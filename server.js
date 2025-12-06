@@ -18,7 +18,8 @@ app.use(cors());
 // Aumentando o limite para 50MB para aceitar a migração
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-// --- ROTA DE MIGRAÇÃO (ADICIONAR AQUI) ---
+
+// --- ROTA DE MIGRAÇÃO (ATUALIZADA) ---
 app.post('/api/migrar-completo', async (req, res) => {
   // Aumenta o tempo limite para não dar erro em envio grande
   req.setTimeout(500000); 
@@ -28,12 +29,11 @@ app.post('/api/migrar-completo', async (req, res) => {
   try {
     console.log("🚀 Iniciando migração de dados...");
 
-    // 1. MIGRAR MONITORES E DESEMPENHO (Do JSON Financeiro)
+    // 1. MIGRAR MONITORES E DESEMPENHO
     if (financeDataV30 && financeDataV30.monitores) {
       console.log(`📦 Processando ${financeDataV30.monitores.length} monitores...`);
       
       for (const m of financeDataV30.monitores) {
-        // Salva o Monitor
         await prisma.monitor.upsert({
           where: { id: m.id },
           update: {}, 
@@ -50,7 +50,6 @@ app.post('/api/migrar-completo', async (req, res) => {
           }
         });
 
-        // Salva os Desempenhos desse Monitor
         if (m.desempenho && m.desempenho.length > 0) {
           for (const d of m.desempenho) {
             await prisma.desempenho.upsert({
@@ -62,7 +61,6 @@ app.post('/api/migrar-completo', async (req, res) => {
                 nota: typeof d.nota === 'string' ? d.nota : String(d.nota),
                 descricao: d.descricao || null,
                 obs: d.obs || null,
-                // AQUI ESTÁ O TRUQUE DO SQLITE (Objeto virando Texto)
                 detalhes: d.detalhes ? JSON.stringify(d.detalhes) : null,
                 monitorId: m.id
               }
@@ -88,11 +86,10 @@ app.post('/api/migrar-completo', async (req, res) => {
       }
     }
 
-    // 3. MIGRAR CLIENTES (Se houver no JSON)
+    // 3. MIGRAR CLIENTES
     if (clients && clients.length > 0) {
         console.log(`👥 Processando ${clients.length} clientes...`);
         for (const c of clients) {
-            // Verifica se o ID é válido (não nulo)
             if (!c.id) continue;
             
             await prisma.client.upsert({
@@ -109,20 +106,34 @@ app.post('/api/migrar-completo', async (req, res) => {
         }
     }
 
-    // 4. MIGRAR EVENTOS (Se houver)
+    // 4. MIGRAR EVENTOS (COM ITENS AGORA!)
     if (events && events.length > 0) {
         console.log(`📅 Processando ${events.length} eventos...`);
         for (const evt of events) {
              if (!evt.id) continue;
 
+             // Tenta encontrar a lista de brinquedos dentro do evento
+             // Geralmente chama "toys" ou "itens" no JSON antigo
+             const listaItens = evt.toys || evt.itens || [];
+
+             // Prepara os itens para salvar no formato do Prisma
+             const itensParaSalvar = listaItens.map(item => ({
+                 quantity: item.quantity || 1,
+                 // Tenta pegar o ID do brinquedo (pode ser item.id ou item.toyId)
+                 toyId: item.id || item.toyId || null 
+             })).filter(i => i.toyId !== null); // Remove se não tiver ID
+
              await prisma.event.upsert({
                  where: { id: parseFloat(evt.id) },
-                 update: {},
+                 update: {}, // Se já existe, não mexe (para não duplicar itens)
                  create: {
                      id: parseFloat(evt.id),
                      date: evt.date,
-                     clientName: evt.clientName || "Cliente Desconhecido"
-                     // Adicione outros campos do evento aqui se precisar
+                     clientName: evt.clientName || "Cliente Desconhecido",
+                     // MÁGICA AQUI: Cria os itens junto com o evento
+                     items: {
+                         create: itensParaSalvar
+                     }
                  }
              });
         }
@@ -136,9 +147,50 @@ app.post('/api/migrar-completo', async (req, res) => {
     res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
-// --- FIM DA ROTA DE MIGRAÇÃO ---
 
-// Rotas da API (ANTES de servir arquivos estáticos)
+// --- NOVAS ROTAS PARA O FRONTEND (CAMINHO A) ---
+
+// 1. Buscar Brinquedos
+app.get('/api/admin/toys', async (req, res) => {
+    try {
+        const toys = await prisma.toy.findMany({ orderBy: { name: 'asc' } });
+        res.json(toys);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao buscar brinquedos" });
+    }
+});
+
+// 2. Buscar Clientes
+app.get('/api/admin/clients', async (req, res) => {
+    try {
+        const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
+        res.json(clients);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao buscar clientes" });
+    }
+});
+
+// 3. Buscar Eventos Completos (Com Itens)
+app.get('/api/admin/events-full', async (req, res) => {
+    try {
+        const events = await prisma.event.findMany({
+            include: {
+                items: { include: { toy: true } } // Traz os itens e o nome do brinquedo
+            },
+            orderBy: { date: 'desc' }
+        });
+        res.json(events);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao buscar eventos" });
+    }
+});
+
+// --- FIM DAS NOVAS ROTAS ---
+
+// Rotas da API Legadas
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
@@ -149,7 +201,7 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Sistema Operante API está funcionando' });
 });
 
-// Servir arquivos estáticos (HTML, CSS, JS) - DEPOIS das rotas da API
+// Servir arquivos estáticos (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname)));
 
 // Rota raiz - redireciona para login
@@ -162,4 +214,3 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
     console.log(`📧 Firebase Email: ${process.env.FIREBASE_EMAIL_FUNCTION_URL ? '✅ Configurado' : '⚠️  Não configurado (modo simulação)'}`);
 });
-
