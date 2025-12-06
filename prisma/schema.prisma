@@ -11,7 +11,7 @@ datasource db {
 // --- SEÇÃO DE ESTOQUE E EVENTOS (Do arquivo dados-completos) ---
 
 model Toy {
-  id       Int     @id @default(autoincrement())
+  id       Float     @id // <--- MUDOU DE Int PARA Float
   name     String
   quantity Int
   // Relação: Um brinquedo pode estar em vários eventos
@@ -42,7 +42,7 @@ model EventItem {
   eventId  Float
   event    Event @relation(fields: [eventId], references: [id])
   
-  toyId    Int?
+  toyId    Float?   // <--- MUDOU DE Int? PARA Float?
   toy      Toy?  @relation(fields: [toyId], references: [id])
 }
 
