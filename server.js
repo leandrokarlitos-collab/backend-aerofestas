@@ -15,8 +15,9 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Aumentando o limite para 50MB para aceitar a migração
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // --- ROTA DE MIGRAÇÃO (ADICIONAR AQUI) ---
 app.post('/api/migrar-completo', async (req, res) => {
   // Aumenta o tempo limite para não dar erro em envio grande
