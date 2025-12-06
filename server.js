@@ -188,6 +188,79 @@ app.get('/api/admin/events-full', async (req, res) => {
     }
 });
 
+// 4. Criar/Atualizar Evento
+app.post('/api/admin/events', async (req, res) => {
+    try {
+        const evt = req.body;
+        
+        // Log detalhado para debug
+        console.log('📥 POST /api/admin/events - Dados recebidos:');
+        console.log(JSON.stringify(evt, null, 2));
+        
+        if (!evt.date || !evt.clientName) {
+            console.log('❌ Validação falhou: faltam campos obrigatórios');
+            return res.status(400).json({ error: "Data e nome do cliente são obrigatórios" });
+        }
+        
+        // Aceitar lista de brinquedos de diferentes propriedades
+        const listaItens = evt.items || evt.toys || evt.itens || [];
+        console.log(`🧸 Itens encontrados: ${listaItens.length}`);
+        
+        // Preparar itens para salvar
+        const itensParaSalvar = listaItens.map(item => ({
+            quantity: item.quantity || 1,
+            toyId: item.id || item.toyId || null,
+            price: item.price || 0
+        })).filter(i => i.toyId !== null);
+        
+        console.log(`✅ Itens válidos para salvar: ${itensParaSalvar.length}`);
+        
+        let savedEvent;
+        
+        // Se tem ID, é UPDATE
+        if (evt.id) {
+            console.log(`🔄 Atualizando evento ID: ${evt.id}`);
+            savedEvent = await prisma.event.update({
+                where: { id: parseFloat(evt.id) },
+                data: {
+                    date: evt.date,
+                    clientName: evt.clientName,
+                    // Remover itens antigos e adicionar novos
+                    items: {
+                        deleteMany: {},
+                        create: itensParaSalvar
+                    }
+                },
+                include: {
+                    items: { include: { toy: true } }
+                }
+            });
+        } else {
+            // Criar novo evento
+            console.log('✨ Criando novo evento');
+            savedEvent = await prisma.event.create({
+                data: {
+                    date: evt.date,
+                    clientName: evt.clientName,
+                    items: {
+                        create: itensParaSalvar
+                    }
+                },
+                include: {
+                    items: { include: { toy: true } }
+                }
+            });
+        }
+        
+        console.log(`✅ Evento salvo com sucesso! ID: ${savedEvent.id}`);
+        res.json(savedEvent);
+        
+    } catch (error) {
+        console.error("❌ Erro ao salvar evento:", error);
+        res.status(500).json({ error: "Erro ao salvar evento", details: error.message });
+    }
+});
+
 // --- FIM DAS NOVAS ROTAS ---
 
 // Rotas da API Legadas
