@@ -1,0 +1,2350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Integrado</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- [MODIFICADO] Adicionado Chart.js para os novos gráficos financeiros -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #1f2937;
+            --text-muted-color: #6b7280;
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --header-grad-from: #4f46e5;
+            --header-grad-to: #a855f7;
+            --particle-color-rgb: 100, 116, 139;
+            --card-bg: rgba(255, 255, 255, 0.65);
+            --border-color: rgba(200, 200, 200, 0.3);
+            --input-bg: #f9fafb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .header-title {
+            background: linear-gradient(to right, var(--header-grad-from), var(--header-grad-to));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .glassmorphism {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            transition: background 0.5s ease;
+        }
+        .form-input {
+            background-color: var(--input-bg);
+            border: 1px solid #d1d5db;
+            color: var(--text-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .form-input::placeholder { color: var(--text-muted-color); }
+        .form-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #4f46e5;
+            border-color: #4f46e5;
+        }
+        .task-item label:has(input:checked) {
+            text-decoration: line-through;
+            color: var(--text-muted-color);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #a8a8a8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .verse-container {
+            font-style: italic;
+            border-left: 3px solid var(--header-grad-from);
+            transition: border-color 0.5s ease;
+        }
+        .gemini-btn {
+            background-image: linear-gradient(to right, #8b5cf6 0%, #c084fc 51%, #8b5cf6 100%);
+            background-size: 200% auto;
+            color: white;
+            box-shadow: 0 4px 15px 0 rgba(139, 92, 246, 0.4);
+            transition: all 0.4s ease;
+        }
+        .gemini-btn:hover {
+            background-position: right center;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px 0 rgba(139, 92, 246, 0.6);
+        }
+        .modal-box.glassmorphism {
+             background: var(--glass-bg);
+        }
+        .shiny-btn {
+             position: relative;
+             border: 2px solid transparent;
+             background-image: linear-gradient(to right, #4f46e5 0%, #3b82f6 51%, #4f46e5 100%);
+             background-size: 200% auto;
+             color: white;
+             box-shadow: 0 4px 15px 0 rgba(60, 78, 224, 0.4);
+             transition: all 0.4s ease;
+        }
+        .shiny-btn:hover {
+            background-position: right center;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #4f46e5;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes toast-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-enter {
+            animation: toast-in 0.5s ease-out forwards;
+        }
+        
+        /* ESTILOS PARA RECOLHÍVEIS E DESCANSO DE TELA */
+        .collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            max-height: 1000px; /* Altura máxima grande o suficiente */
+        }
+        .collapsible-content.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: -1px; /* Evita borda dupla */
+        }
+        .collapsible-header i.fa-chevron-down {
+            transition: transform 0.3s ease;
+        }
+        .collapsible-header i.fa-chevron-down.rotated {
+            transform: rotate(180deg);
+        }
+        #screensaver {
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* [NOVO] ESTILOS PARA ABAS DO MODAL FINANCEIRO */
+        .finance-modal-content {
+            display: none;
+        }
+        .finance-modal-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .finance-tab-btn {
+            background-color: #e5e7eb; /* bg-gray-200 */
+            color: #4b5563; /* text-gray-600 */
+            transition: all 0.2s ease-in-out;
+            border-bottom: 3px solid transparent;
+        }
+        .finance-tab-btn:hover {
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+        .finance-tab-btn.active {
+            background-color: transparent;
+            color: #4f46e5; /* text-indigo-600 */
+            font-weight: 600;
+            border-bottom-color: #4f46e5;
+        }
+
+    </style>
+</head>
+<body class="min-h-screen">
+    <canvas id="particles-js"></canvas>
+
+    <div id="screensaver" class="fixed inset-0 z-20 flex items-center justify-center text-white bg-black/30 hidden opacity-0">
+        <div id="screensaver-clock" class="text-8xl font-bold text-center" style="text-shadow: 0 0 20px rgba(0,0,0,0.5);">
+            </div>
+    </div>
+
+    <div id="main-container" class="container mx-auto p-4 md:p-8 relative z-10 transition-opacity duration-500">
+        <header class="text-center mb-8 relative">
+            <h1 id="greeting" class="text-4xl md:text-5xl header-title"></h1>
+            <p class="text-gray-500 mt-2">Este é o seu resumo diário.</p>
+            <div id="daily-verse" class="verse-container text-center max-w-2xl mx-auto mt-6 p-4 text-gray-600">
+                <p id="verse-text" class="mb-1"></p>
+                <p id="verse-ref" class="font-semibold text-sm"></p>
+            </div>
+             <div class="absolute top-0 right-0 flex space-x-2 p-2">
+                <button onclick="window.location.href='./Agenda de eventos.html'" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Acessar Agenda de Eventos">
+                    <i class="fa-solid fa-calendar-days"></i>
+                </button>
+                <button onclick="window.location.href='./Sistema Gestão Financeira.html'" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Acessar Gestão Financeira">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+                 <button onclick="window.location.href='./Sistema de CRM.html'" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Acessar CRM">
+                    <i class="fas fa-users"></i>
+                </button>
+                <button id="settings-btn" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Configurações">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <div class="lg:col-span-2 flex flex-col gap-8">
+                <section id="widget-assistant" class="glassmorphism rounded-lg">
+                    <div class="collapsible-header flex justify-between items-center p-6 cursor-pointer">
+                        <h2 class="text-2xl font-semibold">Assistente Diário</h2>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <!-- [MODIFICADO] Adicionado max-h-[70vh] (70% da altura da tela) e overflow-y-auto -->
+                    <div class="collapsible-content px-6 pb-6 text-center max-h-[70vh] overflow-y-auto">
+                        <!-- [MODIFICADO] Adicionado ID 'assistant-prompt-text' -->
+                        <p id="assistant-prompt-text" class="text-gray-600 mb-4">Use a IA para criar um plano de ação para o seu dia com base nos seus eventos e tarefas.</p>
+                        <!-- [MODIFICADO] Container persistente para os botões -->
+                        <div id="assistant-actions" class="flex flex-col md:flex-row gap-4 justify-center">
+                            <button id="plan-day-btn" class="gemini-btn font-bold py-3 px-6 rounded-lg w-full md:w-auto">✨ Planejar meu dia</button>
+                            <button id="view-plan-history-btn" class="shiny-btn font-bold py-3 px-6 rounded-lg w-full md:w-auto">📜 Ver Histórico</button>
+                        </div>
+                        <!-- [NOVO] Container onde o plano será renderizado -->
+                        <div id="plan-display-area" class="mt-4"></div>
+                    </div>
+                </section>
+
+                <!-- [NOVO] Widget de Resumo Financeiro -->
+                <section id="widget-finance-summary" class="glassmorphism rounded-lg">
+                    <div class="collapsible-header flex justify-between items-center p-6 cursor-pointer">
+                        <h2 class="text-2xl font-semibold"><i class="fas fa-wallet mr-3 text-green-500"></i>Resumo Financeiro (Mês)</h2>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="collapsible-content px-6 pb-6">
+                        <p class="text-gray-600 mb-4 text-sm">Balanço rápido com base no mês selecionado no Sistema de Gestão Financeira.</p>
+                        <div id="finance-summary-loading" class="text-center text-gray-500 py-8">
+                            <div class="loader inline-block"></div>
+                            <p class="mt-2">Carregando dados financeiros...</p>
+                        </div>
+                        <div id="finance-summary-content" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                                <div class="bg-white/50 p-4 rounded-lg" style="background-color: var(--card-bg)">
+                                    <h4 class="text-sm font-semibold text-green-600">Receitas</h4>
+                                    <p id="finance-summary-receitas" class="text-2xl font-bold">R$ 0,00</p>
+                                </div>
+                                <div class="bg-white/50 p-4 rounded-lg" style="background-color: var(--card-bg)">
+                                    <h4 class="text-sm font-semibold text-red-600">Despesas</h4>
+                                    <p id="finance-summary-despesas" class="text-2xl font-bold">R$ 0,00</p>
+                                </div>
+                                <div class="bg-white/50 p-4 rounded-lg" style="background-color: var(--card-bg)">
+                                    <h4 class="text-sm font-semibold text-blue-600">Saldo</h4>
+                                    <p id="finance-summary-saldo" class="text-2xl font-bold">R$ 0,00</p>
+                                </div>
+                            </div>
+                            <p class="text-center text-xs text-gray-500 mt-2">Mês de referência: <strong id="finance-summary-month">--</strong></p>
+                            <button id="open-finance-modal-btn" class="shiny-btn w-full py-2 px-4 rounded-lg mt-6">Ver Detalhes (Gráficos e Contas)</button>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="widget-events" class="glassmorphism rounded-lg">
+                    <div class="collapsible-header flex justify-between items-center p-6 cursor-pointer">
+                         <h2 class="text-2xl font-semibold"><i class="fas fa-calendar-alt mr-3 text-indigo-500"></i>Próximos Eventos</h2>
+                         <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="collapsible-content px-6 pb-6">
+                        <div id="upcoming-events-list" class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                            <!-- Eventos serão carregados aqui -->
+                        </div>
+                    </div>
+                </section>
+
+                <section id="widget-dates" class="glassmorphism rounded-lg">
+                    <div class="collapsible-header flex justify-between items-center p-6 cursor-pointer">
+                        <h2 class="text-2xl font-semibold"><i class="fas fa-gift mr-3 text-pink-500"></i>Próximas Datas Relevantes</h2>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="collapsible-content px-6 pb-6">
+                        <div id="relevant-dates-list" class="space-y-3 max-h-60 overflow-y-auto pr-2">
+                            <!-- Datas relevantes serão carregadas aqui -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="widget-tasks" class="lg:col-span-1 glassmorphism rounded-lg flex flex-col h-full max-h-[80vh]">
+                 <div class="collapsible-header flex justify-between items-center p-6 cursor-pointer">
+                    <h2 class="text-2xl font-semibold"><i class="fas fa-tasks mr-3 text-blue-500"></i>Tarefas</h2>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content flex-grow flex flex-col px-6 pb-6 min-h-0">
+                    <div class="flex border-b mb-4">
+                        <button id="tab-today" class="tab-btn flex-1 py-2 font-semibold border-b-2 border-indigo-500 text-indigo-600">Hoje</button>
+                        <button id="tab-general" class="tab-btn flex-1 py-2 font-semibold border-b-2 border-transparent text-gray-500">Geral</button>
+                    </div>
+                    
+                    <div id="task-lists-container" class="flex-grow overflow-y-auto pr-2">
+                        <div id="tasks-today-list" class="task-list space-y-3"></div>
+                        <div id="tasks-general-list" class="task-list space-y-3 hidden"></div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t">
+                        <form id="add-task-form" class="flex gap-2 items-center">
+                            <div class="relative flex-grow">
+                                 <input type="text" id="new-task-input" placeholder="Nova tarefa..." class="form-input w-full pr-10" required>
+                                 <button type="button" id="breakdown-task-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-purple-500 hover:text-purple-700" title="✨ Quebrar tarefa com IA">
+                                    <i class="fas fa-wand-magic-sparkles"></i>
+                                </button>
+                            </div>
+                            <input type="date" id="new-task-date" class="form-input">
+                            <button type="submit" class="bg-indigo-500 text-white w-10 h-10 rounded-md hover:bg-indigo-600 transition-colors flex-shrink-0" title="Adicionar tarefa">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal API Key -->
+    <!-- [MODIFICADO] z-index de z-50 para z-30 -->
+    <div id="api-key-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-30">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md m-4">
+            <h2 class="text-2xl font-bold mb-4">Configurar API do Gemini</h2>
+            <p class="text-sm text-gray-600 mb-6">Para usar os recursos de IA, você precisa de uma chave de API do Google AI Studio. A chave será salva apenas no seu navegador.</p>
+            <div class="space-y-4">
+                <div>
+                    <label for="api-key-input" class="block text-sm font-medium mb-1">Sua Chave da API</label>
+                    <input type="password" id="api-key-input" placeholder="Cole sua chave aqui" class="form-input w-full px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button type="button" id="cancel-api-key-btn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button type="button" id="save-api-key-btn" class="shiny-btn px-6 py-2 rounded-md">Salvar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Gemini (Plano do Dia / Quebrar Tarefa) -->
+    <!-- [MODIFICADO] z-index de z-50 para z-40 -->
+    <div id="gemini-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 hidden z-40">
+        <div id="gemini-modal-box" class="modal-box glassmorphism w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-lg">
+            <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
+                <h2 id="gemini-modal-title" class="text-2xl font-semibold">✨ Assistente IA</h2>
+                <button id="gemini-close-btn" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="gemini-modal-content" class="p-6 overflow-y-auto">
+                <!-- O conteúdo será injetado aqui -->
+            </div>
+            <!-- [MODIFICADO] Removido 'hidden' para que o listener do botão de histórico possa mostrá-lo -->
+            <div id="gemini-modal-footer" class="p-4 bg-gray-50/50 border-t border-gray-200/50 flex justify-end space-x-4">
+                <button id="gemini-copy-btn" class="shiny-btn py-2 px-4 rounded-lg">Copiar Texto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [NOVO] Modal de Chat da IA (Sobre o modal principal) -->
+    <!-- [MODIFICADO] z-index de z-60 para z-50 -->
+    <div id="gemini-chat-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-box glassmorphism w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-lg">
+            <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
+                <!-- [MODIFICADO] Título agora está vazio e será preenchido via JS -->
+                <h2 id="gemini-chat-title" class="text-xl font-semibold"></h2>
+                <button id="gemini-chat-close-btn" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="gemini-chat-messages" class="p-6 flex-grow overflow-y-auto space-y-4">
+                <!-- Mensagens do chat serão injetadas aqui -->
+            </div>
+            <div class="p-4 bg-gray-50/50 border-t border-gray-200/50">
+                <form id="gemini-chat-form" class="flex gap-2 items-center">
+                    <input type="text" id="gemini-chat-input" placeholder="Digite sua pergunta..." class="form-input w-full" required>
+                    <button type="submit" id="gemini-chat-send-btn" class="bg-indigo-500 text-white w-10 h-10 rounded-md hover:bg-indigo-600 transition-colors flex-shrink-0" title="Enviar">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <!-- [MODIFICADO] z-index de z-50 para z-60 (para ficar acima de tudo) -->
+    <div id="toast" class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-60">
+        <i id="toast-icon" class="text-lg"></i>
+        <p id="toast-message" class="ml-3"></p>
+    </div>
+
+    <!-- [NOVO] Modal de Detalhes Financeiros -->
+    <div id="finance-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 hidden z-40">
+        <div id="finance-modal-box" class="modal-box glassmorphism w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-lg">
+            <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
+                <h2 id="finance-modal-title" class="text-2xl font-semibold">Detalhes Financeiros (Mês)</h2>
+                <button id="finance-close-btn" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <!-- Abas -->
+            <div class="flex border-b border-gray-200/50" style="background-color: var(--input-bg);">
+                <button id="finance-tab-1" class="finance-tab-btn flex-1 py-3 px-4 text-sm font-medium" data-tab="1">
+                    <i class="fas fa-file-invoice-dollar mr-2"></i>Resumo
+                </button>
+                <button id="finance-tab-2" class="finance-tab-btn flex-1 py-3 px-4 text-sm font-medium" data-tab="2">
+                    <i class="fas fa-chart-pie mr-2"></i>Gráficos
+                </button>
+                <button id="finance-tab-3" class="finance-tab-btn flex-1 py-3 px-4 text-sm font-medium" data-tab="3">
+                    <i class="fas fa-calendar-check mr-2"></i>Contas Fixas
+                </button>
+            </div>
+
+            <!-- Conteúdo das Abas -->
+            <div class="p-6 overflow-y-auto flex-grow" style="background-color: var(--card-bg)">
+                <!-- Aba 1: Resumo -->
+                <div id="finance-content-1" class="finance-modal-content">
+                    <h3 class="text-xl font-semibold mb-4">Balanço do Mês (<span id="finance-modal-month-1">--</span>)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                            <h4 class="text-lg font-semibold text-green-600">Receitas Totais</h4>
+                            <p id="finance-modal-receitas" class="text-3xl font-bold">R$ 0,00</p>
+                        </div>
+                        <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                            <h4 class="text-lg font-semibold text-red-600">Despesas Totais</h4>
+                            <p id="finance-modal-despesas" class="text-3xl font-bold">R$ 0,00</p>
+                        </div>
+                        <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                            <h4 class="text-lg font-semibold text-blue-600">Saldo Final</h4>
+                            <p id="finance-modal-saldo" class="text-3xl font-bold">R$ 0,00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba 2: Gráficos -->
+                <div id="finance-content-2" class="finance-modal-content">
+                    <h3 class="text-xl font-semibold mb-4">Gráficos do Mês (<span id="finance-modal-month-2">--</span>)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                            <h4 class="text-center font-semibold mb-2">Receita vs. Despesa</h4>
+                            <canvas id="finance-chart-receita-despesa" class="max-h-64"></canvas>
+                        </div>
+                        <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                            <h4 class="text-center font-semibold mb-2">Composição das Despesas</h4>
+                            <canvas id="finance-chart-despesa-comp" class="max-h-64"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba 3: Contas Fixas -->
+                <div id="finance-content-3" class="finance-modal-content">
+                    <h3 class="text-xl font-semibold mb-4">Status das Contas Fixas (<span id="finance-modal-month-3">--</span>)</h3>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200/50">
+                        <table class="min-w-full bg-white/50">
+                            <thead class="bg-gray-50/50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Descrição</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Valor Previsto</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Vencimento</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finance-modal-contas-fixas-tbody" class="divide-y divide-gray-200/50">
+                                <!-- Conteúdo será injetado pelo JS -->
+                                <tr><td colspan="4" class="p-4 text-center text-gray-500">Carregando contas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- CONFIGURAÇÕES GLOBAIS E INICIALIZAÇÃO ---
+    let currentContext = { events: [], tasks: [] }; // [NOVO] Armazena o contexto do plano
+    let chatHistory = []; // [NOVO] Armazena o histórico do chat
+    
+    // --- [NOVO] Constantes do Widget Financeiro ---
+    const financeWidgetLoading = document.getElementById('finance-summary-loading');
+    const financeWidgetContent = document.getElementById('finance-summary-content');
+    const financeWidgetReceitas = document.getElementById('finance-summary-receitas');
+    const financeWidgetDespesas = document.getElementById('finance-summary-despesas');
+    const financeWidgetSaldo = document.getElementById('finance-summary-saldo');
+    const financeWidgetMonth = document.getElementById('finance-summary-month');
+    
+    const openFinanceModalBtn = document.getElementById('open-finance-modal-btn');
+    const financeModal = document.getElementById('finance-modal');
+    const financeCloseBtn = document.getElementById('finance-close-btn');
+    const financeTabBtns = document.querySelectorAll('.finance-tab-btn');
+    const financeTabContents = document.querySelectorAll('.finance-modal-content');
+
+    const financeModalMonth1 = document.getElementById('finance-modal-month-1');
+    const financeModalMonth2 = document.getElementById('finance-modal-month-2');
+    const financeModalMonth3 = document.getElementById('finance-modal-month-3');
+    
+    const financeModalReceitas = document.getElementById('finance-modal-receitas');
+    const financeModalDespesas = document.getElementById('finance-modal-despesas');
+    const financeModalSaldo = document.getElementById('finance-modal-saldo');
+    const financeModalContasTbody = document.getElementById('finance-modal-contas-fixas-tbody');
+
+    let financeChart1 = null;
+    let financeChart2 = null;
+    let loadedFinancialData = null; // Cache para modal
+    const FINANCE_STORAGE_KEY = 'financeDataV21'; // Chave do sistema financeiro
+    // --- Fim das Constantes Financeiras ---
+
+
+    const BIBLE_VERSES = [
+        { text: "O Senhor é meu pastor, nada me faltará.", ref: "Salmo 22, 1" },
+        { text: "Tudo posso naquele que me conforta.", ref: "Filipenses 4, 13" },
+        { text: "O Senhor é minha luz e minha salvação, a quem temerei?", ref: "Salmo 26, 1" },
+        { text: "Deem graças ao Senhor, porque ele é bom, porque o seu amor é para sempre.", ref: "Salmo 135, 1" },
+        { text: "Pois é pela graça que fostes salvos, por meio da fé. E isto não vem de vós: é dom de Deus.", ref: "Efésios 2, 8" },
+        { text: "O temor do Senhor é o princípio da sabedoria.", ref: "Provérbios 9, 10" },
+        { text: "Vinde a mim, vós todos que estais aflitos sob o fardo, e eu vos aliviarei.", ref: "Mateus 11, 28" },
+        { text: "A caridade é paciente, a caridade é bondosa. Não tem inveja. A caridade não é orgulhosa. Não é arrogante.", ref: "I Coríntios 13, 4" }
+    ];
+
+    // --- INÍCIO DA MODIFICAÇÃO: DEFINIÇÃO DE FERIADOS E ANIVERSÁRIOS ---
+    const FIXED_HOLIDAYS_CITY_ANNIVERSARIES = [
+        // Feriados Nacionais Fixos
+        { name: 'Confraternização Universal', date: '01-01', type: 'holiday_nat' },
+        { name: 'Tiradentes', date: '04-21', type: 'holiday_nat' },
+        { name: 'Dia do Trabalho', date: '05-01', type: 'holiday_nat' },
+        { name: 'Independência do Brasil', date: '09-07', type: 'holiday_nat' },
+        { name: 'Nossa Senhora Aparecida', date: '10-12', type: 'holiday_nat' },
+        { name: 'Finados', date: '11-02', type: 'holiday_nat' },
+        { name: 'Proclamação da República', date: '11-15', type: 'holiday_nat' },
+        { name: 'Natal', date: '12-25', type: 'holiday_nat' },
+        // Feriados Móveis (Exemplo para 2025 - Idealmente calcular ou obter de API)
+        { name: 'Carnaval (ponto facultativo)', date: '03-03', year: 2025, type: 'holiday_opt' }, // Segunda
+        { name: 'Carnaval (ponto facultativo)', date: '03-04', year: 2025, type: 'holiday_opt' }, // Terça
+        { name: 'Sexta-feira Santa', date: '04-18', year: 2025, type: 'holiday_nat' }, // Paixão de Cristo
+        { name: 'Corpus Christi', date: '06-19', year: 2025, type: 'holiday_nat' },
+        // Aniversários Cidades Goiás (Exemplos)
+        { name: 'Aniversário de Goiânia', date: '10-24', type: 'city_anniversary_go' },
+        { name: 'Aniversário de Aparecida de Goiânia', date: '05-11', type: 'city_anniversary_go' },
+        { name: 'Aniversário de Anápolis', date: '07-31', type: 'city_anniversary_go' },
+        // { name: 'Padroeira de Goiânia (N. Sra. Auxiliadora)', date: '05-24', type: 'holiday_mun_gyn' }, // Feriado Municipal Gyn
+    ];
+    // --- FIM DA MODIFICAÇÃO: DEFINIÇÃO DE FERIADOS E ANIVERSÁRIOS ---
+
+    function displayRandomVerse() {
+        const verse = BIBLE_VERSES[Math.floor(Math.random() * BIBLE_VERSES.length)];
+        document.getElementById('verse-text').textContent = `"${verse.text}"`;
+        document.getElementById('verse-ref').textContent = verse.ref;
+    }
+
+    function applyTheme() {
+        const hour = new Date().getHours();
+        const root = document.documentElement;
+        
+        if (hour >= 5 && hour < 12) { // Manhã
+            root.style.setProperty('--bg-color', '#e0f2fe');
+            root.style.setProperty('--text-color', '#0c4a6e');
+            root.style.setProperty('--text-muted-color', '#38bdf8');
+            root.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.7)');
+            root.style.setProperty('--header-grad-from', '#38bdf8');
+            root.style.setProperty('--header-grad-to', '#fb923c');
+            root.style.setProperty('--particle-color-rgb', '56, 189, 248');
+        } else if (hour >= 12 && hour < 18) { // Tarde
+             // Tema padrão (já definido no :root)
+        } else { // Noite
+            root.style.setProperty('--bg-color', '#1e293b');
+            root.style.setProperty('--text-color', '#e2e8f0');
+            root.style.setProperty('--text-muted-color', '#94a3b8');
+            root.style.setProperty('--glass-bg', 'rgba(30, 41, 59, 0.7)');
+            root.style.setProperty('--header-grad-from', '#818cf8');
+            root.style.setProperty('--header-grad-to', '#c084fc');
+            root.style.setProperty('--particle-color-rgb', '129, 140, 248');
+            root.style.setProperty('--card-bg', 'rgba(51, 65, 85, 0.6)');
+            root.style.setProperty('--border-color', 'rgba(71, 85, 105, 0.3)');
+            root.style.setProperty('--input-bg', '#334155');
+        }
+    }
+
+    function setGreeting() {
+        const greetingEl = document.getElementById('greeting');
+        const hour = new Date().getHours();
+        let greetingText = '';
+        if (hour < 5) {
+            greetingText = 'Boa madrugada, Leandro';
+        } else if (hour < 12) {
+            greetingText = 'Bom dia, Leandro';
+        } else if (hour < 18) {
+            greetingText = 'Boa tarde, Leandro';
+        } else {
+            greetingText = 'Boa noite, Leandro';
+        }
+        greetingEl.textContent = greetingText;
+    }
+
+    // --- CARREGAMENTO DE DADOS (Eventos, Datas, Tarefas) ---
+
+    function loadUpcomingEvents() {
+        const eventsListEl = document.getElementById('upcoming-events-list');
+        const rawEvents = localStorage.getItem('events');
+        if (!rawEvents) {
+            eventsListEl.innerHTML = '<p class="text-gray-500">Nenhum evento encontrado na agenda.</p>';
+            return;
+        }
+
+        const events = JSON.parse(rawEvents);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcomingEvents = events
+            .filter(event => new Date(event.date + 'T00:00:00') >= today)
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .slice(0, 5);
+
+        if (upcomingEvents.length === 0) {
+            eventsListEl.innerHTML = '<p class="text-gray-500">Nenhum evento futuro agendado.</p>';
+            return;
+        }
+
+        eventsListEl.innerHTML = upcomingEvents.map(event => {
+            const eventDate = new Date(event.date + 'T00:00:00');
+            const formattedDate = eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+            const dayOfWeek = eventDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+            
+            // Link para editar evento na agenda
+            return `
+                <a href="./Agenda de eventos.html?editEvent=${event.id}" class="block transition-transform transform hover:scale-[1.02] hover:shadow-lg rounded-lg" title="Clique para ver detalhes e editar na agenda">
+                    <div class="flex items-center gap-4 p-3 bg-white/50 rounded-lg" style="background-color: var(--card-bg)">
+                        <div class="text-center w-20 flex-shrink-0">
+                            <p class="text-2xl font-bold text-indigo-600">${formattedDate.split(' ')[0]}</p>
+                            <p class="text-sm text-gray-500 capitalize">${dayOfWeek.split('-')[0]}</p>
+                        </div>
+                        <div class="flex-grow border-l-2 border-indigo-200 pl-4">
+                            <p class="font-semibold">${event.clientName}</p>
+                            <p class="text-sm capitalize" style="color: var(--text-muted-color)"><i class="fas fa-map-marker-alt fa-fw mr-1"></i> ${event.clientAddress || 'Local a confirmar'}</p>
+                            <p class="text-sm" style="color: var(--text-muted-color)"><i class="fas fa-clock fa-fw mr-1"></i> ${event.startTime || ''} - ${event.endTime || ''}</p>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }).join('');
+    }
+    
+    // --- INÍCIO DA MODIFICAÇÃO: FUNÇÃO loadRelevantDates ---
+    function loadRelevantDates() {
+        const datesListEl = document.getElementById('relevant-dates-list');
+        const rawClients = localStorage.getItem('crmToyClients_v8');
+        let allDates = [];
+        const currentYear = new Date().getFullYear();
+
+        // 1. Adiciona aniversários (usuário e clientes)
+        allDates.push({ name: 'Leandro (Aniversariante)', dateStr: '1990-10-25', type: 'user', id: null });
+        if (rawClients) {
+            const clients = JSON.parse(rawClients);
+            clients.forEach(client => {
+                if (client.dataNascimento) {
+                    allDates.push({ name: client.nome, dateStr: client.dataNascimento, type: 'client', id: client.id });
+                }
+            });
+        }
+
+        // 2. Adiciona feriados e aniversários de cidades
+        FIXED_HOLIDAYS_CITY_ANNIVERSARIES.forEach(item => {
+            // Se o item tem um ano específico e não é o ano atual, ignora
+            if (item.year && item.year !== currentYear) {
+                return;
+            }
+            allDates.push({
+                name: item.name,
+                dateStr: item.date, // Formato MM-DD ou YYYY-MM-DD para móveis
+                type: item.type,
+                id: null
+            });
+        });
+
+        // 3. Processa e filtra as datas
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const lookaheadLimit = new Date();
+        lookaheadLimit.setDate(today.getDate() + 30); // Limite de 30 dias
+
+        const upcomingDates = allDates
+            .map(item => {
+                let month, day, year;
+                let isRecurring = false;
+                
+                // Tenta parsear a data (MM-DD, YYYY-MM-DD, DD/MM/YYYY)
+                if (item.dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) { // YYYY-MM-DD (aniversários CRM, feriados móveis específicos)
+                    [year, month, day] = item.dateStr.split('-').map(Number);
+                    if (item.type === 'client' || item.type === 'user') isRecurring = true; // Aniversários são recorrentes
+                } else if (item.dateStr.match(/^\d{2}-\d{2}$/)) { // MM-DD (feriados fixos, aniversários de cidades)
+                    [month, day] = item.dateStr.split('-').map(Number);
+                    isRecurring = true;
+                } else if (item.dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) { // DD/MM/YYYY (possível formato do CRM)
+                    [day, month, year] = item.dateStr.split('/').map(Number);
+                     if (item.type === 'client' || item.type === 'user') isRecurring = true;
+                } else {
+                    console.warn(`Formato de data inválido para ${item.name}: ${item.dateStr}`);
+                    return null; // Formato inválido
+                }
+
+                if (!month || !day) return null; // Mês ou dia inválido
+
+                let nextOccurrence;
+                if (isRecurring) {
+                    // Calcula a próxima ocorrência para datas recorrentes
+                    nextOccurrence = new Date(currentYear, month - 1, day);
+                    if (nextOccurrence < today) {
+                        nextOccurrence.setFullYear(currentYear + 1); // Se já passou este ano, calcula para o próximo
+                    }
+                } else if (year) {
+                    // Para datas não recorrentes com ano (feriados móveis)
+                    nextOccurrence = new Date(year, month - 1, day);
+                } else {
+                    return null; // Não é possível calcular
+                }
+                
+                // Verifica se a data é válida
+                if (isNaN(nextOccurrence.getTime())) {
+                     console.warn(`Data inválida calculada para ${item.name}: ${item.dateStr}`);
+                    return null;
+                }
+
+                item.nextOccurrence = nextOccurrence;
+                return item;
+            })
+            .filter(item => item && item.nextOccurrence >= today && item.nextOccurrence <= lookaheadLimit) // Filtra para os próximos 30 dias
+            .sort((a, b) => a.nextOccurrence - b.nextOccurrence); // Ordena cronologicamente
+
+        // 4. Renderiza a lista
+        if (upcomingDates.length === 0) {
+            datesListEl.innerHTML = '<p class="text-gray-500">Nenhuma data relevante nos próximos 30 dias.</p>';
+            return;
+        }
+
+        datesListEl.innerHTML = upcomingDates.map(item => {
+            const formattedDate = item.nextOccurrence.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+            const isToday = item.nextOccurrence.toDateString() === today.toDateString();
+            const highlightClass = isToday ? 'bg-yellow-100 font-bold' : '';
+            let iconClass = 'fa-calendar-day text-gray-500'; // Default
+            let title = item.name;
+
+            // Define ícone e título com base no tipo
+            switch (item.type) {
+                case 'user':
+                    iconClass = 'fa-star text-yellow-500';
+                    title = `${item.name}`; // Já inclui (Aniversariante)
+                    break;
+                case 'client':
+                    iconClass = 'fa-user-friends text-green-500';
+                    title = `Aniv. ${item.name}`;
+                    break;
+                case 'holiday_nat':
+                    iconClass = 'fa-flag text-red-500';
+                    title = `${item.name} (Feriado Nac.)`;
+                    break;
+                 case 'holiday_opt':
+                     iconClass = 'fa-flag text-orange-500';
+                    title = `${item.name}`; // Já inclui (ponto facultativo)
+                    break;
+                case 'city_anniversary_go':
+                    iconClass = 'fa-map-pin text-blue-500';
+                    title = `${item.name}`; // Já inclui Aniversário de...
+                    break;
+                // Adicione outros tipos se necessário
+            }
+
+            // Cria link para clientes, div para os outros
+            if (item.type === 'client' && item.id) {
+                return `
+                    <a href="./Sistema de CRM.html?clientId=${item.id}" class="block transition-transform transform hover:scale-[1.02] hover:shadow-sm rounded-md" title="Ver perfil de ${item.name} no CRM">
+                        <div class="flex items-center gap-3 p-2 ${highlightClass} rounded-md" style="background-color: var(--card-bg)">
+                            <i class="fas ${iconClass} fa-fw"></i>
+                            <p class="flex-grow">${title}</p>
+                            <p class="text-sm">${formattedDate}</p>
+                        </div>
+                    </a>
+                `;
+            } else {
+                return `
+                    <div class="flex items-center gap-3 p-2 ${highlightClass} rounded-md" style="background-color: var(--card-bg)">
+                        <i class="fas ${iconClass} fa-fw"></i>
+                        <p class="flex-grow">${title}</p>
+                        <p class="text-sm">${formattedDate}</p>
+                    </div>
+                `;
+            }
+        }).join('');
+    }
+    // --- FIM DA MODIFICAÇÃO: FUNÇÃO loadRelevantDates ---
+
+    const taskState = {
+        tasks: JSON.parse(localStorage.getItem('dashboardTasks_v1')) || [],
+        activeTab: 'today'
+    };
+
+    function saveTasks() {
+        localStorage.setItem('dashboardTasks_v1', JSON.stringify(taskState.tasks));
+    }
+
+    function renderTasks() {
+        const todayListEl = document.getElementById('tasks-today-list');
+        const generalListEl = document.getElementById('tasks-general-list');
+        
+        const today = new Date().toISOString().split('T')[0];
+
+        // Mostra tarefas de hoje (com data de hoje)
+        const todayTasks = taskState.tasks.filter(task => task.dueDate === today && !task.completed);
+        // Mostra tarefas gerais (sem data OU com data passada E não concluídas)
+        const generalTasks = taskState.tasks.filter(task => !task.completed && (!task.dueDate || task.dueDate < today)); 
+
+        const renderList = (tasks, listEl) => {
+             // Ordena: primeiro as sem data, depois as com data mais antiga
+            tasks.sort((a, b) => {
+                if (!a.dueDate && b.dueDate) return -1;
+                if (a.dueDate && !b.dueDate) return 1;
+                if (!a.dueDate && !b.dueDate) return 0;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+
+            if (tasks.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 pt-4">Nenhuma tarefa por aqui.</p>';
+            } else {
+                listEl.innerHTML = tasks.map(task => {
+                     const isPastDue = task.dueDate && task.dueDate < today;
+                    const dateClass = isPastDue ? 'bg-red-200 text-red-700' : 'bg-gray-200 text-gray-600';
+                    const dateText = task.dueDate ? new Date(task.dueDate+'T00:00:00').toLocaleDateString('pt-BR') : '';
+                    
+                    return `
+                        <div class="task-item flex items-center gap-3 p-2 rounded-md" style="background-color: var(--card-bg)">
+                            <label class="flex-grow flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" data-id="${task.id}" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="${isPastDue ? 'text-red-700 font-medium' : ''}">${task.text}</span>
+                            </label>
+                            ${dateText ? `<span class="text-xs ${dateClass} px-2 py-1 rounded-full">${dateText}</span>` : ''}
+                            <button data-id="${task.id}" class="delete-task-btn text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        };
+
+        // Renderiza AMBAS as listas. A visibilidade é controlada pela função switchTab.
+        renderList(todayTasks, todayListEl);
+        renderList(generalTasks, generalListEl);
+        
+        addTaskListEventListeners();
+    }
+    
+    function addTask(text, dueDate = null) {
+        taskState.tasks.push({
+            id: Date.now(),
+            text: text,
+            completed: false,
+            dueDate: dueDate
+        });
+        saveTasks();
+        // Renderiza apenas a lista da aba ativa para evitar renderização dupla desnecessária
+         if (taskState.activeTab === 'today') {
+            switchTab('today'); // Isso chama renderTasks e ajusta a data
+        } else {
+            switchTab('general'); // Isso chama renderTasks e ajusta a data
+        }
+    }
+
+    function addTaskListEventListeners() {
+        document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const taskId = Number(e.target.dataset.id);
+                const task = taskState.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = e.target.checked;
+                    saveTasks();
+                    // Adiciona um pequeno delay para a UI atualizar e remove a tarefa concluída visualmente
+                    setTimeout(() => {
+                        // Re-renderiza ambas as listas para garantir consistência
+                        renderTasks();
+                         // Atualiza a visualização da aba atual
+                        switchTab(taskState.activeTab);
+                    }, 300); 
+                }
+            });
+        });
+
+        document.querySelectorAll('.delete-task-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const taskId = Number(e.currentTarget.dataset.id);
+                taskState.tasks = taskState.tasks.filter(t => t.id !== taskId);
+                saveTasks();
+                renderTasks(); // Re-renderiza para remover o item deletado
+                 switchTab(taskState.activeTab); // Garante que a aba correta esteja visível
+            });
+        });
+    }
+
+    document.getElementById('add-task-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('new-task-input');
+        const dateInput = document.getElementById('new-task-date');
+        const text = input.value.trim();
+
+        if (text) {
+            let dueDate = dateInput.value || null;
+            // Se a aba "Hoje" estiver ativa E nenhuma data foi selecionada, define como hoje
+            if (taskState.activeTab === 'today' && !dateInput.value) {
+                 dueDate = new Date().toISOString().split('T')[0];
+            } 
+            
+            addTask(text, dueDate);
+            input.value = '';
+             // Define a data padrão baseada na aba ativa APÓS adicionar
+            dateInput.value = (taskState.activeTab === 'today') ? new Date().toISOString().split('T')[0] : '';
+        }
+    });
+    
+    const tabTodayBtn = document.getElementById('tab-today');
+    const tabGeneralBtn = document.getElementById('tab-general');
+    const todayListEl = document.getElementById('tasks-today-list');
+    const generalListEl = document.getElementById('tasks-general-list');
+    const taskDateInput = document.getElementById('new-task-date');
+
+    function switchTab(tab) {
+        taskState.activeTab = tab;
+        const todayISO = new Date().toISOString().split('T')[0]; // Pega a data de hoje formatada
+
+        if (tab === 'today') {
+            tabTodayBtn.classList.add('border-indigo-500', 'text-indigo-600');
+            tabTodayBtn.classList.remove('border-transparent', 'text-gray-500');
+            tabGeneralBtn.classList.add('border-transparent', 'text-gray-500');
+            tabGeneralBtn.classList.remove('border-indigo-500', 'text-indigo-600');
+            todayListEl.classList.remove('hidden');
+            generalListEl.classList.add('hidden');
+            taskDateInput.value = todayISO; // Define o valor do input para hoje
+            taskDateInput.disabled = true; // Desabilita a data na aba "Hoje"
+        } else { // Aba "Geral"
+            tabGeneralBtn.classList.add('border-indigo-500', 'text-indigo-600');
+            tabGeneralBtn.classList.remove('border-transparent', 'text-gray-500');
+            tabTodayBtn.classList.add('border-transparent', 'text-gray-500');
+            tabTodayBtn.classList.remove('border-indigo-500', 'text-indigo-600');
+            generalListEl.classList.remove('hidden');
+            todayListEl.classList.add('hidden');
+            taskDateInput.value = ''; // Limpa a data na aba "Geral"
+            taskDateInput.disabled = false; // Permite selecionar data
+        }
+        renderTasks(); // Re-renderiza as tarefas para mostrar as corretas para a aba
+    }
+
+    tabTodayBtn.addEventListener('click', () => switchTab('today'));
+    tabGeneralBtn.addEventListener('click', () => switchTab('general'));
+
+
+    // --- [NOVO] LÓGICA DO WIDGET FINANCEIRO ---
+
+    const formatarMoeda = (valor) => (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    /**
+     * Busca e calcula os dados financeiros do localStorage.
+     */
+    function getFinancialData() {
+        try {
+            const rawData = localStorage.getItem(FINANCE_STORAGE_KEY);
+            if (!rawData) {
+                return { error: "Sistema financeiro não inicializado." };
+            }
+            const state = JSON.parse(rawData);
+            
+            // Usa o mês selecionado no sistema financeiro, ou o mês atual como padrão
+            const currentMonth = state.selectedMonth || new Date().toISOString().slice(0, 7);
+            const [year, monthNum] = currentMonth.split('-').map(Number);
+            const formattedMonth = new Date(year, monthNum - 1, 5).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+            const filterByMonth = (item) => item.data && item.data.startsWith(currentMonth);
+
+            const filteredEventos = (state.eventos || []).filter(filterByMonth);
+            const filteredGastos = (state.gastos || []).filter(filterByMonth);
+            const filteredPagamentos = (state.pagamentosMonitores || []).filter(filterByMonth);
+            
+            const totalReceitas = filteredEventos.reduce((acc, ev) => acc + (ev.valor || 0), 0);
+            
+            const totalGastosGerais = filteredGastos.reduce((acc, g) => acc + (g.valor || 0), 0);
+            const totalPagamentosMonitores = filteredPagamentos.reduce((acc, p) => acc + (p.pagamento || 0), 0);
+            const totalDespesas = totalGastosGerais + totalPagamentosMonitores;
+
+            const saldo = totalReceitas - totalDespesas;
+            
+            const contasFixas = state.contasFixas || [];
+            // Encontra IDs de gastos que são de contas fixas
+            const gastosFixosIds = new Set(filteredGastos.filter(g => g.contaFixaId).map(g => g.contaFixaId));
+
+            // Mapeia o status de cada conta fixa para o mês atual
+            const contasFixasStatus = contasFixas.map(cf => {
+                const vencimento = `${String(cf.diaVencimento).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
+                const isPaid = gastosFixosIds.has(cf.id);
+                return {
+                    descricao: cf.descricao,
+                    valor: cf.valor,
+                    vencimento: vencimento,
+                    isPaid: isPaid,
+                    status: isPaid ? "Lançado" : "Pendente"
+                };
+            });
+
+            return {
+                currentMonth,
+                formattedMonth,
+                totalReceitas,
+                totalGastosGerais, // Para gráfico
+                totalPagamentosMonitores, // Para gráfico
+                totalDespesas,
+                saldo,
+                contasFixasStatus
+            };
+
+        } catch (err) {
+            console.error("Erro ao ler dados financeiros:", err);
+            return { error: "Erro ao processar dados." };
+        }
+    }
+
+    /**
+     * Atualiza o widget do dashboard e pré-carrega o modal com dados.
+     */
+    function loadFinancialSummary() {
+        const data = getFinancialData();
+        loadedFinancialData = data; // Armazena em cache para o modal
+
+        if (data.error) {
+            financeWidgetLoading.textContent = data.error;
+            financeWidgetLoading.classList.remove('hidden');
+            financeWidgetContent.classList.add('hidden');
+            return;
+        }
+
+        // Atualiza o widget no dashboard
+        financeWidgetReceitas.textContent = formatarMoeda(data.totalReceitas);
+        financeWidgetDespesas.textContent = formatarMoeda(data.totalDespesas);
+        financeWidgetSaldo.textContent = formatarMoeda(data.saldo);
+        financeWidgetMonth.textContent = data.formattedMonth;
+        
+        financeWidgetLoading.classList.add('hidden');
+        financeWidgetContent.classList.remove('hidden');
+
+        // Pré-preenche os dados do modal
+        financeModalMonth1.textContent = data.formattedMonth;
+        financeModalMonth2.textContent = data.formattedMonth;
+        financeModalMonth3.textContent = data.formattedMonth;
+
+        // Aba 1: Resumo
+        financeModalReceitas.textContent = formatarMoeda(data.totalReceitas);
+        financeModalDespesas.textContent = formatarMoeda(data.totalDespesas);
+        financeModalSaldo.textContent = formatarMoeda(data.saldo);
+
+        // Aba 3: Contas Fixas
+        financeModalContasTbody.innerHTML = data.contasFixasStatus.map(cf => {
+            const statusClass = cf.isPaid ? 'text-green-600 font-semibold' : 'text-yellow-600';
+            return `
+                <tr>
+                    <td class="px-4 py-3">${cf.descricao}</td>
+                    <td class="px-4 py-3">${formatarMoeda(cf.valor)}</td>
+                    <td class="px-4 py-3">${cf.vencimento}</td>
+                    <td class="px-4 py-3 ${statusClass}">${cf.status}</td>
+                </tr>
+            `;
+        }).join('');
+        if (data.contasFixasStatus.length === 0) {
+            financeModalContasTbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
+        }
+    }
+    
+    /**
+     * Renderiza os gráficos dentro do modal financeiro.
+     */
+    function renderFinancialCharts(data) {
+        if (!data || data.error) return;
+
+        // Gráfico 1: Receita vs. Despesa
+        const ctx1 = document.getElementById('finance-chart-receita-despesa').getContext('2d');
+        if (financeChart1) financeChart1.destroy();
+        financeChart1 = new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Receitas', 'Despesas'],
+                datasets: [{
+                    data: [data.totalReceitas, data.totalDespesas],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // Gráfico 2: Composição das Despesas
+        const ctx2 = document.getElementById('finance-chart-despesa-comp').getContext('2d');
+        if (financeChart2) financeChart2.destroy();
+        financeChart2 = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Gastos Gerais/Compras', 'Pagamentos Monitores'],
+                datasets: [{
+                    data: [data.totalGastosGerais, data.totalPagamentosMonitores],
+                    backgroundColor: ['#f97316', '#8b5cf6'],
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    /**
+     * Controla a troca de abas no modal financeiro.
+     */
+    function switchFinanceTab(tabNumber) {
+        financeTabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `finance-content-${tabNumber}`);
+        });
+        financeTabBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabNumber);
+        });
+
+        if (tabNumber === '2') {
+            // Renderiza os gráficos apenas quando a aba é aberta
+            // Usamos um pequeno timeout para garantir que o canvas esteja visível
+            setTimeout(() => renderFinancialCharts(loadedFinancialData), 50);
+        }
+    }
+
+    // --- [NOVO] Listeners do Modal Financeiro ---
+    openFinanceModalBtn.addEventListener('click', () => {
+        switchFinanceTab('1'); // Sempre abre na primeira aba
+        financeModal.classList.remove('hidden');
+    });
+    financeCloseBtn.addEventListener('click', () => {
+        financeModal.classList.add('hidden');
+    });
+    financeTabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            switchFinanceTab(e.currentTarget.dataset.tab);
+        });
+    });
+
+    // --- FIM DA LÓGICA FINANCEIRA ---
+    
+
+    // --- GEMINI API & LÓGICA DOS MODAIS ---
+    const settingsBtn = document.getElementById('settings-btn');
+    const apiKeyModal = document.getElementById('api-key-modal');
+    const geminiModal = document.getElementById('gemini-modal');
+    const geminiChatModal = document.getElementById('gemini-chat-modal'); // [NOVO]
+
+    const showModal = (modalEl) => modalEl.classList.remove('hidden');
+    const hideModal = (modalEl) => modalEl.classList.add('hidden');
+    
+    const showToast = (message, isError = true) => {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const toastIcon = document.getElementById('toast-icon');
+        toastMessage.textContent = message;
+        toast.classList.toggle('bg-red-600', isError);
+        toast.classList.toggle('bg-green-600', !isError);
+        toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+        toast.classList.remove('hidden');
+        toast.classList.add('toast-enter');
+        setTimeout(() => {
+             toast.classList.add('hidden');
+             toast.classList.remove('toast-enter');
+        }, 5000);
+    };
+
+    const getApiKey = () => {
+        const key = ""; // A chave da API será injetada aqui em produção
+        return key || localStorage.getItem('geminiApiKey');
+    }
+
+    // --- Configurações da API Key ---
+    settingsBtn.addEventListener('click', () => {
+        document.getElementById('api-key-input').value = localStorage.getItem('geminiApiKey') || '';
+        showModal(apiKeyModal);
+    });
+    document.getElementById('cancel-api-key-btn').addEventListener('click', () => hideModal(apiKeyModal));
+    document.getElementById('save-api-key-btn').addEventListener('click', () => {
+        const key = document.getElementById('api-key-input').value.trim();
+        if (key) {
+            localStorage.setItem('geminiApiKey', key);
+            hideModal(apiKeyModal);
+            showToast("Chave da API salva com sucesso!", false);
+        } else {
+            showToast("Por favor, insira uma chave da API.");
+        }
+    });
+    
+    // --- Fechar Modal Gemini ---
+    document.getElementById('gemini-close-btn').addEventListener('click', () => hideModal(geminiModal));
+    document.getElementById('gemini-chat-close-btn').addEventListener('click', () => hideModal(geminiChatModal)); // [NOVO]
+
+    // --- Função Principal da API Gemini ---
+    // [MODIFICADO] para aceitar 'contents' (histórico) OU 'prompt' (string)
+    async function callGeminiAPI(input, generationConfig = null) {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            showToast("Por favor, configure sua chave de API do Gemini nas configurações.");
+            showModal(apiKeyModal);
+            return null;
+        }
+
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        
+        let payload;
+        if (typeof input === 'string') {
+            // Se for string (prompt único)
+            payload = {
+                contents: [{ parts: [{ text: input }] }],
+            };
+        } else {
+            // Se for array (histórico de chat)
+            payload = {
+                contents: input,
+            };
+        }
+
+        if (generationConfig) {
+            payload.generationConfig = generationConfig;
+        }
+
+        try {
+             // Implementando retry com backoff exponencial simples
+            let response;
+            let retries = 0;
+            const maxRetries = 3;
+            let delay = 1000; // 1 segundo
+
+            while (retries < maxRetries) {
+                response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    break; // Sucesso, sair do loop
+                }
+
+                 // Tratar erros 429 (Too Many Requests) ou 5xx (Server Errors)
+                if (response.status === 429 || response.status >= 500) {
+                    retries++;
+                    console.log(`API call failed with status ${response.status}. Retrying in ${delay / 1000}s... (${retries}/${maxRetries})`);
+                    if (retries >= maxRetries) {
+                        throw new Error(`Muitas tentativas (${maxRetries}). A API pode estar sobrecarregada ou indisponível. (Erro: ${response.status})`);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Backoff exponencial
+                } else {
+                     // Outros erros (ex: 400, 401) não devem ser retentados
+                    const errorResult = await response.json();
+                    console.error("Erro da API Gemini:", errorResult);
+                     const errorMessage = errorResult.error?.message.includes("API key not valid")
+                        ? "Sua chave da API é inválida. Verifique nas configurações."
+                        : `Erro da API: ${errorResult.error?.message || response.statusText} (Status: ${response.status})`;
+                    throw new Error(errorMessage);
+                }
+            }
+
+            const result = await response.json();
+             // Verifica se há candidatos e conteúdo válido
+            const candidate = result.candidates?.[0];
+            const textResponse = candidate?.content?.parts?.[0]?.text;
+            
+             // Verifica safetyRatings e finishReason
+            if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+                 console.warn(`Gemini Finish Reason: ${candidate.finishReason}`, candidate.safetyRatings);
+                 throw new Error(`Geração interrompida: ${candidate.finishReason}. Verifique o console para detalhes.`);
+            }
+
+            if (!textResponse) {
+                 console.error("Resposta da API Gemini inválida ou vazia:", result);
+                 throw new Error('Resposta da API vazia ou em formato inesperado.');
+            }
+
+            return textResponse;
+
+        } catch (error) {
+            console.error("Erro ao chamar Gemini API:", error);
+            showToast(`Erro ao contactar a IA: ${error.message}`);
+            return null;
+        }
+    }
+    
+    // --- [MODIFICADO] Evento do Botão "Planejar meu dia" ---
+    // A lógica foi movida para uma função separada (handlePlanDayClick)
+    // para poder ser re-anexada após a limpeza do plano.
+    
+    // --- [NOVO] Função para renderizar o plano (reutilizável) ---
+    function renderDailyPlan(plan, targetEl) {
+        // [MODIFICADO] Esconde o texto de prompt inicial
+        document.getElementById('assistant-prompt-text')?.classList.add('hidden');
+
+        // Função para converter markdown simples (como negrito) em HTML
+        const mdToHtml = (str) => str ? str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : '';
+
+        // Construir o HTML
+        let html = `
+            <div class="prose prose-sm max-w-none text-left" style="color: var(--text-color)">
+                <!-- [NOVO] Cabeçalho com botão de limpar -->
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold mb-0">${plan.titulo}</h2>
+                    <button id="clear-plan-btn" class="text-xs text-gray-500 hover:text-red-500 font-semibold" title="Gerar Novo Plano">&times; LIMPAR PLANO</button>
+                </div>
+                
+                <p class="mb-4">${mdToHtml(plan.introducao)}</p>
+                
+                <blockquote class="border-l-4 border-indigo-400 pl-4 py-2 my-4 italic" style="border-color: var(--header-grad-from)">
+                    <strong>Lema do Dia:</strong> "${plan.lema}"
+                </blockquote>
+
+                <h3 class="text-xl font-semibold mt-6 mb-3">Prioridades (Top 3)</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-lg">
+                        <thead style="background-color: var(--input-bg)">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider w-16">#</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Prioridade</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Objetivo</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${plan.prioridades.map(p => `
+                                <tr>
+                                    <td class="px-4 py-3 font-bold text-center">${p.id}</td>
+                                    <td class="px-4 py-3">${mdToHtml(p.nome)}</td>
+                                    <td class="px-4 py-3">${mdToHtml(p.objetivo)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="text-xl font-semibold mt-6 mb-3">Plano de Ação Detalhado</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-lg">
+                        <thead style="background-color: var(--input-bg)">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Categoria</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Tarefas (Checklist)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider w-20">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${plan.planoDeAcao.map((item, index) => `
+                                <tr>
+                                    <td class="px-4 py-3 font-medium">${item.categoria}</td>
+                                    <td class="px-4 py-3">
+                                        <label for="plan-task-${index}" class="flex items-center gap-2 cursor-pointer interactive-task-label">
+                                            ${mdToHtml(item.tarefa)}
+                                        </label>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <input id="plan-task-${index}" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 interactive-task-checkbox">
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="text-xl font-semibold mt-6 mb-3">Sugestão Rápida para o Dia</h3>
+                <blockquote class="border-l-4 border-purple-400 pl-4 py-2 my-4" style="background-color: var(--input-bg); border-color: var(--header-grad-to)">
+                    <p>${mdToHtml(plan.sugestaoRapida)}</p>
+                </blockquote>
+
+                <!-- [NOVO] Campo de Revisão do Dia -->
+                <h3 class="text-xl font-semibold mt-6 mb-3">Revisão do Dia</h3>
+                <p class="text-sm text-gray-500">Como foi a execução deste plano? (Salvo automaticamente)</p>
+                <textarea 
+                    id="plan-review-textarea"
+                    class="form-input w-full mt-2" 
+                    rows="4"
+                    placeholder="Anote suas observações, o que deu certo e o que falhou..."
+                >${plan.review || ''}</textarea>
+                <!-- [NOVO] Botão de Análise de Revisão -->
+                <button id="analyze-review-btn" class="shiny-btn w-full text-sm py-2 px-4 rounded-lg mt-3">
+                    <i class="fas fa-search-plus mr-2"></i> O que poderia ter sido melhor?
+                </button>
+                <!-- Fim do Campo de Revisão -->
+
+                <div class="flex flex-col md:flex-row gap-4 mt-6">
+                    <button id="check-forgotten-btn" class="gemini-btn w-full py-3 rounded-lg text-base order-1">
+                        <i class="fas fa-lightbulb mr-2"></i> Estou esquecendo de algo?
+                    </button>
+                    <button id="plan-copy-btn" class="shiny-btn w-full md:w-auto py-3 px-6 rounded-lg text-base order-2">
+                        Copiar Texto
+                    </button>
+                </div>
+            </div>
+        `;
+
+        targetEl.innerHTML = html;
+
+        // Adicionar interatividade aos checkboxes recém-criados
+        targetEl.querySelectorAll('.interactive-task-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const label = e.target.closest('tr').querySelector('.interactive-task-label');
+                if (e.target.checked) {
+                    label.style.textDecoration = 'line-through';
+                    label.style.color = 'var(--text-muted-color)';
+                } else {
+                    label.style.textDecoration = 'none';
+                    label.style.color = 'var(--text-color)';
+                }
+            });
+        });
+
+        // [NOVO] Adicionar listener para salvar a revisão do dia
+        const reviewTextarea = targetEl.querySelector('#plan-review-textarea');
+        if (reviewTextarea) {
+            reviewTextarea.addEventListener('input', (e) => {
+                const todayISO = new Date().toISOString().split('T')[0];
+                const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+                const plan = history[todayISO];
+                
+                if (plan) {
+                    plan.review = e.target.value;
+                    history[todayISO] = plan;
+                    localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+                }
+            });
+        }
+    }
+
+    // --- [NOVO] Função para limpar o plano e restaurar o botão ---
+    function clearDailyPlan() {
+        // [MODIFICADO] Remove do Histórico
+        const todayISO = new Date().toISOString().split('T')[0];
+        const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+        delete history[todayISO];
+        localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+        
+        // [NOVO] Limpa chaves antigas (migração)
+        localStorage.removeItem('dailyPlan_v1');
+        localStorage.removeItem('dailyPlanDate_v1');
+
+        // [MODIFICADO] Apenas limpa a área do plano e mostra o botão "Planejar"
+        const planContainer = document.getElementById('plan-display-area');
+        if (planContainer) {
+            planContainer.innerHTML = ''; // Limpa a área de exibição
+        }
+        
+        const planButton = document.getElementById('plan-day-btn');
+        if (planButton) {
+            planButton.style.display = 'block'; // Mostra o botão de planejar
+        }
+
+        // [MODIFICADO] Mostra o texto de prompt inicial
+        document.getElementById('assistant-prompt-text')?.classList.remove('hidden');
+    }
+
+    // --- [NOVO] Função extraída do listener para gerar o plano ---
+    async function handlePlanDayClick(e) {
+        const btn = e.currentTarget;
+        // [MODIFICADO] Esconde o botão "Planejar"
+        btn.style.display = 'none'; 
+        
+        // [MODIFICADO] Define a área de exibição do plano como alvo
+        const planContainer = document.getElementById('plan-display-area'); 
+
+        planContainer.innerHTML = '<div class="flex justify-center items-center py-10"><div class="loader"></div></div>'; // Mostra o loader no novo container
+        
+        // [MODIFICADO] Esconde o texto de prompt inicial
+        document.getElementById('assistant-prompt-text')?.classList.add('hidden');
+
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+        const todayISO = today.toISOString().split('T')[0];
+        
+        // Pega eventos do localStorage
+        const eventsTodayRaw = JSON.parse(localStorage.getItem('events')) || [];
+        const eventsToday = eventsTodayRaw
+            .filter(event => event.date === todayISO)
+            .map(event => event.clientName);
+
+        // Pega tarefas do estado local
+        const tasksToday = taskState.tasks
+            .filter(task => (task.dueDate === todayISO || !task.dueDate) && !task.completed) // Pega tarefas de hoje E tarefas gerais (sem data)
+            .map(task => task.text);
+
+        currentContext = {
+            events: eventsToday,
+            tasks: tasksToday,
+            date: formattedDate
+        };
+
+        const prompt = `
+        Aja como um assistente pessoal para Leandro, dono de uma empresa de festas.
+        Hoje é ${currentContext.date}.
+        Os eventos agendados para hoje são: ${currentContext.events.length > 0 ? currentContext.events.join(', ') : 'Nenhum evento agendado.'}
+        As tarefas pendentes (de hoje e gerais) são: ${currentContext.tasks.length > 0 ? currentContext.tasks.join(', ') : 'Nenhuma tarefa pendente.'}
+
+        Gere um "Plano de Ação Diário" para o Leandro. O resultado DEVE ser um objeto JSON, seguindo o schema fornecido.
+
+        Instruções importantes:
+        1.  Baseie as prioridades e o plano de ação nos eventos e tarefas fornecidos.
+        2.  Categorize as tarefas de forma inteligente (ex: Operacional/Logística, Administrativo/Financeiro, Vendas, Marketing).
+        3.  Se houver eventos, a logística deve ser alta prioridade.
+        4.  Se não houver tarefas ou eventos, crie um plano focado em prospecção ou manutenção.
+        5.  O JSON deve ser válido. Não inclua markdown ou qualquer texto fora do objeto JSON.
+        `;
+        
+        const planSchemaConfig = { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    "titulo": { "type": "STRING" },
+                    "introducao": { "type": "STRING" },
+                    "lema": { "type": "STRING" },
+                    "prioridades": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "id": { "type": "STRING" },
+                                "nome": { "type": "STRING" },
+                                "objetivo": { "type": "STRING" }
+                            },
+                            "required": ["id", "nome", "objetivo"]
+                        }
+                    },
+                    "planoDeAcao": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "categoria": { "type": "STRING" },
+                                "tarefa": { "type": "STRING" }
+                            },
+                            "required": ["categoria", "tarefa"]
+                        }
+                    },
+                    "sugestaoRapida": { "type": "STRING" }
+                },
+                "required": ["titulo", "introducao", "lema", "prioridades", "planoDeAcao", "sugestaoRapida"]
+            }
+        };
+
+        const response = await callGeminiAPI(prompt, planSchemaConfig); 
+        
+        if (response) {
+            try {
+                const plan = JSON.parse(response);
+                
+                // [MODIFICADO] Salva no Histórico
+                const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+                history[todayISO] = plan; // Adiciona/sobrescreve o plano de hoje
+                localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+                
+                // [NOVO] Limpa chaves antigas (migração)
+                localStorage.removeItem('dailyPlan_v1');
+                localStorage.removeItem('dailyPlanDate_v1');
+
+                // [NOVO] Chama a função de renderização no container correto
+                renderDailyPlan(plan, planContainer);
+
+            } catch (err) {
+                console.error("Erro ao parsear JSON do plano:", err);
+                console.error("Resposta recebida:", response);
+                clearDailyPlan(); // Limpa e restaura o botão
+                showToast("Erro ao processar o plano do dia.");
+            }
+        } else {
+            clearDailyPlan(); // Limpa e restaura o botão
+            showToast("Não foi possível gerar o plano do dia.");
+        }
+    }
+
+    // Anexa o handler ao botão inicial
+    document.getElementById('plan-day-btn').addEventListener('click', handlePlanDayClick);
+    
+    // --- Evento do Botão "Quebrar Tarefa" ---
+    document.getElementById('breakdown-task-btn').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const input = document.getElementById('new-task-input');
+        const mainTask = input.value.trim();
+
+        if (!mainTask) {
+            showToast("Digite uma tarefa para quebrar em subtarefas.");
+            return;
+        }
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        const prompt = `Divida a tarefa principal "${mainTask}" em 3 a 5 subtarefas acionáveis. Responda apenas com um array JSON de strings, como ["Subtarefa 1", "Subtarefa 2"].`;
+        
+        // [MODIFICADO] Define o schema config
+        const subtaskSchemaConfig = { 
+            responseMimeType: "application/json" 
+        };
+
+        // [MODIFICADO] Solicita um JSON passando o schema config
+        const response = await callGeminiAPI(prompt, subtaskSchemaConfig); 
+        
+        document.getElementById('gemini-modal-title').textContent = "✨ Dividir Tarefa";
+        const contentEl = document.getElementById('gemini-modal-content');
+        const footerEl = document.getElementById('gemini-modal-footer');
+        
+        if (response) {
+            try {
+                const subtasks = JSON.parse(response);
+                contentEl.innerHTML = `
+                    <p class="mb-4">Selecione as subtarefas que deseja adicionar:</p>
+                    <div id="subtask-list" class="space-y-2">
+                        ${subtasks.map((task, index) => `
+                            <label class="flex items-center gap-3 p-2 rounded-md" style="background-color: var(--card-bg)">
+                                <input type="checkbox" value="${task}" checked class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span>${task}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <button id="add-subtasks-btn" class="shiny-btn w-full mt-6 py-2 rounded-md">Adicionar Tarefas SelecionADAS</button>
+                `;
+                
+                document.getElementById('add-subtasks-btn').onclick = () => {
+                    const selectedTasks = document.querySelectorAll('#subtask-list input:checked');
+                    // Usa a data do input (que é controlada pela aba ativa)
+                    const date = document.getElementById('new-task-date').value || null; 
+                    
+                    selectedTasks.forEach(checkbox => {
+                        addTask(`- ${checkbox.value}`, date);
+                    });
+                    showToast(`${selectedTasks.length} subtarefas adicionadas!`, false);
+                    hideModal(geminiModal);
+                    input.value = '';
+                };
+                
+            } catch (err) {
+                console.error("Erro ao parsear JSON:", err);
+                contentEl.innerHTML = `<p>Ocorreu um erro ao processar as subtarefas. Tente novamente.</p><p class="text-xs mt-2 text-gray-400">${response}</p>`;
+            }
+        } else {
+            contentEl.innerHTML = '<p>Não foi possível gerar as subtarefas.</p>';
+        }
+        
+        footerEl.classList.add('hidden'); // Não precisa copiar no "Quebrar Tarefa"
+        showModal(geminiModal); // Este ainda usa o modal principal
+
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
+        btn.disabled = false;
+    });
+
+    // --- Evento do Botão "Copiar Texto" (do modal "Quebrar Tarefa") ---
+    document.getElementById('gemini-copy-btn').addEventListener('click', () => {
+        // Copia o texto puro, sem HTML
+        const textToCopy = document.getElementById('gemini-modal-content').innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast('Texto copiado!', false);
+        });
+    });
+
+    // --- [NOVA] Lógica do Chat IA ---
+
+    const chatMessagesEl = document.getElementById('gemini-chat-messages');
+    const chatForm = document.getElementById('gemini-chat-form');
+    const chatInput = document.getElementById('gemini-chat-input');
+    const chatSendBtn = document.getElementById('gemini-chat-send-btn');
+    const chatModalTitle = document.getElementById('gemini-chat-title'); // [NOVO]
+
+    // Adiciona mensagens ao modal de chat
+    function addChatMessage(message, sender = 'ia') {
+        const messageEl = document.createElement('div');
+        messageEl.classList.add('p-3', 'rounded-lg', 'max-w-[85%]', 'break-words'); // Adicionado break-words
+        
+        // Converte markdown simples (negrito, listas) para HTML
+        let htmlMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Trata listas
+        htmlMessage = htmlMessage.replace(/^\s*-\s(.*?)$/gm, '<li class="ml-4">$1</li>'); // Converte '- item' para '<li>item</li>'
+        htmlMessage = htmlMessage.replace(/<li>/g, '<ul class="list-disc pl-5"><li>'); // Adiciona <ul> wrapper start
+        htmlMessage = htmlMessage.replace(/<\/li>(?!<li)/g, '</li></ul>'); // Adiciona </ul> wrapper end
+
+
+        if (sender === 'user') {
+            messageEl.classList.add('bg-indigo-500', 'text-white', 'self-end', 'ml-auto');
+            messageEl.innerHTML = htmlMessage;
+        } else {
+            messageEl.classList.add('bg-gray-200', 'text-gray-800', 'self-start', 'mr-auto');
+            if (message === '...') {
+                messageEl.innerHTML = '<div class="loader w-5 h-5 border-2 border-indigo-500 border-t-transparent"></div>';
+            } else {
+                messageEl.innerHTML = htmlMessage;
+            }
+        }
+        chatMessagesEl.appendChild(messageEl);
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight; // Auto-scroll
+        return messageEl;
+    }
+
+    // [NOVO] Adiciona uma lista de sugestões com botões
+    function addChatSuggestions(introduction, suggestions) {
+        const containerEl = document.createElement('div');
+        containerEl.classList.add('p-3', 'rounded-lg', 'max-w-[85%]', 'bg-gray-200', 'text-gray-800', 'self-start', 'mr-auto', 'w-full'); // w-full para botões alinharem
+        
+        let html = `<p class="font-semibold">${introduction}</p>`;
+        html += '<ul class="list-none space-y-2 mt-2">';
+        
+        suggestions.forEach((taskText, index) => {
+            // Escapa aspas no atributo de dados
+            const escapedTaskText = taskText.replace(/"/g, '&quot;');
+            html += `
+                <li class="flex items-center justify-between gap-2">
+                    <span class="flex-grow break-words">- ${taskText}</span>
+                    <button 
+                        class="add-suggestion-btn bg-indigo-500 text-white text-xs font-bold py-1 px-2 rounded-md hover:bg-indigo-600 transition-colors flex-shrink-0"
+                        data-task-text="${escapedTaskText}"
+                    >
+                        + Add
+                    </button>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        
+        containerEl.innerHTML = html;
+        chatMessagesEl.appendChild(containerEl);
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight; // Auto-scroll
+        return containerEl;
+    }
+
+
+    // [MODIFICADO] Abre o chat E copia o texto (listeners delegados ao <body>)
+    // Movido de '#widget-assistant' para 'document.body' para garantir que os cliques sejam capturados.
+    document.body.addEventListener('click', async (e) => {
+        // Listener para o botão "Estou esquecendo de algo?"
+        if (e.target.id === 'check-forgotten-btn' || e.target.closest('#check-forgotten-btn')) {
+            // [MODIFICADO] Define o título do modal
+            chatModalTitle.innerHTML = '<i class="fas fa-lightbulb mr-2 text-yellow-400"></i> Estou esquecendo de algo?';
+            
+            chatMessagesEl.innerHTML = ''; // Limpa a tela
+            showModal(geminiChatModal); // Abre o modal de chat (z-50)
+            
+            const loadingEl = addChatMessage('...');
+
+            // [NOVO] Regenera o contexto para garantir que está atualizado
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+            const todayISO = today.toISOString().split('T')[0];
+            const eventsTodayRaw = JSON.parse(localStorage.getItem('events')) || [];
+            const eventsToday = eventsTodayRaw.filter(event => event.date === todayISO).map(event => event.clientName);
+            const tasksToday = taskState.tasks.filter(task => (task.dueDate === todayISO || !task.dueDate) && !task.completed).map(task => task.text);
+            
+            currentContext = { events: eventsToday, tasks: tasksToday, date: formattedDate };
+            // Fim da regeneração de contexto
+
+            const prompt = `
+            Contexto: Hoje é ${currentContext.date}. Leandro (dono de empresa de festas) tem estes eventos: [${currentContext.events.join(', ')}] e estas tarefas: [${currentContext.tasks.join(', ')}].
+            
+            Pergunta: Com base nesse contexto, o que mais o Leandro pode estar esquecendo? Pense em logística, comunicação com cliente, pagamentos pendentes, preparação de equipe, ou materiais.
+            
+            Responda com um objeto JSON no formato:
+            {
+              "introducao": "Analisando seu dia, talvez você deva checar:",
+              "sugestoes": ["Sugestão 1", "Sugestão 2", "Sugestão 3"]
+            }
+            Onde "sugestoes" é um array de strings (máximo 3) das tarefas que ele pode estar esquecendo.
+            Se não houver sugestões óbvias, retorne um array vazio.
+            `;
+            
+            // [MODIFICADO] Inicia o histórico
+            chatHistory = [
+                 { 
+                    role: 'user', 
+                    parts: [{ 
+                        text: `Contexto: Hoje é ${currentContext.date}. Eventos: [${currentContext.events.join(', ')}]. Tarefas: [${currentContext.tasks.join(', ')}].` 
+                    }]
+                },
+                {
+                    role: 'model',
+                    parts: [{
+                        text: "Contexto entendido. O que devo fazer?"
+                    }]
+                }
+            ];
+            // Adiciona a pergunta real como um turno separado
+            chatHistory.push({ role: 'user', parts: [{ text: prompt }] });
+
+            // [MODIFICADO] Adiciona generationConfig para JSON
+            const jsonConfig = { responseMimeType: "application/json" };
+            
+            const response = await callGeminiAPI(chatHistory, jsonConfig); // Passa o config
+            
+            if (response) {
+                loadingEl.remove(); // Remove o loader
+                try {
+                    const data = JSON.parse(response);
+                    if (data.introducao && data.sugestoes) {
+                        if (data.sugestoes.length > 0) {
+                            addChatSuggestions(data.introducao, data.sugestoes);
+                        } else {
+                            addChatMessage("Analisando seu dia, parece que você cobriu todos os pontos principais. Bom trabalho!", 'ia');
+                        }
+                        // Salva a resposta da IA no histórico
+                        chatHistory.push({ role: 'model', parts: [{ text: response }] });
+                    } else {
+                        throw new Error("Formato JSON inesperado.");
+                    }
+                } catch (err) {
+                    console.error("Erro ao parsear sugestões JSON:", err);
+                    console.error("Resposta recebida:", response);
+                    addChatMessage("Não consegui verificar (erro de formato). Tente novamente.", 'ia');
+                    chatHistory.pop(); // Remove o prompt com falha
+                }
+            } else {
+                loadingEl.innerHTML = "Não consegui verificar. Tente novamente.";
+                chatHistory.pop(); // Remove o prompt com falha
+            }
+        }
+
+        // [NOVO] Listener para o botão "Ver Histórico"
+        if (e.target.id === 'view-plan-history-btn' || e.target.closest('#view-plan-history-btn')) {
+            const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+            const dates = Object.keys(history).sort().reverse(); // Mais recentes primeiro
+
+            const modalTitle = document.getElementById('gemini-modal-title');
+            const modalContent = document.getElementById('gemini-modal-content');
+            const modalFooter = document.getElementById('gemini-modal-footer');
+
+            modalTitle.textContent = "📜 Histórico de Planos Diários";
+            
+            if (dates.length === 0) {
+                modalContent.innerHTML = '<p>Nenhum plano salvo encontrado no histórico.</p>';
+                modalFooter.classList.add('hidden');
+            } else {
+                // Criar um <select> para navegar pelos dias
+                const dateOptions = dates.map(date => {
+                    const d = new Date(date + 'T00:00:00');
+                    const formatted = d.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+                    return `<option value="${date}">${formatted}</option>`;
+                }).join('');
+
+                modalContent.innerHTML = `
+                    <div class="mb-4">
+                        <label for="history-date-select" class="block text-sm font-medium mb-1">Selecione um dia:</label>
+                        <select id="history-date-select" class="form-input w-full">
+                            ${dateOptions}
+                        </select>
+                    </div>
+                    <!-- [NOVO] Botão de Análise de Desempenho -->
+                    <button id="analyze-history-btn" class="gemini-btn w-full text-sm py-2 px-4 rounded-lg my-4">
+                        <i class="fas fa-chart-line mr-2"></i> Analisar meu desempenho geral
+                    </button>
+                    <!-- Fim do Botão de Análise -->
+                    <div id="history-plan-content" class="prose prose-sm max-w-none mt-4" style="color: var(--text-color)">
+                        <!-- O plano será carregado aqui -->
+                    </div>
+                `;
+                
+                // [INÍCIO DA CORREÇÃO - CÓDIGO RESTAURADO]
+                const selectEl = modalContent.querySelector('#history-date-select');
+                const planContentEl = modalContent.querySelector('#history-plan-content');
+
+                // Função para carregar o plano selecionado
+                const loadPlanForDate = (date) => {
+                    const plan = history[date];
+                    if (!plan) {
+                        planContentEl.innerHTML = '<p>Erro ao carregar plano.</p>';
+                        return;
+                    }
+                    
+                    // Reutiliza a lógica de formatação (simplificada)
+                    const mdToHtml = (str) => str ? str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : '';
+                    
+                    planContentEl.innerHTML = `
+                        <h2 class="text-2xl font-bold">${plan.titulo}</h2>
+                        <p>${mdToHtml(plan.introducao)}</p>
+                        <blockquote class="border-l-4 border-indigo-400 pl-4 py-2 my-4 italic">
+                            <strong>Lema:</strong> "${plan.lema}"
+                        </blockquote>
+                        
+                        <h3 class="text-xl font-semibold">Prioridades</h3>
+                        <ul class="list-disc pl-5">
+                            ${plan.prioridades.map(p => `<li><strong>${p.id}: ${mdToHtml(p.nome)}</strong> - ${mdToHtml(p.objetivo)}</li>`).join('')}
+                        </ul>
+                        
+                        <h3 class="text-xl font-semibold">Plano de Ação</h3>
+                        <ul class="list-disc pl-5">
+                            ${plan.planoDeAcao.map(item => `<li><strong>${item.categoria}:</strong> ${mdToHtml(item.tarefa)}</li>`).join('')}
+                        </ul>
+
+                        <h3 class="text-xl font-semibold">Sugestão Rápida</h3>
+                        <p>${mdToHtml(plan.sugestaoRapida)}</p>
+                        
+                        <h3 class="text-xl font-semibold mt-6">Revisão do Dia</h3>
+                        <p class="border p-3 rounded-md" style="background-color: var(--input-bg)">
+                            ${plan.review ? plan.review.replace(/\n/g, '<br>') : '<i>Nenhuma revisão registrada.</i>'}
+                        </p>
+                    `;
+                };
+
+                // Adiciona o listener para o <select>
+                selectEl.addEventListener('change', (e) => {
+                    loadPlanForDate(e.target.value);
+                });
+
+                // Carrega o primeiro plano (o mais recente) por padrão
+                loadPlanForDate(dates[0]);
+                
+                modalFooter.classList.remove('hidden'); // Mostra o footer (com botão de copiar)
+            }
+            
+            showModal(geminiModal); // Usa o modal genérico
+        }
+        // [FIM DA CORREÇÃO]
+                
+        // [NOVO] Listener para o botão "O que poderia ter sido melhor?"
+        if (e.target.id === 'analyze-review-btn' || e.target.closest('#analyze-review-btn')) {
+            // [MODIFICADO] Define o título do modal
+            chatModalTitle.innerHTML = '<i class="fas fa-search-plus mr-2 text-blue-400"></i> O que poderia ter sido melhor?';
+            
+            const todayISO = new Date().toISOString().split('T')[0];
+            const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+            const plan = history[todayISO];
+            const reviewText = document.getElementById('plan-review-textarea')?.value || '';
+
+            if (!plan) {
+                showToast("Nenhum plano para hoje encontrado.");
+                return;
+            }
+
+            if (!reviewText.trim()) {
+                showToast("Por favor, escreva sua revisão do dia primeiro.");
+                return;
+            }
+
+            chatMessagesEl.innerHTML = ''; // Limpa a tela
+            showModal(geminiChatModal); // Abre o modal de chat
+            const loadingEl = addChatMessage('...');
+
+            const planContext = JSON.stringify(plan.planoDeAcao); // Envia só o plano de ação
+            const reviewContext = reviewText;
+
+            const prompt = `
+            Contexto do Plano do Dia: ${planContext}
+            Revisão do Usuário: "${reviewContext}"
+
+            Pergunta: Aja como um coach de produtividade. Com base no plano de ação e na revisão do usuário, forneça um feedback construtivo (máximo 2-3 parágrafos).
+            1.  Identifique pontos positivos (o que parece ter dado certo).
+            2.  Identifique o que poderia ter sido melhor, sugerindo a causa raiz (ex: "Parece que as tarefas administrativas tomaram mais tempo que o esperado").
+            3.  Faça uma sugestão acionável para amanhã.
+            Responda em markdown.
+            `;
+            
+            chatHistory = [
+                 { role: 'user', parts: [{ text: prompt }] }
+            ];
+
+            const response = await callGeminiAPI(chatHistory); 
+            
+            if (response) {
+                loadingEl.remove();
+                addChatMessage(response, 'ia');
+                chatHistory.push({ role: 'model', parts: [{ text: response }] });
+            } else {
+                loadingEl.innerHTML = "Não consegui analisar. Tente novamente.";
+            }
+        }
+
+        // [NOVO] Listener para o botão "Analisar desempenho" (do Histórico)
+        if (e.target.id === 'analyze-history-btn' || e.target.closest('#analyze-history-btn')) {
+            // [MODIFICADO] Define o título do modal
+            chatModalTitle.innerHTML = '<i class="fas fa-chart-line mr-2 text-green-400"></i> Análise de Desempenho';
+
+            const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+            const dates = Object.keys(history);
+
+            // [NOVO] Pega o histórico de análises anteriores
+            const analysesHistory = JSON.parse(localStorage.getItem('performanceAnalyses_v1')) || [];
+            const lastAnalysis = analysesHistory.length > 0 ? analysesHistory[analysesHistory.length - 1] : null;
+
+
+            if (dates.length < 2) {
+                showToast("É necessário ter pelo menos 2 dias de histórico para uma análise.");
+                return;
+            }
+
+            // Prepara o contexto para a IA
+            const summarizedHistory = dates.sort().map(date => {
+                const plan = history[date];
+                return {
+                    data: date,
+                    prioridades: plan.prioridades.map(p => p.nome),
+                    revisao: plan.review || "Nenhuma revisão."
+                };
+            });
+
+            // Fecha o modal de histórico e abre o de chat
+            hideModal(geminiModal);
+            chatMessagesEl.innerHTML = '';
+            showModal(geminiChatModal);
+            const loadingEl = addChatMessage('...');
+
+            // [MODIFICADO] O prompt agora é dinâmico e inclui a análise anterior, se existir
+            let prompt;
+            if (lastAnalysis) {
+                prompt = `
+                Contexto: Analise o seguinte histórico de planos diários e revisões de um dono de empresa de festas.
+                Histórico de Planos/Revisões: ${JSON.stringify(summarizedHistory)}
+                
+                Análise Anterior (de ${new Date(lastAnalysis.date).toLocaleDateString('pt-BR')}):
+                "${lastAnalysis.analysis}"
+
+                Pergunta: Aja como um analista de desempenho sênior.
+                1.  Revise a "Análise Anterior".
+                2.  Com base no "Histórico de Planos/Revisões" (especialmente os mais recentes), avalie o progresso feito desde a análise anterior.
+                3.  O que foi otimizado com sucesso?
+                4.  Quais pontos da análise anterior ainda são problemas recorrentes?
+                5.  Quais *novos* padrões ou gargalos surgiram?
+                6.  Forneça 2-3 novas sugestões de otimização com base *nesta nova avaliação*.
+                Responda em markdown, de forma concisa e acionável. Comece mencionando a análise anterior (ex: "Na nossa última análise...").
+                `;
+            } else {
+                // Este é o prompt para a primeira análise
+                prompt = `
+                Contexto: Analise o seguinte histórico de planos diários e revisões de um dono de empresa de festas.
+                Histórico de Planos/Revisões: ${JSON.stringify(summarizedHistory)}
+
+                Pergunta: Aja como um analista de desempenho. Esta é a *primeira* análise.
+                1.  Identifique padrões de sucesso (o que ele faz bem consistentemente?).
+                2.  Identifique gargalos ou problemas recorrentes (o que sempre falha ou é difícil?).
+                3.  Forneça 2-3 sugestões de otimização de processo para ele melhorar a produtividade geral.
+                Responda em markdown, de forma concisa e acionável.
+                `;
+            }
+            
+            chatHistory = [
+                 { role: 'user', parts: [{ text: prompt }] }
+            ];
+
+            const response = await callGeminiAPI(chatHistory); 
+            
+            if (response) {
+                loadingEl.remove();
+                addChatMessage(response, 'ia');
+                chatHistory.push({ role: 'model', parts: [{ text: response }] });
+
+                // [NOVO] Salva a nova análise no histórico de análises
+                const newAnalysis = {
+                    date: new Date().toISOString(),
+                    analysis: response 
+                };
+                analysesHistory.push(newAnalysis);
+                localStorage.setItem('performanceAnalyses_v1', JSON.stringify(analysesHistory));
+
+            } else {
+                loadingEl.innerHTML = "Não consegui analisar. Tente novamente.";
+            }
+        }
+
+        // Listener para o botão "Copiar Texto" do plano
+        if (e.target.id === 'plan-copy-btn' || e.target.closest('#plan-copy-btn')) {
+            const contentToCopy = e.target.closest('.collapsible-content').querySelector('.prose');
+            if (contentToCopy) {
+                navigator.clipboard.writeText(contentToCopy.innerText).then(() => {
+                    showToast('Plano copiado!', false);
+                });
+            }
+        }
+
+        // [NOVO] Listener para o botão "Limpar Plano"
+        if (e.target.id === 'clear-plan-btn' || e.target.closest('#clear-plan-btn')) {
+            clearDailyPlan();
+        }
+
+        // [NOVO] Listener para o botão "+ Add" do chat
+        if (e.target.classList.contains('add-suggestion-btn')) {
+            const btn = e.target;
+            const taskText = btn.dataset.taskText;
+            
+            if (taskText) {
+                const todayISO = new Date().toISOString().split('T')[0];
+                
+                // 1. Adiciona à lista de tarefas principal
+                addTask(taskText, todayISO); // Isso já salva e renderiza 'widget-tasks'
+                
+                // 2. Mostra feedback
+                showToast('Tarefa adicionada ao dia de hoje!', false);
+                btn.textContent = '✔️';
+                btn.disabled = true;
+                btn.classList.remove('bg-indigo-500', 'hover:bg-indigo-600');
+                btn.classList.add('bg-green-500');
+
+                // 3. Atualiza o Plano Diário (se existir)
+                // [CORRIGIDO] para usar dailyPlanHistory_v1
+                const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+                const plan = history[todayISO];
+                
+                if (plan) { // [CORRIGIDO]
+                    try {
+                        // const plan = JSON.parse(savedPlanRaw); // Não é mais necessário
+                        
+                        // Adiciona a nova tarefa ao plano
+                        plan.planoDeAcao.push({
+                            categoria: 'Ponta Solta (IA)', // Categoria para tarefas adicionadas
+                            tarefa: taskText
+                        });
+
+                        // Salva o plano atualizado
+                        // [CORRIGIDO]
+                        history[todayISO] = plan;
+                        localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+
+                        // Re-renderiza o plano no widget
+                        const contentEl = document.getElementById('widget-assistant').querySelector('.collapsible-content');
+                        renderDailyPlan(plan, contentEl);
+                        
+                    } catch (err) {
+                        console.error("Erro ao atualizar o plano diário:", err);
+                        showToast("Tarefa adicionada, mas falha ao atualizar o plano.");
+                    }
+                }
+            }
+        }
+    });
+
+    // Envia mensagem do chat
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userInput = chatInput.value.trim();
+        if (!userInput) return;
+
+        addChatMessage(userInput, 'user');
+        chatHistory.push({ role: 'user', parts: [{ text: userInput }] }); // Add pergunta
+        chatInput.value = '';
+        chatSendBtn.disabled = true;
+
+        const loadingEl = addChatMessage('...');
+
+        // [MODIFICADO] Envia o histórico
+        const response = await callGeminiAPI(chatHistory); 
+
+        if (response) {
+            loadingEl.remove();
+            addChatMessage(response, 'ia');
+            chatHistory.push({ role: 'model', parts: [{ text: response }] }); // Add resposta
+        } else {
+            loadingEl.innerHTML = "Erro. Tente novamente.";
+            chatHistory.pop(); // Remove a pergunta sem resposta
+        }
+        chatSendBtn.disabled = false;
+    });
+
+
+    // --- NOVA LÓGICA: MENUS RECOLHÍVEIS ---
+    function setupCollapsibleWidgets() {
+        const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+        const collapsedState = JSON.parse(localStorage.getItem('collapsedWidgets_v1')) || {};
+
+        collapsibleHeaders.forEach(header => {
+            const widget = header.closest('section, div[id^="widget-"]');
+            const widgetId = widget.id;
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('i.fa-chevron-down');
+
+            // Aplicar estado salvo no carregamento
+            if (widgetId && collapsedState[widgetId]) {
+                content.classList.add('collapsed');
+                icon.classList.add('rotated');
+            }
+
+            header.addEventListener('click', () => {
+                const isCollapsed = content.classList.toggle('collapsed');
+                icon.classList.toggle('rotated', isCollapsed);
+
+                // Salvar o estado
+                if (widgetId) {
+                    collapsedState[widgetId] = isCollapsed;
+                    localStorage.setItem('collapsedWidgets_v1', JSON.stringify(collapsedState));
+                }
+            });
+        });
+    }
+
+    // --- NOVA LÓGICA: DESCANSO DE TELA ---
+    function setupScreensaver() {
+        let inactivityTimer;
+        const mainContainer = document.getElementById('main-container');
+        const screensaverContainer = document.getElementById('screensaver');
+        const screensaverClock = document.getElementById('screensaver-clock');
+        let clockInterval;
+
+        const showScreensaver = () => {
+            mainContainer.classList.add('opacity-0');
+            screensaverContainer.classList.remove('hidden');
+            screensaverContainer.classList.remove('opacity-0');
+            updateClock();
+            clockInterval = setInterval(updateClock, 1000);
+        };
+
+        const hideScreensaver = () => {
+            if (!screensaverContainer.classList.contains('hidden')) {
+                mainContainer.classList.remove('opacity-0');
+                screensaverContainer.classList.add('opacity-0');
+                setTimeout(() => screensaverContainer.classList.add('hidden'), 500);
+                clearInterval(clockInterval);
+            }
+        };
+
+        const resetTimer = () => {
+            hideScreensaver();
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(showScreensaver, 3 * 60 * 1000); // 3 minutos
+        };
+
+        const updateClock = () => {
+            const now = new Date();
+            const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const date = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            screensaverClock.innerHTML = `${time}<div class="text-3xl mt-4 capitalize">${date}</div>`;
+        };
+
+        ['mousemove', 'keypress', 'mousedown', 'touchstart', 'scroll'].forEach(event => {
+            document.addEventListener(event, resetTimer, false);
+        });
+
+        resetTimer(); // Inicia o timer na carga da página
+    }
+
+    // --- [NOVO] Função para carregar o plano salvo ---
+    function loadDailyPlan() {
+        const todayISO = new Date().toISOString().split('T')[0];
+        // [MODIFICADO] Pega do Histórico
+        const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+        const plan = history[todayISO]; // Pega o plano de hoje
+        
+        // Log de debug para verificação de carregamento
+        console.log('📦 Dados carregados do localStorage (Dashboard):', {
+            dailyPlanHistory: Object.keys(history).length,
+            todayPlan: plan ? 'existe' : 'não existe'
+        });
+        
+        // [NOVO] Bloco de migração de dados de chaves antigas
+        const oldPlanRaw = localStorage.getItem('dailyPlan_v1');
+        if (oldPlanRaw) {
+            try {
+                const oldDate = localStorage.getItem('dailyPlanDate_v1');
+                if (oldDate && !history[oldDate]) { // Se a data antiga existe E não está no histórico
+                    history[oldDate] = JSON.parse(oldPlanRaw); // Migra o plano antigo
+                    localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+                }
+            } catch (e) {
+                console.error("Erro ao migrar plano antigo:", e);
+            }
+            // Limpa as chaves antigas independentemente de sucesso na migração
+            localStorage.removeItem('dailyPlan_v1');
+            localStorage.removeItem('dailyPlanDate_v1');
+        }
+        
+        // Se temos um plano salvo E ele é de hoje
+        if (plan) { // [MODIFICADO]
+            try {
+                // const plan = JSON.parse(savedPlanRaw); // Não é mais necessário
+                // [MODIFICADO] Esconde o botão de planejar
+                const planButton = document.getElementById('plan-day-btn');
+                if (planButton) {
+                    planButton.style.display = 'none';
+                }
+                
+                // [MODIFICADO] Define o container de exibição do plano
+                const planContainer = document.getElementById('plan-display-area');
+                
+                // Define o contexto atual para o botão "Estou esquecendo" funcionar
+                const today = new Date();
+                const formattedDate = today.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+                const eventsTodayRaw = JSON.parse(localStorage.getItem('events')) || [];
+                const eventsToday = eventsTodayRaw.filter(event => event.date === todayISO).map(event => event.clientName);
+                // taskState.tasks é preenchido por switchTab() -> renderTasks()
+                const tasksToday = taskState.tasks.filter(task => (task.dueDate === todayISO || !task.dueDate) && !task.completed).map(task => task.text);
+                
+                currentContext = { events: eventsToday, tasks: tasksToday, date: formattedDate };
+
+                // Renderiza o plano salvo no container correto
+                if (planContainer) {
+                    renderDailyPlan(plan, planContainer);
+                } else {
+                    console.error("Container #plan-display-area não encontrado.");
+                    clearDailyPlan();
+                }
+            } catch(err) {
+                console.error("Erro ao carregar plano salvo:", err);
+                clearDailyPlan(); // Limpa o plano corrompido
+            }
+        } else {
+            // [NOVO] Se não há plano para hoje, garante que os botões de ação corretos estejam visíveis
+            // [MODIFICADO] Apenas garante que o botão de planejar esteja visível
+            const planButton = document.getElementById('plan-day-btn');
+            if (planButton) {
+                planButton.style.display = 'block';
+            }
+            // E que a área do plano esteja limpa
+            const planContainer = document.getElementById('plan-display-area');
+            if (planContainer) {
+                planContainer.innerHTML = '';
+            }
+            // [MODIFICADO] Mostra o texto de prompt inicial
+            document.getElementById('assistant-prompt-text')?.classList.remove('hidden');
+        }
+    }
+
+
+    // --- Função de Inicialização Principal ---
+    function init() {
+        applyTheme();
+        setGreeting();
+        displayRandomVerse();
+        loadUpcomingEvents();
+        loadRelevantDates();
+        
+        // [NOVO] Carrega o resumo financeiro
+        loadFinancialSummary(); 
+        
+        switchTab('today'); // Inicia na aba "Hoje" (isso também chama renderTasks)
+        
+        // [MODIFICADO] Carrega o plano salvo DEPOIS que as tarefas foram carregadas (por switchTab)
+        loadDailyPlan(); 
+        
+        // Inicializar novas funcionalidades
+        setupCollapsibleWidgets();
+        setupScreensaver();
+    }
+
+    init();
+
+    // --- Lógica das Partículas (Plano de Fundo) ---
+    const canvas = document.getElementById('particles-js'); const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    let particlesArray; let mouse = { x: null, y: null, radius: (canvas.height/80) * (canvas.width/80) };
+    window.addEventListener('mousemove', (event) => { mouse.x = event.x; mouse.y = event.y; });
+    class Particle { constructor(x, y, directionX, directionY, size) { this.x = x; this.y = y; this.directionX = directionX; this.directionY = directionY; this.size = size; } draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false); const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color-rgb').trim(); ctx.fillStyle = `rgba(${particleColor}, 0.4)`; ctx.fill(); } update() { if (this.x > canvas.width || this.x < 0) this.directionX = -this.directionX; if (this.y > canvas.height || this.y < 0) this.directionY = -this.directionY; let dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx*dx + dy*dy); if (distance < mouse.radius + this.size){ if(mouse.x < this.x && this.x < canvas.width - this.size * 10) this.x += 1; if(mouse.x > this.x && this.x > this.size * 10) this.x -= 1; if(mouse.y < this.y && this.y < canvas.height - this.size * 10) this.y += 1; if(mouse.y > this.y && this.y > this.size * 10) this.y -= 1; } this.x += this.directionX; this.y += this.directionY; this.draw(); } }
+    function initParticles() { particlesArray = []; let numberOfParticles = (canvas.height * canvas.width) / 9000; for (let i = 0; i < numberOfParticles; i++) { let size = (Math.random() * 2) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2); let directionX = (Math.random() * .4) - .2; let directionY = (Math.random() * .4) - .2; particlesArray.push(new Particle(x, y, directionX, directionY, size)); } }
+    function connectParticles(){ let opacityValue = 1; for (let a = 0; a < particlesArray.length; a++) { for (let b = a; b < particlesArray.length; b++) { let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y)); if (distance < (canvas.width/7) * (canvas.height/7)) { opacityValue = 1 - (distance/20000); const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color-rgb').trim(); ctx.strokeStyle = `rgba(${particleColor}, ${opacityValue * 0.5})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(particlesArray[a].x, particlesArray[a].y); ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke(); } } } }
+    function animateParticles() { requestAnimationFrame(animateParticles); ctx.clearRect(0, 0, innerWidth, innerHeight); for (let i = 0; i < particlesArray.length; i++) particlesArray[i].update(); connectParticles(); }
+    window.addEventListener('resize', () => { canvas.width = innerWidth; canvas.height = innerHeight; mouse.radius = ((canvas.height/80) * (canvas.width/80)); initParticles(); });
+    window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
+    
+    setTimeout(() => {
+        initParticles(); 
+        animateParticles();
+    }, 100);
+});
+</script>
+
+<!-- Sistema de Autenticação -->
+<script src="js/protect.js"></script>
+
+</body>
+</html>

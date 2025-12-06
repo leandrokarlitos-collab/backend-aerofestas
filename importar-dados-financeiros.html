@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Dados Financeiros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">💰 Importar Dados Financeiros</h1>
+        
+        <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <h2 class="font-bold mb-2">📝 Instruções:</h2>
+            <ol class="list-decimal list-inside space-y-2 text-sm">
+                <li>Use o arquivo exportado de <code class="bg-gray-200 px-2 py-1 rounded">example/exportar-dados-financeiros.html</code></li>
+                <li>Carregue o arquivo JSON abaixo</li>
+                <li>Clique em "Importar Dados Financeiros"</li>
+            </ol>
+        </div>
+
+        <div class="mb-6">
+            <label class="block font-semibold mb-2">Carregar arquivo JSON dos dados financeiros:</label>
+            <input 
+                type="file" 
+                id="arquivoJson" 
+                accept=".json"
+                class="w-full p-4 border-2 border-dashed rounded hover:border-green-500 cursor-pointer"
+                onchange="carregarArquivo(this)"
+            />
+        </div>
+
+        <div class="mb-6">
+            <label class="block font-semibold mb-2">Ou cole os dados JSON aqui:</label>
+            <textarea 
+                id="dadosJson" 
+                class="w-full h-64 p-4 border rounded font-mono text-xs"
+                placeholder='{"financeDataV30":{"eventos":[],"monitores":[],...}}'
+            ></textarea>
+        </div>
+
+        <div class="flex gap-4 mb-6">
+            <button onclick="importarDados()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold">
+                Importar Dados Financeiros
+            </button>
+            <button onclick="validarDados()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold">
+                Validar JSON
+            </button>
+        </div>
+
+        <div id="resultado" class="space-y-2"></div>
+    </div>
+
+    <script>
+        function carregarArquivo(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const textarea = document.getElementById('dadosJson');
+                textarea.value = e.target.result;
+                validarDados();
+            };
+            reader.readAsText(file);
+        }
+
+        function validarDados() {
+            const textarea = document.getElementById('dadosJson');
+            const resultado = document.getElementById('resultado');
+            
+            try {
+                const dados = JSON.parse(textarea.value);
+                
+                // Encontrar versão disponível
+                const versoes = ['financeDataV30', 'financeDataV29', 'financeDataV22', 'financeDataV23', 'financeDataV21'];
+                let versaoEncontrada = null;
+                let dadosVersao = null;
+                
+                for (const versao of versoes) {
+                    if (dados[versao]) {
+                        versaoEncontrada = versao;
+                        dadosVersao = dados[versao];
+                        break;
+                    }
+                }
+                
+                if (!dadosVersao) {
+                    resultado.innerHTML = `<div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+                        <h3 class="font-bold text-yellow-800 mb-2">⚠️ Nenhuma versão de dados financeiros encontrada</h3>
+                        <div class="text-sm">O JSON deve conter pelo menos uma das chaves: ${versoes.join(', ')}</div>
+                    </div>`;
+                    return;
+                }
+                
+                const eventos = dadosVersao.eventos || [];
+                const monitores = dadosVersao.monitores || [];
+                const gastos = dadosVersao.gastos || [];
+                
+                let html = '<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">';
+                html += '<h3 class="font-bold text-green-800 mb-2">✅ JSON válido!</h3>';
+                html += '<div class="text-sm space-y-1">';
+                html += `<div>Versão encontrada: <strong>${versaoEncontrada}</strong></div>`;
+                html += `<div>📅 Eventos: ${eventos.length}</div>`;
+                html += `<div>👨‍💼 Monitores: ${monitores.length}</div>`;
+                html += `<div>💸 Gastos: ${gastos.length}</div>`;
+                html += `<div>📊 Mês Selecionado: ${dadosVersao.selectedMonth || 'Não definido'}</div>`;
+                html += '</div></div>';
+                
+                resultado.innerHTML = html;
+            } catch (error) {
+                resultado.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Erro ao validar JSON</h3>
+                    <div class="text-sm">${error.message}</div>
+                </div>`;
+            }
+        }
+
+        function importarDados() {
+            const textarea = document.getElementById('dadosJson');
+            const resultado = document.getElementById('resultado');
+            
+            try {
+                const dados = JSON.parse(textarea.value);
+                
+                // Importar todas as versões encontradas
+                const versoes = ['financeDataV30', 'financeDataV29', 'financeDataV22', 'financeDataV23', 'financeDataV21'];
+                let importadas = [];
+                
+                versoes.forEach(versao => {
+                    if (dados[versao]) {
+                        localStorage.setItem(versao, JSON.stringify(dados[versao]));
+                        importadas.push(versao);
+                    }
+                });
+
+                if (importadas.length === 0) {
+                    resultado.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                        <h3 class="font-bold text-red-800 mb-2">❌ Nenhum dado para importar</h3>
+                        <div class="text-sm">O JSON não contém dados financeiros válidos.</div>
+                    </div>`;
+                    return;
+                }
+
+                const versaoMaisRecente = dados.financeDataV30 || dados.financeDataV29 || dados.financeDataV22 || dados.financeDataV23 || dados.financeDataV21;
+                const eventos = versaoMaisRecente.eventos || [];
+                
+                let html = '<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">';
+                html += '<h3 class="font-bold text-green-800 mb-2">✅ Dados financeiros importados com sucesso!</h3>';
+                html += '<div class="text-sm space-y-1">';
+                html += `<div>Versões importadas: ${importadas.join(', ')}</div>`;
+                html += `<div>📅 Total de eventos: ${eventos.length}</div>`;
+                html += '</div>';
+                html += '<div class="mt-4 pt-4 border-t border-green-200">';
+                html += '<a href="/Sistema Gestão Financeira.html" class="inline-block bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold">Ir para Gestão Financeira</a>';
+                html += '</div>';
+                html += '</div>';
+                
+                resultado.innerHTML = html;
+                textarea.value = '';
+                
+            } catch (error) {
+                resultado.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Erro ao importar dados</h3>
+                    <div class="text-sm">${error.message}</div>
+                </div>`;
+            }
+        }
+    </script>
+</body>
+</html>
+

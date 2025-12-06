@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - Sistema Operante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f2f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold"><i class="fas fa-user mr-2"></i>Meu Perfil</h1>
+                    <p class="text-sm text-white/80">Gerencie suas informações pessoais</p>
+                </div>
+                <div class="flex gap-4">
+                    <a href="Dashboard.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-home mr-2"></i>Dashboard
+                    </a>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8 max-w-4xl">
+            <!-- Mensagens -->
+            <div id="messageContainer" class="mb-6"></div>
+
+            <!-- Loading -->
+            <div id="loadingProfile" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p class="mt-2 text-gray-600">Carregando perfil...</p>
+            </div>
+
+            <!-- Conteúdo do Perfil -->
+            <div id="profileContent" class="hidden">
+                <!-- Informações Pessoais -->
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-user-circle mr-2 text-indigo-600"></i>Informações Pessoais
+                    </h2>
+                    
+                    <form id="profileForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                            <input 
+                                type="text" 
+                                id="profileName" 
+                                required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input 
+                                type="email" 
+                                id="profileEmail" 
+                                required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Ao alterar o email, será necessário confirmá-lo novamente.</p>
+                        </div>
+
+                        <div class="flex gap-3 pt-4">
+                            <button 
+                                type="submit" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors"
+                            >
+                                <i class="fas fa-save mr-2"></i>Salvar Alterações
+                            </button>
+                            <button 
+                                type="button" 
+                                onclick="resetProfileForm()" 
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Alterar Senha -->
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-lock mr-2 text-indigo-600"></i>Alterar Senha
+                    </h2>
+                    
+                    <form id="passwordForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Senha Atual</label>
+                            <input 
+                                type="password" 
+                                id="currentPassword" 
+                                required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+                            <input 
+                                type="password" 
+                                id="newPassword" 
+                                required 
+                                minlength="6"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">A senha deve ter no mínimo 6 caracteres.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
+                            <input 
+                                type="password" 
+                                id="confirmNewPassword" 
+                                required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                        </div>
+
+                        <div class="flex gap-3 pt-4">
+                            <button 
+                                type="submit" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors"
+                            >
+                                <i class="fas fa-key mr-2"></i>Alterar Senha
+                            </button>
+                            <button 
+                                type="button" 
+                                onclick="resetPasswordForm()" 
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Informações de Auditoria -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-info-circle mr-2 text-indigo-600"></i>Informações do Sistema
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-600 mb-1">Criado em:</p>
+                            <p class="font-semibold" id="createdAt">-</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 mb-1">Última atualização:</p>
+                            <p class="font-semibold" id="updatedAt">-</p>
+                        </div>
+                        <div id="createdByContainer">
+                            <p class="text-gray-600 mb-1">Criado por:</p>
+                            <p class="font-semibold" id="createdBy">-</p>
+                        </div>
+                        <div id="updatedByContainer">
+                            <p class="text-gray-600 mb-1">Alterado por:</p>
+                            <p class="font-semibold" id="updatedBy">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/profile.js"></script>
+    <!-- protect.js não é necessário na página de perfil, pois já verificamos autenticação -->
+    <script>
+        let currentProfile = null;
+
+        // Aguarda o carregamento completo da página e scripts
+        window.addEventListener('load', async function() {
+            // Verifica se está autenticado
+            if (typeof isAuthenticated === 'function' && !isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Verifica se as funções necessárias estão disponíveis
+            if (typeof getProfile === 'undefined') {
+                console.error('getProfile não está definido');
+                showMessage('Erro: Arquivo js/profile.js não foi carregado corretamente. Recarregue a página.', 'error');
+                return;
+            }
+            
+            try {
+                currentProfile = await getProfile();
+                displayProfile(currentProfile);
+            } catch (error) {
+                console.error('Erro ao carregar perfil:', error);
+                showMessage('Erro ao carregar perfil: ' + error.message, 'error');
+                
+                // Se erro de autenticação, redireciona
+                if (error.message.includes('Não autenticado') || error.message.includes('401')) {
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 2000);
+                }
+            }
+        });
+
+        // Exibe perfil
+        function displayProfile(profile) {
+            document.getElementById('loadingProfile').classList.add('hidden');
+            document.getElementById('profileContent').classList.remove('hidden');
+
+            document.getElementById('profileName').value = profile.name;
+            document.getElementById('profileEmail').value = profile.email;
+
+            // Informações de auditoria
+            if (profile.createdAt) {
+                document.getElementById('createdAt').textContent = new Date(profile.createdAt).toLocaleString('pt-BR');
+            }
+            if (profile.updatedAt) {
+                document.getElementById('updatedAt').textContent = new Date(profile.updatedAt).toLocaleString('pt-BR');
+            }
+
+            if (profile.createdByInfo) {
+                document.getElementById('createdBy').textContent = profile.createdByInfo.name + ' (' + profile.createdByInfo.email + ')';
+            } else if (profile.createdBy === 'system') {
+                document.getElementById('createdBy').textContent = 'Sistema (Auto-registro)';
+            } else {
+                document.getElementById('createdByContainer').classList.add('hidden');
+            }
+
+            if (profile.updatedByInfo) {
+                document.getElementById('updatedBy').textContent = profile.updatedByInfo.name + ' (' + profile.updatedByInfo.email + ')';
+            } else if (profile.updatedBy === 'system') {
+                document.getElementById('updatedBy').textContent = 'Sistema';
+            } else {
+                document.getElementById('updatedByContainer').classList.add('hidden');
+            }
+        }
+
+        // Atualiza perfil
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('profileName').value.trim();
+            const email = document.getElementById('profileEmail').value.trim();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Salvando...';
+
+            try {
+                const result = await updateProfile({ name, email });
+                showMessage('Perfil atualizado com sucesso!' + (result.emailRequiresConfirmation ? ' Verifique seu email para confirmar a nova conta.' : ''), 'success');
+                
+                // Recarrega perfil
+                currentProfile = await getProfile();
+                displayProfile(currentProfile);
+            } catch (error) {
+                showMessage('Erro ao atualizar perfil: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Salvar Alterações';
+            }
+        });
+
+        // Altera senha
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            if (newPassword !== confirmPassword) {
+                showMessage('As senhas não coincidem', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showMessage('A senha deve ter no mínimo 6 caracteres', 'error');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Alterando...';
+
+            try {
+                await changePassword(currentPassword, newPassword);
+                showMessage('Senha alterada com sucesso!', 'success');
+                resetPasswordForm();
+            } catch (error) {
+                showMessage('Erro ao alterar senha: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-key mr-2"></i>Alterar Senha';
+            }
+        });
+
+        // Reset formulários
+        function resetProfileForm() {
+            if (currentProfile) {
+                document.getElementById('profileName').value = currentProfile.name;
+                document.getElementById('profileEmail').value = currentProfile.email;
+            }
+        }
+
+        function resetPasswordForm() {
+            document.getElementById('passwordForm').reset();
+        }
+
+        // Mensagens
+        function showMessage(text, type) {
+            const container = document.getElementById('messageContainer');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            container.innerHTML = `
+                <div class="${bgColor} text-white px-4 py-3 rounded-lg shadow-lg">
+                    ${escapeHtml(text)}
+                </div>
+            `;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+

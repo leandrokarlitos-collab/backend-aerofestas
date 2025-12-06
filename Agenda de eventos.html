@@ -1,0 +1,3623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda de Eventos - Integrada</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bibliotecas para Geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --glow-color: hsl(224, 88%, 66%);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+            color: #1f2937; /* gray-800 */
+        }
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        header h1 {
+            background: linear-gradient(to right, #4f46e5, #d946ef); /* Indigo to Fuchsia */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            text-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+        }
+        .calendar-grid {
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+        .day-cell {
+            min-height: 120px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border-radius: 0.5rem; /* rounded-lg */
+        }
+        .day-cell:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        .day-number {
+            position: relative;
+            z-index: 1;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .event-count-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            background: linear-gradient(to top right, rgba(59, 130, 246, 0.9), rgba(99, 102, 241, 0.9));
+            color: white;
+            font-weight: bold;
+            border-radius: 0.75rem; /* rounded-xl */
+            pointer-events: none;
+        }
+        .day-cell:hover .event-count-container {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .day-cell:hover .day-number {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        .event-count {
+            font-size: 1.5rem; /* text-2xl */
+            line-height: 1;
+            font-weight: 800;
+        }
+        .event-count-label {
+            font-size: 0.625rem; /* text-xs menor */
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .has-event::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--glow-color);
+            box-shadow: 0 0 6px var(--glow-color), 0 0 8px var(--glow-color);
+        }
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+        .shiny-btn {
+             position: relative;
+             border: 2px solid transparent;
+             background-image: linear-gradient(to right, #4f46e5 0%, #3b82f6 51%, #4f46e5 100%);
+             background-size: 200% auto;
+             color: white;
+             box-shadow: 0 4px 15px 0 rgba(60, 78, 224, 0.4);
+             transition: all 0.4s ease;
+        }
+        .shiny-btn:hover {
+            background-position: right center;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px 0 rgba(60, 78, 224, 0.6);
+        }
+        /* Botão vermelho para PDF */
+        .shiny-btn-red {
+             position: relative;
+             border: 2px solid transparent;
+             background-image: linear-gradient(to right, #ef4444 0%, #dc2626 51%, #ef4444 100%); /* Red gradient */
+             background-size: 200% auto;
+             color: white;
+             box-shadow: 0 4px 15px 0 rgba(220, 38, 38, 0.4); /* Red shadow */
+             transition: all 0.4s ease;
+        }
+        .shiny-btn-red:hover {
+            background-position: right center;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px 0 rgba(220, 38, 38, 0.6);
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(200, 200, 200, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+        .modal-box.glassmorphism {
+             background: rgba(255, 255, 255, 0.75);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeInBackdrop { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomInContent { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-enter {
+            animation: fadeInBackdrop 0.3s ease-out forwards;
+        }
+        .modal-enter .modal-box {
+            animation: zoomInContent 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+        }
+        @keyframes toast-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-enter {
+            animation: toast-in 0.5s ease-out forwards;
+        }
+        .form-input {
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #d1d5db; /* gray-300 */
+            color: #1f2937;
+        }
+        .form-input::placeholder {
+            color: #6b7280;
+        }
+        .form-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #4f46e5;
+            border-color: #4f46e5;
+        }
+        /* INÍCIO: Animação sino de notificação */
+        @keyframes pulse-bell {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.2) rotate(15deg); opacity: 0.8; }
+          75% { transform: scale(1.1) rotate(-10deg); }
+        }
+        .bell-pulse {
+            animation: pulse-bell 1.8s ease-in-out infinite;
+            color: #f59e0b; /* text-amber-500 */
+        }
+        /* FIM: Animação sino */
+
+        /* INÍCIO: Estilos para Status de Pagamento */
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .status-aguardando { background-color: #f59e0b; } /* amber-500 */
+        .status-sinal { background-color: #3b82f6; } /* blue-500 */
+        .status-pago { background-color: #10b981; } /* emerald-500 */
+        .status-cancelado { background-color: #ef4444; } /* red-500 */
+        /* FIM: Estilos para Status de Pagamento */
+    </style>
+</head>
+<body>
+    <canvas id="particles-js"></canvas>
+
+    <div class="container mx-auto p-4 md:p-8 relative z-10">
+        <header class="text-center mb-8 relative fade-in">
+            <h1 class="text-4xl md:text-5xl font-bold">Agenda de Eventos</h1>
+            <p class="text-gray-500 mt-2">Sistema de Gestão de Eventos</p>
+            <div class="absolute top-0 left-0 flex space-x-2 p-2">
+                <button onclick="window.location.href='./Dashboard.html'" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Acessar Dashboard">
+                    <i class="fa-solid fa-house"></i>
+                </button>
+                <button id="notifications-btn" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors relative" title="Notificações">
+                    <i id="notifications-header-icon" class="fas fa-bell"></i>
+                </button>
+            </div>
+             <div class="absolute top-0 right-0 flex space-x-2 p-2">
+                 <button class="bg-indigo-200/80 text-indigo-700 w-10 h-10 rounded-full cursor-default" title="Você está na Agenda de Eventos">
+                    <i class="fa-solid fa-calendar-days"></i>
+                </button>
+                 <button onclick="window.location.href='./Sistema Gestão Financeira.html'" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Acessar Gestão Financeira">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+                <button onclick="window.location.href='./Sistema de CRM.html'" class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors" title="Acessar CRM">
+                    <i class="fas fa-users"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="text-center mb-8 fade-in" style="animation-delay: 0.1s;">
+            <div id="monthly-total-container" class="glassmorphism p-4 rounded-lg shadow-md max-w-sm mx-auto">
+                <h2 class="text-lg text-gray-600 font-semibold">Faturamento do Mês</h2>
+                <p id="monthly-total" class="text-4xl font-bold text-emerald-600" style="text-shadow: 0 0 10px rgba(5, 150, 105, 0.2);">R$ 0,00</p>
+            </div>
+        </div>
+
+        <main class="flex justify-center fade-in" style="animation-delay: 0.3s;">
+            <div class="w-full max-w-4xl space-y-4">
+                <div class="flex justify-end">
+                    <button id="catalog-settings-btn" class="bg-white/50 text-gray-600 px-4 py-2 rounded-md hover:bg-white/80 transition-colors flex items-center space-x-2" title="Catálogo de Brinquedos e Empresas">
+                        <i class="fas fa-cog"></i>
+                        <span>Catálogo</span>
+                    </button>
+                </div>
+                <div class="glassmorphism p-4 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prev-month-btn" class="bg-white/50 text-gray-600 px-3 py-1.5 rounded-md hover:bg-white/80 transition-colors text-sm">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <h2 id="month-year-header" class="text-lg md:text-xl font-bold"></h2>
+                        <div class="flex items-center space-x-2">
+                            <button id="filter-events-btn" class="bg-white/50 text-gray-600 px-3 py-1.5 rounded-md hover:bg-white/80 transition-colors text-sm flex items-center space-x-2" title="Filtrar Eventos do Mês">
+                                <i class="fas fa-filter"></i>
+                                <span class="hidden md:inline">Filtrar</span>
+                            </button>
+                            <button id="next-month-btn" class="bg-white/50 text-gray-600 px-3 py-1.5 rounded-md hover:bg-white/80 transition-colors text-sm">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <button id="settings-btn" class="bg-white/50 text-gray-600 w-8 h-8 rounded-full hover:bg-white/80 transition-colors text-sm" title="Configurações da API">
+                                <i class="fas fa-key"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid calendar-grid text-center text-xs font-semibold text-gray-500 mb-1.5">
+                        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                    </div>
+                    <div id="calendar-body" class="grid calendar-grid gap-1.5"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="event-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <!-- MODIFICADO: Aumentar um pouco a largura máxima para o wizard -->
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-3xl m-4 max-h-screen overflow-y-auto">
+            
+            <!-- MODIFICADO: Adicionar indicador de Etapa -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900" id="modal-title">Adicionar Agendamento</h2>
+                <div id="step-indicator" class="text-lg font-semibold text-indigo-600">Etapa 1 de 3</div>
+            </div>
+
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <input type="hidden" id="event-date">
+                <!-- Campo de data visível será adicionado na etapa 2 -->
+                
+                <!-- INÍCIO: WIZARD STEPS -->
+                <div class="space-y-6">
+
+                    <!-- =================== ETAPA 1: CLIENTE =================== -->
+                    <div id="step-1" class="step-content space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Informações do Cliente</h3>
+                        <!-- START: NEW CLIENT SECTION -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Cliente</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="client-type-pf" name="client-type" value="PF" class="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" checked>
+                                    <span class="ml-2 text-sm text-gray-700">Pessoa Física</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" id="client-type-pj" name="client-type" value="PJ" class="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                    <span class="ml-2 text-sm text-gray-700">Pessoa Jurídica</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Fields for Pessoa Física (PF) -->
+                        <div id="pf-fields" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                <div>
+                                    <label for="client-name" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+                                    <input type="text" id="client-name" class="form-input w-full px-3 py-2 rounded-md" list="client-suggestions">
+                                    <datalist id="client-suggestions"></datalist>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="client-dob" class="block text-sm font-medium text-gray-700 mb-1">Data de Nasc. (Opcional)</label>
+                                    <input type="date" id="client-dob" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                                <div>
+                                    <label for="client-cpf" class="block text-sm font-medium text-gray-700 mb-1">CPF do Cliente (Opcional)</label>
+                                    <input type="text" id="client-cpf" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                                <div>
+                                    <label for="client-rg" class="block text-sm font-medium text-gray-700 mb-1">RG do Cliente (Opcional)</label>
+                                    <input type="text" id="client-rg" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <div>
+                                   <label for="client-phone" class="block text-sm font-medium text-gray-700 mb-1">Telefone Principal</label>
+                                   <input type="text" id="client-phone" class="form-input w-full px-3 py-2 rounded-md">
+                               </div>
+                               <div>
+                                   <label for="client-phone-backup" class="block text-sm font-medium text-gray-700 mb-1">Telefone Reserva (Opcional)</label>
+                                   <input type="text" id="client-phone-backup" class="form-input w-full px-3 py-2 rounded-md">
+                               </div>
+                           </div>
+                           <!-- INÍCIO DA MODIFICAÇÃO: Mover campo de Endereço de Contrato -->
+                           <div class="mt-4"> <!-- Adicionado mt-4 para espaçamento -->
+                               <label for="contract-address" class="block text-sm font-medium text-gray-700 mb-1">Endereço para Contrato (Residencial)</label>
+                               <input type="text" id="contract-address" class="form-input w-full px-3 py-2 rounded-md" placeholder="Deixe em branco se for o mesmo do evento">
+                           </div>
+                           <!-- FIM DA MODIFICAÇÃO -->
+                        </div>
+
+                        <!-- Fields for Pessoa Jurídica (PJ) -->
+                        <div id="pj-fields" class="hidden space-y-4">
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="pj-company-name" class="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa</label>
+                                    <input type="text" id="pj-company-name" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                                 <div>
+                                    <label for="pj-cnpj" class="block text-sm font-medium text-gray-700 mb-1">CNPJ</label>
+                                    <input type="text" id="pj-cnpj" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                             </div>
+                             <div>
+                                 <label for="pj-company-address" class="block text-sm font-medium text-gray-700 mb-1">Sede da Empresa (Endereço)</label>
+                                 <input type="text" id="pj-company-address" class="form-input w-full px-3 py-2 rounded-md">
+                             </div>
+                             <div class="bg-gray-50 p-3 rounded-md mt-4">
+                                <p class="text-sm font-semibold text-gray-800 mb-2">Dados do Representante Legal</p>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                       <div>
+                                           <label for="pj-rep-name" class="block text-sm font-medium text-gray-700 mb-1">Nome do Representante</label>
+                                           <input type="text" id="pj-rep-name" class="form-input w-full px-3 py-2 rounded-md">
+                                       </div>
+                                        <div>
+                                           <label for="pj-rep-cpf" class="block text-sm font-medium text-gray-700 mb-1">CPF do Representante</label>
+                                           <input type="text" id="pj-rep-cpf" class="form-input w-full px-3 py-2 rounded-md">
+                                       </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                           <label for="pj-rep-phone" class="block text-sm font-medium text-gray-700 mb-1">Telefone Principal</label>
+                                           <input type="text" id="pj-rep-phone" class="form-input w-full px-3 py-2 rounded-md">
+                                       </div>
+                                       <div>
+                                           <label for="pj-rep-phone-backup" class="block text-sm font-medium text-gray-700 mb-1">Telefone Reserva (Opcional)</label>
+                                           <input type="text" id="pj-rep-phone-backup" class="form-input w-full px-3 py-2 rounded-md">
+                                       </div>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                        <!-- END: NEW CLIENT SECTION -->
+                    </div>
+
+                    <!-- =================== ETAPA 2: EVENTO =================== -->
+                    <div id="step-2" class="step-content hidden space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Detalhes do Evento</h3>
+
+                        <!-- INÍCIO: Campo de Data Editável -->
+                        <div>
+                            <label for="event-date-visible" class="block text-sm font-medium text-gray-700 mb-1">Data do Evento</label>
+                            <input type="date" id="event-date-visible" required class="form-input w-full px-3 py-2 rounded-md">
+                        </div>
+                        <!-- FIM: Campo de Data Editável -->
+
+                        <!-- INÍCIO: Seção Aniversariante -->
+                        <div class="mt-4">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="is-birthday-checkbox" class="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <span class="ml-2 text-sm font-medium text-gray-700">É um evento de Aniversário?</span>
+                            </label>
+                        </div>
+
+                        <!-- Campos do Aniversariante (ocultos por padrão) -->
+                        <div id="birthday-fields" class="hidden space-y-4 mt-4 bg-indigo-50 p-4 rounded-lg">
+                            <p class="text-sm font-semibold text-indigo-800">Dados do Aniversariante</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="birthday-person-name" class="block text-sm font-medium text-gray-700 mb-1">Nome do Aniversariante</label>
+                                    <input type="text" id="birthday-person-name" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                                <div>
+                                    <label for="birthday-person-dob" class="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
+                                    <input type="date" id="birthday-person-dob" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- FIM: Seção Aniversariante -->
+
+                        <hr class="border-gray-200"/>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="your-company-select" class="block text-sm font-medium text-gray-700 mb-1">Sua Empresa</LabeL>
+                                <select id="your-company-select" required class="form-input w-full px-3 py-2 rounded-md"></select>
+                            </div>
+                            <!-- INÍCIO DA MODIFIFCAÇÃO: Campo Monitor/Equipe -->
+                            <div>
+                                <label for="event-monitor" class="block text-sm font-medium text-gray-700 mb-1">Monitor/Equipe Designada</label>
+                                <input type="text" id="event-monitor" class="form-input w-full px-3 py-2 rounded-md" placeholder="Ex: João, Equipe A">
+                            </div>
+                            <!-- FIM DA MODIFCAÇÃO -->
+                        </div>
+
+                        <!-- INÍCIO DA MODIFICAÇÃO: Campos de Endereço com CEP -->
+                        <div class="border-t border-b border-gray-200 py-4 space-y-4">
+                            <h3 class="text-md font-semibold text-gray-800">Endereço do Evento</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="md:col-span-1">
+                                    <label for="event-cep" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                    <div class="flex">
+                                        <input type="text" id="event-cep" class="form-input w-full px-3 py-2 rounded-l-md" placeholder="Apenas números">
+                                        <button type="button" id="cep-search-btn" class="bg-indigo-500 text-white px-3 py-2 rounded-r-md hover:bg-indigo-600"><i class="fas fa-search"></i></button>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="client-address" class="block text-sm font-medium text-gray-700 mb-1">Logradouro (Rua, Av.)</label>
+                                    <input type="text" id="client-address" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                            </div>
+                             <!-- INÍCIO DA MODIFICAÇÃO: Adicionar Complemento e reordenar -->
+                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="md:col-span-2">
+                                    <label for="event-complemento" class="block text-sm font-medium text-gray-700 mb-1">Complemento (Nº, Qd., Lt.)</label>
+                                    <input type="text" id="event-complemento" class="form-input w-full px-3 py-2 rounded-md" placeholder="Ex: N° 123, Qd. 10, Lt. 05">
+                                </div>
+                                 <div>
+                                    <label for="event-bairro" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                                    <input type="text" id="event-bairro" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                            </div>
+                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                 <div class="md:col-span-2">
+                                    <label for="event-cidade" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                    <input type="text" id="event-cidade" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                                 <div>
+                                    <label for="event-uf" class="block text-sm font-medium text-gray-700 mb-1">UF</label>
+                                    <input type="text" id="event-uf" class="form-input w-full px-3 py-2 rounded-md" maxlength="2">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- FIM DA MODIFICAÇÃO -->
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="event-start-time" class="block text-sm font-medium text-gray-700 mb-1">Início</label>
+                                <input type="time" id="event-start-time" required class="form-input w-full px-3 py-2 rounded-md">
+                            </div>
+                            <div>
+                                <label for="event-end-time" class="block text-sm font-medium text-gray-700 mb-1">Término</label>
+                                <input type="time" id="event-end-time" required class="form-input w-full px-3 py-2 rounded-md">
+                            </div>
+                        </div>
+
+                         <div>
+                            <label for="event-observations" class="block text-sm font-medium text-gray-700 mb-1">Observações Gerais</label>
+                            <textarea id="event-observations" rows="2" class="form-input w-full px-3 py-2 rounded-md resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- =================== ETAPA 3: FINANCEIRO =================== -->
+                    <div id="step-3" class="step-content hidden space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Valores e Pagamento</h3>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Brinquedos</label>
+                            <div class="grid grid-cols-12 gap-2">
+                                <select id="toy-select-modal" class="form-input col-span-5 px-3 py-2 rounded-md"></select>
+                                <input type="number" id="toy-quantity-modal" min="1" value="1" class="form-input col-span-2 px-2 py-2 rounded-md" title="Quantidade">
+                                <input type="number" id="toy-price-modal" min="0" step="0.01" placeholder="Valor R$" class="form-input col-span-3 px-2 py-2 rounded-md" title="Valor do Brinquedo">
+                                <button type="button" id="add-toy-to-event-btn" class="col-span-2 bg-indigo-500 text-white shrink-0 rounded-md hover:bg-indigo-600">Add</button>
+                            </div>
+                            <div id="selected-toys-list" class="mt-3 space-y-2 max-h-24 overflow-y-auto"></div>
+                        </div>
+                        
+                        <div class="bg-gray-100/80 p-3 rounded-md space-y-2">
+                            <div class="flex justify-between items-center text-md">
+                                <span class="font-medium text-gray-600">Subtotal:</span>
+                                <span id="event-subtotal" class="font-semibold text-gray-800">R$ 0,00</span>
+                            </div>
+                             <div class="flex justify-between items-center text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <label for="discount-type" class="font-medium text-gray-600">Desconto:</label>
+                                    <select id="discount-type" class="form-input text-xs py-1">
+                                        <option value="fixed">R$</option>
+                                        <option value="percent">%</option>
+                                    </select>
+                                    <input type="number" id="discount-value" value="0" min="0" step="0.01" class="form-input w-24 px-2 py-1 rounded-md">
+                                </div>
+                                <span id="discount-amount" class="font-semibold text-red-500">- R$ 0,00</span>
+                            </div>
+                             <!-- INÍCIO DA MODIFICAÇÃO: Taxa de Entrega -->
+                             <div class="flex justify-between items-center text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <label for="delivery-fee" class="font-medium text-gray-600">Taxa de Entrega:</label>
+                                    <input type="number" id="delivery-fee" value="0" min="0" step="0.01" class="form-input w-24 px-2 py-1 rounded-md">
+                                </div>
+                                <span id="delivery-fee-amount" class="font-semibold text-gray-800">+ R$ 0,00</span>
+                            </div>
+                            <!-- FIM DA MODIFICAÇÃO -->
+                             <hr class="border-gray-200"/>
+                            <div class="flex justify-between items-center text-lg">
+                                <label for="event-price" class="font-bold text-gray-800">Valor Final:</label>
+                                <input type="text" id="event-price" readonly class="w-32 text-right bg-transparent font-bold text-emerald-600 border-none focus:ring-0" value="R$ 0,00">
+                            </div>
+                        </div>
+
+                        <hr class="border-gray-200"/>
+                         <!-- NOVO CAMPO: Detalhes do Pagamento -->
+                         <div>
+                            <label for="payment-details" class="block text-sm font-medium text-gray-700 mb-1">Detalhes do Pagamento (para Contrato)</label>
+                            <textarea id="payment-details" rows="3" class="form-input w-full px-3 py-2 rounded-md resize-none" placeholder="Ex: Entrada de R$ XXX via PIX na assinatura, restante de R$ YYY em 2x no cartão na entrega. Inclua dados bancários/PIX aqui."></textarea>
+                        </div>
+
+                        <!-- INÍCIO DA MODIFICAÇÃO: Status de Pagamento -->
+                        <div class="bg-gray-50 p-3 rounded-md space-y-3">
+                            <h3 class="text-md font-semibold text-gray-800">Status Financeiro</h3>
+                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                <div>
+                                    <label for="payment-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select id="payment-status" class="form-input w-full px-3 py-2 rounded-md">
+                                        <option value="Aguardando Sinal">Aguardando Sinal</option>
+                                        <option value="Sinal Pago">Sinal Pago</option>
+                                        <option value="Pago Integralmente">Pago Integralmente</option>
+                                        <option value="Cancelado">Cancelado</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="signal-amount" class="block text-sm font-medium text-gray-700 mb-1">Valor do Sinal (R$)</label>
+                                    <input type="number" id="signal-amount" min="0" step="0.01" value="0" class="form-input w-full px-3 py-2 rounded-md">
+                                </div>
+                                <div class="pt-6">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="checkbox" id="signal-received" class="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="ml-2 text-sm font-medium text-gray-700">Sinal Recebido?</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- FIM DA MODIFICAÇÃO -->
+                    </div>
+
+                </div>
+                <!-- FIM: WIZARD STEPS -->
+
+                <!-- MODIFICADO: Botões de Navegação -->
+                <div id="modal-navigation" class="flex justify-between space-x-4 mt-8">
+                    <button type="button" id="cancel-btn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors">Cancelar</button>
+                    
+                    <div class="flex space-x-4">
+                        <button type="button" id="prev-step-btn" class="bg-gray-400 text-white px-6 py-2 rounded-md hover:bg-gray-500 transition-colors hidden">Voltar</button>
+                        <button type="button" id="next-step-btn" class="shiny-btn px-6 py-2 rounded-md">Avançar</button>
+                        <button type="submit" id="save-step-btn" class="shiny-btn px-6 py-2 rounded-md hidden">Salvar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="gemini-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-screen flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900" id="gemini-modal-title">Conteúdo Gerado ✨</h2>
+                <button id="close-gemini-modal-btn" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <textarea id="gemini-modal-content" class="form-input w-full h-64 p-3 rounded-md bg-white/50 text-sm" readonly></textarea>
+            <div class="flex justify-end space-x-4 mt-6">
+                <!-- Botão Imprimir Adicionado -->
+                <button id="print-gemini-content-btn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors"><i class="fas fa-print mr-2"></i>Imprimir</button>
+                <button id="copy-gemini-content-btn" class="shiny-btn px-6 py-2 rounded-md"><i class="fas fa-copy mr-2"></i>Copiar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="api-key-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md m-4">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">Configurar API do Gemini</h2>
+            <p class="text-sm text-gray-600 mb-6">Para usar os recursos de IA, você precisa de uma chave de API do Google AI Studio. A chave será salva apenas no seu navegador.</p>
+            <div class="space-y-4">
+                <div>
+                    <label for="api-key-input" class="block text-sm font-medium text-gray-700 mb-1">Sua Chave da API</label>
+                    <input type="password" id="api-key-input" placeholder="Cole sua chave aqui" class="form-input w-full px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button type="button" id="cancel-api-key-btn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button type="button" id="save-api-key-btn" class="shiny-btn px-6 py-2 rounded-md">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="day-events-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50" role="dialog" aria-labelledby="day-events-modal-title" aria-modal="true">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="day-events-modal-title" class="text-2xl font-bold text-gray-900">Eventos do Dia</h2>
+                <button id="close-day-events-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold" aria-label="Fechar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p id="selected-day-text" class="text-gray-500 font-medium mb-4">Selecione um dia no calendário</p>
+            <div id="day-events-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <div id="filter-events-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50" role="dialog" aria-labelledby="filter-events-modal-title" aria-modal="true">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-5xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="filter-events-modal-title" class="text-2xl font-bold text-gray-900">Eventos do Mês</h2>
+                <div class="flex items-center space-x-3">
+                    <button id="export-filter-events-pdf-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2" title="Exportar PDF">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Exportar PDF</span>
+                    </button>
+                    <button id="close-filter-events-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold" aria-label="Fechar modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="filter-events-table-container" class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-100">
+                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors" data-sort="name" data-sort-order="asc">
+                                Nome <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            </th>
+                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors" data-sort="date" data-sort-order="asc">
+                                Data <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            </th>
+                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors" data-sort="location" data-sort-order="asc">
+                                Local <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            </th>
+                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors" data-sort="value" data-sort-order="asc">
+                                Valor <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="filter-events-table-body" class="bg-white">
+                        <!-- Eventos serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="filter-events-empty" class="text-center text-gray-500 py-8 hidden">Nenhum evento encontrado para este mês.</p>
+        </div>
+    </div>
+
+    <div id="notifications-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50" role="dialog" aria-labelledby="notifications-modal-title" aria-modal="true">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="notifications-modal-title" class="text-2xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-bell text-gray-500 mr-2"></i>Notificações
+                </h2>
+                <button id="close-notifications-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold" aria-label="Fechar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="notifications-list" class="space-y-3">
+                <!-- Conteúdo será inserido pelo JS -->
+            </div>
+        </div>
+    </div>
+
+    <div id="catalog-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50" role="dialog" aria-labelledby="catalog-modal-title" aria-modal="true">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="catalog-modal-title" class="text-2xl font-bold text-gray-900">Catálogo de Brinquedos e Empresas</h2>
+                <button id="close-catalog-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold" aria-label="Fechar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Seção de Brinquedos -->
+                <div class="glassmorphism p-6 rounded-lg">
+                    <div id="toggle-toys" class="flex justify-between items-center cursor-pointer border-b border-gray-200 pb-2 mb-4">
+                        <h3 class="text-xl font-semibold">Catálogo de Brinquedos</h3>
+                        <i id="toys-icon" class="fas fa-chevron-down transition-transform duration-300"></i>
+                    </div>
+                    <div id="toys-content-wrapper" class="overflow-hidden transition-all duration-500 ease-in-out max-h-[1000px] pt-4">
+                        <div id="toy-list" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
+                        <div class="space-y-2">
+                            <div class="flex space-x-2">
+                                <input type="text" id="new-toy-name" placeholder="Nome do novo brinquedo" class="form-input flex-grow px-3 py-2 rounded-md">
+                                <input type="number" id="new-toy-quantity" placeholder="Qtd" min="1" value="1" class="form-input w-20 px-3 py-2 rounded-md">
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="add-toy-btn" class="shiny-btn px-4 py-2 rounded-md w-1/2" title="Adicionar Brinquedo">
+                                    <i class="fas fa-plus sm:mr-1"></i> <span class="hidden sm:inline">Add</span>
+                                </button>
+                                <button id="export-toys-pdf-btn" class="shiny-btn-red px-4 py-2 rounded-md w-1/2" title="Exportar PDF">
+                                    <i class="fas fa-file-pdf sm:mr-1"></i> <span class="hidden sm:inline">PDF</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção de Empresas -->
+                <div class="glassmorphism p-6 rounded-lg">
+                    <div id="toggle-companies" class="flex justify-between items-center cursor-pointer border-b border-gray-200 pb-2 mb-4">
+                        <h3 class="text-xl font-semibold">Suas Empresas</h3>
+                        <i id="companies-icon" class="fas fa-chevron-down transition-transform duration-300"></i>
+                    </div>
+                    <div id="companies-content-wrapper" class="overflow-hidden transition-all duration-500 ease-in-out max-h-[1000px] pt-4">
+                        <div id="company-list" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
+                        <div class="space-y-2">
+                            <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="form-input w-full px-3 py-2 rounded-md">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <input type="text" id="new-company-cnpj" placeholder="CNPJ" class="form-input w-full px-3 py-2 rounded-md">
+                                <input type="text" id="new-company-phone" placeholder="Telefone/Whatsapp" class="form-input w-full px-3 py-2 rounded-md">
+                            </div>
+                            <input type="text" id="new-company-address" placeholder="Endereço Completo (Sede)" class="form-input w-full px-3 py-2 rounded-md">
+                            <input type="email" id="new-company-email" placeholder="E-mail de Contato" class="form-input w-full px-3 py-2 rounded-md">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <input type="text" id="new-company-rep-name" placeholder="Nome do Representante" class="form-input w-full px-3 py-2 rounded-md">
+                                <input type="text" id="new-company-rep-doc" placeholder="CPF/RG do Representante" class="form-input w-full px-3 py-2 rounded-md">
+                            </div>
+                            <textarea id="new-company-payment" rows="2" placeholder="Dados de Pagamento (PIX, Banco, Ag/Conta)" class="form-input w-full px-3 py-2 rounded-md resize-none"></textarea>
+                            <button id="add-company-btn" class="w-full shiny-btn px-4 py-2 rounded-md">
+                                <i class="fas fa-plus mr-2"></i>Adicionar Empresa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="toast" class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-50">
+        <i id="toast-icon" class="text-lg"></i>
+        <p id="toast-message" class="ml-3"></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENTOS DO DOM ---
+    const monthYearHeader = document.getElementById('month-year-header');
+    const calendarBody = document.getElementById('calendar-body');
+    const prevMonthBtn = document.getElementById('prev-month-btn');
+    const nextMonthBtn = document.getElementById('next-month-btn');
+    const toyListDiv = document.getElementById('toy-list');
+    const addToyBtn = document.getElementById('add-toy-btn');
+    const newToyNameInput = document.getElementById('new-toy-name');
+    const newToyQuantityInput = document.getElementById('new-toy-quantity');
+    const exportToysPdfBtn = document.getElementById('export-toys-pdf-btn'); // Botão PDF
+    const companyListDiv = document.getElementById('company-list');
+    const addCompanyBtn = document.getElementById('add-company-btn');
+    const selectedDayText = document.getElementById('selected-day-text');
+    const dayEventsList = document.getElementById('day-events-list');
+    const dayEventsModal = document.getElementById('day-events-modal');
+    const closeDayEventsModalBtn = document.getElementById('close-day-events-modal-btn');
+    const filterEventsBtn = document.getElementById('filter-events-btn');
+    const filterEventsModal = document.getElementById('filter-events-modal');
+    const closeFilterEventsModalBtn = document.getElementById('close-filter-events-modal-btn');
+    const exportFilterEventsPdfBtn = document.getElementById('export-filter-events-pdf-btn');
+    const filterEventsTableBody = document.getElementById('filter-events-table-body');
+    const filterEventsEmpty = document.getElementById('filter-events-empty');
+    const notificationsBtn = document.getElementById('notifications-btn');
+    const notificationsModal = document.getElementById('notifications-modal');
+    const closeNotificationsModalBtn = document.getElementById('close-notifications-modal-btn');
+    const catalogModal = document.getElementById('catalog-modal');
+    const catalogSettingsBtn = document.getElementById('catalog-settings-btn');
+    const closeCatalogModalBtn = document.getElementById('close-catalog-modal-btn');
+    const monthlyTotalEl = document.getElementById('monthly-total');
+    const eventModal = document.getElementById('event-modal');
+    const eventForm = document.getElementById('event-form');
+    const cancelBtn = document.getElementById('cancel-btn');
+
+    // INÍCIO: Elementos do Wizard
+    const stepIndicator = document.getElementById('step-indicator');
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const step3 = document.getElementById('step-3');
+    const prevStepBtn = document.getElementById('prev-step-btn');
+    const nextStepBtn = document.getElementById('next-step-btn');
+    const saveStepBtn = document.getElementById('save-step-btn');
+    const allSteps = [step1, step2, step3];
+    // FIM: Elementos do Wizard
+
+    const clientSuggestionsDatalist = document.getElementById('client-suggestions');
+    const yourCompanySelectEl = document.getElementById('your-company-select');
+    const toySelectModalEl = document.getElementById('toy-select-modal');
+    const addToyToEventBtn = document.getElementById('add-toy-to-event-btn');
+    const discountTypeEl = document.getElementById('discount-type');
+    const discountValueEl = document.getElementById('discount-value');
+    // INÍCIO DA MODIFICAÇÃO: Novos Elementos
+    const deliveryFeeEl = document.getElementById('delivery-fee');
+    const deliveryFeeAmountEl = document.getElementById('delivery-fee-amount');
+    const cepSearchBtn = document.getElementById('cep-search-btn');
+    const cepInput = document.getElementById('event-cep');
+    // FIM DA MODIFICAÇÃO
+    const eventSubtotalEl = document.getElementById('event-subtotal');
+    const discountAmountEl = document.getElementById('discount-amount');
+    const eventPriceEl = document.getElementById('event-price');
+    const geminiModal = document.getElementById('gemini-modal');
+    const geminiModalTitle = document.getElementById('gemini-modal-title');
+    const geminiModalContent = document.getElementById('gemini-modal-content');
+    const closeGeminiModalBtn = document.getElementById('close-gemini-modal-btn');
+    const copyGeminiContentBtn = document.getElementById('copy-gemini-content-btn');
+    const printGeminiContentBtn = document.getElementById('print-gemini-content-btn'); // Botão novo
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+    const settingsBtn = document.getElementById('settings-btn');
+    const apiKeyModal = document.getElementById('api-key-modal');
+    const cancelApiKeyBtn = document.getElementById('cancel-api-key-btn');
+    const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+    const apiKeyInput = document.getElementById('api-key-input');
+    const toggleToysHeader = document.getElementById('toggle-toys');
+    const toysContentWrapper = document.getElementById('toys-content-wrapper');
+    const toysIcon = document.getElementById('toys-icon');
+    const toggleCompaniesHeader = document.getElementById('toggle-companies');
+    const companiesContentWrapper = document.getElementById('companies-content-wrapper');
+    const companiesIcon = document.getElementById('companies-icon');
+    const paymentDetailsTextarea = document.getElementById('payment-details'); // Novo elemento
+    
+    // PF/PJ form elements
+    const clientTypePfRadio = document.getElementById('client-type-pf');
+    const clientTypePjRadio = document.getElementById('client-type-pj');
+    const pfFieldsDiv = document.getElementById('pf-fields');
+    const pjFieldsDiv = document.getElementById('pj-fields');
+    const clientNameInput = document.getElementById('client-name');
+    const pjCompanyNameInput = document.getElementById('pj-company-name');
+
+    // --- INÍCIO DA MODIFICAÇÃO: Elementos do Aniversariante ---
+    const isBirthdayCheckbox = document.getElementById('is-birthday-checkbox');
+    const birthdayFieldsDiv = document.getElementById('birthday-fields');
+    // --- FIM DA MODIFICAÇÃO ---
+
+
+    // --- ESTADO DA APLICAÇÃO ---
+    let currentDate = new Date();
+    let selectedDate = null;
+    let toysForCurrentEvent = [];
+    
+    // INÍCIO: Estado do Wizard
+    let currentStep = 1;
+    const totalSteps = 3;
+    // FIM: Estado do Wizard
+
+    // Carrega dados do localStorage
+    let toys = JSON.parse(localStorage.getItem('toys')) || [];
+    let companies = JSON.parse(localStorage.getItem('companies')) || [];
+    let events = JSON.parse(localStorage.getItem('events')) || [];
+    let clients = JSON.parse(localStorage.getItem('clients')) || [];
+    
+    // Função para recarregar dados do localStorage (útil quando dados são atualizados por outros sistemas)
+    const reloadDataFromStorage = () => {
+        try {
+            const toysRaw = localStorage.getItem('toys');
+            const companiesRaw = localStorage.getItem('companies');
+            const eventsRaw = localStorage.getItem('events');
+            const clientsRaw = localStorage.getItem('clients');
+            
+            console.log('🔍 Raw localStorage data:', {
+                toys: toysRaw ? toysRaw.substring(0, 100) + '...' : 'null',
+                companies: companiesRaw ? companiesRaw.substring(0, 100) + '...' : 'null',
+                events: eventsRaw ? eventsRaw.substring(0, 100) + '...' : 'null',
+                clients: clientsRaw ? clientsRaw.substring(0, 100) + '...' : 'null'
+            });
+            
+            toys = toysRaw ? JSON.parse(toysRaw) : [];
+            companies = companiesRaw ? JSON.parse(companiesRaw) : [];
+            events = eventsRaw ? JSON.parse(eventsRaw) : [];
+            clients = clientsRaw ? JSON.parse(clientsRaw) : [];
+            
+            // Log de debug para verificação de carregamento
+            console.log('📦 Dados recarregados do localStorage:', {
+                toys: toys.length,
+                companies: companies.length,
+                events: events.length,
+                clients: clients.length,
+                toysSample: toys.length > 0 ? toys[0] : null,
+                eventsSample: events.length > 0 ? events[0] : null
+            });
+            
+            return { toys, companies, events, clients };
+        } catch (error) {
+            console.error('❌ Erro ao recarregar dados do localStorage:', error);
+            return { toys: [], companies: [], events: [], clients: [] };
+        }
+    };
+    
+    // Log de debug para verificação de carregamento inicial
+    console.log('📦 Dados carregados do localStorage (inicial):', {
+        toys: toys.length,
+        companies: companies.length,
+        events: events.length,
+        clients: clients.length,
+        toysSample: toys.length > 0 ? toys[0] : null,
+        eventsSample: events.length > 0 ? events[0] : null
+    });
+    
+    // Verifica se há dados no localStorage mas não foram carregados
+    if (toys.length === 0 && companies.length === 0 && events.length === 0 && clients.length === 0) {
+        console.warn('⚠️ Nenhum dado encontrado no localStorage. Verificando todas as chaves...');
+        const allKeys = Object.keys(localStorage);
+        console.log('🔑 Todas as chaves do localStorage:', allKeys);
+        allKeys.forEach(key => {
+            if (!key.startsWith('auth') && !key.startsWith('gemini')) {
+                const value = localStorage.getItem(key);
+                try {
+                    const parsed = JSON.parse(value);
+                    console.log(`  ${key}:`, Array.isArray(parsed) ? `${parsed.length} itens` : typeof parsed);
+                } catch (e) {
+                    console.log(`  ${key}:`, value ? value.substring(0, 50) : 'null');
+                }
+            }
+        });
+    }
+
+    // --- FUNÇÕES AUXILIARES ---
+    const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+    const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const showToast = (message, isError = false, duration = 3000) => {
+        toastMessage.textContent = message;
+        toast.classList.toggle('bg-red-600', isError);
+        toast.classList.toggle('bg-green-600', !isError);
+        toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+        toast.classList.remove('hidden');
+        toast.classList.add('toast-enter');
+        setTimeout(() => {
+             toast.classList.add('hidden');
+             toast.classList.remove('toast-enter');
+        }, duration);
+    };
+
+    // INÍCIO DA MODIFICAÇÃO: Busca de CEP
+    const handleCepSearch = async () => {
+        const cep = cepInput.value.replace(/\D/g, ''); // Remove não-números
+        if (cep.length !== 8) {
+            showToast('CEP inválido. Digite 8 números.', true);
+            return;
+        }
+
+        const originalBtnHtml = cepSearchBtn.innerHTML;
+        cepSearchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        cepSearchBtn.disabled = true;
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            if (!response.ok) {
+                throw new Error('Erro ao buscar CEP.');
+            }
+            const data = await response.json();
+            if (data.erro) {
+                showToast('CEP não encontrado.', true);
+            } else {
+                document.getElementById('client-address').value = data.logradouro || '';
+                document.getElementById('event-bairro').value = data.bairro || '';
+                document.getElementById('event-cidade').value = data.localidade || '';
+                document.getElementById('event-uf').value = data.uf || '';
+                showToast('Endereço preenchido!', false);
+            }
+        } catch (error) {
+            console.error('Erro na API ViaCEP:', error);
+            showToast('Falha ao buscar CEP. Verifique a conexão.', true);
+        } finally {
+            cepSearchBtn.innerHTML = originalBtnHtml;
+            cepSearchBtn.disabled = false;
+        }
+    };
+    // FIM DA MODIFICAÇÃO
+
+    const calculateAndDisplayMonthlyTotal = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const monthlyEvents = events.filter(event => {
+            const eventDate = new Date(event.date + 'T00:00:00');
+            return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+        });
+        const total = monthlyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+        monthlyTotalEl.textContent = formatCurrency(total);
+    };
+    
+    // --- FUNÇÃO PARA GESTÃO DE INVENTÁRIO COM HORÁRIO ---
+    const getToyAvailabilityForDateTime = (toyId, dateStr, startTime, endTime, eventIdToIgnore = null) => {
+        const toy = toys.find(t => t.id === toyId);
+        if (!toy) {
+            return { total: 0, unavailable: 0, available: 0 };
+        }
+
+        const totalQuantity = toy.quantity;
+
+        const eventsOnSameDate = events.filter(e => {
+            return e.date === dateStr && e.id !== eventIdToIgnore;
+        });
+
+        const timesOverlap = (startA, endA, startB, endB) => {
+            if (!startA || !endA || !startB || !endB) return false; 
+            return startA < endB && startB < endA;
+        };
+        
+        const overlappingEvents = eventsOnSameDate.filter(event => 
+            timesOverlap(startTime, endTime, event.startTime, event.endTime)
+        );
+
+        let bookedInOverlap = 0;
+        overlappingEvents.forEach(event => {
+            event.toys.forEach(eventToy => {
+                if (eventToy.id === toyId) {
+                    bookedInOverlap += eventToy.quantity;
+                }
+            });
+        });
+        
+        const availableQuantity = totalQuantity - bookedInOverlap;
+
+        return {
+            total: totalQuantity,
+            unavailable: bookedInOverlap,
+            available: availableQuantity
+        };
+    };
+
+    // --- FUNÇÕES DO WIZARD (NOVAS) ---
+    
+    /**
+     * Valida os campos da etapa atual.
+     * @param {number} step - O número da etapa a ser validada.
+     * @returns {boolean} - True se a etapa for válida, False caso contrário.
+     */
+    const validateStep = (step) => {
+        if (step === 1) {
+            const clientType = document.querySelector('input[name="client-type"]:checked').value;
+            if (clientType === 'PF') {
+                const clientName = document.getElementById('client-name').value.trim();
+                if (!clientName) {
+                    showToast('O Nome do Cliente (PF) é obrigatório.', true);
+                    return false;
+                }
+            } else { // PJ
+                const companyName = document.getElementById('pj-company-name').value.trim();
+                if (!companyName) {
+                    showToast('O Nome da Empresa (PJ) é obrigatório.', true);
+                    return false;
+                }
+            }
+        }
+        if (step === 2) {
+            const startTime = document.getElementById('event-start-time').value;
+            const endTime = document.getElementById('event-end-time').value;
+            if (!startTime || !endTime) {
+                showToast('Os horários de Início e Término são obrigatórios.', true);
+                return false;
+            }
+            if (endTime <= startTime) {
+                showToast('O horário de término deve ser após o horário de início.', true);
+                return false;
+            }
+            const companyId = document.getElementById('your-company-select').value;
+            if (!companyId) {
+                showToast('Selecionar a "Sua Empresa" é obrigatório.', true);
+                return false;
+            }
+        }
+        if (step === 3) {
+            if (toysForCurrentEvent.length === 0) {
+                showToast('Adicione pelo menos um brinquedo ao evento.', true);
+                return false;
+            }
+        }
+        return true; // Passou na validação
+    };
+
+
+    /**
+     * Mostra a etapa especificada do wizard e atualiza os botões.
+     * @param {number} stepToShow - O número da etapa (1, 2 ou 3).
+     */
+    const showStep = (stepToShow) => {
+        currentStep = stepToShow;
+        
+        // Oculta todas as etapas
+        allSteps.forEach(step => step.classList.add('hidden'));
+        
+        // Mostra a etapa atual
+        const activeStep = document.getElementById(`step-${currentStep}`);
+        if (activeStep) {
+            activeStep.classList.remove('hidden');
+        }
+
+        // Atualiza o indicador
+        stepIndicator.textContent = `Etapa ${currentStep} de ${totalSteps}`;
+
+        // Atualiza os botões
+        if (currentStep === 1) {
+            prevStepBtn.classList.add('hidden');
+            nextStepBtn.classList.remove('hidden');
+            saveStepBtn.classList.add('hidden');
+        } else if (currentStep === totalSteps) {
+            prevStepBtn.classList.remove('hidden');
+            nextStepBtn.classList.add('hidden');
+            saveStepBtn.classList.remove('hidden');
+        } else {
+            prevStepBtn.classList.remove('hidden');
+            nextStepBtn.classList.remove('hidden');
+            saveStepBtn.classList.add('hidden');
+        }
+    };
+
+
+    // --- FUNÇÕES DE MODAL ---
+    const showModal = (modalEl) => {
+        modalEl.classList.remove('hidden');
+        setTimeout(() => modalEl.classList.add('modal-enter'), 10);
+    };
+
+    const hideModal = (modalEl) => {
+        modalEl.classList.remove('modal-enter');
+        setTimeout(() => {
+            modalEl.classList.add('hidden');
+            // INÍCIO: Resetar o wizard ao fechar
+            currentStep = 1;
+            showStep(1);
+            // FIM: Resetar o wizard
+        }, 300); // Wait for animation
+    };
+
+    // --- FUNÇÕES DE GERENCIAMENTO DA API KEY ---
+    const getApiKey = () => localStorage.getItem('geminiApiKey');
+
+    const showApiKeyModal = () => {
+        const currentKey = getApiKey();
+        apiKeyInput.value = currentKey || '';
+        showModal(apiKeyModal);
+    };
+
+    const saveApiKey = () => {
+        const key = apiKeyInput.value.trim();
+        if (key) {
+            localStorage.setItem('geminiApiKey', key);
+            hideModal(apiKeyModal);
+            showToast("Chave da API salva com sucesso!", false);
+        } else {
+            showToast("Por favor, insira uma chave da API.", true);
+        }
+    };
+    
+    // --- FUNÇÕES GEMINI ---
+    const showGeminiModal = (title, content) => {
+        geminiModalTitle.textContent = title;
+        geminiModalContent.value = content;
+        showModal(geminiModal);
+    };
+
+    // --- INÍCIO DA MODIFICAÇÃO (Refatoração para Impressão) ---
+    /**
+     * Abre uma nova janela formatada para impressão com o conteúdo fornecido.
+     * @param {string} title - O título da janela de impressão.
+     * @param {string} content - O texto a ser impresso (será colocado em uma tag <pre>).
+     */
+    const openPrintWindow = (title, content) => {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>${title}</title>
+                    <style>
+                        body { 
+                            font-family: 'Times New Roman', Times, serif; 
+                            margin: 40px; 
+                            color: #000; 
+                            font-size: 12pt; 
+                            line-height: 1.5;
+                        }
+                        pre { 
+                            white-space: pre-wrap; /* Essencial para manter a formatação */
+                            word-wrap: break-word;
+                            font-family: 'Times New Roman', Times, serif; 
+                            font-size: 12pt;
+                            line-height: 1.5;
+                        }
+                        h1 {
+                            font-family: Arial, sans-serif;
+                            font-size: 16pt;
+                            text-align: center;
+                            border-bottom: 1px solid #000;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                        }
+                        .print-button { 
+                            display: block; 
+                            width: 150px; 
+                            margin: 30px auto; 
+                            padding: 10px; 
+                            background: #007bff; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 5px; 
+                            cursor: pointer;
+                            font-family: Arial, sans-serif;
+                            font-size: 10pt;
+                        }
+                        @media print {
+                            .print-button { display: none; }
+                            body { margin: 25px; }
+                            h1 { font-size: 14pt; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    <pre>${content}</pre>
+                    <button class="print-button" onclick="window.print()">Imprimir</button>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+    };
+    // --- FIM DA MODIFICAÇÃO (Refatoração para Impressão) ---
+
+    const callGeminiAPI = async (prompt, buttonElement = null) => {
+        const apiKey = getApiKey();
+        
+        if (!apiKey) {
+            showToast("Chave da API do Gemini não configurada.", true);
+            showApiKeyModal();
+            return null;
+        }
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        let originalButtonContent = '';
+        if (buttonElement) {
+            originalButtonContent = buttonElement.innerHTML;
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            // Adicionando systemInstruction para guiar o modelo
+            systemInstruction: {
+                parts: [{ text: "Você é um assistente prestativo. Sua tarefa é gerar textos para um sistema de gerenciamento de eventos, como mensagens de confirmação e contratos. Seja profissional e siga o formato solicitado." }]
+            },
+        };
+        
+        try {
+            // Implementando retry com backoff exponencial
+            let response;
+            let retries = 0;
+            const maxRetries = 3;
+            let delay = 1000; // 1 segundo
+
+            while (retries < maxRetries) {
+                response = await fetch(apiUrl, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload),
+                });
+
+                if (response.ok) {
+                    break; // Sucesso, sair do loop
+                }
+
+                // Tratar erros 429 (Too Many Requests) ou 5xx (Server Errors)
+                if (response.status === 429 || response.status >= 500) {
+                    retries++;
+                    if (retries >= maxRetries) {
+                        throw new Error(`Muitas tentativas. A API pode estar sobrecarregada. (Erro: ${response.status})`);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Backoff exponencial
+                } else {
+                    // Outros erros (ex: 400, 401) não devem ser retentados
+                    const errorResult = await response.json();
+                    console.error("Erro da API Gemini:", errorResult);
+                    const errorMessage = errorResult.error?.message.includes("API key not valid")
+                        ? "Sua chave da API é inválida. Verifique nas configurações."
+                        : `Erro da API: ${errorResult.error?.message || response.statusText}`;
+                    throw new Error(errorMessage);
+                }
+            }
+            
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                return candidate.content.parts[0].text;
+            } else {
+                const feedback = result.promptFeedback ? `Conteúdo bloqueado: ${result.promptFeedback.blockReason}` : 'Resposta da API inválida ou vazia.';
+                throw new Error(feedback);
+            }
+        } catch (error) {
+            console.error("Falha no callGeminiAPI:", error);
+            showToast(error.message || 'Falha ao gerar conteúdo.', true);
+            return null;
+        } finally {
+            if (buttonElement) {
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = originalButtonContent;
+            }
+        }
+    };
+    
+    // --- RENDERIZAÇÃO ---
+    const renderAll = () => {
+        // Recarrega dados do localStorage antes de renderizar (garante dados atualizados)
+        reloadDataFromStorage();
+        renderToys();
+        renderCompanies();
+        renderCalendar();
+        if(selectedDate) renderDayEvents(selectedDate);
+    };
+
+    const renderCalendar = () => {
+        // Garante que está usando os dados mais recentes do localStorage
+        const currentEvents = JSON.parse(localStorage.getItem('events')) || [];
+        events = currentEvents; // Atualiza a variável global
+        calendarBody.innerHTML = '';
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        monthYearHeader.textContent = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+        calculateAndDisplayMonthlyTotal();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            calendarBody.innerHTML += `<div class="bg-gray-100/50 rounded-xl"></div>`;
+        }
+        for (let day = 1; day <= lastDateOfMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const today = new Date();
+            const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            const eventsOnDay = currentEvents.filter(e => e.date === dateStr).length;
+
+            const dayCell = document.createElement('div');
+            dayCell.className = `day-cell p-1.5 border border-transparent flex flex-col items-start cursor-pointer text-gray-700 ${isToday ? 'bg-indigo-200/80 font-bold' : 'bg-white/40 hover:bg-white/80'} ${eventsOnDay > 0 ? 'has-event' : ''}`;
+            dayCell.dataset.date = dateStr;
+
+            let eventInfoHtml = '';
+            if (eventsOnDay > 0) {
+                const label = eventsOnDay === 1 ? 'evento' : 'eventos';
+                eventInfoHtml = `
+                    <div class="event-count-container">
+                        <span class="event-count">${eventsOnDay}</span>
+                        <span class="event-count-label">${label}</span>
+                    </div>
+                `;
+            }
+
+            dayCell.innerHTML = `<span class="day-number text-xs font-medium">${day}</span>${eventInfoHtml}`;
+            dayCell.addEventListener('click', () => handleDayClick(dateStr));
+            calendarBody.appendChild(dayCell);
+        }
+    };
+
+    const renderToys = () => {
+        // Garante que está usando os dados mais recentes do localStorage
+        toys = JSON.parse(localStorage.getItem('toys')) || [];
+        toyListDiv.innerHTML = '';
+        toySelectModalEl.innerHTML = '<option value="">Selecione um brinquedo</option>';
+        if(toys.length === 0) {
+            toyListDiv.innerHTML = '<p class="text-sm text-gray-500">Nenhum brinquedo cadastrado.</p>';
+        } else {
+            toys.sort((a,b) => a.name.localeCompare(b.name)).forEach(toy => {
+                const toyItem = document.createElement('div');
+                toyItem.className = 'flex justify-between items-center bg-white/60 p-2 rounded-md';
+                toyItem.innerHTML = `
+                    <span class="flex-grow mr-2 truncate" title="${toy.name}">${toy.name}</span>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <label for="qty-${toy.id}" class="text-sm text-gray-600">Qtd:</label>
+                        <input type="number" id="qty-${toy.id}" data-id="${toy.id}" value="${toy.quantity}" min="1" class="edit-toy-quantity form-input w-16 text-center px-1 py-0.5 rounded-md">
+                        <button data-id="${toy.id}" class="edit-toy-btn text-blue-500 hover:text-blue-700 text-sm" title="Editar Nome"><i class="fas fa-pencil-alt"></i></button>
+                        <button data-id="${toy.id}" class="delete-toy-btn text-red-500 hover:text-red-700 text-sm" title="Excluir Brinquedo"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+                toyListDiv.appendChild(toyItem);
+                const option = document.createElement('option');
+                option.value = toy.id;
+                option.textContent = toy.name;
+                toySelectModalEl.appendChild(option);
+            });
+        }
+        document.querySelectorAll('.edit-toy-quantity').forEach(input => {
+            input.addEventListener('change', (e) => handleEditToyQuantity(parseInt(e.currentTarget.dataset.id), parseInt(e.currentTarget.value)));
+        });
+        document.querySelectorAll('.edit-toy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => handleEditToy(parseInt(e.currentTarget.dataset.id)));
+        });
+        document.querySelectorAll('.delete-toy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => handleDeleteToy(parseInt(e.currentTarget.dataset.id)));
+        });
+    };
+
+    const renderCompanies = () => {
+        // Garante que está usando os dados mais recentes do localStorage
+        companies = JSON.parse(localStorage.getItem('companies')) || [];
+        companyListDiv.innerHTML = '';
+        yourCompanySelectEl.innerHTML = '<option value="">Selecione sua empresa</option>';
+
+        // --- INÍCIO DA MODIFICAÇÃO: Calcular faturamento mensal ---
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        const monthlyEvents = events.filter(event => {
+            const eventDate = new Date(event.date + 'T00:00:00');
+            return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+        });
+        // --- FIM DA MODIFICAÇÃO ---
+
+
+        if(companies.length === 0) {
+            companyListDiv.innerHTML = '<p class="text-sm text-gray-500">Nenhuma empresa cadastrada.</p>';
+        } else {
+            companies.sort((a,b) => a.name.localeCompare(b.name)).forEach(company => {
+                
+                // --- INÍCIO DA MODIFICAÇÃO: Calcular total da empresa ---
+                const companyEvents = monthlyEvents.filter(e => e.yourCompanyId === company.id);
+                const companyTotal = companyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+                // --- FIM DA MODIFICAÇÃO ---
+
+                const companyItem = document.createElement('div');
+                companyItem.className = 'flex justify-between items-center bg-white/60 p-2 rounded-md';
+                // --- INÍCIO DA MODIFICAÇÃO: Exibir telefone ---
+                companyItem.innerHTML = `
+                    <div class="flex-grow mr-2 text-sm">
+                        <p class="font-semibold truncate" title="${company.name}">${company.name}</p>
+                        <p class="text-xs text-gray-500">${company.cnpj || 'CNPJ não informado'}</p>
+                        <p class="text-xs text-gray-500">${company.phone || 'Telefone não informado'}</p>
+                        <p class="text-sm font-bold text-emerald-600">${formatCurrency(companyTotal)}</p>
+                    </div>
+                    <div class="flex items-center space-x-3 shrink-0">
+                        <button data-id="${company.id}" class="edit-company-btn text-blue-500 hover:text-blue-700 text-sm" title="Editar Empresa"><i class="fas fa-pencil-alt"></i></button>
+                        <button data-id="${company.id}" class="delete-company-btn text-red-500 hover:text-red-700 text-sm" title="Excluir Empresa"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+                // --- FIM DA MODIFICAÇÃO ---
+                companyListDiv.appendChild(companyItem);
+                const option = document.createElement('option');
+                option.value = company.id;
+                option.textContent = company.name;
+                yourCompanySelectEl.appendChild(option);
+            });
+        }
+        document.querySelectorAll('.edit-company-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => handleEditCompany(parseInt(e.currentTarget.dataset.id)));
+        });
+        document.querySelectorAll('.delete-company-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => handleDeleteCompany(parseInt(e.currentTarget.dataset.id)));
+        });
+    };
+
+    const renderDayEvents = (dateStr) => {
+        const dayEvents = events.filter(e => e.date === dateStr);
+        dayEventsList.innerHTML = '';
+        if (dayEvents.length === 0) {
+            dayEventsList.innerHTML = '<p class="text-sm text-gray-500">Nenhum evento para este dia.</p>';
+        } else {
+            dayEvents.sort((a, b) => a.startTime.localeCompare(b.startTime)).forEach(event => {
+                let toysHtml = '<ul class="list-disc list-inside pl-1 text-blue-500">';
+                event.toys.forEach(eventToy => {
+                    const toy = toys.find(t => t.id === eventToy.id);
+                    const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
+                    toysHtml += `<li class="font-semibold text-gray-700">${toy ? toy.name : 'Brinquedo removido'}${quantityText}</li>`;
+                });
+                toysHtml += '</ul>';
+                const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+                const clientNameDisplay = event.clientType === 'PJ' ? `${event.clientName} (PJ)` : event.clientName;
+                const contactPhone = event.clientType === 'PJ' ? event.repPhone : event.clientPhone;
+                
+                // INÍCIO DA MODIFICAÇÃO: Endereço Completo para Card
+                const eventAddressFull = [event.clientAddress, event.complemento, event.bairro, event.cidade]
+                    .filter(Boolean) // Remove itens vazios
+                    .join(', ');
+                // FIM DA MODIFICAÇÃO
+
+                // --- INÍCIO DA MODIFICAÇÃO: Exibir dados do Aniversariante ---
+                let birthdayInfoHtml = '';
+                if (event.isBirthday && event.birthdayPersonName) {
+                    birthdayInfoHtml = `<p class="mt-1 pt-1 border-t border-indigo-100"><i class="fas fa-birthday-cake fa-fw mr-1 text-pink-400"></i>Aniversariante: <strong>${event.birthdayPersonName}</strong></p>`;
+                }
+                // --- FIM DA MODIFICAÇÃO ---
+                
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'bg-white/50 p-3 rounded-lg border border-gray-200';
+                eventDiv.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            ${toysHtml}
+                            <div class="mt-2 space-y-1 text-sm text-gray-500">
+                                <!-- INÍCIO DA MODIFICAÇÃO: Status de Pagamento -->
+                                <p class="font-semibold text-gray-800">${getPaymentStatusHtml(event)}</p>
+                                <!-- FIM DA MODIFICAÇÃO -->
+                                <p><i class="fas fa-user fa-fw mr-1 text-gray-400"></i>Cliente: <strong>${clientNameDisplay}</strong></p>
+                                ${contactPhone ? `<p><i class="fas fa-phone fa-fw mr-1 text-gray-400"></i>Contato: <strong>${contactPhone}</strong></p>` : ''}
+                                ${eventAddressFull ? `<p><i class="fas fa-map-marker-alt fa-fw mr-1 text-gray-400"></i>Endereço: <strong class="break-all">${eventAddressFull}</strong></p>` : ''}
+                                <p><i class="fas fa-clock fa-fw mr-1 text-gray-400"></i>Horário: <strong>${event.startTime} às ${event.endTime}</strong></p>
+                                ${yourCompany ? `<p><i class="fas fa-building fa-fw mr-1 text-gray-400"></i>Por: <strong>${yourCompany.name}</strong></p>` : ''}
+                                <!-- INÍCIO DA MODIFICAÇÃO: Monitor -->
+                                ${event.monitor ? `<p><i class="fas fa-user-shield fa-fw mr-1 text-gray-400"></i>Monitor: <strong>${event.monitor}</strong></p>` : ''}
+                                <!-- FIM DA MODIFICAÇÃO -->
+                                <p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>Valor: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>
+                                ${event.paymentDetails ? `<p><i class="fas fa-credit-card fa-fw mr-1 text-gray-400"></i>Pagamento: <strong class="text-xs">${event.paymentDetails.replace(/\n/g, '<br>')}</strong></p>` : ''}
+                                ${birthdayInfoHtml} <!-- ADICIONADO AQUI -->
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-2 items-center">
+                             <button data-id="${event.id}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
+                            <button data-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 text-lg shrink-0" title="Excluir Evento"><i class="fas fa-times-circle"></i></button>
+                            <button data-id="${event.id}" class="generate-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" title="✨ Criar Mensagem de Confirmação"><i class="fas fa-comment-dots"></i></button>
+                            <!-- BOTÃO DE IMPRESSÃO INDIVIDUAL REMOVIDO -->
+                            <!-- NOVO CHECKBOX DE SELEÇÃO -->
+                            <input type="checkbox" data-id="${event.id}" class="event-print-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500" title="Selecionar para Impressão">
+                            <button data-id="${event.id}" class="generate-contract-btn text-purple-500 hover:text-purple-600 text-lg shrink-0" title="Gerar Contrato"><i class="fas fa-file-signature"></i></button>
+                        </div>
+                    </div>`;
+                dayEventsList.appendChild(eventDiv);
+            });
+        }
+        
+        // <!-- INÍCIO DA MODIFICAÇÃO: Botão de Imprimir e Checkbox de Ocultar Valores -->
+        if (dayEvents.length > 0) {
+            const hidePricesContainer = document.createElement('div');
+            hidePricesContainer.className = 'flex items-center justify-center mt-4';
+            hidePricesContainer.innerHTML = `
+                <input type="checkbox" id="hide-prices-checkbox" class="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500 mr-2">
+                <label for="hide-prices-checkbox" class="text-sm text-gray-700 select-none cursor-pointer">Ocultar valores na impressão</label>
+            `;
+            dayEventsList.appendChild(hidePricesContainer);
+
+            const printSelectedBtn = document.createElement('button');
+            printSelectedBtn.id = 'print-selected-events-btn';
+            printSelectedBtn.textContent = 'Imprimir Ordens de Serviço Selecionadas';
+            printSelectedBtn.className = 'mt-2 w-full px-4 py-2 rounded-md shiny-btn-red'; // mt-2 em vez de mt-4
+            printSelectedBtn.onclick = () => handlePrintSelectedEvents();
+            dayEventsList.appendChild(printSelectedBtn);
+        }
+        // <!-- FIM DA MODIFICAÇÃO -->
+
+        const addEventBtn = document.createElement('button');
+        addEventBtn.textContent = 'Adicionar Agendamento';
+        addEventBtn.className = 'mt-4 w-full px-4 py-2 rounded-md shiny-btn';
+        addEventBtn.onclick = () => showEventModal(dateStr);
+        dayEventsList.appendChild(addEventBtn);
+        
+        document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id))));
+        document.querySelectorAll('.delete-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteEvent(parseInt(e.currentTarget.dataset.id))));
+        document.querySelectorAll('.generate-message-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateMessage(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
+        // <!-- LISTENER DO BOTÃO INDIVIDUAL REMOVIDO -->
+        document.querySelectorAll('.generate-contract-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateContract(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
+    };
+
+    // INÍCIO: Funções para Modal de Filtro de Eventos
+    let currentSortColumn = null;
+    let currentSortOrder = 'asc';
+
+    const renderFilterEventsTable = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        const monthlyEvents = events.filter(event => {
+            const eventDate = new Date(event.date + 'T00:00:00');
+            return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+        });
+
+        if (monthlyEvents.length === 0) {
+            filterEventsTableBody.innerHTML = '';
+            filterEventsEmpty.classList.remove('hidden');
+            return;
+        }
+
+        filterEventsEmpty.classList.add('hidden');
+        
+        // Ordenar eventos
+        const sortedEvents = [...monthlyEvents].sort((a, b) => {
+            if (!currentSortColumn) return 0;
+            
+            let aValue, bValue;
+            
+            switch (currentSortColumn) {
+                case 'name':
+                    aValue = a.clientName || '';
+                    bValue = b.clientName || '';
+                    return currentSortOrder === 'asc' 
+                        ? aValue.localeCompare(bValue, 'pt-BR')
+                        : bValue.localeCompare(aValue, 'pt-BR');
+                case 'date':
+                    aValue = new Date(a.date + 'T00:00:00');
+                    bValue = new Date(b.date + 'T00:00:00');
+                    return currentSortOrder === 'asc' 
+                        ? aValue - bValue
+                        : bValue - aValue;
+                case 'location':
+                    const aLocation = [a.clientAddress, a.complemento, a.bairro, a.cidade]
+                        .filter(Boolean).join(', ') || 'Local a confirmar';
+                    const bLocation = [b.clientAddress, b.complemento, b.bairro, b.cidade]
+                        .filter(Boolean).join(', ') || 'Local a confirmar';
+                    return currentSortOrder === 'asc' 
+                        ? aLocation.localeCompare(bLocation, 'pt-BR')
+                        : bLocation.localeCompare(aLocation, 'pt-BR');
+                case 'value':
+                    aValue = a.price || 0;
+                    bValue = b.price || 0;
+                    return currentSortOrder === 'asc' 
+                        ? aValue - bValue
+                        : bValue - aValue;
+                default:
+                    return 0;
+            }
+        });
+
+        filterEventsTableBody.innerHTML = sortedEvents.map(event => {
+            const eventDate = new Date(event.date + 'T00:00:00');
+            const formattedDate = eventDate.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric' 
+            });
+            const eventLocation = [event.clientAddress, event.complemento, event.bairro, event.cidade]
+                .filter(Boolean).join(', ') || 'Local a confirmar';
+            
+            return `
+                <tr class="hover:bg-indigo-50 cursor-pointer transition-colors" data-event-id="${event.id}" data-event-date="${event.date}">
+                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${event.clientName || 'Sem nome'}</td>
+                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${formattedDate}</td>
+                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${eventLocation}</td>
+                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700 font-semibold text-emerald-600">${formatCurrency(event.price || 0)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // Adicionar event listeners para as linhas
+        filterEventsTableBody.querySelectorAll('tr[data-event-id]').forEach(row => {
+            row.addEventListener('click', () => {
+                const eventDate = row.dataset.eventDate;
+                hideModal(filterEventsModal);
+                handleDayClick(eventDate);
+            });
+        });
+    };
+
+    const handleSortColumn = (columnName) => {
+        const header = document.querySelector(`th[data-sort="${columnName}"]`);
+        if (!header) return;
+
+        // Resetar todos os ícones de ordenação
+        document.querySelectorAll('th[data-sort] i').forEach(icon => {
+            icon.className = 'fas fa-sort ml-1 text-gray-400';
+        });
+
+        if (currentSortColumn === columnName) {
+            // Alternar ordem
+            currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            // Nova coluna, começar com asc
+            currentSortColumn = columnName;
+            currentSortOrder = 'asc';
+        }
+
+        // Atualizar ícone da coluna atual
+        const icon = header.querySelector('i');
+        if (currentSortOrder === 'asc') {
+            icon.className = 'fas fa-sort-up ml-1 text-indigo-600';
+        } else {
+            icon.className = 'fas fa-sort-down ml-1 text-indigo-600';
+        }
+
+        renderFilterEventsTable();
+    };
+
+    const showFilterEventsModal = () => {
+        currentSortColumn = null;
+        currentSortOrder = 'asc';
+        // Resetar todos os ícones
+        document.querySelectorAll('th[data-sort] i').forEach(icon => {
+            icon.className = 'fas fa-sort ml-1 text-gray-400';
+        });
+        renderFilterEventsTable();
+        showModal(filterEventsModal);
+    };
+
+    const handleExportFilterEventsPDF = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        const monthlyEvents = events.filter(event => {
+            const eventDate = new Date(event.date + 'T00:00:00');
+            return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+        });
+
+        if (monthlyEvents.length === 0) {
+            showToast("Nenhum evento encontrado para este mês.", true);
+            return;
+        }
+
+        try {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showToast("Erro ao carregar a biblioteca PDF. Tente recarregar.", true);
+                console.error("window.jspdf.jsPDF is not defined.");
+                return;
+            }
+
+            // Ordenar eventos da mesma forma que na tabela
+            const sortedEvents = [...monthlyEvents].sort((a, b) => {
+                if (!currentSortColumn) return 0;
+                
+                let aValue, bValue;
+                
+                switch (currentSortColumn) {
+                    case 'name':
+                        aValue = a.clientName || '';
+                        bValue = b.clientName || '';
+                        return currentSortOrder === 'asc' 
+                            ? aValue.localeCompare(bValue, 'pt-BR')
+                            : bValue.localeCompare(aValue, 'pt-BR');
+                    case 'date':
+                        aValue = new Date(a.date + 'T00:00:00');
+                        bValue = new Date(b.date + 'T00:00:00');
+                        return currentSortOrder === 'asc' 
+                            ? aValue - bValue
+                            : bValue - aValue;
+                    case 'location':
+                        const aLocation = [a.clientAddress, a.complemento, a.bairro, a.cidade]
+                            .filter(Boolean).join(', ') || 'Local a confirmar';
+                        const bLocation = [b.clientAddress, b.complemento, b.bairro, b.cidade]
+                            .filter(Boolean).join(', ') || 'Local a confirmar';
+                        return currentSortOrder === 'asc' 
+                            ? aLocation.localeCompare(bLocation, 'pt-BR')
+                            : bLocation.localeCompare(aLocation, 'pt-BR');
+                    case 'value':
+                        aValue = a.price || 0;
+                        bValue = b.price || 0;
+                        return currentSortOrder === 'asc' 
+                            ? aValue - bValue
+                            : bValue - aValue;
+                    default:
+                        return 0;
+                }
+            });
+
+            const doc = new jsPDF();
+            
+            // Título
+            const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+            doc.setFontSize(18);
+            doc.text(`Eventos do Mês - ${monthName}`, 14, 22);
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Total de ${sortedEvents.length} evento(s) cadastrado(s).`, 14, 29);
+
+            // Preparar dados da tabela
+            const columns = ["Nome", "Data", "Local", "Valor"];
+            const rows = sortedEvents.map(event => {
+                const eventDate = new Date(event.date + 'T00:00:00');
+                const formattedDate = eventDate.toLocaleDateString('pt-BR', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                });
+                const eventLocation = [event.clientAddress, event.complemento, event.bairro, event.cidade]
+                    .filter(Boolean).join(', ') || 'Local a confirmar';
+                
+                return [
+                    event.clientName || 'Sem nome',
+                    formattedDate,
+                    eventLocation,
+                    formatCurrency(event.price || 0)
+                ];
+            });
+
+            // Adicionar linha de total
+            const totalValue = sortedEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+            rows.push(['TOTAL', '', '', formatCurrency(totalValue)]);
+
+            // Calcular larguras das colunas (coluna de valor com o dobro)
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 14 * 2; // margens esquerda e direita
+            const availableWidth = pageWidth - margin;
+            // Dividir em 5 partes: 1 para nome, 1 para data, 1 para local, 2 para valor
+            const baseWidth = availableWidth / 5;
+            
+            // Tabela
+            doc.autoTable({
+                startY: 35,
+                head: [columns],
+                body: rows,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] },
+                columnStyles: {
+                    0: { cellWidth: baseWidth }, // Nome
+                    1: { cellWidth: baseWidth }, // Data
+                    2: { cellWidth: baseWidth }, // Local
+                    3: { cellWidth: baseWidth * 2, halign: 'right', fontStyle: 'bold' } // Coluna de valor - o dobro da largura
+                },
+                didParseCell: (data) => {
+                    // Estilizar linha de total
+                    if (data.row.section === 'body' && data.row.index === rows.length - 1) {
+                        data.cell.styles.fillColor = [241, 245, 249];
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [31, 41, 55];
+                    }
+                }
+            });
+
+            // Salva o arquivo
+            const monthStr = String(month + 1).padStart(2, '0');
+            doc.save(`eventos_${monthStr}_${year}.pdf`);
+            showToast("PDF exportado com sucesso!", false);
+
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            showToast("Ocorreu um erro ao gerar o PDF.", true);
+        }
+    };
+    // FIM: Funções para Modal de Filtro de Eventos
+
+    // INÍCIO DA MODIFICAÇÃO: Helper para Status de Pagamento
+    const getPaymentStatusHtml = (event) => {
+        let statusClass = '';
+        let statusText = event.paymentStatus || 'Aguardando Sinal'; // Default
+
+        switch (statusText) {
+            case 'Aguardando Sinal':
+                statusClass = 'status-aguardando';
+                break;
+            case 'Sinal Pago':
+                statusClass = 'status-sinal';
+                statusText = event.signalReceived ? 'Sinal Recebido' : 'Sinal (Pendente)';
+                break;
+            case 'Pago Integralmente':
+                statusClass = 'status-pago';
+                break;
+            case 'Cancelado':
+                statusClass = 'status-cancelado';
+                break;
+            default:
+                statusClass = 'status-aguardando';
+        }
+        return `<span class="flex items-center"><span class="status-dot ${statusClass}"></span>${statusText}</span>`;
+    };
+    // FIM DA MODIFICAÇÃO
+
+    const renderSelectedToysInModal = () => {
+        const listEl = document.getElementById('selected-toys-list');
+        listEl.innerHTML = '';
+        if (toysForCurrentEvent.length === 0) {
+            listEl.innerHTML = '<p class="text-sm text-center text-gray-500 pt-2">Nenhum brinquedo adicionado.</p>';
+        } else {
+            toysForCurrentEvent.forEach(eventToy => {
+                const toy = toys.find(t => t.id === eventToy.id);
+                if (toy) {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-md text-sm';
+                    itemEl.innerHTML = `
+                        <span>${toy.name} (x${eventToy.quantity}) - ${formatCurrency(eventToy.price)}</span>
+                        <button type="button" data-id="${toy.id}" data-price="${eventToy.price}" class="remove-toy-from-event-btn text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                    `;
+                    listEl.appendChild(itemEl);
+                }
+            });
+        }
+        document.querySelectorAll('.remove-toy-from-event-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const toyIdToRemove = parseInt(e.currentTarget.dataset.id);
+                const priceToRemove = parseFloat(e.currentTarget.dataset.price);
+                const indexToRemove = toysForCurrentEvent.findIndex(t => t.id === toyIdToRemove && t.price === priceToRemove);
+                 if (indexToRemove > -1) {
+                    toysForCurrentEvent.splice(indexToRemove, 1);
+                    renderSelectedToysInModal();
+                    updateFinalPrice();
+                }
+            });
+        });
+    };
+
+    const updateFinalPrice = () => {
+        const subtotal = toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0);
+        eventSubtotalEl.textContent = formatCurrency(subtotal);
+
+        // INÍCIO DA MODIFICAÇÃO: Incluir Frete no Cálculo
+        const deliveryFee = parseFloat(deliveryFeeEl.value) || 0;
+        deliveryFeeAmountEl.textContent = `+ ${formatCurrency(deliveryFee)}`;
+
+        const discountType = discountTypeEl.value;
+        const discountValue = parseFloat(discountValueEl.value) || 0;
+        let discount = 0;
+        
+        if (discountType === 'fixed') {
+            discount = discountValue;
+        } else { // percent
+            discount = (subtotal * discountValue) / 100;
+        }
+        
+        // Preço final = (Subtotal - Desconto) + Frete
+        const finalPrice = (subtotal - discount) + deliveryFee; 
+        
+        discountAmountEl.textContent = `- ${formatCurrency(discount)}`;
+        eventPriceEl.value = formatCurrency(finalPrice);
+        // FIM DA MODIFICAÇÃO
+    };
+
+    const handleDayClick = (dateStr) => {
+        selectedDate = dateStr;
+        const dateObj = new Date(dateStr + 'T00:00:00');
+        selectedDayText.textContent = `Eventos para ${new Intl.DateTimeFormat('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(dateObj)}`;
+        renderDayEvents(dateStr);
+        showModal(dayEventsModal);
+    };
+    
+    const handleAddToy = () => {
+        const name = newToyNameInput.value.trim();
+        const quantity = parseInt(newToyQuantityInput.value) || 1;
+        if (name && quantity > 0) {
+            toys.push({ id: Date.now(), name, quantity });
+            saveData('toys', toys);
+            renderToys();
+            newToyNameInput.value = '';
+            newToyQuantityInput.value = '1';
+        }
+    };
+
+    // --- INÍCIO DA NOVA FUNÇÃO ---
+    /**
+     * Gera e baixa um PDF com a lista de brinquedos cadastrados.
+     */
+    const handleExportToysPDF = () => {
+        if (toys.length === 0) {
+            showToast("Nenhum brinquedo cadastrado para exportar.", true);
+            return;
+        }
+
+        try {
+            const { jsPDF } = window.jspdf;
+            if (!jsPDF) {
+                showToast("Erro ao carregar a biblioteca PDF. Tente recarregar.", true);
+                console.error("window.jspdf.jsPDF is not defined.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            
+            const columns = ["Nome do Brinquedo", "Quantidade em Estoque"];
+            const rows = toys.map(toy => [toy.name, toy.quantity]);
+
+            // Título
+            doc.setFontSize(18);
+            doc.text("Catálogo de Brinquedos", 14, 22);
+            doc.setFontSize(11);
+            doc.setTextColor(100); // Cor cinza
+            doc.text(`Total de ${toys.length} tipos de brinquedos cadastrados.`, 14, 29);
+
+            // Tabela
+            doc.autoTable({
+                startY: 35,
+                head: [columns],
+                body: rows,
+                theme: 'striped', // Tema da tabela
+                headStyles: { fillColor: [79, 70, 229] } // Cor índigo no cabeçalho
+            });
+
+            // Salva o arquivo
+            doc.save('catalogo_brinquedos.pdf');
+
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            showToast("Ocorreu um erro ao gerar o PDF.", true);
+        }
+    };
+    // --- FIM DA NOVA FUNÇÃO ---
+
+
+    const handleEditToy = (toyId) => {
+        const toy = toys.find(t => t.id === toyId);
+        if(!toy) return;
+        const newName = prompt("Novo nome:", toy.name);
+        if(newName && newName.trim()){
+            toy.name = newName.trim();
+            saveData('toys', toys);
+            renderAll();
+        }
+    };
+    
+    const handleDeleteToy = (toyId) => {
+        if (confirm('Tem certeza que deseja excluir este brinquedo?')) {
+            toys = toys.filter(t => t.id !== toyId);
+            events.forEach(e => {
+                e.toys = e.toys.filter(t => t.id !== toyId);
+            });
+            events = events.filter(e => e.toys.length > 0);
+            saveData('toys', toys);
+            saveData('events', events);
+            renderAll();
+        }
+    };
+    
+    const handleEditToyQuantity = (toyId, newQuantity) => {
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            showToast('Quantidade inválida.', true);
+            renderToys();
+            return;
+        }
+        const toy = toys.find(t => t.id === toyId);
+        if (toy) {
+            toy.quantity = newQuantity;
+            saveData('toys', toys);
+            showToast('Quantidade atualizada!', false);
+        }
+    };
+
+    // --- INÍCIO DA MODIFICAÇÃO: handleAddCompany ---
+    const handleAddCompany = () => {
+        const nameInput = document.getElementById('new-company-name');
+        const cnpjInput = document.getElementById('new-company-cnpj');
+        const addressInput = document.getElementById('new-company-address');
+        const repNameInput = document.getElementById('new-company-rep-name');
+        const repDocInput = document.getElementById('new-company-rep-doc');
+        // Novos campos
+        const phoneInput = document.getElementById('new-company-phone');
+        const emailInput = document.getElementById('new-company-email');
+        const paymentInput = document.getElementById('new-company-payment');
+
+        if (nameInput.value.trim()) {
+            companies.push({ 
+                id: Date.now(), 
+                name: nameInput.value.trim(),
+                cnpj: cnpjInput.value.trim(),
+                address: addressInput.value.trim(),
+                repName: repNameInput.value.trim(),
+                repDoc: repDocInput.value.trim(),
+                // Novos dados
+                phone: phoneInput.value.trim(),
+                email: emailInput.value.trim(),
+                paymentInfo: paymentInput.value.trim()
+            });
+            saveData('companies', companies);
+            renderCompanies();
+            // Limpar todos os campos
+            nameInput.value = '';
+            cnpjInput.value = '';
+            addressInput.value = '';
+            repNameInput.value = '';
+            repDocInput.value = '';
+            phoneInput.value = '';
+            emailInput.value = '';
+            paymentInput.value = '';
+        } else {
+            showToast('O nome da empresa é obrigatório.', true);
+        }
+    };
+    // --- FIM DA MODIFICAÇÃO ---
+
+    // --- INÍCIO DA MODIFICAÇÃO: handleEditCompany ---
+    const handleEditCompany = (companyId) => {
+        const company = companies.find(c => c.id === companyId);
+        if(!company) return;
+
+        const newName = prompt("Novo nome da empresa:", company.name);
+        if(!newName || !newName.trim()) return;
+
+        company.name = newName.trim();
+        company.cnpj = prompt("Novo CNPJ:", company.cnpj) || "";
+        company.address = prompt("Novo Endereço:", company.address) || "";
+        // Novos campos
+        company.phone = prompt("Novo Telefone/Whatsapp:", company.phone) || "";
+        company.email = prompt("Novo E-mail:", company.email) || "";
+        company.paymentInfo = prompt("Novos Dados de Pagamento (PIX, Banco, etc.):", company.paymentInfo) || "";
+        // Campos existentes
+        company.repName = prompt("Novo Representante:", company.repName) || "";
+        company.repDoc = prompt("Novo Doc. Representante:", company.repDoc) || "";
+        
+        saveData('companies', companies);
+        renderAll();
+        showToast("Empresa atualizada!", false);
+    };
+    // --- FIM DA MODIFICAÇÃO ---
+
+    const handleDeleteCompany = (companyId) => {
+        if (confirm('Tem certeza que deseja excluir esta empresa?')) {
+            if(events.some(e => e.yourCompanyId === companyId)){
+                showToast("Empresa não pode ser excluída pois está em uso.", true);
+                return;
+            }
+            companies = companies.filter(c => c.id !== companyId);
+            saveData('companies', companies);
+            renderCompanies();
+        }
+    };
+
+    const handleEditEvent = (eventId) => {
+        const event = events.find(e => e.id === eventId);
+        if(event) showEventModal(event.date, event);
+    };
+    
+    const handleDeleteEvent = (eventId) => {
+        if (confirm('Tem certeza que deseja excluir este evento?')) {
+            const eventToDelete = events.find(e => e.id === eventId);
+            if (!eventToDelete) return;
+
+            // 1. Remove from Agenda
+            events = events.filter(e => e.id !== eventId);
+            saveData('events', events);
+
+            // 2. Sync deletion with CRM
+            let crmClients = JSON.parse(localStorage.getItem('crmToyClients_v8')) || [];
+            const clientIndex = crmClients.findIndex(c => c.nome.toLowerCase() === eventToDelete.clientName.toLowerCase());
+
+            if (clientIndex > -1) {
+                if (crmClients[clientIndex].historicoEventosFechados) {
+                    crmClients[clientIndex].historicoEventosFechados = crmClients[clientIndex].historicoEventosFechados.filter(e => Number(e.id) !== Number(eventId));
+                }
+                localStorage.setItem('crmToyClients_v8', JSON.stringify(crmClients));
+            }
+            
+            // 3. Sync deletion with Financial System
+            let financeData = JSON.parse(localStorage.getItem('financeDataV30')) || { eventos: [] };
+            const financialEventId = `agenda-${eventId}`;
+            const initialLength = financeData.eventos.length;
+            financeData.eventos = financeData.eventos.filter(e => e.id !== financialEventId);
+            if (financeData.eventos.length < initialLength) {
+                 localStorage.setItem('financeDataV30', JSON.stringify(financeData));
+            }
+            
+            showToast('Evento removido de todos os sistemas!', false);
+
+
+            // 4. Re-render UI
+            renderAll();
+            checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
+        }
+    };
+    
+    // ===================================================================
+    // FUNÇÃO DE SINCRONIZAÇÃO: Agenda -> CRM
+    // ===================================================================
+    const syncEventToCRM = (agendaEvent) => {
+        const allToys = JSON.parse(localStorage.getItem('toys')) || [];
+        let crmClients = JSON.parse(localStorage.getItem('crmToyClients_v8')) || [];
+        
+        const eventId = Number(agendaEvent.id);
+
+        let crmClient = crmClients.find(c => c.nome.toLowerCase() === agendaEvent.clientName.toLowerCase());
+
+        // INÍCIO DA MODIFICAÇÃO: Endereço completo para CRM
+        const fullAddressCRM = [agendaEvent.clientAddress, agendaEvent.complemento, agendaEvent.bairro]
+            .filter(Boolean)
+            .join(', ');
+        // FIM DA MODIFICAÇÃO
+
+        const crmEventObject = {
+            id: eventId,
+            dataEvento: agendaEvent.date,
+            enderecoEvento: fullAddressCRM || '', // Modificado
+            cep: '', 
+            googleMaps: '', 
+            horarioInicio: agendaEvent.startTime,
+            horarioTermino: agendaEvent.endTime,
+            // --- INÍCIO DA MODIFICAÇÃO: Sincronizar Aniversariante ---
+            nomeAniversariante: agendaEvent.isBirthday ? agendaEvent.birthdayPersonName : '',
+            nascimentoAniversariante: agendaEvent.isBirthday ? agendaEvent.birthdayPersonDob : '',
+            // --- FIM DA MODIFICAÇÃO ---
+            feedbackCliente: '',
+            brinquedosAlugados: (agendaEvent.toys || []).map(agendaToy => {
+                const toyInfo = allToys.find(t => t.id === agendaToy.id);
+                return {
+                    nome: toyInfo ? toyInfo.name : 'Brinquedo Removido',
+                    valor: agendaToy.price || 0
+                };
+            }),
+            valorTotal: agendaEvent.price || 0
+        };
+
+        if (crmClient) { // Existing client
+            if (!crmClient.historicoEventosFechados) {
+                crmClient.historicoEventosFechados = [];
+            }
+            const eventIndex = crmClient.historicoEventosFechados.findIndex(e => Number(e.id) === eventId);
+            if (eventIndex > -1) {
+                crmClient.historicoEventosFechados[eventIndex] = crmEventObject;
+            } else {
+                crmClient.historicoEventosFechados.push(crmEventObject);
+            }
+
+            // Update client data based on type
+            if (agendaEvent.clientType === 'PJ') {
+                crmClient.telefone = agendaEvent.repPhone || crmClient.telefone;
+                crmClient.telefoneReserva = agendaEvent.repPhoneBackup || crmClient.telefoneReserva;
+                // Add PJ info to notes if it's not already there
+                const pjNote = `[PJ] CNPJ: ${agendaEvent.cnpj || 'N/A'}, Rep.: ${agendaEvent.repName || 'N/A'} (CPF: ${agendaEvent.repCpf || 'N/A'})`;
+                if (!crmClient.anotacoes.includes(pjNote)) {
+                    crmClient.anotacoes = (crmClient.anotacoes ? crmClient.anotacoes + '\n' : '') + pjNote;
+                }
+                // ATUALIZADO: Usar contractAddress como fallback para endereço residencial
+                crmClient.enderecoResidencial = agendaEvent.companyAddress || crmClient.enderecoResidencial;
+            } else { // PF
+                crmClient.telefone = agendaEvent.clientPhone || crmClient.telefone;
+                crmClient.telefoneReserva = agendaEvent.clientPhoneBackup || crmClient.telefoneReserva;
+                crmClient.cpf = agendaEvent.clientCpf || crmClient.cpf;
+                crmClient.rg = agendaEvent.clientRg || crmClient.rg;
+                crmClient.dataNascimento = agendaEvent.clientDob || crmClient.dataNascimento; // <-- ADICIONADO
+                // ATUALIZADO: Usar contractAddress para endereço residencial
+                crmClient.enderecoResidencial = agendaEvent.contractAddress || crmClient.enderecoResidencial;
+            }
+
+        } else { // New client
+            const newCrmClient = {
+                id: Date.now() + Math.random(),
+                createdAt: Date.now(),
+                nome: agendaEvent.clientName, // For PJ, this is the company name, which is correct
+                dataNascimento: '',
+                fotoUrl: '',
+                email: '',
+                instagram: '',
+                // ATUALIZADO: Lógica de endereço residencial
+                enderecoResidencial: agendaEvent.clientType === 'PJ' ? (agendaEvent.companyAddress || '') : (agendaEvent.contractAddress || ''),
+                estagio: 5, // 5 = Locação Agendada
+                origem: 'Agenda de Eventos',
+                dataNegociacao: new Date().toISOString().split('T')[0],
+                company: (companies.find(c => c.id === agendaEvent.yourCompanyId) || {}).name || '',
+                tipoEvento: 'A ser definido',
+                isRecorrente: false,
+                anotacoes: `Cliente e evento criados via sistema de Agenda em ${new Date().toLocaleDateString('pt-BR')}.`,
+                historicoEventosFechados: [crmEventObject]
+            };
+
+            // Add client data based on type
+            if (agendaEvent.clientType === 'PJ') {
+                newCrmClient.telefone = agendaEvent.repPhone || '';
+                newCrmClient.telefoneReserva = agendaEvent.repPhoneBackup || '';
+                newCrmClient.cpf = agendaEvent.repCpf || ''; // Store rep's CPF in the main CPF field
+                newCrmClient.rg = ''; // No RG for rep in form
+                const pjNote = `[PJ] CNPJ: ${agendaEvent.cnpj || 'N/A'}, Rep.: ${agendaEvent.repName || 'N/A'}`;
+                newCrmClient.anotacoes += '\n' + pjNote;
+            } else { // PF
+                newCrmClient.telefone = agendaEvent.clientPhone || '';
+                newCrmClient.telefoneReserva = agendaEvent.clientPhoneBackup || '';
+                newCrmClient.cpf = agendaEvent.clientCpf || '';
+                newCrmClient.rg = agendaEvent.clientRg || '';
+                newCrmClient.dataNascimento = agendaEvent.clientDob || ''; // <-- ADICIONADO
+            }
+
+            crmClients.push(newCrmClient);
+        }
+        
+        localStorage.setItem('crmToyClients_v8', JSON.stringify(crmClients));
+        showToast('Evento sincronizado com o CRM!', false);
+    };
+
+    // ===================================================================
+    // FUNÇÃO DE SINCRONIZAÇÃO: Agenda -> Sistema Financeiro
+    // ===================================================================
+    const syncEventToFinance = (agendaEvent) => {
+        let financeData = JSON.parse(localStorage.getItem('financeDataV30')) || { 
+            eventos: [], 
+            monitores: [], 
+            gastos: [], 
+            contas: [], 
+            contasFixas: [],
+            funcionarios: [],
+            faixasComissao: [],
+            gastoCategorias: [],
+            contaFixaCategorias: [],
+            currentEventItems: [],
+            selectedMonth: new Date().toISOString().slice(0, 7)
+        };
+        
+        const financialEventId = `agenda-${agendaEvent.id}`;
+        const eventValue = parseFloat(agendaEvent.price) || 0;
+        
+        const financialEventObject = {
+            id: financialEventId,
+            data: agendaEvent.date,
+            descricao: `${agendaEvent.clientName} - Evento`,
+            valor: eventValue,
+            tipo: 'Receita',
+            categoria: 'Eventos',
+            conta: 'Principal',
+            observacoes: agendaEvent.eventObservations || '',
+            origem: 'Agenda de Eventos'
+        };
+        
+        // Verificar se evento já existe
+        const existingIndex = financeData.eventos.findIndex(e => e.id === financialEventId);
+        
+        if (existingIndex > -1) {
+            // Atualizar evento existente
+            financeData.eventos[existingIndex] = financialEventObject;
+        } else {
+            // Adicionar novo evento
+            financeData.eventos.push(financialEventObject);
+        }
+        
+        localStorage.setItem('financeDataV30', JSON.stringify(financeData));
+        console.log(`💰 Evento ${agendaEvent.id} sincronizado com o sistema financeiro`);
+    };
+
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+
+        // INÍCIO: Adicionar validação final por segurança
+        if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+            showToast('Existem erros no formulário. Por favor, volte e verifique as etapas.', true);
+            // Tenta navegar para a primeira etapa inválida
+            if (!validateStep(1)) return showStep(1);
+            if (!validateStep(2)) return showStep(2);
+            if (!validateStep(3)) return showStep(3);
+            return;
+        }
+        // FIM: Adicionar validação final
+
+        const eventId = document.getElementById('event-id').value ? parseInt(document.getElementById('event-id').value) : null;
+        
+        const clientType = document.querySelector('input[name="client-type"]:checked').value;
+
+        // INÍCIO DA MODIFICAÇÃO: Usar campo de data visível para permitir edição
+        const eventDate = document.getElementById('event-date-visible').value;
+        // Sincronizar com campo hidden para compatibilidade
+        document.getElementById('event-date').value = eventDate;
+        
+        const eventData = {
+            date: eventDate,
+            clientType: clientType,
+            yourCompanyId: parseInt(document.getElementById('your-company-select').value),
+            clientAddress: document.getElementById('client-address').value,
+            // INÍCIO DA MODIFICAÇÃO: Salvar novo campo
+            contractAddress: document.getElementById('contract-address').value.trim(),
+            // FIM DA MODIFICAÇÃO
+            eventObservations: document.getElementById('event-observations').value,
+            paymentDetails: paymentDetailsTextarea.value.trim(), // Salva os detalhes do pagamento
+            toys: toysForCurrentEvent,
+            startTime: document.getElementById('event-start-time').value,
+            endTime: document.getElementById('event-end-time').value,
+            subtotal: toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0),
+            discountType: discountTypeEl.value,
+            discountValue: parseFloat(discountValueEl.value) || 0,
+            
+            // INÍCIO DA MODIFICAÇÃO: Novos campos
+            deliveryFee: parseFloat(deliveryFeeEl.value) || 0,
+            monitor: document.getElementById('event-monitor').value.trim(),
+            paymentStatus: document.getElementById('payment-status').value,
+            signalAmount: parseFloat(document.getElementById('signal-amount').value) || 0,
+            signalReceived: document.getElementById('signal-received').checked,
+            cep: document.getElementById('event-cep').value,
+            complemento: document.getElementById('event-complemento').value.trim(), // ADICIONADO
+            bairro: document.getElementById('event-bairro').value,
+            cidade: document.getElementById('event-cidade').value,
+            uf: document.getElementById('event-uf').value,
+            // FIM DA MODIFICAÇÃO
+
+            // --- INÍCIO DA MODIFICAÇÃO: Salvar dados do Aniversariante ---
+            isBirthday: isBirthdayCheckbox.checked,
+            birthdayPersonName: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-name').value.trim() : '',
+            birthdayPersonDob: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-dob').value : '',
+            // --- FIM DA MODIFICAÇÃO ---
+        };
+
+        if (clientType === 'PF') {
+            eventData.clientName = document.getElementById('client-name').value.trim();
+            if(!eventData.clientName) {
+                // Esta validação já é feita no validateStep, mas mantemos por segurança
+                showToast("O nome do cliente é obrigatório.", true);
+                return;
+            }
+            eventData.clientCpf = document.getElementById('client-cpf').value;
+            eventData.clientRg = document.getElementById('client-rg').value;
+            eventData.clientDob = document.getElementById('client-dob').value; // <-- ADICIONADO
+            eventData.clientPhone = document.getElementById('client-phone').value;
+            eventData.clientPhoneBackup = document.getElementById('client-phone-backup').value;
+        } else { // PJ
+            eventData.clientName = document.getElementById('pj-company-name').value.trim();
+            if(!eventData.clientName) {
+                // Esta validação já é feita no validateStep, mas mantemos por segurança
+                showToast("O nome da empresa é obrigatório.", true);
+                return;
+            }
+            eventData.cnpj = document.getElementById('pj-cnpj').value;
+            eventData.companyAddress = document.getElementById('pj-company-address').value;
+            eventData.repName = document.getElementById('pj-rep-name').value;
+            eventData.repCpf = document.getElementById('pj-rep-cpf').value;
+            eventData.repPhone = document.getElementById('pj-rep-phone').value;
+            eventData.repPhoneBackup = document.getElementById('pj-rep-phone-backup').value;
+        }
+
+        // eventData.price = eventData.subtotal - (eventData.discountType === 'fixed' ? eventData.discountValue : (eventData.subtotal * eventData.discountValue / 100));
+        // INÍCIO DA MODIFICAÇÃO: Cálculo de Preço Final Atualizado
+        const discountAmount = eventData.discountType === 'fixed' 
+            ? eventData.discountValue 
+            : (eventData.subtotal * eventData.discountValue / 100);
+        eventData.price = (eventData.subtotal - discountAmount) + eventData.deliveryFee;
+        // FIM DA MODIFICAÇÃO
+
+        let newOrUpdatedEvent;
+        if(eventId) {
+            const index = events.findIndex(e => e.id === eventId);
+            newOrUpdatedEvent = {...events[index], ...eventData};
+            events[index] = newOrUpdatedEvent;
+        } else {
+            newOrUpdatedEvent = {id: Date.now(), ...eventData};
+            events.push(newOrUpdatedEvent);
+        }
+        
+        syncEventToCRM(newOrUpdatedEvent);
+        syncEventToFinance(newOrUpdatedEvent); // Sincroniza também com o sistema financeiro
+
+        saveData('events', events);
+        hideModal(eventModal);
+        renderAll();
+        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
+    };
+
+    const showEventModal = (dateStr, eventToEdit = null) => {
+        eventForm.reset();
+        document.getElementById('event-id').value = '';
+        toysForCurrentEvent = [];
+        document.getElementById('event-date').value = dateStr;
+        // INÍCIO DA MODIFICAÇÃO: Preencher campo de data visível
+        document.getElementById('event-date-visible').value = dateStr;
+        // FIM DA MODIFICAÇÃO
+        paymentDetailsTextarea.value = ''; // Limpa o campo de detalhes do pagamento
+        // INÍCIO DA MODIFICAÇÃO: Limpar novo campo
+        document.getElementById('contract-address').value = '';
+        // FIM DA MODIFICAÇÃO
+
+        if (eventToEdit) {
+            document.getElementById('modal-title').textContent = `Editar Agendamento`;
+            document.getElementById('event-id').value = eventToEdit.id;
+            // INÍCIO DA MODIFICAÇÃO: Preencher campo de data visível com a data do evento
+            document.getElementById('event-date-visible').value = eventToEdit.date;
+            document.getElementById('event-date').value = eventToEdit.date;
+            // FIM DA MODIFICAÇÃO
+            document.getElementById('your-company-select').value = eventToEdit.yourCompanyId || '';
+            document.getElementById('client-address').value = eventToEdit.clientAddress || '';
+            // INÍCIO DA MODIFICAÇÃO: Preencher novo campo
+            document.getElementById('contract-address').value = eventToEdit.contractAddress || '';
+            // FIM DA MODIFICAÇÃO
+            document.getElementById('event-observations').value = eventToEdit.eventObservations || '';
+            paymentDetailsTextarea.value = eventToEdit.paymentDetails || ''; // Preenche os detalhes do pagamento
+            document.getElementById('event-start-time').value = eventToEdit.startTime;
+            document.getElementById('event-end-time').value = eventToEdit.endTime;
+            discountTypeEl.value = eventToEdit.discountType || 'fixed';
+            discountValueEl.value = eventToEdit.discountValue || 0;
+            toysForCurrentEvent = JSON.parse(JSON.stringify(eventToEdit.toys)); 
+
+            // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
+            deliveryFeeEl.value = eventToEdit.deliveryFee || 0;
+            document.getElementById('event-monitor').value = eventToEdit.monitor || '';
+            document.getElementById('payment-status').value = eventToEdit.paymentStatus || 'Aguardando Sinal';
+            document.getElementById('signal-amount').value = eventToEdit.signalAmount || 0;
+            document.getElementById('signal-received').checked = eventToEdit.signalReceived || false;
+            document.getElementById('event-cep').value = eventToEdit.cep || '';
+            document.getElementById('event-complemento').value = eventToEdit.complemento || ''; // ADICIONADO
+            document.getElementById('event-bairro').value = eventToEdit.bairro || '';
+            document.getElementById('event-cidade').value = eventToEdit.cidade || '';
+            document.getElementById('event-uf').value = eventToEdit.uf || '';
+            // FIM DA MODIFICAÇÃO
+
+            // --- INÍCIO DA MODIFICAÇÃO: Preencher dados do Aniversariante ---
+            isBirthdayCheckbox.checked = eventToEdit.isBirthday || false;
+            document.getElementById('birthday-person-name').value = eventToEdit.birthdayPersonName || '';
+            document.getElementById('birthday-person-dob').value = eventToEdit.birthdayPersonDob || '';
+            // --- FIM DA MODIFICAÇÃO ---
+
+            if(eventToEdit.clientType === 'PJ'){
+                clientTypePjRadio.checked = true;
+                document.getElementById('pj-company-name').value = eventToEdit.clientName || '';
+                document.getElementById('pj-cnpj').value = eventToEdit.cnpj || '';
+                document.getElementById('pj-company-address').value = eventToEdit.companyAddress || '';
+                document.getElementById('pj-rep-name').value = eventToEdit.repName || '';
+                document.getElementById('pj-rep-cpf').value = eventToEdit.repCpf || '';
+                document.getElementById('pj-rep-phone').value = eventToEdit.repPhone || '';
+                document.getElementById('pj-rep-phone-backup').value = eventToEdit.repPhoneBackup || '';
+            } else { // PF or old event without type
+                clientTypePfRadio.checked = true;
+                document.getElementById('client-name').value = eventToEdit.clientName || '';
+                document.getElementById('client-cpf').value = eventToEdit.clientCpf || '';
+                document.getElementById('client-rg').value = eventToEdit.clientRg || '';
+                document.getElementById('client-dob').value = eventToEdit.clientDob || ''; // <-- ADICIONADO
+                document.getElementById('client-phone').value = eventToEdit.clientPhone || '';
+                document.getElementById('client-phone-backup').value = eventToEdit.clientPhoneBackup || '';
+            }
+
+        } else {
+            const dateObj = new Date(dateStr + 'T00:00:00');
+            document.getElementById('modal-title').textContent = `Agendar para ${new Intl.DateTimeFormat('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(dateObj)}`;
+            clientTypePfRadio.checked = true;
+            isBirthdayCheckbox.checked = false; // --- ADICIONADO ---
+            // INÍCIO DA MODIFICAÇÃO: Limpar novo campo (garantia)
+            document.getElementById('contract-address').value = '';
+            // FIM DA MODIFICAÇÃO
+        }
+
+        toggleClientTypeFields();
+        toggleBirthdayFields(); // <!-- CHAMADA DA NOVA FUNÇÃO -->
+        renderSelectedToysInModal();
+        updateFinalPrice();
+
+        // INÍCIO: Resetar e mostrar o wizard
+        currentStep = 1;
+        showStep(1);
+        // FIM: Resetar e mostrar o wizard
+
+        showModal(eventModal);
+    };
+
+    // <!-- INÍCIO DA MODIFICAÇÃO: handlePrintEvent foi refatorada para generateEventHTML -->
+    /**
+     * Gera o HTML para uma única Ordem de Serviço.
+     * @param {object} event - O objeto do evento.
+     * @param {boolean} hidePrices - Se deve ocultar os valores.
+     * @returns {string} - O HTML da Ordem de Serviço.
+     */
+    const generateEventHTML = (event, hidePrices = false) => {
+        if (!event) return '';
+
+        const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+
+        const toyData = event.toys.map(eventToy => {
+            const toy = toys.find(t => t.id === eventToy.id);
+            return {
+                name: toy ? toy.name : 'Brinquedo Removido',
+                quantity: eventToy.quantity,
+                price: eventToy.price * eventToy.quantity
+            };
+        });
+
+        // <!-- INÍCIO DA MODIFICAÇÃO: Ocultar valores -->
+        const itemsSectionHtml = `
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: ${hidePrices ? '60%' : '45%'};">Brinquedo</th>
+                        <th style="width: ${hidePrices ? '40%' : '35%'};">Monitor(a)</th>
+                        ${!hidePrices ? '<th style="text-align: right;">Valor</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${toyData.map(item => `
+                        <tr>
+                            <td>${item.name} (x${item.quantity})</td>
+                            <td style="border-bottom: 1px dotted #000;"></td>
+                            ${!hidePrices ? `<td style="text-align: right;">${formatCurrency(item.price)}</td>` : ''}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+        
+        let discountRowHtml = '';
+        if(event.discountValue > 0 && !hidePrices){ // <--- MODIFICAÇÃO
+            const discountTypeLabel = event.discountType === 'percent' ? `%` : '';
+            const discountAmount = event.discountType === 'percent' ? (event.subtotal * event.discountValue) / 100 : event.discountValue;
+            discountRowHtml = `<tr>
+                                <td colspan="1" style="text-align: right; font-weight: bold;">Desconto (${event.discountValue}${discountTypeLabel})</td>
+                                <td style="text-align: right; font-weight: bold; color: #000;">- ${formatCurrency(discountAmount)}</td>
+                            </tr>`;
+        }
+        
+        // INÍCIO DA MODIFICAÇÃO: Adicionar Frete na O.S. (se não oculto)
+        let deliveryFeeRowHtml = '';
+        if (event.deliveryFee > 0 && !hidePrices) {
+            deliveryFeeRowHtml = `<tr>
+                                <td colspan="1" style="text-align: right; font-weight: bold;">Taxa de Entrega</td>
+                                <td style="text-align: right; font-weight: bold;">+ ${formatCurrency(event.deliveryFee)}</td>
+                            </tr>`;
+        }
+        // FIM DA MODIFICAÇÃO
+
+        let financeSummaryHtml = '';
+        if (!hidePrices) { // <--- MODIFICAÇÃO
+            financeSummaryHtml = `
+                <div class="section">
+                    <h2>Resumo Financeiro</h2>
+                    <table style="max-width: 350px; margin-left: auto;">
+                        <tbody>
+                            <tr>
+                                <td style="text-align: right; font-weight: bold;">Subtotal</td>
+                                <td style="text-align: right; font-weight: bold;">${formatCurrency(event.subtotal)}</td>
+                            </tr>
+                            ${discountRowHtml}
+                            ${deliveryFeeRowHtml} <!-- ADICIONADO -->
+                            <tr>
+                                <td style="text-align: right; font-weight: bold; font-size: 1.2em;">TOTAL</td>
+                                <td style="text-align: right; font-weight: bold; font-size: 1.2em;">${formatCurrency(event.price)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        // <!-- FIM DA MODIFICAÇÃO -->
+
+
+        const dateObj = new Date(event.date + 'T00:00:00');
+        const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(dateObj);
+        
+        // INÍCIO DA MODIFICAÇÃO: Endereço completo para O.S.
+        const fullEventAddressOS = [event.clientAddress, event.complemento, event.bairro, event.cidade]
+            .filter(Boolean)
+            .join(', ');
+        // FIM DA MODIFICAÇÃO
+        
+        let clientDetailsHtml = '';
+        if(event.clientType === 'PJ') {
+            clientDetailsHtml = `
+                <p><strong>Empresa:</strong> ${event.clientName}</p>
+                <p><strong>CNPJ:</strong> ${event.cnpj || 'N/A'}</p>
+                <p><strong>Representante:</strong> ${event.repName || 'N/A'}</p>
+                <p><strong>Contato:</strong> ${event.repPhone || 'N/A'}</p>
+                <p><strong>Endereço do Evento:</strong> ${fullEventAddressOS || 'N/A'}</p>
+            `;
+        } else {
+            clientDetailsHtml = `
+                <p><strong>Cliente:</strong> ${event.clientName}</p>
+                <p><strong>Telefone:</strong> ${event.clientPhone || 'N/A'}</p>
+                <p><strong>Telefone Reserva:</strong> ${event.clientPhoneBackup || 'N/A'}</p>
+                <p><strong>CPF:</strong> ${event.clientCpf || 'N/A'}</p>
+                <p><strong>RG:</strong> ${event.clientRg || 'N/A'}</p>
+                <p><strong>Endereço:</strong> ${fullEventAddressOS || 'N/A'}</p>
+            `;
+        }
+        // ** NOTA: O campo event.contractAddress NÃO é adicionado aqui de propósito,
+        // conforme solicitado pelo usuário (Não deve aparecer na ordem de serviço).
+
+        // --- INÍCIO DA MODIFICAÇÃO: Adicionar Info Aniversariante na OS ---
+        if (event.isBirthday && event.birthdayPersonName) {
+            clientDetailsHtml += `<p style="grid-column: 1 / -1; margin-top: 5px; padding-top: 5px; border-top: 1px dotted #888;"><strong>ANIVERSARIANTE:</strong> ${event.birthdayPersonName}</p>`;
+        }
+        // --- FIM DA MODIFICAÇÃO ---
+
+        // INÍCIO DA MODIFICAÇÃO: Adicionar Monitor na OS
+        const monitorHtml = event.monitor ? `<p><strong>Monitor/Equipe:</strong> <b>${event.monitor}</b></p>` : '';
+        // FIM DA MODIFICAÇÃO
+
+        // Retorna apenas o HTML do container da OS
+        return `
+            <div class="os-container">
+                <div class="header">
+                    <h1>Ordem de Serviço</h1>
+                    <p>${yourCompany ? yourCompany.name : ''}</p>
+                </div>
+                
+                <div class="section">
+                    <div class="details-grid">
+                        <p><strong>Data:</strong> <b>${formattedDate}</b></p>
+                        <p><strong>Horário:</strong> <b>${event.startTime} às ${event.endTime}</b></p>
+                        ${monitorHtml} <!-- ADICIONADO AQUI -->
+                    </div>
+                </div>
+                <div class="section">
+                     <div class="details-grid">
+                        ${clientDetailsHtml}
+                    </div>
+                </div>
+
+                <div class="section flex-grow"> <!-- flex-grow permite que esta seção preencha o espaço -->
+                    <h2>Itens Alugados</h2>
+                    ${itemsSectionHtml}
+                </div>
+                
+                ${financeSummaryHtml} <!-- MODIFICADO -->
+
+                 ${event.paymentDetails ? `<div class="section compact-section"><h2>Condições de Pagamento</h2><p>${event.paymentDetails.replace(/\n/g, '<br>')}</p></div>` : ''}
+                ${event.eventObservations ? `<div class="section compact-section"><h2>Observações Gerais</h2><p>${event.eventObservations.replace(/\n/g, '<br>')}</p></div>` : ''}
+            </div>
+        `;
+    };
+
+    /**
+     * Nova função para imprimir os eventos selecionados.
+     */
+    const handlePrintSelectedEvents = () => {
+        const selectedCheckboxes = document.querySelectorAll('.event-print-checkbox:checked');
+        if (selectedCheckboxes.length === 0) {
+            showToast('Nenhum evento selecionado para imprimir.', true);
+            return;
+        }
+
+        // <!-- INÍCIO DA MODIFICAÇÃO: Ler checkbox -->
+        const hidePrices = document.getElementById('hide-prices-checkbox')?.checked || false;
+        // <!-- FIM DA MODIFICAÇÃO -->
+
+
+        let allEventsHTML = '';
+        selectedCheckboxes.forEach(checkbox => {
+            const eventId = parseInt(checkbox.dataset.id);
+            const event = events.find(e => e.id === eventId);
+            if (event) {
+                allEventsHTML += generateEventHTML(event, hidePrices); // <--- MODIFICAÇÃO
+            }
+        });
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Ordens de Serviço</title>
+                    <style>
+                        /* --- INÍCIO DAS MODIFICAÇÕES DE ESTILO --- */
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            margin: 0; 
+                            padding: 0;
+                            color: #000; /* Cor do texto preta */
+                            font-size: 10px; 
+                            font-weight: 500; /* Um pouco mais forte */
+                        }
+                        .os-container {
+                            width: 100%;
+                            height: 49vh; 
+                            padding: 10px 15px;
+                            box-sizing: border-box; 
+                            border-bottom: 2px solid #000; /* Linha separadora forte e sólida */
+                            page-break-inside: avoid !important; 
+                            display: flex;
+                            flex-direction: column;
+                            overflow: hidden; 
+                        }
+                        .os-container:last-child {
+                            border-bottom: none;
+                        }
+                        .header { 
+                            text-align: center; 
+                            border-bottom: 2px solid #000; /* Borda do cabeçalho mais forte */
+                            padding-bottom: 5px; 
+                            margin-bottom: 5px; 
+                            flex-shrink: 0;
+                        }
+                        .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
+                        .header p { margin: 2px 0 0; font-size: 12px; font-weight: bold; }
+                        
+                        .section { 
+                            margin-bottom: 5px; 
+                            border-bottom: 1px solid #000; /* Linha da seção preta */
+                            padding-bottom: 5px; 
+                            flex-shrink: 0; 
+                        }
+                        .section:last-child { border-bottom: none; margin-bottom: 0; }
+                        
+                        .section.flex-grow {
+                            flex-grow: 1; 
+                            overflow-y: auto; 
+                        }
+                        .section.compact-section {
+                            font-size: 9px;
+                            line-height: 1.2;
+                        }
+                        .section h2 { font-size: 12px; margin-top: 0; margin-bottom: 4px; font-weight: bold; }
+                        
+                        .details-grid { 
+                            display: grid; 
+                            grid-template-columns: 1fr 1fr; 
+                            gap: 2px 10px; 
+                        }
+                        .details-grid p { margin: 0; padding: 1px 0; font-weight: bold; } /* Texto dos detalhes mais forte */
+                        .details-grid strong { 
+                            display: block; 
+                            font-size: 0.9em; 
+                            color: #000; 
+                            text-transform: uppercase; 
+                            font-weight: 900; /* Muito forte */
+                        }
+                        
+                        table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin-top: 5px; 
+                        }
+                        th, td { 
+                            border: 1px solid #000; /* Borda da tabela preta */
+                            padding: 3px; 
+                            text-align: left; 
+                            font-size: 9px; 
+                            font-weight: bold; /* Texto da tabela forte */
+                        }
+                        th { 
+                            background-color: #fff; /* Fundo branco para economizar tinta */
+                            font-weight: 900; /* Cabeçalho da tabela muito forte */
+                        }
+                        
+                        .print-button { 
+                            display: block; 
+                            width: 150px; 
+                            margin: 20px auto; 
+                            padding: 10px; 
+                            background: #007bff; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 5px; 
+                            cursor: pointer;
+                            font-size: 12pt;
+                        }
+
+                        @media print {
+                            body { font-size: 10px; font-weight: 500; }
+                            .print-button { display: none; }
+                            .os-container {
+                                height: 50vh; 
+                                padding: 10px 15px;
+                                border-bottom: 2px solid #000; /* Borda sólida também na impressão */
+                            }
+                            .header h1 { font-size: 16px; font-weight: bold; }
+                            .header p { font-size: 11px; font-weight: bold; }
+                            th, td { padding: 3px; font-size: 9px; border: 1px solid #000; font-weight: bold; }
+                            th { background-color: #fff; font-weight: 900; }
+                            .section { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #000; }
+                        }
+                        /* --- FIM DAS MODIFICAÇÕES DE ESTILO --- */
+                    </style>
+                </head>
+                <body>
+                    ${allEventsHTML}
+                    <button class="print-button" onclick="window.print()">Imprimir Todas as Ordens</button>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+    };
+    // <!-- FIM DAS MODIFICAÇÕES DE IMPRESSÃO -->
+
+    
+    const handleGenerateMessage = async (eventId, buttonElement) => {
+        const event = events.find(e => e.id === eventId);
+        if (!event) return;
+        const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+        const customerName = event.clientType === 'PJ' ? event.repName || event.clientName : event.clientName;
+
+        const toyNames = event.toys.map(eventToy => {
+            const toy = toys.find(t => t.id === eventToy.id);
+            if (!toy) return null;
+            const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
+            return `${toy.name}${quantityText}`;
+        }).filter(Boolean).join(', ');
+
+        const dateObj = new Date(event.date + 'T00:00:00');
+        const formattedDate = new Intl.DateTimeFormat('pt-BR', {day: '2-digit', month: 'long', year: 'numeric'}).format(dateObj);
+        const companyName = yourCompany ? yourCompany.name : 'Nossa Equipe';
+        
+        // INÍCIO DA MODIFICAÇÃO: Endereço completo para Mensagem
+        const fullAddressMessage = [event.clientAddress, event.complemento, event.bairro, event.cidade]
+            .filter(Boolean)
+            .join(', ');
+        // FIM DA MODIFICAÇÃO
+
+        // --- INÍCIO DA MODIFICAÇÃO: Adicionar nome do aniversariante ao prompt ---
+        let birthdayPrompt = '';
+        if (event.isBirthday && event.birthdayPersonName) {
+            birthdayPrompt = `O evento é o aniversário de ${event.birthdayPersonName}.\n`;
+        }
+        // --- FIM DA MODIFICAÇÃO ---
+
+        const prompt = `Aja como um representante da empresa de aluguel de brinquedos "${companyName}". Escreva uma mensagem de confirmação amigável e profissional para ser enviada via WhatsApp para o cliente. Use emojis para deixar a mensagem mais agradável. Use as seguintes informações:\n- Nome do Cliente: ${customerName}\n- Data do Evento: ${formattedDate}\n- Horário: das ${event.startTime} às ${event.endTime}\n- Endereço de Entrega: ${fullAddressMessage || 'a confirmar'}\n- Brinquedos Alugados: ${toyNames}\n- Valor Total: ${formatCurrency(event.price)}\n${birthdayPrompt}\nA mensagem deve confirmar todos os detalhes, agradecer a preferência e se colocar à disposição para qualquer dúvida. A mensagem DEVE terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
+
+        const message = await callGeminiAPI(prompt, buttonElement);
+        if (message) {
+            showGeminiModal("Mensagem de Confirmação", message);
+        }
+    };
+
+    // --- INÍCIO DA MODIFICAÇÃO: handleGenerateContract ---
+    const handleGenerateContract = async (eventId, buttonElement) => {
+        const event = events.find(e => e.id === eventId);
+        if (!event) return;
+        const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+        if (!yourCompany) {
+            showToast("Selecione 'Sua Empresa' no evento para gerar o contrato.", true);
+            return;
+        }
+
+        const toyListString = event.toys.map(eventToy => {
+            const toy = toys.find(t => t.id === eventToy.id);
+            if (!toy) return null;
+            return `- ${eventToy.quantity}x ${toy.name}`;
+        }).filter(Boolean).join('\n');
+
+        const dateObj = new Date(event.date + 'T00:00:00');
+        const formattedEventDate = new Intl.DateTimeFormat('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(dateObj);
+        const todayFormatted = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
+
+        const fullEventAddressContract = [event.clientAddress, event.complemento, event.bairro, event.cidade, event.uf]
+            .filter(Boolean)
+            .join(', ');
+
+        let contratantePromptSection = '';
+        if (event.clientType === 'PJ') {
+            const sedeAddress = event.companyAddress || 'Não informado';
+            contratantePromptSection = `
+            - **CONTRATANTE:**
+              - Razão Social: ${event.clientName}
+              - CNPJ: ${event.cnpj || 'Não informado'}
+              - Sede: ${sedeAddress}
+              - Neste ato representada por seu Representante Legal:
+                - Nome Completo: ${event.repName || 'Não informado'}
+                - CPF: ${event.repCpf || 'Não informado'}
+              - Endereço do Evento: ${fullEventAddressContract || 'Não informado'}
+              - Telefone Principal (Representante): ${event.repPhone || 'Não informado'}
+              - Telefone Reserva (Representante): ${event.repPhoneBackup || 'Não informado'}
+            `;
+        } else { // PF
+            const residentialAddress = event.contractAddress || 'Não informado'; // Usa o novo campo
+            contratantePromptSection = `
+            - **CONTRATANTE:**
+              - Nome Completo: ${event.clientName}
+              - CPF: ${event.clientCpf || 'Não informado'}
+              - RG: ${event.clientRg || 'Não informado'}
+              - Data de Nascimento: ${event.clientDob || 'Não informada'}
+              - Endereço Residencial: ${residentialAddress}
+              - Endereço do Evento: ${fullEventAddressContract || 'Não informado'}
+              - Telefone Principal: ${event.clientPhone || 'Não informado'}
+              - Telefone Reserva: ${event.clientPhoneBackup || 'Não informado'}
+            `;
+        }
+        
+        const subtotal = event.subtotal;
+        const discountAmount = event.discountType === 'fixed' 
+            ? event.discountValue 
+            : (subtotal * event.discountValue / 100);
+        const frete = event.deliveryFee || 0;
+        const valorTotal = event.price; 
+
+        const financePromptSection = `
+            - **VALORES:**
+              - Subtotal (Brinquedos): ${formatCurrency(subtotal)}
+              - Desconto: - ${formatCurrency(discountAmount)}
+              - Taxa de Entrega: + ${formatCurrency(frete)}
+              - **Valor Total:** ${formatCurrency(valorTotal)}
+            
+            - **STATUS FINANCEIRO:**
+              - Status Atual: ${event.paymentStatus}
+              - Valor do Sinal: ${formatCurrency(event.signalAmount)}
+              - Sinal Recebido: ${event.signalReceived ? 'Sim' : 'Não'}
+        `;
+        
+        const paymentDetailsText = event.paymentDetails 
+            ? event.paymentDetails 
+            : `O pagamento de 50% do valor será efetuado via PIX no ato da assinatura deste contrato, e os 50% restantes no momento da entrega e montagem dos equipamentos.`;
+        
+        // --- MODIFICAÇÃO CHAVE: Usar os dados da empresa salva ---
+        const paymentDataText = (yourCompany.paymentInfo ? yourCompany.paymentInfo : 'Dados de pagamento não cadastrados na empresa.') + ' (Informação de pagamento da CONTRATADA)';
+        
+        let birthdayContractPrompt = '';
+        if (event.isBirthday && event.birthdayPersonName) {
+            birthdayContractPrompt = `O evento em questão é a festa de aniversário de ${event.birthdayPersonName}, a ser realizada no endereço e data especificados.`;
+        }
+
+        const prompt = `
+            Aja como um assistente jurídico. Crie um CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS formal e completo. Use as seguintes informações para preencher o contrato:
+
+            - **CONTRATADA:**
+              - Razão Social/Nome: ${yourCompany.name}
+              - CNPJ: ${yourCompany.cnpj || 'Não informado'}
+              - Endereço: ${yourCompany.address || 'Não informado'}
+              - Telefone: ${yourCompany.phone || 'Não informado'}
+              - E-mail: ${yourCompany.email || 'Não informado'}
+              - Representante Legal: ${yourCompany.repName || 'Não informado'}, portador do documento ${yourCompany.repDoc || 'Não informado'}
+
+            ${contratantePromptSection}
+
+            - **OBJETO DO CONTRATO (Lista de Equipamentos/Serviços):**
+            ${toyListString}
+
+            - **DATA E HORA DO EVENTO:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.
+            - **LOCAL DE INSTALAÇÃO/EVENTO:** ${fullEventAddressContract || 'O mesmo endereço do contratante.'}
+            - **DETALHE DO EVENTO:** ${birthdayContractPrompt}
+
+            ${financePromptSection}
+            
+            - **CONDIÇÕES DE PAGAMENTO ESPECÍFICAS:** ${paymentDetailsText}. ${paymentDataText} 
+            
+            O contrato deve ser estruturado com um título claro ("CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS"), qualificação completa das partes e cláusulas numeradas, incluindo:
+            1.  **CLÁUSULA PRIMEIRA - DO OBJETO:** Descrever a locação dos equipamentos/brinquedos listados para o evento na data, hora e local especificados. ${birthdayContractPrompt} Mencionar que inclui montagem e desmontagem.
+            2.  **CLÁUSULA SEGUNDA - DOS SERVIÇOS:** Listar os serviços inclusos: a) Fornecimento dos equipamentos; b) Montagem e desmontagem; c) Fornecimento de mão de obra (monitores, se aplicável, caso contrário omitir);
+            3.  **CLÁUSULA TERCEIRA - DO PRAZO:** Definir o prazo determinado do contrato, correspondendo exatamente à data e horários de início e término do evento.
+            4.  **CLÁUSULA QUARTA - DO VALOR E PAGAMENTO:** Mencionar o valor total ( ${formatCurrency(valorTotal)} ), a taxa de entrega ( ${formatCurrency(frete)} ), e USAR EXATAMENTE as "CONDIÇÕES DE PAGAMENTO ESPECÍFICAS" e o "STATUS FINANCEIRO" (especialmente o valor do sinal) fornecidos acima.
+            5.  **CLÁUSULA QUINTA - DAS DESPESAS:** Informar que o valor pago engloba todas as despesas da CONTRATADA (material, transporte, mão de obra, impostos, etc.), constituindo a única remuneração devida.
+            6.  **CLÁUSULA SEXTA - DAS OBRIGAÇÕES DA CONTRATADA:** Garantir a entrega dos equipamentos em perfeitas condições de uso e segurança, e realizar a montagem e desmontagem nos horários acordados.
+            7.  **CLÁUSULA SÉTIMA - DAS OBRIGAÇÕES DO CONTRATANTE:**
+                - Fornecer local seguro, plano, limpo e com ponto de energia elétrica compatível e acessível.
+                - Supervisionar o uso dos brinquedos por um adulto responsável.
+                - Responsabilizar-se por danos por mau uso (sapatos, alimentos, objetos pontiagudos, excesso de peso/capacidade, etc.).
+                - Não mover os equipamentos do local de instalação.
+                - Em caso de chuva/ventos fortes, desligar os infláveis e protegê-los.
+            8.  **CLÁUSULA OITAVA - DA RESCISÃO (CANCELAMENTO):** Incluir cláusula sobre cancelamento (Ex: "O cancelamento da locação por parte do CONTRATANTE com antecedência superior a 7 (sete) dias da data do evento implicará na devolução integral do valor pago a título de sinal. Cancelamentos realizados com 7 (sete) dias ou menos de antecedência da data do evento resultarão na retenção de 50% (cinquenta por cento) do valor total do contrato, a título de multa compensatória por perdas e danos.").
+            9.  **CLÁUSULA NONA - DA RESPONSABILIDADE (PROBLEMAS EXTERNOS):** Isentar a CONTRATADA por mal funcionamento devido a problemas de energia elétrica, clima adverso (chuvas, ventos fortes) ou depredação por terceiros.
+            10. **CLÁUSULA DÉCIMA - DO FORO:** Definir o foro da comarca da CONTRATADA (Ex: Aparecida de Goiânia, GO) para dirimir quaisquer controvérsias, com renúncia a qualquer outro.
+            
+            Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tudo quanto se encontra disposto neste instrumento, assinam-no, em 02 (duas) vias de igual teor e forma.", local, data e linhas para as assinaturas da CONTRATADA (representada por seu responsável) e do CONTRATANTE.
+            **Local e data:** Aparecida de Goiânia, GO, ${todayFormatted}.
+        `;
+
+        const contract = await callGeminiAPI(prompt, buttonElement);
+        
+        if(contract){
+            showGeminiModal("Contrato de Locação (Gerado)", contract);
+            openPrintWindow(`Contrato - ${event.clientName}`, contract);
+        }
+    };
+    // --- FIM DA MODIFICAÇÃO ---
+
+    const toggleClientTypeFields = () => {
+        if (clientTypePjRadio.checked) {
+            pjFieldsDiv.classList.remove('hidden');
+            pfFieldsDiv.classList.add('hidden');
+            pjCompanyNameInput.required = true;
+            clientNameInput.required = false;
+        } else {
+            pfFieldsDiv.classList.remove('hidden');
+            pjFieldsDiv.classList.add('hidden');
+            clientNameInput.required = true;
+            pjCompanyNameInput.required = false;
+        }
+    };
+    
+    // --- INÍCIO DA MODIFICAÇÃO: Nova função para campos de Aniversariante ---
+    const toggleBirthdayFields = () => {
+        if (isBirthdayCheckbox.checked) {
+            birthdayFieldsDiv.classList.remove('hidden');
+        } else {
+            birthdayFieldsDiv.classList.add('hidden');
+        }
+    };
+    // --- FIM DA MODIFICAÇÃO ---
+
+    // --- INICIALIZAÇÃO E EVENT LISTENERS ---
+    
+    clientNameInput.addEventListener('input', (e) => {
+        const client = clients.find(c => c.name === e.target.value);
+        if(client) {
+            document.getElementById('client-phone').value = client.phone || '';
+            // document.getElementById('client-address').value = client.address || ''; // Não preencher endereço para não confundir com endereço do evento
+            document.getElementById('client-cpf').value = client.cpf || '';
+            document.getElementById('client-rg').value = client.rg || '';
+            document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONADO
+        }
+    });
+
+    eventModal.addEventListener('focusin', () => {
+        clientSuggestionsDatalist.innerHTML = '';
+        clients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client.name;
+            clientSuggestionsDatalist.appendChild(option);
+        });
+    });
+
+    prevMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        // --- INÍCIO DA MODIFICAÇÃO: Atualizar faturamento das empresas ao mudar o mês ---
+        selectedDate = null;
+        hideModal(dayEventsModal);
+        renderCalendar();
+        renderCompanies(); // Atualiza os totais das empresas
+        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
+        // --- FIM DA MODIFICAÇÃO ---
+    });
+    nextMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        // --- INÍCIO DA MODIFICAÇÃO: Atualizar faturamento das empresas ao mudar o mês ---
+        selectedDate = null;
+        hideModal(dayEventsModal);
+        renderCalendar();
+        renderCompanies(); // Atualiza os totais das empresas
+        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
+        // --- FIM DA MODIFICAÇÃO ---
+    });
+    
+    addToyBtn.addEventListener('click', handleAddToy);
+    exportToysPdfBtn.addEventListener('click', handleExportToysPDF); // Event listener para o PDF
+    addCompanyBtn.addEventListener('click', handleAddCompany);
+    
+    // MODIFICADO: Mover o listener de submit do form para o botão "Salvar" do wizard
+    // eventForm.addEventListener('submit', handleFormSubmit); // REMOVIDO
+    saveStepBtn.addEventListener('click', handleFormSubmit); // ADICIONADO
+
+    cancelBtn.addEventListener('click', () => hideModal(eventModal));
+
+    // INÍCIO: Listeners de Navegação do Wizard
+    nextStepBtn.addEventListener('click', () => {
+        if (validateStep(currentStep)) {
+            if (currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            }
+        }
+    });
+
+    prevStepBtn.addEventListener('click', () => {
+        if (currentStep > 1) {
+            showStep(currentStep - 1);
+        }
+    });
+    // FIM: Listeners de Navegação do Wizard
+
+    clientTypePfRadio.addEventListener('change', toggleClientTypeFields);
+    clientTypePjRadio.addEventListener('change', toggleClientTypeFields);
+    isBirthdayCheckbox.addEventListener('change', toggleBirthdayFields); // <-- ADICIONADO
+
+    // INÍCIO DA MODIFICAÇÃO: Sincronizar campo de data visível com campo hidden
+    const eventDateVisibleEl = document.getElementById('event-date-visible');
+    if (eventDateVisibleEl) {
+        eventDateVisibleEl.addEventListener('change', () => {
+            document.getElementById('event-date').value = eventDateVisibleEl.value;
+        });
+    }
+    // FIM DA MODIFICAÇÃO
+
+    addToyToEventBtn.addEventListener('click', () => {
+        const selectedToyId = parseInt(toySelectModalEl.value);
+        const quantity = parseInt(document.getElementById('toy-quantity-modal').value);
+        const price = parseFloat(document.getElementById('toy-price-modal').value);
+        // INÍCIO DA MODIFICAÇÃO: Usar campo de data visível
+        const eventDate = document.getElementById('event-date-visible').value || document.getElementById('event-date').value;
+        // FIM DA MODIFICAÇÃO
+        const eventId = document.getElementById('event-id').value ? parseInt(document.getElementById('event-id').value) : null;
+        const startTime = document.getElementById('event-start-time').value;
+        const endTime = document.getElementById('event-end-time').value;
+
+        if (!selectedToyId || quantity < 1 || isNaN(price)) {
+            showToast('Selecione um brinquedo e insira quantidade e valor válidos.', true);
+            return;
+        }
+
+        if (!startTime || !endTime) {
+            showToast('Por favor, defina o horário de início e término do evento.', true);
+            return;
+        }
+
+        if (endTime <= startTime) {
+            showToast('O horário de término deve ser após o horário de início.', true);
+            return;
+        }
+
+        const availability = getToyAvailabilityForDateTime(selectedToyId, eventDate, startTime, endTime, eventId);
+
+        if (quantity > availability.available) {
+            const availableText = availability.available > 0 ? `Apenas ${availability.available} unidade(s) disponível(is)` : `Nenhuma unidade disponível`;
+            showToast(`Estoque insuficiente! ${availableText} para este horário.`, true);
+            return;
+        }
+
+        toysForCurrentEvent.push({ id: selectedToyId, quantity, price });
+        renderSelectedToysInModal();
+        updateFinalPrice();
+        toySelectModalEl.value = '';
+        document.getElementById('toy-quantity-modal').value = '1';
+        document.getElementById('toy-price-modal').value = '';
+    });
+    
+    [discountTypeEl, discountValueEl].forEach(el => el.addEventListener('input', updateFinalPrice));
+    
+    // INÍCIO DA MODIFICAÇÃO: Listeners para novos campos
+    deliveryFeeEl.addEventListener('input', updateFinalPrice);
+    cepSearchBtn.addEventListener('click', handleCepSearch);
+    // FIM DA MODIFICAÇÃO
+
+    settingsBtn.addEventListener('click', showApiKeyModal);
+    cancelApiKeyBtn.addEventListener('click', () => hideModal(apiKeyModal));
+    closeDayEventsModalBtn.addEventListener('click', () => hideModal(dayEventsModal));
+    
+    // Fechar modal de eventos do dia ao clicar fora
+    dayEventsModal.addEventListener('click', (e) => {
+        if (e.target === dayEventsModal) {
+            hideModal(dayEventsModal);
+        }
+    });
+
+    // Event listeners para modal de filtro de eventos
+    filterEventsBtn.addEventListener('click', showFilterEventsModal);
+    closeFilterEventsModalBtn.addEventListener('click', () => hideModal(filterEventsModal));
+    exportFilterEventsPdfBtn.addEventListener('click', handleExportFilterEventsPDF);
+    
+    // Fechar modal de filtro ao clicar fora
+    filterEventsModal.addEventListener('click', (e) => {
+        if (e.target === filterEventsModal) {
+            hideModal(filterEventsModal);
+        }
+    });
+
+    // Event listeners para ordenação por coluna
+    document.querySelectorAll('th[data-sort]').forEach(header => {
+        header.addEventListener('click', () => {
+            handleSortColumn(header.dataset.sort);
+        });
+    });
+
+    // Event listeners para modal de notificações
+    notificationsBtn.addEventListener('click', () => showModal(notificationsModal));
+    closeNotificationsModalBtn.addEventListener('click', () => hideModal(notificationsModal));
+    
+    // Fechar modal de notificações ao clicar fora
+    notificationsModal.addEventListener('click', (e) => {
+        if (e.target === notificationsModal) {
+            hideModal(notificationsModal);
+        }
+    });
+
+    // Event listeners para modal de catálogo
+    catalogSettingsBtn.addEventListener('click', () => showModal(catalogModal));
+    closeCatalogModalBtn.addEventListener('click', () => hideModal(catalogModal));
+    
+    // Fechar modal de catálogo ao clicar fora
+    catalogModal.addEventListener('click', (e) => {
+        if (e.target === catalogModal) {
+            hideModal(catalogModal);
+        }
+    });
+    
+    // --- INÍCIO DA CORREÇÃO ---
+    saveApiKeyBtn.addEventListener('click', saveApiKey);
+    closeGeminiModalBtn.addEventListener('click', () => hideModal(geminiModal));
+
+    // Novo listener para o botão de imprimir do modal
+    printGeminiContentBtn.addEventListener('click', () => {
+        const title = geminiModalTitle.textContent;
+        const content = geminiModalContent.value;
+        openPrintWindow(title, content);
+    });
+
+    copyGeminiContentBtn.addEventListener('click', () => {
+        geminiModalContent.select();
+        try {
+            document.execCommand('copy');
+            showToast('Texto copiado!', false);
+        } catch (err) {
+            showToast('Falha ao copiar. Use Ctrl+C.', true);
+        }
+    });
+
+    const initCollapsible = (header, content, icon, storageKey) => {
+        const setVisibility = (collapse) => {
+            if (collapse) {
+                content.style.maxHeight = '0px';
+                content.style.paddingTop = '0px';
+                content.style.opacity = '0';
+                icon.classList.add('rotate-180');
+            } else {
+                content.style.maxHeight = content.scrollHeight + 40 + 'px'; // Add padding
+                content.style.paddingTop = '1rem';
+                content.style.opacity = '1';
+                icon.classList.remove('rotate-180');
+            }
+        };
+
+        const isCollapsed = localStorage.getItem(storageKey) === 'collapsed';
+        setVisibility(isCollapsed);
+
+        header.addEventListener('click', () => {
+            const isCurrentlyCollapsed = content.style.maxHeight === '0px';
+            localStorage.setItem(storageKey, isCurrentlyCollapsed ? 'expanded' : 'collapsed');
+            setVisibility(!isCurrentlyCollapsed);
+        });
+    };
+
+    initCollapsible(toggleToysHeader, toysContentWrapper, toysIcon, 'toysSectionCollapsed');
+    initCollapsible(toggleCompaniesHeader, companiesContentWrapper, companiesIcon, 'companiesSectionCollapsed');
+    
+
+    // --- INÍCIO: Funções de Notificação de Aniversário ---
+    const notificationsListEl = document.getElementById('notifications-list');
+    const notificationsHeaderIcon = document.getElementById('notifications-header-icon'); // Pegar o ícone do botão no header
+
+    /**
+     * Renderiza as notificações de aniversário na UI.
+     * @param {Array} notifications - Um array de objetos de notificação.
+     */
+    const renderNotifications = (notifications) => {
+        notificationsListEl.innerHTML = '';
+        
+        if (notifications.length === 0) {
+            notificationsListEl.innerHTML = '<p class="text-sm text-gray-500">Nenhum aniversário próximo.</p>';
+            if (notificationsHeaderIcon) {
+                notificationsHeaderIcon.classList.remove('bell-pulse'); // Remover pulso
+            }
+            return;
+        }
+
+        // Adicionar pulso se houver notificações
+        if (notificationsHeaderIcon) {
+            notificationsHeaderIcon.classList.add('bell-pulse');
+        }
+
+        // Ordenar: hoje primeiro, depois por menos dias
+        notifications.sort((a, b) => a.dias - b.dias);
+
+        notifications.forEach(notif => {
+            const notifEl = document.createElement('div');
+            notifEl.className = 'bg-white/50 p-3 rounded-md border border-gray-200 flex items-center space-x-3';
+            
+            let iconHtml = '';
+            let textHtml = '';
+            let bgColor = 'bg-white/50';
+
+            // --- INÍCIO DA MODIFICAÇÃO: Formatar data do evento ---
+            let eventDateStr = '';
+            if (notif.eventDate) {
+                try {
+                    // Adiciona T00:00:00 para garantir consistência de fuso horário
+                    const d = new Date(notif.eventDate + "T00:00:00");
+                    // Formato MM/YYYY
+                    // eventDateStr = ` (Evento: ${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()})`;
+                    // --- INÍCIO DA CORREÇÃO: Formato DD/MM/YYYY ---
+                    eventDateStr = ` (Evento: ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()})`;
+                    // --- FIM DA CORREÇÃO ---
+                } catch (err) { /* Ignora data inválida */ }
+            }
+            // --- FIM DA MODIFICAÇÃO ---
+
+            if (notif.dias === 0) {
+                iconHtml = '<i class="fas fa-birthday-cake text-pink-500 text-2xl"></i>';
+                // MODIFICADO
+                textHtml = `É o aniversário de <strong>${notif.nome}</strong> (${notif.tipo}) hoje! <span class="text-xs block text-gray-600">Ref: ${notif.clientName}${eventDateStr}</span>`;
+                bgColor = 'bg-pink-100/80 border-pink-300'; // Destaque especial
+            } else {
+                iconHtml = '<i class="fas fa-gift text-blue-500 text-xl"></i>';
+                // MODIFICADO
+                textHtml = `Aniversário de <strong>${notif.nome}</strong> (${notif.tipo}) em <strong>${notif.dias} dias</strong>. <span class="text-xs block text-gray-600">Ref: ${notif.clientName}${eventDateStr}</span>`;
+                bgColor = 'bg-blue-50/80';
+            }
+            
+            notifEl.className = `p-3 rounded-md border flex items-center space-x-3 ${bgColor}`;
+            // --- INÍCIO DA MODIFICAÇÃO: Adicionar botão de mensagem ---
+            notifEl.innerHTML = `
+                <div>${iconHtml}</div>
+                <div class="flex-1"> <!-- ADICIONADO WRAPPER -->
+                    <p class="text-sm text-gray-800">${textHtml}</p>
+                </div>
+                <!-- Botão de Relacionamento -->
+                <button 
+                    class="birthday-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" 
+                    title="✨ Criar Mensagem de Relacionamento"
+                    data-nome="${notif.nome}"
+                    data-tipo="${notif.tipo}"
+                    data-dias="${notif.dias}"
+                >
+                    <i class="fas fa-comment-dots"></i>
+                </button>
+            `;
+            // --- FIM DA MODIFICAÇÃO ---
+            notificationsListEl.appendChild(notifEl);
+        });
+
+        // --- INÍCIO DA MODIFICAÇÃO: Adicionar listeners aos novos botões ---
+        document.querySelectorAll('.birthday-message-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget;
+                handleGenerateBirthdayMessage(
+                    target.dataset.nome,
+                    target.dataset.tipo,
+                    parseInt(target.dataset.dias, 10),
+                    target // Passa o botão para mostrar o spinner
+                );
+            });
+        });
+        // --- FIM DA MODIFICAÇÃO ---
+    };
+
+    /**
+     * Verifica todos os eventos por datas de aniversário próximas e renderiza as notificações.
+     */
+    const checkBirthdayNotifications = () => {
+        // const aniversariantes = new Map(); // REMOVIDO
+        const notificacoes = []; // <-- Criado aqui
+        const hoje = new Date();
+        const anoAtual = hoje.getFullYear();
+        // Normaliza 'hoje' para meia-noite para comparações de dia inteiro
+        const hojeTimestamp = new Date(anoAtual, hoje.getMonth(), hoje.getDate()).getTime(); 
+        
+        // Intervalos de dias para notificar
+        const intervalos = [0, 7, 15, 30]; 
+
+        events.forEach(e => {
+            // --- INÍCIO DA MODIFICAÇÃO: Passar data do evento para a função ---
+            const processarAniversario = (nome, dob, tipo, clientName, eventId, eventDate) => {
+                if (!dob) return;
+                try {
+                    const dobDate = new Date(dob + "T00:00:00");
+                    const dobMes = dobDate.getMonth();
+                    const dobDia = dobDate.getDate();
+
+                    const aniversarioEsteAno = new Date(anoAtual, dobMes, dobDia).getTime();
+                    let diffDays = (aniversarioEsteAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
+
+                    if (diffDays >= 0 && intervalos.includes(diffDays)) {
+                        notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate }); // Passa eventDate
+                    } else if (diffDays < 0) {
+                        const aniversarioProximoAno = new Date(anoAtual + 1, dobMes, dobDia).getTime();
+                        diffDays = (aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
+                        if (intervalos.includes(diffDays)) {
+                            notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate }); // Passa eventDate
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao processar data de aniversário:", dob, error);
+                }
+            };
+
+            // Adiciona contratante (PF) se tiver data de nascimento
+            if (e.clientDob && e.clientType === 'PF' && e.clientName) {
+                processarAniversario(e.clientName, e.clientDob, 'Contratante', e.clientName, e.id, e.date); // Passa e.date
+            }
+            // Adiciona aniversariante do evento se tiver data de nascimento
+            if (e.isBirthday && e.birthdayPersonDob && e.birthdayPersonName) {
+                processarAniversario(e.birthdayPersonName, e.birthdayPersonDob, 'Aniversariante', e.clientName, e.id, e.date); // Passa e.date
+            }
+            // --- FIM DA MODIFICAÇÃO ---
+        });
+        
+        renderNotifications(notificacoes);
+    };
+    // --- FIM: Funções de Notificação de Aniversário ---
+
+
+    // --- LÓGICA PARA LIDAR COM PARÂMETROS DA URL (EDIÇÃO) ---
+    const handleUrlParameters = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventIdToEdit = urlParams.get('editEvent');
+        if (eventIdToEdit) {
+            const eventIdNum = parseInt(eventIdToEdit, 10);
+            const eventToEdit = events.find(e => e.id === eventIdNum);
+            if (eventToEdit) {
+                // Navega para o mês correto do evento
+                currentDate = new Date(eventToEdit.date + 'T00:00:00');
+                renderCalendar();
+                // Simula o clique no dia e abre o modal de edição
+                handleDayClick(eventToEdit.date);
+                showEventModal(eventToEdit.date, eventToEdit);
+            } else {
+                showToast('Evento para edição não encontrado.', true);
+            }
+        } // <-- INÍCIO DA CORREÇÃO: Esta chave estava faltando
+            // --- FIM DA MODIFICAÇÃO ---
+    };
+
+    // --- INÍCIO DA MODIFICAÇÃO: Nova função para gerar mensagem de aniversário ---
+    /**
+     * Gera uma mensagem de relacionamento (aniversário) usando a API Gemini.
+     */
+    const handleGenerateBirthdayMessage = async (nome, tipo, dias, buttonElement) => {
+        let prompt = '';
+        // Usamos um nome genérico, pois a empresa específica não é armazenada na notificação.
+        const companyName = "Nossa Equipe"; 
+        
+        if (dias === 0) {
+            prompt = `Aja como um representante da empresa de aluguel de brinquedos "${companyName}". Hoje é o aniversário de "${nome}" (que é nosso ${tipo}). Escreva uma mensagem de "Feliz Aniversário" curta, amigável e calorosa para ser enviada via WhatsApp. Use emojis. Não precisa ser um texto de vendas, apenas de relacionamento. Termine com "Atenciosamente, Equipe ${companyName}".`;
+        } else {
+            prompt = `Aja como um representante da empresa de aluguel de brinquedos "${companyName}". O aniversário de "${nome}" (que é nosso ${tipo}) é em ${dias} dias. Escreva uma mensagem de relacionamento amigável para ser enviada via WhatsApp, lembrando o cliente da data especial que se aproxima e desejando felicidades. Use emojis. Mantenha um tom de relacionamento, não de venda direta. Termine com "Atencitwosamente, Equipe ${companyName}".`;
+        }
+
+        const message = await callGeminiAPI(prompt, buttonElement);
+        if (message) {
+            showGeminiModal("Mensagem de Relacionamento", message);
+        }
+    };
+    // --- FIM DA MODIFICAÇÃO ---
+
+    // --- INÍCIO DA CORREÇÃO: Restaurando o código de partículas ---
+    const canvas = document.getElementById('particles-js');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particlesArray;
+
+    let mouse = {
+        x: null,
+        y: null,
+        radius: (canvas.height/80) * (canvas.width/80)
+    };
+
+    window.addEventListener('mousemove', (event) => {
+        mouse.x = event.x;
+        mouse.y = event.y;
+    });
+
+    class Particle {
+        constructor(x, y, directionX, directionY, size, color) {
+            this.x = x;
+            this.y = y;
+            this.directionX = directionX;
+            this.directionY = directionY;
+            this.size = size;
+            this.color = color;
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+            ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
+            ctx.fill();
+        }
+        update() {
+            if (this.x > canvas.width || this.x < 0) {
+                this.directionX = -this.directionX;
+            }
+            if (this.y > canvas.height || this.y < 0) {
+                this.directionY = -this.directionY;
+            }
+            
+            let dx = mouse.x - this.x;
+            let dy = mouse.y - this.y;
+            let distance = Math.sqrt(dx*dx + dy*dy);
+            if (distance < mouse.radius + this.size){
+                if(mouse.x < this.x && this.x < canvas.width - this.size * 10){
+                    this.x += 1;
+                }
+                if(mouse.x > this.x && this.x > this.size * 10){
+                    this.x -= 1;
+                }
+                if(mouse.y < this.y && this.y < canvas.height - this.size * 10){
+                    this.y += 1;
+                }
+                if(mouse.y > this.y && this.y > this.size * 10){
+                    this.y -= 1;
+                }
+            }
+            this.x += this.directionX;
+            this.y += this.directionY;
+            this.draw();
+        }
+    }
+
+    function initParticles() {
+        particlesArray = [];
+        let numberOfParticles = (canvas.height * canvas.width) / 9000;
+        for (let i = 0; i < numberOfParticles; i++) {
+            let size = (Math.random() * 2) + 1;
+            let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+            let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+            let directionX = (Math.random() * .4) - .2;
+            let directionY = (Math.random() * .4) - .2;
+            let color = 'rgba(100, 116, 139, 0.4)';
+            particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+        }
+    }
+
+    function connectParticles(){
+        let opacityValue = 1;
+        for (let a = 0; a < particlesArray.length; a++) {
+            for (let b = a; b < particlesArray.length; b++) {
+                let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
+                               ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                if (distance < (canvas.width/7) * (canvas.height/7)) {
+                    opacityValue = 1 - (distance/20000);
+                    ctx.strokeStyle = `rgba(100, 116, 139, ${opacityValue * 0.5})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                    ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function animateParticles() {
+        requestAnimationFrame(animateParticles);
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        for (let i = 0; i < particlesArray.length; i++) {
+            particlesArray[i].update();
+        }
+        connectParticles();
+    }
+    
+    window.addEventListener('resize', () => {
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+        mouse.radius = ((canvas.height/80) * (canvas.width/80));
+        initParticles();
+    });
+
+    window.addEventListener('mouseout', () => {
+        mouse.x = undefined;
+        mouse.y = undefined;
+    });
+    // --- FIM DA CORREÇÃO ---
+
+    // Recarrega dados do localStorage antes de renderizar (garante dados atualizados)
+    reloadDataFromStorage();
+    
+    initParticles();
+    animateParticles();
+    renderAll();
+    checkBirthdayNotifications(); // <-- Chamada da nova função
+    handleUrlParameters();
+});
+    </script>
+
+<!-- Sistema de Autenticação -->
+<script src="js/protect.js"></script>
+
+</body>
+</html>

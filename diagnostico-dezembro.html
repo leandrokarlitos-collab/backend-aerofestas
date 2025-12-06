@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico - Dezembro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+    <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">🔍 Diagnóstico - Dados de Dezembro</h1>
+        
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const resultado = document.getElementById('resultado');
+            
+            try {
+                // Carregar dados financeiros
+                const financeData = JSON.parse(localStorage.getItem('financeDataV30') || '{}');
+                
+                if (!financeData.eventos || financeData.eventos.length === 0) {
+                    resultado.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                        <h3 class="font-bold text-red-800 mb-2">❌ Nenhum dado financeiro encontrado</h3>
+                        <div class="text-sm">Os dados financeiros não foram carregados corretamente.</div>
+                    </div>`;
+                    return;
+                }
+
+                // Analisar eventos por mês
+                const eventosPorMes = {};
+                financeData.eventos.forEach(evento => {
+                    if (evento.data) {
+                        const mes = evento.data.substring(0, 7); // YYYY-MM
+                        if (!eventosPorMes[mes]) {
+                            eventosPorMes[mes] = [];
+                        }
+                        eventosPorMes[mes].push(evento);
+                    }
+                });
+
+                // Ordenar meses
+                const mesesOrdenados = Object.keys(eventosPorMes).sort();
+
+                let html = '<div class="space-y-4">';
+
+                // Verificar mês selecionado
+                html += '<div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">📅 Mês Selecionado no Sistema</h2>';
+                html += `<div class="text-sm">Mês atual salvo: <strong>${financeData.selectedMonth || 'Não definido'}</strong></div>`;
+                html += '<div class="text-xs mt-2 text-gray-600">O sistema mostra os dados do mês selecionado. Se não estiver em Dezembro, os dados não aparecerão.</div>';
+                html += '</div>';
+
+                // Mostrar eventos por mês
+                html += '<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">📊 Eventos por Mês</h2>';
+                html += '<div class="text-sm mb-2">Total de eventos: ' + financeData.eventos.length + '</div>';
+                html += '<div class="space-y-2">';
+                
+                mesesOrdenados.forEach(mes => {
+                    const eventos = eventosPorMes[mes];
+                    const total = eventos.reduce((sum, e) => sum + (parseFloat(e.valor) || 0), 0);
+                    const isDezembro = mes.endsWith('-12');
+                    
+                    html += `<div class="p-2 ${isDezembro ? 'bg-yellow-100 border-l-4 border-yellow-500' : 'bg-white'} rounded">
+                        <strong>${mes}${isDezembro ? ' 🎄 DEZEMBRO' : ''}:</strong> 
+                        ${eventos.length} eventos 
+                        (R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})})
+                    </div>`;
+                });
+                
+                html += '</div></div>';
+
+                // Verificar especificamente dezembro 2025
+                const dezembro2025 = eventosPorMes['2025-12'] || [];
+                const dezembro2024 = eventosPorMes['2024-12'] || [];
+                
+                html += '<div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">🎄 Dados de Dezembro</h2>';
+                
+                if (dezembro2025.length > 0) {
+                    html += `<div class="mb-2"><strong>Dezembro/2025:</strong> ${dezembro2025.length} eventos</div>`;
+                    html += '<div class="text-xs space-y-1 ml-4">';
+                    dezembro2025.forEach(e => {
+                        html += `<div>• ${e.descricao || 'Sem descrição'} - R$ ${(parseFloat(e.valor) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<div class="mb-2">❌ Dezembro/2025: Nenhum evento</div>';
+                }
+                
+                if (dezembro2024.length > 0) {
+                    html += `<div class="mt-3 mb-2"><strong>Dezembro/2024:</strong> ${dezembro2024.length} eventos</div>`;
+                    html += '<div class="text-xs space-y-1 ml-4">';
+                    dezembro2024.forEach(e => {
+                        html += `<div>• ${e.descricao || 'Sem descrição'} - R$ ${(parseFloat(e.valor) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<div class="mt-3">❌ Dezembro/2024: Nenhum evento</div>';
+                }
+                
+                html += '</div>';
+
+                // Solução
+                html += '<div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">💡 Solução</h2>';
+                
+                const temDezembro = dezembro2025.length > 0 || dezembro2024.length > 0;
+                
+                if (temDezembro) {
+                    html += '<div class="text-sm">';
+                    html += '<p class="mb-2"><strong>Os dados de dezembro existem!</strong></p>';
+                    html += '<p>Para visualizá-los na Gestão Financeira:</p>';
+                    html += '<ol class="list-decimal list-inside ml-4 space-y-1">';
+                    html += '<li>Abra: <code class="bg-gray-200 px-2 py-1 rounded">Sistema Gestão Financeira.html</code></li>';
+                    html += '<li>No seletor de mês, escolha <strong>Dezembro/2025</strong> ou <strong>Dezembro/2024</strong></li>';
+                    html += '<li>Os dados devem aparecer</li>';
+                    html += '</ol>';
+                    html += '<button onclick="corrigirMes()" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">Definir Mês Atual como Dezembro/2025</button>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="text-sm">';
+                    html += '<p class="mb-2 text-red-600"><strong>Não há dados de dezembro.</strong></p>';
+                    html += '<p>Possíveis causas:</p>';
+                    html += '<ul class="list-disc list-inside ml-4">';
+                    html += '<li>Os dados de dezembro não existiam no arquivo original</li>';
+                    html += '<li>Os dados de dezembro não foram exportados</li>';
+                    html += '<li>Os eventos de dezembro estão em outro mês</li>';
+                    html += '</ul>';
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+
+                // Outros dados financeiros
+                html += '<div class="p-4 bg-gray-50 border-l-4 border-gray-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">📋 Outros Dados Financeiros</h2>';
+                html += '<div class="text-sm space-y-1">';
+                html += `<div>Monitores: ${financeData.monitores?.length || 0}</div>`;
+                html += `<div>Gastos: ${financeData.gastos?.length || 0}</div>`;
+                html += `<div>Contas: ${financeData.contas?.length || 0}</div>`;
+                html += `<div>Contas Fixas: ${financeData.contasFixas?.length || 0}</div>`;
+                html += '</div></div>';
+
+                html += '</div>';
+                resultado.innerHTML = html;
+                
+            } catch (error) {
+                resultado.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Erro ao analisar dados</h3>
+                    <div class="text-sm">${error.message}</div>
+                    <pre class="mt-2 text-xs bg-white p-2 rounded overflow-auto">${error.stack}</pre>
+                </div>`;
+            }
+        });
+
+        function corrigirMes() {
+            try {
+                const financeData = JSON.parse(localStorage.getItem('financeDataV30') || '{}');
+                financeData.selectedMonth = '2025-12';
+                localStorage.setItem('financeDataV30', JSON.stringify(financeData));
+                
+                alert('✅ Mês definido para Dezembro/2025!\n\nAgora acesse: Sistema Gestão Financeira.html');
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,78 @@
+// Configurações iniciais
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- SEÇÃO DE ESTOQUE E EVENTOS (Do arquivo dados-completos) ---
+
+model Toy {
+  id       Int     @id @default(autoincrement())
+  name     String
+  quantity Int
+  // Relação: Um brinquedo pode estar em vários eventos
+  eventItems EventItem[]
+}
+
+model Client {
+  id        Float    @id // Mantive Float pois seus IDs parecem ser timestamps
+  name      String
+  phone     String?
+  address   String?
+  cpf       String?
+  // Adicione outros campos que existirem no seu JSON
+}
+
+model Event {
+  id           Float    @id
+  date         String
+  clientName   String?
+  // Relação com itens
+  items        EventItem[]
+}
+
+model EventItem {
+  id       Int   @id @default(autoincrement())
+  quantity Int
+  
+  eventId  Float
+  event    Event @relation(fields: [eventId], references: [id])
+  
+  toyId    Int?
+  toy      Toy?  @relation(fields: [toyId], references: [id])
+}
+
+// --- SEÇÃO FINANCEIRA E RH (Do arquivo dados-financeiros) ---
+
+model Monitor {
+  id            String   @id // Seus IDs aqui são Strings ("1762376509666")
+  nome          String
+  nascimento    String?
+  telefone      String?
+  email         String?
+  endereco      String?
+  cnh           Boolean? @default(false)
+  cnhCategoria  String?
+  fotoPerfil    String?  // Pode guardar a URL ou Base64 (cuidado com tamanho)
+  
+  // Relação: Um monitor tem várias avaliações de desempenho
+  desempenho    Desempenho[]
+}
+
+model Desempenho {
+  id          String   @id
+  data        String
+  descricao   String?
+  nota        String?  // Está como string no JSON ("10.0")
+  obs         String?
+  
+  // O campo mágico! Guarda todo aquele objeto "forca", "agilidade" como um JSON puro.
+  detalhes    String?    
+  
+  monitorId   String
+  monitor     Monitor  @relation(fields: [monitorId], references: [id])
+}

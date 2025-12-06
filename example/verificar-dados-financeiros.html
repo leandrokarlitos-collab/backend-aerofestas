@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Dados Financeiros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">🔍 Verificar Dados Financeiros no Example</h1>
+        
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const resultado = document.getElementById('resultado');
+            
+            // Verificar todas as versões de dados financeiros
+            const versoes = ['financeDataV30', 'financeDataV29', 'financeDataV22', 'financeDataV23', 'financeDataV21'];
+            
+            let html = '<div class="space-y-4">';
+            
+            html += '<div class="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">';
+            html += '<h2 class="font-bold text-lg mb-2">Chaves de Dados Financeiros</h2>';
+            
+            let encontrou = false;
+            versoes.forEach(versao => {
+                const dados = localStorage.getItem(versao);
+                if (dados) {
+                    encontrou = true;
+                    try {
+                        const parsed = JSON.parse(dados);
+                        const size = new Blob([dados]).size;
+                        html += `<div class="mb-2 p-2 bg-white rounded">
+                            <strong>✅ ${versao}:</strong> Encontrado (${size} bytes)
+                            <div class="text-xs mt-1">
+                                ${parsed.monitores ? `Monitores: ${parsed.monitores.length}, ` : ''}
+                                ${parsed.eventos ? `Eventos: ${parsed.eventos.length}, ` : ''}
+                                ${parsed.gastos ? `Gastos: ${parsed.gastos.length}, ` : ''}
+                                ${parsed.contas ? `Contas: ${parsed.contas.length}` : ''}
+                            </div>
+                        </div>`;
+                    } catch (e) {
+                        html += `<div class="mb-2 p-2 bg-white rounded">
+                            <strong>⚠️ ${versao}:</strong> Encontrado mas erro ao ler: ${e.message}
+                        </div>`;
+                    }
+                } else {
+                    html += `<div class="mb-2 p-2 bg-gray-100 rounded text-gray-500">
+                        <strong>❌ ${versao}:</strong> Não encontrado
+                    </div>`;
+                }
+            });
+            
+            html += '</div>';
+            
+            if (encontrou) {
+                html += '<div class="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">';
+                html += '<h2 class="font-bold text-lg mb-2 text-green-800">✅ Dados Financeiros Encontrados!</h2>';
+                html += '<p class="text-sm">Use o exportador atualizado para incluir esses dados.</p>';
+                html += '</div>';
+            } else {
+                html += '<div class="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">';
+                html += '<h2 class="font-bold text-lg mb-2 text-yellow-800">⚠️ Nenhum Dado Financeiro Encontrado</h2>';
+                html += '<p class="text-sm mb-2">Possíveis causas:</p>';
+                html += '<ul class="list-disc list-inside text-sm">';
+                html += '<li>Este não é o arquivo correto do example</li>';
+                html += '<li>Os dados financeiros estão em outra chave</li>';
+                html += '<li>Os dados financeiros nunca foram salvos aqui</li>';
+                html += '</ul>';
+                html += '<div class="mt-4 p-3 bg-white rounded border">';
+                html += '<p class="text-sm font-bold mb-2">Todas as chaves disponíveis:</p>';
+                html += '<div class="text-xs space-y-1">';
+                Object.keys(localStorage).forEach(key => {
+                    const value = localStorage.getItem(key);
+                    const size = new Blob([value]).size;
+                    html += `<div>${key}: ${size} bytes</div>`;
+                });
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            resultado.innerHTML = html;
+        });
+    </script>
+</body>
+</html>
+

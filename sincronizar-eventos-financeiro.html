@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sincronizar Eventos para Financeiro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+    <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">🔄 Sincronizar Eventos da Agenda para o Sistema Financeiro</h1>
+        
+        <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+            <h2 class="font-bold mb-2">⚠️ O que esta ferramenta faz:</h2>
+            <p class="text-sm mb-2">Ela pega TODOS os eventos da Agenda de Eventos e cria entradas correspondentes no Sistema de Gestão Financeira.</p>
+            <p class="text-sm font-bold text-red-600">CUIDADO: Isso pode criar duplicatas se alguns eventos já existem no sistema financeiro!</p>
+        </div>
+
+        <div id="status" class="mb-6"></div>
+
+        <div class="flex gap-4 mb-6">
+            <button onclick="analisarEventos()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold">
+                🔍 Analisar Eventos
+            </button>
+            <button onclick="sincronizarTodos()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold">
+                🔄 Sincronizar Todos os Eventos
+            </button>
+            <button onclick="sincronizarApenasDezembro()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold">
+                🎄 Sincronizar Apenas Dezembro
+            </button>
+        </div>
+
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        function analisarEventos() {
+            const statusEl = document.getElementById('status');
+            const resultadoEl = document.getElementById('resultado');
+            
+            try {
+                // Carregar dados
+                const agendaEvents = JSON.parse(localStorage.getItem('events') || '[]');
+                const financeData = JSON.parse(localStorage.getItem('financeDataV30') || '{}');
+                const financeEventos = financeData.eventos || [];
+                
+                // Analisar eventos da Agenda
+                const eventosPorMes = {};
+                agendaEvents.forEach(e => {
+                    if (e.date) {
+                        const mes = e.date.substring(0, 7);
+                        if (!eventosPorMes[mes]) {
+                            eventosPorMes[mes] = [];
+                        }
+                        eventosPorMes[mes].push(e);
+                    }
+                });
+
+                // Verificar quais já estão no financeiro
+                const eventosFinanceiroIds = new Set(
+                    financeEventos
+                        .filter(e => e.id && e.id.startsWith('agenda-'))
+                        .map(e => e.id)
+                );
+
+                let html = '<div class="space-y-4">';
+                
+                html += '<div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">📊 Análise</h2>';
+                html += '<div class="text-sm space-y-1">';
+                html += `<div><strong>Total de eventos na Agenda:</strong> ${agendaEvents.length}</div>`;
+                html += `<div><strong>Total de eventos no Financeiro:</strong> ${financeEventos.length}</div>`;
+                html += `<div><strong>Eventos da Agenda já no Financeiro:</strong> ${eventosFinanceiroIds.size}</div>`;
+                html += `<div><strong>Eventos a sincronizar:</strong> ${agendaEvents.length - eventosFinanceiroIds.size}</div>`;
+                html += '</div></div>';
+
+                html += '<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">';
+                html += '<h2 class="font-bold text-lg mb-2">📅 Eventos da Agenda por Mês</h2>';
+                html += '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">';
+                
+                Object.keys(eventosPorMes).sort().forEach(mes => {
+                    const eventos = eventosPorMes[mes];
+                    const total = eventos.reduce((sum, e) => sum + (parseFloat(e.price) || 0), 0);
+                    const isDezembro = mes.endsWith('-12');
+                    const jaNoFinanceiro = eventos.filter(e => eventosFinanceiroIds.has(`agenda-${e.id}`)).length;
+                    
+                    html += `<div class="p-2 ${isDezembro ? 'bg-red-100 border-2 border-red-500' : 'bg-white border'} rounded">
+                        <div class="font-bold">${mes}${isDezembro ? ' 🎄' : ''}</div>
+                        <div class="text-xs">${eventos.length} evento(s)</div>
+                        <div class="text-xs text-green-600">${jaNoFinanceiro} já sincronizado(s)</div>
+                        <div class="text-xs">R$ ${total.toFixed(2)}</div>
+                    </div>`;
+                });
+                
+                html += '</div></div>';
+
+                // Dezembro específico
+                const dezembroKeys = Object.keys(eventosPorMes).filter(k => k.endsWith('-12'));
+                if (dezembroKeys.length > 0) {
+                    html += '<div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">';
+                    html += '<h2 class="font-bold text-lg mb-2">🎄 Eventos de Dezembro</h2>';
+                    
+                    dezembroKeys.forEach(mes => {
+                        const eventos = eventosPorMes[mes];
+                        const naoSincronizados = eventos.filter(e => !eventosFinanceiroIds.has(`agenda-${e.id}`));
+                        
+                        html += `<div class="mb-2">
+                            <div class="font-bold">${mes}: ${eventos.length} evento(s)</div>
+                            <div class="text-sm text-red-600">Não sincronizados: ${naoSincronizados.length}</div>
+                        </div>`;
+                    });
+                    
+                    html += '</div>';
+                }
+
+                html += '</div>';
+                resultadoEl.innerHTML = html;
+                
+                statusEl.innerHTML = `<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">
+                    <h3 class="font-bold text-green-800">✅ Análise concluída</h3>
+                    <div class="text-sm mt-2">Clique em "Sincronizar" para transferir os eventos para o sistema financeiro.</div>
+                </div>`;
+                
+            } catch (error) {
+                statusEl.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Erro</h3>
+                    <div class="text-sm">${error.message}</div>
+                </div>`;
+            }
+        }
+
+        function sincronizarTodos() {
+            if (!confirm('⚠️ Tem certeza que deseja sincronizar TODOS os eventos da Agenda para o Financeiro?\n\nIsso pode criar duplicatas!')) {
+                return;
+            }
+            
+            sincronizarEventos(null);
+        }
+
+        function sincronizarApenasDezembro() {
+            if (!confirm('Sincronizar apenas os eventos de DEZEMBRO da Agenda para o Financeiro?')) {
+                return;
+            }
+            
+            sincronizarEventos('12');
+        }
+
+        function sincronizarEventos(mesEspecifico) {
+            const statusEl = document.getElementById('status');
+            const resultadoEl = document.getElementById('resultado');
+            
+            try {
+                // Carregar dados
+                const agendaEvents = JSON.parse(localStorage.getItem('events') || '[]');
+                let financeData = JSON.parse(localStorage.getItem('financeDataV30')) || { 
+                    eventos: [], 
+                    monitores: [], 
+                    gastos: [], 
+                    contas: [], 
+                    contasFixas: [],
+                    funcionarios: [],
+                    faixasComissao: [],
+                    gastoCategorias: [],
+                    contaFixaCategorias: [],
+                    currentEventItems: [],
+                    selectedMonth: new Date().toISOString().slice(0, 7)
+                };
+                
+                let sincronizados = 0;
+                let pulados = 0;
+                
+                agendaEvents.forEach(agendaEvent => {
+                    // Filtrar por mês se especificado
+                    if (mesEspecifico) {
+                        const mes = agendaEvent.date ? agendaEvent.date.substring(5, 7) : null;
+                        if (mes !== mesEspecifico) {
+                            return;
+                        }
+                    }
+                    
+                    const financialEventId = `agenda-${agendaEvent.id}`;
+                    const eventValue = parseFloat(agendaEvent.price) || 0;
+                    
+                    // Verificar se já existe
+                    const existingIndex = financeData.eventos.findIndex(e => e.id === financialEventId);
+                    
+                    const financialEventObject = {
+                        id: financialEventId,
+                        data: agendaEvent.date,
+                        descricao: `${agendaEvent.clientName} - Evento`,
+                        valor: eventValue,
+                        tipo: 'Receita',
+                        categoria: 'Eventos',
+                        conta: 'Principal',
+                        observacoes: agendaEvent.eventObservations || '',
+                        origem: 'Agenda de Eventos'
+                    };
+                    
+                    if (existingIndex > -1) {
+                        financeData.eventos[existingIndex] = financialEventObject;
+                        pulados++;
+                    } else {
+                        financeData.eventos.push(financialEventObject);
+                        sincronizados++;
+                    }
+                });
+                
+                // Salvar
+                localStorage.setItem('financeDataV30', JSON.stringify(financeData));
+                
+                statusEl.innerHTML = `<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">
+                    <h3 class="font-bold text-green-800 mb-2">✅ Sincronização concluída!</h3>
+                    <div class="text-sm space-y-1">
+                        <div>✓ Eventos sincronizados (novos): <strong>${sincronizados}</strong></div>
+                        <div>✓ Eventos atualizados (já existentes): <strong>${pulados}</strong></div>
+                        <div class="mt-2 pt-2 border-t border-green-200">
+                            Total de eventos no Financeiro: <strong>${financeData.eventos.length}</strong>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="/Sistema Gestão Financeira.html" class="inline-block bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold">
+                            Abrir Gestão Financeira
+                        </a>
+                    </div>
+                </div>`;
+                
+                // Executar análise novamente
+                setTimeout(() => analisarEventos(), 500);
+                
+            } catch (error) {
+                statusEl.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Erro ao sincronizar</h3>
+                    <div class="text-sm">${error.message}</div>
+                    <pre class="mt-2 text-xs bg-white p-2 rounded overflow-auto">${error.stack}</pre>
+                </div>`;
+            }
+        }
+
+        // Executar análise automaticamente ao carregar
+        window.addEventListener('load', analisarEventos);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exportar Dados do Example</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-100">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">📤 Exportar Dados do Example</h1>
+        
+        <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <h2 class="font-bold mb-2">📝 Como usar:</h2>
+            <ol class="list-decimal list-inside space-y-2 text-sm">
+                <li><strong>Copie este arquivo</strong> para a pasta <code class="bg-gray-200 px-2 py-1 rounded">example/</code></li>
+                <li><strong>Abra</strong> o arquivo <code class="bg-gray-200 px-2 py-1 rounded">example/exportar-dados-example.html</code> diretamente no navegador</li>
+                <li><strong>Clique</strong> em "Exportar Dados"</li>
+                <li><strong>O arquivo</strong> será baixado automaticamente</li>
+                <li><strong>Use</strong> o arquivo baixado na ferramenta de importação do servidor</li>
+            </ol>
+        </div>
+
+        <div id="status" class="mb-6"></div>
+
+        <button onclick="exportarDados()" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg">
+            📤 Exportar Dados
+        </button>
+    </div>
+
+    <script>
+        function exportarDados() {
+            const statusEl = document.getElementById('status');
+            
+            try {
+                // Coletar dados do localStorage
+                const dados = {
+                    toys: JSON.parse(localStorage.getItem('toys') || '[]'),
+                    companies: JSON.parse(localStorage.getItem('companies') || '[]'),
+                    events: JSON.parse(localStorage.getItem('events') || '[]'),
+                    clients: JSON.parse(localStorage.getItem('clients') || '[]'),
+                    crmToyClients_v8: JSON.parse(localStorage.getItem('crmToyClients_v8') || '[]')
+                };
+
+                // Mostrar estatísticas
+                const total = dados.toys.length + dados.companies.length + dados.events.length + dados.clients.length + dados.crmToyClients_v8.length;
+
+                if (total === 0) {
+                    statusEl.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                        <h3 class="font-bold text-red-800 mb-2">⚠️ Nenhum dado encontrado!</h3>
+                        <div class="text-sm">Certifique-se de abrir este arquivo a partir da pasta <code>example/</code> onde os dados estão armazenados.</div>
+                    </div>`;
+                    return;
+                }
+
+                // Criar arquivo JSON
+                const json = JSON.stringify(dados, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                // Criar link de download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dados-example-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                
+                // Limpar
+                URL.revokeObjectURL(url);
+
+                statusEl.innerHTML = `<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">
+                    <h3 class="font-bold text-green-800 mb-2">✅ Dados exportados com sucesso!</h3>
+                    <div class="text-sm space-y-1">
+                        <div>📦 Toys: ${dados.toys.length} itens</div>
+                        <div>🏢 Companies: ${dados.companies.length} itens</div>
+                        <div>📅 Events: ${dados.events.length} itens</div>
+                        <div>👥 Clients: ${dados.clients.length} itens</div>
+                        <div>📊 CRM Clients: ${dados.crmToyClients_v8.length} itens</div>
+                        <div class="mt-2 pt-2 border-t border-green-200 font-bold">Total: ${total} itens</div>
+                    </div>
+                    <div class="mt-4 text-sm">
+                        Arquivo salvo como: <code class="bg-gray-200 px-2 py-1 rounded">${a.download}</code>
+                    </div>
+                </div>`;
+
+            } catch (error) {
+                statusEl.innerHTML = `<div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Erro ao exportar</h3>
+                    <div class="text-sm">${error.message}</div>
+                </div>`;
+            }
+        }
+
+        // Verificar dados ao carregar
+        window.addEventListener('load', () => {
+            const dados = {
+                toys: JSON.parse(localStorage.getItem('toys') || '[]'),
+                companies: JSON.parse(localStorage.getItem('companies') || '[]'),
+                events: JSON.parse(localStorage.getItem('events') || '[]'),
+                clients: JSON.parse(localStorage.getItem('clients') || '[]'),
+                crmToyClients_v8: JSON.parse(localStorage.getItem('crmToyClients_v8') || '[]')
+            };
+
+            const total = dados.toys.length + dados.companies.length + dados.events.length + dados.clients.length + dados.crmToyClients_v8.length;
+
+            const statusEl = document.getElementById('status');
+            if (total > 0) {
+                statusEl.innerHTML = `<div class="p-4 bg-green-50 border-l-4 border-green-500 rounded">
+                    <h3 class="font-bold text-green-800 mb-2">✅ Dados encontrados!</h3>
+                    <div class="text-sm space-y-1">
+                        <div>📦 Toys: ${dados.toys.length} itens</div>
+                        <div>🏢 Companies: ${dados.companies.length} itens</div>
+                        <div>📅 Events: ${dados.events.length} itens</div>
+                        <div>👥 Clients: ${dados.clients.length} itens</div>
+                        <div>📊 CRM Clients: ${dados.crmToyClients_v8.length} itens</div>
+                        <div class="mt-2 pt-2 border-t border-green-200 font-bold">Total: ${total} itens prontos para exportar</div>
+                    </div>
+                </div>`;
+            } else {
+                statusEl.innerHTML = `<div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+                    <h3 class="font-bold text-yellow-800 mb-2">⚠️ Nenhum dado encontrado</h3>
+                    <div class="text-sm">Certifique-se de abrir este arquivo a partir da pasta <code>example/</code> onde os dados estão armazenados.</div>
+                </div>`;
+            }
+        });
+    </script>
+</body>
+</html>
+
