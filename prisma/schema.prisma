@@ -104,7 +104,12 @@ model User {
   password          String
   isAdmin           Boolean   @default(false)
   emailConfirmed    Boolean   @default(false)
-  verificationToken String?   // Para confirmar e-mail
+  verificationToken String?
+  
+  // --- NOVOS CAMPOS PARA RECUPERAÇÃO DE SENHA ---
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
