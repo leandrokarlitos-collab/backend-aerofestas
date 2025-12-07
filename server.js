@@ -212,56 +212,52 @@ app.get('/api/admin/events-full', async (req, res) => {
     }
 });
 
-// 4. Criar/Atualizar Evento (CORRIGIDO E COMPLETO)
+// 4. Criar/Atualizar Evento (CORRIGIDO PARA EVITAR NaN)
 app.post('/api/admin/events', async (req, res) => {
     console.log("------------------------------------------------");
     console.log("🚨 RECEBI UM PEDIDO DE SALVAR EVENTO!");
 
     const evt = req.body;
 
-    // Log para debug
-    console.log("📦 ID Evento:", evt.id);
-    console.log("📦 Data:", evt.date);
-    console.log("📦 Empresa ID:", evt.yourCompanyId);
+    // --- CORREÇÃO DO ID (O PULO DO GATO) ---
+    // Se o ID vier (edição), converte para Float.
+    // Se não vier (novo), gera um timestamp agora (Date.now()).
+    const eventId = evt.id ? parseFloat(evt.id) : Date.now();
+
+    console.log("📦 ID Final:", eventId); // Agora nunca será NaN
 
     try {
-        // 1. Preparar a lista de itens (Brinquedos)
-        // Aceita 'items', 'toys' ou 'itens'
         const listaItens = evt.items || evt.toys || evt.itens || [];
 
         const itensParaSalvar = listaItens.map(item => ({
             quantity: parseInt(item.quantity) || 1,
-            // Converte ID do brinquedo para Float
             toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
         })).filter(i => i.toyId !== null);
 
-        // 2. Limpar itens antigos se for atualização (para evitar duplicidade)
+        // Se for atualização, limpa itens antigos
+        // Importante: Só deleta se o evento JÁ EXISTIA (evt.id original não era nulo)
         if (evt.id) {
-            await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } });
+            await prisma.eventItem.deleteMany({ where: { eventId: eventId } });
         }
 
-        // 3. Montar o objeto de dados
         const eventData = {
-            id: parseFloat(evt.id), // ID sempre Float
+            id: eventId,
             date: evt.date,
             clientName: evt.clientName || "Cliente Sem Nome",
-
-            // --- CAMPOS QUE FALTAVAM NO SEU ARQUIVO ---
             yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
             startTime: evt.startTime || null,
             endTime: evt.endTime || null,
             price: evt.price ? parseFloat(evt.price) : 0,
-            // status: evt.paymentStatus || null, // Se quiser salvar status financeiro também
-
-            // Criação dos itens
             items: {
                 create: itensParaSalvar
             }
         };
 
-        // 4. Salvar no Banco (Upsert: Cria ou Atualiza)
+        // Upsert:
+        // Se for novo (ID gerado agora), o 'where' não acha nada -> Cria.
+        // Se for edição (ID antigo), o 'where' acha -> Atualiza.
         const savedEvent = await prisma.event.upsert({
-            where: { id: parseFloat(evt.id) },
+            where: { id: eventId },
             update: eventData,
             create: eventData
         });
