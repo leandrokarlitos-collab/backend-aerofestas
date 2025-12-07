@@ -130,47 +130,58 @@ app.post('/api/migrar-completo', async (req, res) => {
         }
     }
 
-    // 5. MIGRAR EVENTOS (COM ITENS AGORA!)
-    if (events && events.length > 0) {
-        console.log(`📅 Processando ${events.length} eventos...`);
-        for (const evt of events) {
-             if (!evt.id) continue;
+      // 5. MIGRAR EVENTOS (CORRIGIDO PARA INCLUIR PREÇO E ITENS)
+      if (events && events.length > 0) {
+          console.log(`📅 Processando ${events.length} eventos...`);
+          for (const evt of events) {
+              if (!evt.id) continue;
 
-             // Tenta encontrar a lista de brinquedos dentro do evento
-             // Geralmente chama "toys" ou "itens" no JSON antigo
-             const listaItens = evt.toys || evt.itens || [];
+              // Tenta encontrar a lista de brinquedos (toys ou itens)
+              const listaItens = evt.toys || evt.itens || [];
 
-             // Prepara os itens para salvar no formato do Prisma
-             const itensParaSalvar = listaItens.map(item => ({
-                 quantity: item.quantity || 1,
-                 // Tenta pegar o ID do brinquedo (pode ser item.id ou item.toyId)
-                 toyId: item.id || item.toyId || null 
-             })).filter(i => i.toyId !== null); // Remove se não tiver ID
+              // Prepara os itens
+              const itensParaSalvar = listaItens.map(item => ({
+                  quantity: parseInt(item.quantity) || 1,
+                  toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
+              })).filter(i => i.toyId !== null);
 
-             await prisma.event.upsert({
-                 where: { id: parseFloat(evt.id) },
-                 update: {}, // Se já existe, não mexe (para não duplicar itens)
-                 create: {
-                     id: parseFloat(evt.id),
-                     date: evt.date,
-                     clientName: evt.clientName || "Cliente Desconhecido",
-                     // MÁGICA AQUI: Cria os itens junto com o evento
-                     items: {
-                         create: itensParaSalvar
-                     }
-                 }
-             });
-        }
-    }
+              // Tenta calcular o preço se ele não vier explícito (Soma dos itens)
+              // Se o JSON já tiver 'price', usa ele. Se não, tenta 'total' ou 'valor'.
+              let precoFinal = parseFloat(evt.price || evt.total || evt.valor || 0);
 
-    console.log("✅ Migração finalizada com sucesso!");
-    res.json({ success: true, message: "Todos os dados foram migrados!" });
+              // Se o preço veio zerado, tenta somar os itens (fallback)
+              if (precoFinal === 0 && listaItens.length > 0) {
+                  // Nota: Isso supõe que os itens no JSON tenham preço. Se não tiverem, fica 0.
+                  precoFinal = listaItens.reduce((acc, item) => acc + (parseFloat(item.price || 0) * (item.quantity || 1)), 0);
+              }
 
-  } catch (error) {
-    console.error("❌ Erro durante a migração:", error);
-    res.status(500).json({ error: error.message, stack: error.stack });
-  }
-});
+              const dadosEvento = {
+                  id: parseFloat(evt.id),
+                  date: evt.date,
+                  clientName: evt.clientName || "Cliente Desconhecido",
+                  startTime: evt.startTime || null,
+                  endTime: evt.endTime || null,
+                  price: precoFinal, // <--- O CAMPO QUE FALTAVA PARA A SOMA!
+
+                  // Tenta vincular empresa se existir no JSON antigo
+                  yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
+
+                  // Recria os itens
+                  items: {
+                      create: itensParaSalvar
+                  }
+              };
+
+              // Primeiro limpamos itens antigos desse evento para evitar duplicidade na remigração
+              await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } }).catch(() => { });
+
+              await prisma.event.upsert({
+                  where: { id: parseFloat(evt.id) },
+                  update: dadosEvento,
+                  create: dadosEvento
+              });
+          }
+      }
 
 // --- NOVAS ROTAS PARA O FRONTEND (CAMINHO A) ---
 
