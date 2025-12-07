@@ -24,7 +24,7 @@ app.post('/api/migrar-completo', async (req, res) => {
   // Aumenta o tempo limite para não dar erro em envio grande
   req.setTimeout(500000); 
   
-  const { financeDataV30, toys, events, clients } = req.body;
+  const { financeDataV30, toys, events, clients, companies } = req.body;
 
   try {
     console.log("🚀 Iniciando migração de dados...");
@@ -106,7 +106,31 @@ app.post('/api/migrar-completo', async (req, res) => {
         }
     }
 
-    // 4. MIGRAR EVENTOS (COM ITENS AGORA!)
+    // 4. MIGRAR EMPRESAS (COMPANIES)
+    if (companies && companies.length > 0) {
+        console.log(`🏢 Processando ${companies.length} empresas...`);
+        for (const comp of companies) {
+            if (!comp.id) continue;
+            
+            await prisma.company.upsert({
+                where: { id: parseFloat(comp.id) },
+                update: {},
+                create: {
+                    id: parseFloat(comp.id),
+                    name: comp.name || "",
+                    cnpj: comp.cnpj || null,
+                    address: comp.address || null,
+                    phone: comp.phone || null,
+                    email: comp.email || null,
+                    paymentInfo: comp.paymentInfo || null,
+                    repName: comp.repName || null,
+                    repDoc: comp.repDoc || null
+                }
+            });
+        }
+    }
+
+    // 5. MIGRAR EVENTOS (COM ITENS AGORA!)
     if (events && events.length > 0) {
         console.log(`📅 Processando ${events.length} eventos...`);
         for (const evt of events) {
