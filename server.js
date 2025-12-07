@@ -259,7 +259,7 @@ app.post('/api/admin/events', async (req, res) => {
         const savedEvent = await prisma.event.upsert({
             where: { id: eventId },
             update: eventData,
-            create: eventData
+            create: eventData,
             include: { items: { include: { toy: true } } }
         });
 
