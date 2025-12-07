@@ -18,17 +18,5 @@
     "createdAt": "2025-12-04T22:07:06.178Z",
     "updatedBy": "1764886026178",
     "updatedAt": "2025-12-04T22:41:35.200Z"
-  },
-  {
-    "id": "1765106784204",
-    "name": "Leandro Karlitos",
-    "email": "lks.inari@gmail.com",
-    "password": "$2a$10$mj6wO1VkMRBgsvMzeO0kXOtGDrcHwMfLwWipfVrWqS7wEoHHtYO5O",
-    "isAdmin": false,
-    "emailConfirmed": false,
-    "createdAt": "2025-12-07T11:26:24.204Z",
-    "createdBy": "system",
-    "updatedBy": "system",
-    "updatedAt": "2025-12-07T11:26:24.204Z"
   }
 ]

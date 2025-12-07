@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs'); 
 const nodemailer = require('nodemailer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo-super-secreto-aero';
-// Ajuste para o seu domínio real do Firebase
-const FRONTEND_URL = 'https://sistema-operante-aerofestas.web.app';
+// Ajuste para o seu domínio real do Firebase ou Localhost
+const FRONTEND_URL = 'https://sistema-operante-aerofestas.web.app'; 
 
 // --- CONFIGURAÇÃO DO GMAIL ---
 const transporter = nodemailer.createTransport({
@@ -44,7 +44,6 @@ router.post('/register', async (req, res) => {
             }
         });
 
-        // Link clicável
         const confirmLink = `${FRONTEND_URL}/confirm-email.html?token=${verificationToken}`;
 
         const mailOptions = {
@@ -83,14 +82,13 @@ router.post('/forgot-password', async (req, res) => {
         const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-        // Gera token de recuperação e validade (1 hora)
         const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
         const expires = new Date();
-        expires.setHours(expires.getHours() + 1);
+        expires.setHours(expires.getHours() + 1); // Validade de 1 hora
 
         await prisma.user.update({
             where: { id: user.id },
-            data: {
+            data: { 
                 resetPasswordToken: resetToken,
                 resetPasswordExpires: expires
             }
@@ -124,18 +122,17 @@ router.post('/forgot-password', async (req, res) => {
 
 /**
  * POST /api/auth/reset-password
- * Define a nova senha usando o token
+ * Define a nova senha
  */
 router.post('/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
         if (!token || !newPassword) return res.status(400).json({ error: 'Dados incompletos.' });
 
-        // Busca usuário com token válido e data não expirada
         const user = await prisma.user.findFirst({
-            where: {
+            where: { 
                 resetPasswordToken: token,
-                resetPasswordExpires: { gt: new Date() } // Expiração maior que agora
+                resetPasswordExpires: { gt: new Date() }
             }
         });
 
@@ -147,7 +144,7 @@ router.post('/reset-password', async (req, res) => {
             where: { id: user.id },
             data: {
                 password: hashedPassword,
-                resetPasswordToken: null,   // Limpa o token
+                resetPasswordToken: null,
                 resetPasswordExpires: null
             }
         });
@@ -160,8 +157,9 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
-// --- DEMAIS ROTAS EXISTENTES (Confirm, Login, Me) ---
-
+/**
+ * POST /api/auth/confirm-email
+ */
 router.post('/confirm-email', async (req, res) => {
     try {
         const { token } = req.body;
@@ -181,6 +179,9 @@ router.post('/confirm-email', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/auth/login
+ */
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -206,6 +207,9 @@ router.post('/login', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/auth/me
+ */
 router.get('/me', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;

@@ -1,28 +1,25 @@
 const API_BASE_URL = window.location.origin;
 
-// Importa funções de profile.js se disponível
-if (typeof getToken === 'undefined') {
-    // Funções auxiliares já definidas em auth.js
-}
+// --- FUNÇÕES DE TOKEN (USO INTERNO E EXTERNO) ---
 
 /**
  * Salva token no localStorage
  */
-function saveToken(token) {
+export function saveToken(token) {
     localStorage.setItem('authToken', token);
 }
 
 /**
  * Obtém token do localStorage
  */
-function getToken() {
+export function getToken() {
     return localStorage.getItem('authToken');
 }
 
 /**
  * Remove token do localStorage
  */
-function removeToken() {
+export function removeToken() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
 }
@@ -30,14 +27,14 @@ function removeToken() {
 /**
  * Salva dados do usuário no localStorage
  */
-function saveUserData(user) {
+export function saveUserData(user) {
     localStorage.setItem('userData', JSON.stringify(user));
 }
 
 /**
  * Obtém dados do usuário do localStorage
  */
-function getUserData() {
+export function getUserData() {
     const data = localStorage.getItem('userData');
     return data ? JSON.parse(data) : null;
 }
@@ -45,14 +42,16 @@ function getUserData() {
 /**
  * Verifica se o usuário está autenticado
  */
-function isAuthenticated() {
+export function isAuthenticated() {
     return !!getToken();
 }
+
+// --- FUNÇÕES DE AUTENTICAÇÃO ---
 
 /**
  * Faz login
  */
-async function login(email, password) {
+export async function login(email, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
@@ -79,7 +78,7 @@ async function login(email, password) {
 /**
  * Registra novo usuário
  */
-async function register(name, email, password) {
+export async function register(name, email, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
             method: 'POST',
@@ -104,7 +103,7 @@ async function register(name, email, password) {
 /**
  * Confirma email usando token
  */
-async function confirmEmail(token) {
+export async function confirmEmail(token) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/confirm-email`, {
             method: 'POST',
@@ -129,7 +128,7 @@ async function confirmEmail(token) {
 /**
  * Obtém informações do usuário autenticado
  */
-async function getMe() {
+export async function getMe() {
     try {
         const token = getToken();
         if (!token) {
@@ -161,39 +160,26 @@ async function getMe() {
 /**
  * Faz logout
  */
-function logout() {
+export function logout() {
     removeToken();
     window.location.href = '/login.html';
 }
 
-/**
- * Lista usuários (admin)
- */
-async function listUsers() {
+// --- FUNÇÕES ADMINISTRATIVAS (Para uso futuro) ---
+
+export async function listUsers() {
     try {
         const token = getToken();
         const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao listar usuários');
-        }
-
+        if (!response.ok) throw new Error(data.error || 'Erro ao listar usuários');
         return data;
-    } catch (error) {
-        throw error;
-    }
+    } catch (error) { throw error; }
 }
 
-/**
- * Adiciona usuário (admin)
- */
-async function addUser(userData) {
+export async function addUser(userData) {
     try {
         const token = getToken();
         const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
@@ -204,48 +190,26 @@ async function addUser(userData) {
             },
             body: JSON.stringify(userData)
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao adicionar usuário');
-        }
-
+        if (!response.ok) throw new Error(data.error || 'Erro ao adicionar usuário');
         return data;
-    } catch (error) {
-        throw error;
-    }
+    } catch (error) { throw error; }
 }
 
-/**
- * Remove usuário (admin)
- */
-async function removeUser(userId) {
+export async function removeUser(userId) {
     try {
         const token = getToken();
         const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao remover usuário');
-        }
-
+        if (!response.ok) throw new Error(data.error || 'Erro ao remover usuário');
         return data;
-    } catch (error) {
-        throw error;
-    }
+    } catch (error) { throw error; }
 }
 
-/**
- * Atualiza usuário (admin)
- */
-async function updateUser(userId, userData) {
+export async function updateUser(userId, userData) {
     try {
         const token = getToken();
         const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
@@ -256,23 +220,13 @@ async function updateUser(userId, userData) {
             },
             body: JSON.stringify(userData)
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao atualizar usuário');
-        }
-
+        if (!response.ok) throw new Error(data.error || 'Erro ao atualizar usuário');
         return data;
-    } catch (error) {
-        throw error;
-    }
+    } catch (error) { throw error; }
 }
 
-/**
- * Obtém histórico de alterações (admin)
- */
-async function getHistory(filters = {}) {
+export async function getHistory(filters = {}) {
     try {
         const token = getToken();
         const params = new URLSearchParams();
@@ -284,20 +238,10 @@ async function getHistory(filters = {}) {
         if (filters.offset) params.append('offset', filters.offset);
 
         const response = await fetch(`${API_BASE_URL}/api/admin/history?${params.toString()}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao buscar histórico');
-        }
-
+        if (!response.ok) throw new Error(data.error || 'Erro ao buscar histórico');
         return data;
-    } catch (error) {
-        throw error;
-    }
+    } catch (error) { throw error; }
 }
-

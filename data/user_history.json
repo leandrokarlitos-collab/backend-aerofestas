@@ -70,5 +70,18 @@
       "isAdmin": false
     },
     "timestamp": "2025-12-07T11:26:24.213Z"
+  },
+  {
+    "id": "1765130449247",
+    "userId": "1765106784204",
+    "userEmail": "lks.inari@gmail.com",
+    "userName": "Leandro Karlitos",
+    "action": "delete",
+    "changedBy": "c18f1f94-2a38-48e3-bb78-dcc6e682359d",
+    "changedByName": "Administrador",
+    "changes": {
+      "deleted": true
+    },
+    "timestamp": "2025-12-07T18:00:49.247Z"
   }
 ]
