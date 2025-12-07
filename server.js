@@ -212,76 +212,70 @@ app.get('/api/admin/events-full', async (req, res) => {
     }
 });
 
-// 4. Criar/Atualizar Evento
+// 4. Criar/Atualizar Evento (CORRIGIDO E COMPLETO)
 app.post('/api/admin/events', async (req, res) => {
+    console.log("------------------------------------------------");
+    console.log("🚨 RECEBI UM PEDIDO DE SALVAR EVENTO!");
+
+    const evt = req.body;
+
+    // Log para debug
+    console.log("📦 ID Evento:", evt.id);
+    console.log("📦 Data:", evt.date);
+    console.log("📦 Empresa ID:", evt.yourCompanyId);
+
     try {
-        const evt = req.body;
-        
-        // Log detalhado para debug
-        console.log('📥 POST /api/admin/events - Dados recebidos:');
-        console.log(JSON.stringify(evt, null, 2));
-        
-        if (!evt.date || !evt.clientName) {
-            console.log('❌ Validação falhou: faltam campos obrigatórios');
-            return res.status(400).json({ error: "Data e nome do cliente são obrigatórios" });
-        }
-        
-        // Aceitar lista de brinquedos de diferentes propriedades
+        // 1. Preparar a lista de itens (Brinquedos)
+        // Aceita 'items', 'toys' ou 'itens'
         const listaItens = evt.items || evt.toys || evt.itens || [];
-        console.log(`🧸 Itens encontrados: ${listaItens.length}`);
-        
-        // Preparar itens para salvar
+
         const itensParaSalvar = listaItens.map(item => ({
-            quantity: item.quantity || 1,
-            toyId: item.id || item.toyId || null,
-            price: item.price || 0
+            quantity: parseInt(item.quantity) || 1,
+            // Converte ID do brinquedo para Float
+            toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
         })).filter(i => i.toyId !== null);
-        
-        console.log(`✅ Itens válidos para salvar: ${itensParaSalvar.length}`);
-        
-        let savedEvent;
-        
-        // Se tem ID, é UPDATE
+
+        // 2. Limpar itens antigos se for atualização (para evitar duplicidade)
         if (evt.id) {
-            console.log(`🔄 Atualizando evento ID: ${evt.id}`);
-            savedEvent = await prisma.event.update({
-                where: { id: parseFloat(evt.id) },
-                data: {
-                    date: evt.date,
-                    clientName: evt.clientName,
-                    // Remover itens antigos e adicionar novos
-                    items: {
-                        deleteMany: {},
-                        create: itensParaSalvar
-                    }
-                },
-                include: {
-                    items: { include: { toy: true } }
-                }
-            });
-        } else {
-            // Criar novo evento
-            console.log('✨ Criando novo evento');
-            savedEvent = await prisma.event.create({
-                data: {
-                    date: evt.date,
-                    clientName: evt.clientName,
-                    items: {
-                        create: itensParaSalvar
-                    }
-                },
-                include: {
-                    items: { include: { toy: true } }
-                }
-            });
+            await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } });
         }
-        
-        console.log(`✅ Evento salvo com sucesso! ID: ${savedEvent.id}`);
-        res.json(savedEvent);
-        
+
+        // 3. Montar o objeto de dados
+        const eventData = {
+            id: parseFloat(evt.id), // ID sempre Float
+            date: evt.date,
+            clientName: evt.clientName || "Cliente Sem Nome",
+
+            // --- CAMPOS QUE FALTAVAM NO SEU ARQUIVO ---
+            yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
+            startTime: evt.startTime || null,
+            endTime: evt.endTime || null,
+            price: evt.price ? parseFloat(evt.price) : 0,
+            // status: evt.paymentStatus || null, // Se quiser salvar status financeiro também
+
+            // Criação dos itens
+            items: {
+                create: itensParaSalvar
+            }
+        };
+
+        // 4. Salvar no Banco (Upsert: Cria ou Atualiza)
+        const savedEvent = await prisma.event.upsert({
+            where: { id: parseFloat(evt.id) },
+            update: eventData,
+            create: eventData
+        });
+
+        console.log("✅ Evento salvo com sucesso! ID:", savedEvent.id);
+        res.json({ success: true, data: savedEvent });
+
     } catch (error) {
-        console.error("❌ Erro ao salvar evento:", error);
-        res.status(500).json({ error: "Erro ao salvar evento", details: error.message });
+        console.error("❌ ERRO GRAVE AO SALVAR EVENTO:");
+        console.error(error);
+        res.status(500).json({
+            error: "Erro interno ao salvar evento.",
+            details: error.message
+        });
     }
 });
 
