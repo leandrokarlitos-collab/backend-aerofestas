@@ -1428,11 +1428,31 @@
         } else {
             dayEvents.sort((a, b) => a.startTime.localeCompare(b.startTime)).forEach(event => {
                 let toysHtml = '<ul class="list-disc list-inside pl-1 text-blue-500">';
-                event.toys.forEach(eventToy => {
-                    const toy = toys.find(t => t.id === eventToy.id);
-                    const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
-                    toysHtml += `<li class="font-semibold text-gray-700">${toy ? toy.name : 'Brinquedo removido'}${quantityText}</li>`;
+                
+                // Aceita tanto o formato antigo (toys) quanto o novo (items) da API
+                const lista = event.toys || event.items || [];
+                
+                lista.forEach(item => {
+                    let toyName = 'Brinquedo removido';
+                    let quantity = 1;
+                    
+                    // Formato Novo: item tem a propriedade toy (ex: item.toy.name)
+                    if (item.toy && item.toy.name) {
+                        toyName = item.toy.name;
+                        quantity = item.quantity || 1;
+                    } 
+                    // Formato Antigo: buscar na lista global toys usando o ID
+                    else {
+                        const toyId = item.toyId || item.id;
+                        const toy = toys.find(t => t.id === toyId);
+                        toyName = toy ? toy.name : 'Brinquedo removido';
+                        quantity = item.quantity || 1;
+                    }
+                    
+                    const quantityText = quantity > 1 ? ` (x${quantity})` : '';
+                    toysHtml += `<li class="font-semibold text-gray-700">${toyName}${quantityText}</li>`;
                 });
+                
                 toysHtml += '</ul>';
                 const yourCompany = companies.find(c => c.id === event.yourCompanyId);
                 const clientNameDisplay = event.clientType === 'PJ' ? `${event.clientName} (PJ)` : event.clientName;

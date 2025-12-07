@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const sgMail = require('@sendgrid/mail');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -15,22 +16,58 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-// Aumentando o limite para 50MB para aceitar a migração
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// --- ROTA DE MIGRAÇÃO (VERSÃO FINAL COM CORREÇÃO DE PREÇOS) ---
-app.post('/api/migrar-completo', async (req, res) => {
-    req.setTimeout(900000); // 15 minutos de timeout
+// --- CONFIGURAÇÃO DO SENDGRID ---
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+} else {
+    console.warn("⚠️  AVISO: SENDGRID_API_KEY não encontrada no .env");
+}
 
+// --- ROTA DE ENVIO DE E-MAIL (GENÉRICA) ---
+app.post('/api/send-email', async (req, res) => {
+    const { to, subject, text, html } = req.body;
+
+    if (!to || !subject) {
+        return res.status(400).json({ error: 'Faltam campos obrigatórios (to, subject)' });
+    }
+
+    // AQUI ESTAVA O ERRO: Agora usa SENDGRID_FROM_EMAIL
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'leandrokarlitos@gmail.com';
+
+    const msg = {
+        to,
+        from: fromEmail,
+        subject,
+        text: text || '',
+        html: html || text || '',
+    };
+
+    try {
+        await sgMail.send(msg);
+        console.log(`📧 E-mail enviado para ${to} (De: ${fromEmail})`);
+        res.json({ success: true, message: 'E-mail enviado com sucesso!' });
+    } catch (error) {
+        console.error("❌ Erro ao enviar e-mail:", error);
+        if (error.response) {
+            console.error(error.response.body);
+        }
+        res.status(500).json({ error: 'Falha ao enviar e-mail', details: error.message });
+    }
+});
+
+// --- ROTA DE MIGRAÇÃO ---
+app.post('/api/migrar-completo', async (req, res) => {
+    req.setTimeout(900000);
     const { financeDataV30, toys, events, clients, companies } = req.body;
 
     try {
         console.log("🚀 Iniciando migração de dados...");
 
-        // 1. MIGRAR MONITORES E DESEMPENHO
+        // 1. MIGRAR MONITORES
         if (financeDataV30 && financeDataV30.monitores) {
-            console.log(`📦 Processando ${financeDataV30.monitores.length} monitores...`);
             for (const m of financeDataV30.monitores) {
                 await prisma.monitor.upsert({
                     where: { id: m.id },
@@ -68,25 +105,19 @@ app.post('/api/migrar-completo', async (req, res) => {
             }
         }
 
-        // 2. MIGRAR BRINQUEDOS (TOYS)
+        // 2. MIGRAR BRINQUEDOS
         if (toys && toys.length > 0) {
-            console.log(`🧸 Processando ${toys.length} brinquedos...`);
             for (const t of toys) {
                 await prisma.toy.upsert({
                     where: { id: t.id },
                     update: { quantity: t.quantity, name: t.name },
-                    create: {
-                        id: t.id,
-                        name: t.name,
-                        quantity: t.quantity
-                    }
+                    create: { id: t.id, name: t.name, quantity: t.quantity }
                 });
             }
         }
 
         // 3. MIGRAR CLIENTES
         if (clients && clients.length > 0) {
-            console.log(`👥 Processando ${clients.length} clientes...`);
             for (const c of clients) {
                 if (!c.id) continue;
                 await prisma.client.upsert({
@@ -103,9 +134,8 @@ app.post('/api/migrar-completo', async (req, res) => {
             }
         }
 
-        // 4. MIGRAR EMPRESAS (COMPANIES)
+        // 4. MIGRAR EMPRESAS
         if (companies && companies.length > 0) {
-            console.log(`🏢 Processando ${companies.length} empresas...`);
             for (const comp of companies) {
                 if (!comp.id) continue;
                 await prisma.company.upsert({
@@ -126,9 +156,8 @@ app.post('/api/migrar-completo', async (req, res) => {
             }
         }
 
-        // 5. MIGRAR EVENTOS (COM CÁLCULO DE PREÇO E ITENS)
+        // 5. MIGRAR EVENTOS
         if (events && events.length > 0) {
-            console.log(`📅 Processando ${events.length} eventos...`);
             for (const evt of events) {
                 if (!evt.id) continue;
 
@@ -138,16 +167,12 @@ app.post('/api/migrar-completo', async (req, res) => {
                     toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
                 })).filter(i => i.toyId !== null);
 
-                // Cálculo de preço fallback
                 let precoFinal = parseFloat(evt.price || evt.total || evt.valor || 0);
                 if (precoFinal === 0 && listaItens.length > 0) {
                     precoFinal = listaItens.reduce((acc, item) => acc + (parseFloat(item.price || 0) * (item.quantity || 1)), 0);
                 }
 
-                // Deleta itens antigos para evitar duplicidade na recarga
-                try {
-                    await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } });
-                } catch (e) { /* Ignora se não existir */ }
+                try { await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } }); } catch (e) { }
 
                 const dadosEvento = {
                     id: parseFloat(evt.id),
@@ -157,9 +182,7 @@ app.post('/api/migrar-completo', async (req, res) => {
                     endTime: evt.endTime || null,
                     price: precoFinal,
                     yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
-                    items: {
-                        create: itensParaSalvar
-                    }
+                    items: { create: itensParaSalvar }
                 };
 
                 await prisma.event.upsert({
@@ -179,45 +202,35 @@ app.post('/api/migrar-completo', async (req, res) => {
     }
 });
 
-// --- ROTAS DE LEITURA ---
+// --- ROTAS GET ---
 app.get('/api/admin/toys', async (req, res) => {
     try {
         const toys = await prisma.toy.findMany({ orderBy: { name: 'asc' } });
         res.json(toys);
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar brinquedos" });
-    }
+    } catch (error) { res.status(500).json({ error: "Erro ao buscar brinquedos" }); }
 });
 
 app.get('/api/admin/clients', async (req, res) => {
     try {
         const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
         res.json(clients);
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar clientes" });
-    }
+    } catch (error) { res.status(500).json({ error: "Erro ao buscar clientes" }); }
 });
 
 app.get('/api/admin/events-full', async (req, res) => {
     try {
         const events = await prisma.event.findMany({
-            include: {
-                items: { include: { toy: true } }
-            },
+            include: { items: { include: { toy: true } } },
             orderBy: { date: 'desc' }
         });
         res.json(events);
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar eventos" });
-    }
+    } catch (error) { res.status(500).json({ error: "Erro ao buscar eventos" }); }
 });
 
-// --- ROTA DE SALVAR EVENTO (CORRIGIDA E SEGURA) ---
+// --- ROTA DE SALVAR EVENTO ---
 app.post('/api/admin/events', async (req, res) => {
     console.log("🚨 RECEBI UM PEDIDO DE SALVAR EVENTO!");
     const evt = req.body;
-
-    // Garante ID numérico ou timestamp
     const eventId = evt.id ? parseFloat(evt.id) : Date.now();
 
     try {
@@ -239,9 +252,7 @@ app.post('/api/admin/events', async (req, res) => {
             startTime: evt.startTime || null,
             endTime: evt.endTime || null,
             price: evt.price ? parseFloat(evt.price) : 0,
-            items: {
-                create: itensParaSalvar
-            }
+            items: { create: itensParaSalvar }
         };
 
         const savedEvent = await prisma.event.upsert({
@@ -276,6 +287,12 @@ app.get('/', (req, res) => {
     res.redirect('/login.html');
 });
 
+// Inicia servidor com Log do SendGrid
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+    if (process.env.SENDGRID_API_KEY) {
+        console.log(`📧 Serviço de E-mail: ✅ SendGrid Ativo (${process.env.SENDGRID_FROM_EMAIL || 'Padrão'})`);
+    } else {
+        console.log(`📧 Serviço de E-mail: ⚠️  INATIVO (Falta SENDGRID_API_KEY)`);
+    }
 });
