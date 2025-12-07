@@ -20,24 +20,15 @@
     "updatedAt": "2025-12-04T22:41:35.200Z"
   },
   {
-    "id": "1764886549912",
-    "name": "Leandro Karlitos da Silva Aguiar",
+    "id": "1765106784204",
+    "name": "Leandro Karlitos",
     "email": "lks.inari@gmail.com",
-    "password": "$2a$10$ozvrXSIIZ7vYksLEK0ddSuYeeTE0Lhd/UHyErsv5JuKXsGkt42fQm",
+    "password": "$2a$10$mj6wO1VkMRBgsvMzeO0kXOtGDrcHwMfLwWipfVrWqS7wEoHHtYO5O",
     "isAdmin": false,
     "emailConfirmed": false,
-    "createdAt": "2025-12-04T22:15:49.912Z"
-  },
-  {
-    "id": "1765046509381",
-    "name": "Leandro",
-    "email": "diversaonoespaco@gmail.com",
-    "password": "$2a$10$lYbC8ddesVIJxvQZhc/Kj.3wQ2rAiGpt.cfGQf7nehkUzAvJI6qAS",
-    "isAdmin": false,
-    "emailConfirmed": false,
-    "createdAt": "2025-12-06T18:41:49.381Z",
+    "createdAt": "2025-12-07T11:26:24.204Z",
     "createdBy": "system",
     "updatedBy": "system",
-    "updatedAt": "2025-12-06T18:41:49.381Z"
+    "updatedAt": "2025-12-07T11:26:24.204Z"
   }
 ]

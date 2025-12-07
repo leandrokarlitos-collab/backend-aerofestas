@@ -29,5 +29,46 @@
       "isAdmin": false
     },
     "timestamp": "2025-12-06T18:41:49.386Z"
+  },
+  {
+    "id": "1765106734723",
+    "userId": "1764886549912",
+    "userEmail": "lks.inari@gmail.com",
+    "userName": "Leandro Karlitos da Silva Aguiar",
+    "action": "delete",
+    "changedBy": "1764886026178",
+    "changedByName": "Gerente - Aero & ABC Festas",
+    "changes": {
+      "deleted": true
+    },
+    "timestamp": "2025-12-07T11:25:34.723Z"
+  },
+  {
+    "id": "1765106746982",
+    "userId": "1765046509381",
+    "userEmail": "diversaonoespaco@gmail.com",
+    "userName": "Leandro",
+    "action": "delete",
+    "changedBy": "1764886026178",
+    "changedByName": "Gerente - Aero & ABC Festas",
+    "changes": {
+      "deleted": true
+    },
+    "timestamp": "2025-12-07T11:25:46.982Z"
+  },
+  {
+    "id": "1765106784213",
+    "userId": "1765106784204",
+    "userEmail": "lks.inari@gmail.com",
+    "userName": "Leandro Karlitos",
+    "action": "create",
+    "changedBy": "system",
+    "changedByName": "Sistema",
+    "changes": {
+      "name": "Leandro Karlitos",
+      "email": "lks.inari@gmail.com",
+      "isAdmin": false
+    },
+    "timestamp": "2025-12-07T11:26:24.213Z"
   }
 ]
