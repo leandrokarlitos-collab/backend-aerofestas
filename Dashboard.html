@@ -472,8 +472,10 @@
     </div>
 
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
+<script type="module">
+import { api } from './js/api.js';
+
+document.addEventListener('DOMContentLoaded', async () => {
 
     // --- CONFIGURAÇÕES GLOBAIS E INICIALIZAÇÃO ---
     let currentContext = { events: [], tasks: [] }; // [NOVO] Armazena o contexto do plano
@@ -596,15 +598,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CARREGAMENTO DE DADOS (Eventos, Datas, Tarefas) ---
 
-    function loadUpcomingEvents() {
+    async function loadUpcomingEvents() {
         const eventsListEl = document.getElementById('upcoming-events-list');
-        const rawEvents = localStorage.getItem('events');
-        if (!rawEvents) {
+        const events = await api.getEventos();
+        if (!events || events.length === 0) {
             eventsListEl.innerHTML = '<p class="text-gray-500">Nenhum evento encontrado na agenda.</p>';
             return;
         }
-
-        const events = JSON.parse(rawEvents);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -643,16 +643,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- INÍCIO DA MODIFICAÇÃO: FUNÇÃO loadRelevantDates ---
-    function loadRelevantDates() {
+    async function loadRelevantDates() {
         const datesListEl = document.getElementById('relevant-dates-list');
-        const rawClients = localStorage.getItem('crmToyClients_v8');
+        const clients = await api.getClientes();
         let allDates = [];
         const currentYear = new Date().getFullYear();
 
         // 1. Adiciona aniversários (usuário e clientes)
         allDates.push({ name: 'Leandro (Aniversariante)', dateStr: '1990-10-25', type: 'user', id: null });
-        if (rawClients) {
-            const clients = JSON.parse(rawClients);
+        if (clients && clients.length > 0) {
             clients.forEach(client => {
                 if (client.dataNascimento) {
                     allDates.push({ name: client.nome, dateStr: client.dataNascimento, type: 'client', id: client.id });
@@ -1469,8 +1468,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedDate = today.toLocaleDateString('pt-BR', { dateStyle: 'full' });
         const todayISO = today.toISOString().split('T')[0];
         
-        // Pega eventos do localStorage
-        const eventsTodayRaw = JSON.parse(localStorage.getItem('events')) || [];
+        // Pega eventos da API
+        const eventsTodayRaw = await api.getEventos();
         const eventsToday = eventsTodayRaw
             .filter(event => event.date === todayISO)
             .map(event => event.clientName);
@@ -1739,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
             const formattedDate = today.toLocaleDateString('pt-BR', { dateStyle: 'full' });
             const todayISO = today.toISOString().split('T')[0];
-            const eventsTodayRaw = JSON.parse(localStorage.getItem('events')) || [];
+            const eventsTodayRaw = await api.getEventos();
             const eventsToday = eventsTodayRaw.filter(event => event.date === todayISO).map(event => event.clientName);
             const tasksToday = taskState.tasks.filter(task => (task.dueDate === todayISO || !task.dueDate) && !task.completed).map(task => task.text);
             
@@ -2302,12 +2301,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Função de Inicialização Principal ---
-    function init() {
+    async function init() {
         applyTheme();
         setGreeting();
         displayRandomVerse();
-        loadUpcomingEvents();
-        loadRelevantDates();
+        await loadUpcomingEvents();
+        await loadRelevantDates();
         
         // [NOVO] Carrega o resumo financeiro
         loadFinancialSummary(); 

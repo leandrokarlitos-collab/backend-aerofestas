@@ -27,5 +27,17 @@
     "isAdmin": false,
     "emailConfirmed": false,
     "createdAt": "2025-12-04T22:15:49.912Z"
+  },
+  {
+    "id": "1765046509381",
+    "name": "Leandro",
+    "email": "diversaonoespaco@gmail.com",
+    "password": "$2a$10$lYbC8ddesVIJxvQZhc/Kj.3wQ2rAiGpt.cfGQf7nehkUzAvJI6qAS",
+    "isAdmin": false,
+    "emailConfirmed": false,
+    "createdAt": "2025-12-06T18:41:49.381Z",
+    "createdBy": "system",
+    "updatedBy": "system",
+    "updatedAt": "2025-12-06T18:41:49.381Z"
   }
 ]

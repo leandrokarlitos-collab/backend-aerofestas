@@ -25,18 +25,11 @@
 
     // Verifica se o token é válido
     try {
-        // Usa timeout para não bloquear indefinidamente
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos de timeout
-        
         const response = await fetch('/api/auth/me', {
             headers: {
                 'Authorization': `Bearer ${token}`
-            },
-            signal: controller.signal
+            }
         });
-
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
             // Token inválido, remove e redireciona
@@ -54,29 +47,9 @@
         addLogoutButton(userData);
 
     } catch (error) {
-        // Se for erro de rede (servidor não acessível), permite continuar
-        // mas mostra aviso no console
-        if (error.name === 'AbortError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            console.warn('⚠️ Servidor não acessível. Continuando em modo offline. Certifique-se de que o servidor está rodando.');
-            // Não redireciona se for erro de rede - permite uso offline
-            // Mas ainda tenta adicionar botão de logout se houver dados salvos
-            const savedUserData = localStorage.getItem('userData');
-            if (savedUserData) {
-                try {
-                    const userData = JSON.parse(savedUserData);
-                    addLogoutButton(userData);
-                } catch (e) {
-                    // Ignora erro de parsing
-                }
-            }
-            return;
-        }
-        
-        // Para outros erros, redireciona normalmente
         console.error('Erro ao verificar autenticação:', error);
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
-        sessionStorage.setItem('redirectAfterLogin', window.location.href);
         window.location.href = '/login.html';
     }
 })();

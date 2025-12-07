@@ -8,31 +8,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- SEÇÃO DE ESTOQUE E EVENTOS (Do arquivo dados-completos) ---
+// --- SEÇÃO DE ESTOQUE E EVENTOS ---
 
 model Toy {
-  id       Float     @id // <--- MUDOU DE Int PARA Float
-  name     String
-  quantity Int
-  // Relação: Um brinquedo pode estar em vários eventos
+  id         Float       @id 
+  name       String
+  quantity   Int
   eventItems EventItem[]
 }
 
 model Client {
-  id        Float    @id // Mantive Float pois seus IDs parecem ser timestamps
-  name      String
-  phone     String?
-  address   String?
-  cpf       String?
-  // Adicione outros campos que existirem no seu JSON
+  id      Float   @id 
+  name    String
+  phone   String?
+  address String?
+  cpf     String?
+}
+
+// --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
+
+model Company {
+  id          Float   @id // Float para aceitar Date.now()
+  name        String
+  cnpj        String?
+  address     String?
+  phone       String?
+  email       String?
+  paymentInfo String?
+  repName     String?
+  repDoc      String?
+  
+  events      Event[] // Uma empresa tem vários eventos
 }
 
 model Event {
   id           Float    @id
   date         String
   clientName   String?
+  
+  // Ligação com a Empresa (Correção do Erro 500)
+  yourCompanyId Float?
+  company       Company? @relation(fields: [yourCompanyId], references: [id])
+
   // Relação com itens
   items        EventItem[]
+  
+  // Outros campos úteis que seu frontend envia (Opcional adicionar agora ou depois)
+  startTime    String?
+  endTime      String?
+  price        Float?
+  status       String? 
 }
 
 model EventItem {
@@ -42,24 +67,22 @@ model EventItem {
   eventId  Float
   event    Event @relation(fields: [eventId], references: [id])
   
-  toyId    Float?   // <--- MUDOU DE Int? PARA Float?
-  toy      Toy?  @relation(fields: [toyId], references: [id])
+  toyId    Float?
+  toy      Toy?   @relation(fields: [toyId], references: [id])
 }
 
-// --- SEÇÃO FINANCEIRA E RH (Do arquivo dados-financeiros) ---
+// --- SEÇÃO FINANCEIRA E RH ---
 
 model Monitor {
-  id            String   @id // Seus IDs aqui são Strings ("1762376509666")
+  id            String       @id
   nome          String
   nascimento    String?
   telefone      String?
   email         String?
   endereco      String?
-  cnh           Boolean? @default(false)
+  cnh           Boolean?     @default(false)
   cnhCategoria  String?
-  fotoPerfil    String?  // Pode guardar a URL ou Base64 (cuidado com tamanho)
-  
-  // Relação: Um monitor tem várias avaliações de desempenho
+  fotoPerfil    String?
   desempenho    Desempenho[]
 }
 
@@ -67,12 +90,9 @@ model Desempenho {
   id          String   @id
   data        String
   descricao   String?
-  nota        String?  // Está como string no JSON ("10.0")
+  nota        String?
   obs         String?
-  
-  // O campo mágico! Guarda todo aquele objeto "forca", "agilidade" como um JSON puro.
-  detalhes    String?    
-  
+  detalhes    String?
   monitorId   String
   monitor     Monitor  @relation(fields: [monitorId], references: [id])
 }

@@ -749,8 +749,10 @@
     </div>
 
 
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
+    <script type="module">
+import { api } from './js/api.js';
+
+document.addEventListener('DOMContentLoaded', async () => {
     // ======== CONFIGURAÇÃO INICIAL (FUNIL DE VENDAS ATUALIZADO) ========
     const estagios = {
         1: { text: '1. Apresentação (Quebra-gelo)', color: 'bg-gray-200 text-gray-800' },
@@ -850,9 +852,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Funções Principais ---
-    const loadData = () => {
-        const crmClientsJSON = localStorage.getItem('crmToyClients_v8');
-        clients = crmClientsJSON ? JSON.parse(crmClientsJSON) : [];
+    const loadData = async () => {
+        const apiClients = await api.getClientes();
+        clients = apiClients || [];
 
         // Data migration / enrichment
         clients.forEach(client => {
@@ -877,11 +879,11 @@ document.addEventListener('DOMContentLoaded', () => {
         companies = agendaCompaniesJSON ? JSON.parse(agendaCompaniesJSON) : [];
         FILTER_CYCLE = ['Todas', ...companies.map(c => c.name)];
         
-        const agendaToysJSON = localStorage.getItem('toys');
-        toysList = agendaToysJSON ? JSON.parse(agendaToysJSON).map(t => t.name).sort() : [];
+        const apiToys = await api.getBrinquedos();
+        toysList = apiToys ? apiToys.map(t => t.name).sort() : [];
         
         // Log de debug para verificação de carregamento
-        console.log('📦 Dados carregados do localStorage (CRM):', {
+        console.log('📦 Dados carregados da API (CRM):', {
             clients: clients.length,
             companies: companies.length,
             toys: toysList.length
@@ -2424,8 +2426,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Setup e Event Listeners ---
-    const init = () => {
-        loadData();
+    const init = async () => {
+        await loadData();
 
         for (const key in estagios) {
             estagioSelect.innerHTML += `<option value="${key}">${estagios[key].text}</option>`;

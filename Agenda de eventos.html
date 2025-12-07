@@ -773,8 +773,10 @@
         <p id="toast-message" class="ml-3"></p>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
+    <script type="module">
+        import { api } from './js/api.js';
+        
+        document.addEventListener('DOMContentLoaded', async () => {
     // --- ELEMENTOS DO DOM ---
     const monthYearHeader = document.getElementById('month-year-header');
     const calendarBody = document.getElementById('calendar-body');
@@ -880,76 +882,19 @@
     const totalSteps = 3;
     // FIM: Estado do Wizard
 
-    // Carrega dados do localStorage
-    let toys = JSON.parse(localStorage.getItem('toys')) || [];
+    // Carrega dados da API
+    let toys = await api.getBrinquedos();
     let companies = JSON.parse(localStorage.getItem('companies')) || [];
-    let events = JSON.parse(localStorage.getItem('events')) || [];
-    let clients = JSON.parse(localStorage.getItem('clients')) || [];
+    let events = await api.getEventos();
+    let clients = await api.getClientes();
     
-    // Função para recarregar dados do localStorage (útil quando dados são atualizados por outros sistemas)
-    const reloadDataFromStorage = () => {
-        try {
-            const toysRaw = localStorage.getItem('toys');
-            const companiesRaw = localStorage.getItem('companies');
-            const eventsRaw = localStorage.getItem('events');
-            const clientsRaw = localStorage.getItem('clients');
-            
-            console.log('🔍 Raw localStorage data:', {
-                toys: toysRaw ? toysRaw.substring(0, 100) + '...' : 'null',
-                companies: companiesRaw ? companiesRaw.substring(0, 100) + '...' : 'null',
-                events: eventsRaw ? eventsRaw.substring(0, 100) + '...' : 'null',
-                clients: clientsRaw ? clientsRaw.substring(0, 100) + '...' : 'null'
-            });
-            
-            toys = toysRaw ? JSON.parse(toysRaw) : [];
-            companies = companiesRaw ? JSON.parse(companiesRaw) : [];
-            events = eventsRaw ? JSON.parse(eventsRaw) : [];
-            clients = clientsRaw ? JSON.parse(clientsRaw) : [];
-            
-            // Log de debug para verificação de carregamento
-            console.log('📦 Dados recarregados do localStorage:', {
-                toys: toys.length,
-                companies: companies.length,
-                events: events.length,
-                clients: clients.length,
-                toysSample: toys.length > 0 ? toys[0] : null,
-                eventsSample: events.length > 0 ? events[0] : null
-            });
-            
-            return { toys, companies, events, clients };
-        } catch (error) {
-            console.error('❌ Erro ao recarregar dados do localStorage:', error);
-            return { toys: [], companies: [], events: [], clients: [] };
-        }
-    };
-    
-    // Log de debug para verificação de carregamento inicial
-    console.log('📦 Dados carregados do localStorage (inicial):', {
+    // Log de debug para verificação de carregamento
+    console.log('📦 Dados carregados da API:', {
         toys: toys.length,
         companies: companies.length,
         events: events.length,
-        clients: clients.length,
-        toysSample: toys.length > 0 ? toys[0] : null,
-        eventsSample: events.length > 0 ? events[0] : null
+        clients: clients.length
     });
-    
-    // Verifica se há dados no localStorage mas não foram carregados
-    if (toys.length === 0 && companies.length === 0 && events.length === 0 && clients.length === 0) {
-        console.warn('⚠️ Nenhum dado encontrado no localStorage. Verificando todas as chaves...');
-        const allKeys = Object.keys(localStorage);
-        console.log('🔑 Todas as chaves do localStorage:', allKeys);
-        allKeys.forEach(key => {
-            if (!key.startsWith('auth') && !key.startsWith('gemini')) {
-                const value = localStorage.getItem(key);
-                try {
-                    const parsed = JSON.parse(value);
-                    console.log(`  ${key}:`, Array.isArray(parsed) ? `${parsed.length} itens` : typeof parsed);
-                } catch (e) {
-                    console.log(`  ${key}:`, value ? value.substring(0, 50) : 'null');
-                }
-            }
-        });
-    }
 
     // --- FUNÇÕES AUXILIARES ---
     const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
@@ -1339,8 +1284,6 @@
     
     // --- RENDERIZAÇÃO ---
     const renderAll = () => {
-        // Recarrega dados do localStorage antes de renderizar (garante dados atualizados)
-        reloadDataFromStorage();
         renderToys();
         renderCompanies();
         renderCalendar();
@@ -1348,9 +1291,6 @@
     };
 
     const renderCalendar = () => {
-        // Garante que está usando os dados mais recentes do localStorage
-        const currentEvents = JSON.parse(localStorage.getItem('events')) || [];
-        events = currentEvents; // Atualiza a variável global
         calendarBody.innerHTML = '';
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -1365,7 +1305,7 @@
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const today = new Date();
             const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-            const eventsOnDay = currentEvents.filter(e => e.date === dateStr).length;
+            const eventsOnDay = events.filter(e => e.date === dateStr).length;
 
             const dayCell = document.createElement('div');
             dayCell.className = `day-cell p-1.5 border border-transparent flex flex-col items-start cursor-pointer text-gray-700 ${isToday ? 'bg-indigo-200/80 font-bold' : 'bg-white/40 hover:bg-white/80'} ${eventsOnDay > 0 ? 'has-event' : ''}`;
@@ -1389,8 +1329,6 @@
     };
 
     const renderToys = () => {
-        // Garante que está usando os dados mais recentes do localStorage
-        toys = JSON.parse(localStorage.getItem('toys')) || [];
         toyListDiv.innerHTML = '';
         toySelectModalEl.innerHTML = '<option value="">Selecione um brinquedo</option>';
         if(toys.length === 0) {
@@ -1427,8 +1365,6 @@
     };
 
     const renderCompanies = () => {
-        // Garante que está usando os dados mais recentes do localStorage
-        companies = JSON.parse(localStorage.getItem('companies')) || [];
         companyListDiv.innerHTML = '';
         yourCompanySelectEl.innerHTML = '<option value="">Selecione sua empresa</option>';
 
@@ -2147,12 +2083,12 @@
             }
             
             // 3. Sync deletion with Financial System
-            let financeData = JSON.parse(localStorage.getItem('financeDataV30')) || { eventos: [] };
+            let financeData = JSON.parse(localStorage.getItem('financeDataV21')) || { eventos: [] };
             const financialEventId = `agenda-${eventId}`;
             const initialLength = financeData.eventos.length;
             financeData.eventos = financeData.eventos.filter(e => e.id !== financialEventId);
             if (financeData.eventos.length < initialLength) {
-                 localStorage.setItem('financeDataV30', JSON.stringify(financeData));
+                 localStorage.setItem('financeDataV21', JSON.stringify(financeData));
             }
             
             showToast('Evento removido de todos os sistemas!', false);
@@ -2168,7 +2104,7 @@
     // FUNÇÃO DE SINCRONIZAÇÃO: Agenda -> CRM
     // ===================================================================
     const syncEventToCRM = (agendaEvent) => {
-        const allToys = JSON.parse(localStorage.getItem('toys')) || [];
+        const allToys = toys; // Usa os dados já carregados da API
         let crmClients = JSON.parse(localStorage.getItem('crmToyClients_v8')) || [];
         
         const eventId = Number(agendaEvent.id);
@@ -2280,133 +2216,67 @@
         showToast('Evento sincronizado com o CRM!', false);
     };
 
-    // ===================================================================
-    // FUNÇÃO DE SINCRONIZAÇÃO: Agenda -> Sistema Financeiro
-    // ===================================================================
-    const syncEventToFinance = (agendaEvent) => {
-        let financeData = JSON.parse(localStorage.getItem('financeDataV30')) || { 
-            eventos: [], 
-            monitores: [], 
-            gastos: [], 
-            contas: [], 
-            contasFixas: [],
-            funcionarios: [],
-            faixasComissao: [],
-            gastoCategorias: [],
-            contaFixaCategorias: [],
-            currentEventItems: [],
-            selectedMonth: new Date().toISOString().slice(0, 7)
-        };
-        
-        const financialEventId = `agenda-${agendaEvent.id}`;
-        const eventValue = parseFloat(agendaEvent.price) || 0;
-        
-        const financialEventObject = {
-            id: financialEventId,
-            data: agendaEvent.date,
-            descricao: `${agendaEvent.clientName} - Evento`,
-            valor: eventValue,
-            tipo: 'Receita',
-            categoria: 'Eventos',
-            conta: 'Principal',
-            observacoes: agendaEvent.eventObservations || '',
-            origem: 'Agenda de Eventos'
-        };
-        
-        // Verificar se evento já existe
-        const existingIndex = financeData.eventos.findIndex(e => e.id === financialEventId);
-        
-        if (existingIndex > -1) {
-            // Atualizar evento existente
-            financeData.eventos[existingIndex] = financialEventObject;
-        } else {
-            // Adicionar novo evento
-            financeData.eventos.push(financialEventObject);
-        }
-        
-        localStorage.setItem('financeDataV30', JSON.stringify(financeData));
-        console.log(`💰 Evento ${agendaEvent.id} sincronizado com o sistema financeiro`);
-    };
-
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
 
-        // INÍCIO: Adicionar validação final por segurança
+        // Validação
         if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
-            showToast('Existem erros no formulário. Por favor, volte e verifique as etapas.', true);
-            // Tenta navegar para a primeira etapa inválida
-            if (!validateStep(1)) return showStep(1);
-            if (!validateStep(2)) return showStep(2);
-            if (!validateStep(3)) return showStep(3);
+            showToast('Existem erros no formulário. Verifique as etapas.', true);
             return;
         }
-        // FIM: Adicionar validação final
 
+        // Prepara os dados do formulário
         const eventId = document.getElementById('event-id').value ? parseInt(document.getElementById('event-id').value) : null;
-        
         const clientType = document.querySelector('input[name="client-type"]:checked').value;
-
-        // INÍCIO DA MODIFICAÇÃO: Usar campo de data visível para permitir edição
         const eventDate = document.getElementById('event-date-visible').value;
-        // Sincronizar com campo hidden para compatibilidade
-        document.getElementById('event-date').value = eventDate;
         
+        // Objeto base para envio à API
         const eventData = {
+            id: eventId, // Se for nulo, a API cria novo. Se tiver ID, a API atualiza.
             date: eventDate,
             clientType: clientType,
             yourCompanyId: parseInt(document.getElementById('your-company-select').value),
             clientAddress: document.getElementById('client-address').value,
-            // INÍCIO DA MODIFICAÇÃO: Salvar novo campo
             contractAddress: document.getElementById('contract-address').value.trim(),
-            // FIM DA MODIFICAÇÃO
             eventObservations: document.getElementById('event-observations').value,
-            paymentDetails: paymentDetailsTextarea.value.trim(), // Salva os detalhes do pagamento
-            toys: toysForCurrentEvent,
+            paymentDetails: paymentDetailsTextarea.value.trim(),
             startTime: document.getElementById('event-start-time').value,
             endTime: document.getElementById('event-end-time').value,
+            // A API espera 'items' ou 'toys'. Vamos mandar os dois para garantir.
+            items: toysForCurrentEvent.map(t => ({ id: t.id, quantity: t.quantity, price: t.price })), 
+            toys: toysForCurrentEvent, // Mantendo para compatibilidade local se precisar
+            
             subtotal: toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0),
             discountType: discountTypeEl.value,
             discountValue: parseFloat(discountValueEl.value) || 0,
-            
-            // INÍCIO DA MODIFICAÇÃO: Novos campos
             deliveryFee: parseFloat(deliveryFeeEl.value) || 0,
+            
             monitor: document.getElementById('event-monitor').value.trim(),
             paymentStatus: document.getElementById('payment-status').value,
             signalAmount: parseFloat(document.getElementById('signal-amount').value) || 0,
             signalReceived: document.getElementById('signal-received').checked,
+            
             cep: document.getElementById('event-cep').value,
-            complemento: document.getElementById('event-complemento').value.trim(), // ADICIONADO
+            complemento: document.getElementById('event-complemento').value.trim(),
             bairro: document.getElementById('event-bairro').value,
             cidade: document.getElementById('event-cidade').value,
             uf: document.getElementById('event-uf').value,
-            // FIM DA MODIFICAÇÃO
-
-            // --- INÍCIO DA MODIFICAÇÃO: Salvar dados do Aniversariante ---
+            
             isBirthday: isBirthdayCheckbox.checked,
             birthdayPersonName: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-name').value.trim() : '',
             birthdayPersonDob: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-dob').value : '',
-            // --- FIM DA MODIFICAÇÃO ---
         };
 
+        // Dados do Cliente (PF ou PJ)
         if (clientType === 'PF') {
             eventData.clientName = document.getElementById('client-name').value.trim();
-            if(!eventData.clientName) {
-                // Esta validação já é feita no validateStep, mas mantemos por segurança
-                showToast("O nome do cliente é obrigatório.", true);
-                return;
-            }
             eventData.clientCpf = document.getElementById('client-cpf').value;
             eventData.clientRg = document.getElementById('client-rg').value;
-            eventData.clientDob = document.getElementById('client-dob').value; // <-- ADICIONADO
+            eventData.clientDob = document.getElementById('client-dob').value;
             eventData.clientPhone = document.getElementById('client-phone').value;
             eventData.clientPhoneBackup = document.getElementById('client-phone-backup').value;
-        } else { // PJ
+        } else {
             eventData.clientName = document.getElementById('pj-company-name').value.trim();
-            if(!eventData.clientName) {
-                // Esta validação já é feita no validateStep, mas mantemos por segurança
-                showToast("O nome da empresa é obrigatório.", true);
-                return;
-            }
             eventData.cnpj = document.getElementById('pj-cnpj').value;
             eventData.companyAddress = document.getElementById('pj-company-address').value;
             eventData.repName = document.getElementById('pj-rep-name').value;
@@ -2415,31 +2285,54 @@
             eventData.repPhoneBackup = document.getElementById('pj-rep-phone-backup').value;
         }
 
-        // eventData.price = eventData.subtotal - (eventData.discountType === 'fixed' ? eventData.discountValue : (eventData.subtotal * eventData.discountValue / 100));
-        // INÍCIO DA MODIFICAÇÃO: Cálculo de Preço Final Atualizado
+        // Cálculo do preço final (importante enviar calculado ou deixar o back calcular)
         const discountAmount = eventData.discountType === 'fixed' 
             ? eventData.discountValue 
             : (eventData.subtotal * eventData.discountValue / 100);
         eventData.price = (eventData.subtotal - discountAmount) + eventData.deliveryFee;
-        // FIM DA MODIFICAÇÃO
 
-        let newOrUpdatedEvent;
-        if(eventId) {
-            const index = events.findIndex(e => e.id === eventId);
-            newOrUpdatedEvent = {...events[index], ...eventData};
-            events[index] = newOrUpdatedEvent;
-        } else {
-            newOrUpdatedEvent = {id: Date.now(), ...eventData};
-            events.push(newOrUpdatedEvent);
+        // Feedback visual imediato
+        const saveBtn = document.getElementById('save-step-btn');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Salvando...';
+        saveBtn.disabled = true;
+
+        try {
+            // --- A MÁGICA ACONTECE AQUI: ENVIO PARA A API ---
+            console.log("Enviando para API:", eventData);
+            const response = await api.salvarEvento(eventData); // Chama o api.js
+            
+            console.log("Sucesso API:", response);
+            // Atualiza a lista local com o que voltou do servidor (importante para ter o ID real)
+            const savedEvent = response.data || response; // Depende de como seu back retorna
+            
+            // Atualiza a lista local 'events' para refletir na tela sem precisar recarregar tudo do zero
+            if (eventId) {
+                const index = events.findIndex(e => e.id === eventId);
+                if (index !== -1) events[index] = savedEvent;
+            } else {
+                events.push(savedEvent);
+            }
+
+            // Opcional: Manter sync com localStorage apenas como backup de leitura, 
+            // mas a fonte da verdade agora é a API.
+            // saveData('events', events); 
+
+            // Sincroniza com CRM (mantido local por enquanto)
+            syncEventToCRM(savedEvent);
+
+            hideModal(eventModal);
+            renderAll();
+            checkBirthdayNotifications();
+            showToast('Evento salvo na nuvem com sucesso!', false);
+
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+            showToast('Erro ao salvar na nuvem. Verifique o console.', true);
+        } finally {
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
         }
-        
-        syncEventToCRM(newOrUpdatedEvent);
-        syncEventToFinance(newOrUpdatedEvent); // Sincroniza também com o sistema financeiro
-
-        saveData('events', events);
-        hideModal(eventModal);
-        renderAll();
-        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
     };
 
     const showEventModal = (dateStr, eventToEdit = null) => {
@@ -3605,9 +3498,6 @@
     });
     // --- FIM DA CORREÇÃO ---
 
-    // Recarrega dados do localStorage antes de renderizar (garante dados atualizados)
-    reloadDataFromStorage();
-    
     initParticles();
     animateParticles();
     renderAll();

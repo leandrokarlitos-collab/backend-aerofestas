@@ -11,6 +11,11 @@
     <!-- Bibliotecas para Geração de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <!-- Importar API Module -->
+    <script type="module">
+        import { api } from '../js/api.js';
+        window.api = api; // Tornar disponível globalmente
+    </script>
     <style>
         :root {
             --glow-color: hsl(224, 88%, 66%);
@@ -849,7 +854,7 @@
             const eventDate = new Date(event.date + 'T00:00:00');
             return eventDate.getFullYear() === year && eventDate.getMonth() === month;
         });
-        const total = monthlyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+        const total = monthlyEvents.reduce((sum, event) => sum + Number(event.price || 0), 0);
         monthlyTotalEl.textContent = formatCurrency(total);
     };
     
@@ -1278,7 +1283,7 @@
                 
                 // --- INÍCIO DA MODIFICAÇÃO: Calcular total da empresa ---
                 const companyEvents = monthlyEvents.filter(e => e.yourCompanyId === company.id);
-                const companyTotal = companyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+                const companyTotal = companyEvents.reduce((sum, event) => sum + Number(event.price || 0), 0);
                 // --- FIM DA MODIFICAÇÃO ---
 
                 const companyItem = document.createElement('div');
@@ -1472,7 +1477,7 @@
     };
 
     const updateFinalPrice = () => {
-        const subtotal = toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0);
+        const subtotal = toysForCurrentEvent.reduce((acc, toy) => acc + (Number(toy.price || 0) * Number(toy.quantity || 0)), 0);
         eventSubtotalEl.textContent = formatCurrency(subtotal);
 
         // INÍCIO DA MODIFICAÇÃO: Incluir Frete no Cálculo
@@ -1842,7 +1847,7 @@
         showToast('Evento sincronizado com o CRM!', false);
     };
 
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
 
         // INÍCIO: Adicionar validação final por segurança
@@ -1873,7 +1878,7 @@
             toys: toysForCurrentEvent,
             startTime: document.getElementById('event-start-time').value,
             endTime: document.getElementById('event-end-time').value,
-            subtotal: toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0),
+            subtotal: toysForCurrentEvent.reduce((acc, toy) => acc + (Number(toy.price || 0) * Number(toy.quantity || 0)), 0),
             discountType: discountTypeEl.value,
             discountValue: parseFloat(discountValueEl.value) || 0,
             
@@ -1936,18 +1941,37 @@
         if(eventId) {
             const index = events.findIndex(e => e.id === eventId);
             newOrUpdatedEvent = {...events[index], ...eventData};
-            events[index] = newOrUpdatedEvent;
         } else {
             newOrUpdatedEvent = {id: Date.now(), ...eventData};
-            events.push(newOrUpdatedEvent);
         }
         
-        syncEventToCRM(newOrUpdatedEvent);
-
-        saveData('events', events);
-        hideModal(eventModal);
-        renderAll();
-        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
+        // Salvar evento na nuvem
+        try {
+            const savedEvent = await api.salvarEvento(newOrUpdatedEvent);
+            
+            // Atualizar o array local com a resposta do servidor
+            if (eventId) {
+                const index = events.findIndex(e => e.id === eventId);
+                events[index] = savedEvent;
+            } else {
+                // Para novo evento, usar o ID retornado pelo servidor
+                events.push(savedEvent);
+            }
+            
+            // Sincronizar com CRM usando o evento salvo
+            syncEventToCRM(savedEvent);
+            
+            // Manter sincronizado localmente como cache
+            saveData('events', events);
+            
+            hideModal(eventModal);
+            renderAll();
+            checkBirthdayNotifications();
+            showToast('Evento salvo com sucesso!', false);
+        } catch (error) {
+            showToast('Erro ao salvar evento na nuvem: ' + error.message, true);
+            console.error('Erro ao salvar evento:', error);
+        }
     };
 
     const showEventModal = (dateStr, eventToEdit = null) => {
@@ -2604,9 +2628,8 @@
     exportToysPdfBtn.addEventListener('click', handleExportToysPDF); // Event listener para o PDF
     addCompanyBtn.addEventListener('click', handleAddCompany);
     
-    // MODIFICADO: Mover o listener de submit do form para o botão "Salvar" do wizard
-    // eventForm.addEventListener('submit', handleFormSubmit); // REMOVIDO
-    saveStepBtn.addEventListener('click', handleFormSubmit); // ADICIONADO
+    // Listener de submit do formulário (corrigido para funcionar com type="module")
+    eventForm.addEventListener('submit', handleFormSubmit);
 
     cancelBtn.addEventListener('click', () => hideModal(eventModal));
 
