@@ -1,324 +1,207 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const fs = require('fs').promises;
-const path = require('path');
-const { hashPassword, comparePassword, generateToken } = require('../utils/crypto');
-const { sendConfirmationEmail } = require('../utils/email');
-const { authenticate } = require('../middleware/auth');
+const bcrypt = require('bcryptjs'); // Instale se não tiver: npm install bcryptjs
+const nodemailer = require('nodemailer');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
-const TOKENS_FILE = path.join(__dirname, '..', 'data', 'tokens.json');
-const HISTORY_FILE = path.join(__dirname, '..', 'data', 'user_history.json');
+// Configurações
+const JWT_SECRET = process.env.JWT_SECRET || 'segredo-super-secreto-aero';
 
-// Garante que os arquivos de dados existam
-async function ensureDataFiles() {
-    const dataDir = path.join(__dirname, '..', 'data');
-    try {
-        await fs.mkdir(dataDir, { recursive: true });
-    } catch (error) {
-        // Pasta já existe
+// --- CONFIGURAÇÃO DO GMAIL (MESMA DO SERVER.JS) ---
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
     }
-
-    try {
-        await fs.access(USERS_FILE);
-    } catch {
-        await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2));
-    }
-
-    try {
-        await fs.access(TOKENS_FILE);
-    } catch {
-        await fs.writeFile(TOKENS_FILE, JSON.stringify([], null, 2));
-    }
-}
-
-// Carrega usuários do arquivo
-async function loadUsers() {
-    try {
-        await ensureDataFiles();
-        const data = await fs.readFile(USERS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
-
-// Salva usuários no arquivo
-async function saveUsers(users) {
-    await ensureDataFiles();
-    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-}
-
-// Carrega histórico do arquivo
-async function loadHistory() {
-    try {
-        await ensureDataFiles();
-        const data = await fs.readFile(HISTORY_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
-
-// Salva histórico no arquivo
-async function saveHistory(history) {
-    await ensureDataFiles();
-    await fs.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
-}
-
-// Adiciona entrada no histórico
-async function addHistoryEntry(entry) {
-    const history = await loadHistory();
-    history.push({
-        id: Date.now().toString(),
-        ...entry,
-        timestamp: new Date().toISOString()
-    });
-    await saveHistory(history);
-}
-
-// Carrega tokens do arquivo
-async function loadTokens() {
-    try {
-        await ensureDataFiles();
-        const data = await fs.readFile(TOKENS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
-
-// Salva tokens no arquivo
-async function saveTokens(tokens) {
-    await ensureDataFiles();
-    await fs.writeFile(TOKENS_FILE, JSON.stringify(tokens, null, 2));
-}
-
-// Limpa tokens expirados (mais de 24 horas)
-async function cleanExpiredTokens() {
-    const tokens = await loadTokens();
-    const now = Date.now();
-    const validTokens = tokens.filter(t => now - t.createdAt < 24 * 60 * 60 * 1000);
-    await saveTokens(validTokens);
-}
+});
 
 /**
  * POST /api/auth/register
- * Registra um novo usuário
+ * Registra novo usuário no PostgreSQL e envia e-mail
  */
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        // Validação
         if (!name || !email || !password) {
-            return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+            return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+        // 1. Verifica se usuário já existe no Banco
+        const existingUser = await prisma.user.findUnique({
+            where: { email: email.toLowerCase().trim() }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ error: 'E-mail já cadastrado.' });
         }
 
-        // Validação de email simples
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ error: 'Email inválido' });
-        }
+        // 2. Criptografa a senha
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        const users = await loadUsers();
+        // 3. Gera token de confirmação
+        const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
-        // Verifica se email já existe
-        if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-            return res.status(400).json({ error: 'Email já cadastrado' });
-        }
-
-        // Cria novo usuário
-        const hashedPassword = await hashPassword(password);
-        const newUser = {
-            id: Date.now().toString(),
-            name: name.trim(),
-            email: email.toLowerCase().trim(),
-            password: hashedPassword,
-            isAdmin: false,
-            emailConfirmed: false,
-            createdAt: new Date().toISOString(),
-            createdBy: 'system',
-            updatedBy: 'system',
-            updatedAt: new Date().toISOString()
-        };
-
-        users.push(newUser);
-        await saveUsers(users);
-
-        // Registra no histórico
-        await addHistoryEntry({
-            userId: newUser.id,
-            userEmail: newUser.email,
-            userName: newUser.name,
-            action: 'create',
-            changedBy: 'system',
-            changedByName: 'Sistema',
-            changes: {
-                name: newUser.name,
-                email: newUser.email,
-                isAdmin: false
+        // 4. Cria usuário no Banco de Dados
+        const newUser = await prisma.user.create({
+            data: {
+                name: name.trim(),
+                email: email.toLowerCase().trim(),
+                password: hashedPassword,
+                isAdmin: false,
+                emailConfirmed: false,
+                verificationToken: verificationToken
             }
         });
 
-        // Gera token de confirmação
-        const confirmationToken = generateToken();
-        const tokens = await loadTokens();
-        tokens.push({
-            token: confirmationToken,
-            userId: newUser.id,
-            email: newUser.email,
-            createdAt: Date.now()
-        });
-        await saveTokens(tokens);
+        console.log(`👤 Usuário criado no banco: ${newUser.email}`);
 
-        // Envia email de confirmação
-        try {
-            await sendConfirmationEmail(newUser.email, confirmationToken, newUser.name);
-        } catch (emailError) {
-            console.error('Erro ao enviar email:', emailError);
-            // Continua mesmo se o email falhar
-        }
+        // 5. Envia E-mail pelo Gmail
+        const mailOptions = {
+            from: `"Aero Festas" <${process.env.GMAIL_USER}>`,
+            to: newUser.email,
+            subject: 'Confirme seu cadastro - Aero Festas 🎈',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #4f46e5;">Bem-vindo, ${newUser.name}!</h2>
+                    <p>Seu cadastro foi realizado com sucesso.</p>
+                    <p>Para ativar sua conta, use o código abaixo ou clique no link (se houver página de confirmação):</p>
+                    
+                    <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0;">
+                        ${verificationToken}
+                    </div>
+
+                    <p style="color: #666; font-size: 12px;">Se você não criou esta conta, ignore este e-mail.</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 E-mail de confirmação enviado para ${newUser.email}`);
 
         res.status(201).json({
-            message: 'Usuário cadastrado com sucesso. Verifique seu email para confirmar o cadastro.',
+            message: 'Cadastro realizado! Verifique seu e-mail.',
             userId: newUser.id
         });
+
     } catch (error) {
-        console.error('Erro no registro:', error);
-        res.status(500).json({ error: 'Erro ao cadastrar usuário' });
+        console.error("❌ Erro no Registro:", error);
+        res.status(500).json({ error: 'Erro interno ao cadastrar.' });
     }
 });
 
 /**
  * POST /api/auth/confirm-email
- * Confirma email usando token
+ * Confirma o cadastro com o token
  */
 router.post('/confirm-email', async (req, res) => {
     try {
         const { token } = req.body;
 
-        if (!token) {
-            return res.status(400).json({ error: 'Token não fornecido' });
-        }
+        if (!token) return res.status(400).json({ error: 'Token obrigatório.' });
 
-        await cleanExpiredTokens();
-        const tokens = await loadTokens();
-        const tokenData = tokens.find(t => t.token === token);
-
-        if (!tokenData) {
-            return res.status(400).json({ error: 'Token inválido ou expirado' });
-        }
-
-        const users = await loadUsers();
-        const user = users.find(u => u.id === tokenData.userId);
+        // Busca usuário com esse token
+        const user = await prisma.user.findFirst({
+            where: { verificationToken: token }
+        });
 
         if (!user) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
+            return res.status(400).json({ error: 'Token inválido ou já utilizado.' });
         }
 
-        // Confirma email
-        user.emailConfirmed = true;
-        await saveUsers(users);
+        // Atualiza usuário para confirmado
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailConfirmed: true,
+                verificationToken: null // Limpa o token para não usar de novo
+            }
+        });
 
-        // Remove token usado
-        const remainingTokens = tokens.filter(t => t.token !== token);
-        await saveTokens(remainingTokens);
+        res.json({ message: 'E-mail confirmado com sucesso! Faça login.' });
 
-        res.json({ message: 'Email confirmado com sucesso!' });
     } catch (error) {
-        console.error('Erro na confirmação:', error);
-        res.status(500).json({ error: 'Erro ao confirmar email' });
+        console.error("Erro na confirmação:", error);
+        res.status(500).json({ error: 'Erro ao confirmar e-mail.' });
     }
 });
 
 /**
  * POST /api/auth/login
- * Faz login e retorna JWT
+ * Login simples com JWT
  */
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email e senha são obrigatórios' });
-        }
-
-        const users = await loadUsers();
-        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        const user = await prisma.user.findUnique({
+            where: { email: email.toLowerCase().trim() }
+        });
 
         if (!user) {
-            return res.status(401).json({ error: 'Email ou senha inválidos' });
+            return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
         }
 
-        // Verifica senha
-        const passwordMatch = await comparePassword(password, user.password);
-        if (!passwordMatch) {
-            return res.status(401).json({ error: 'Email ou senha inválidos' });
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
         }
 
-        // Verifica se email foi confirmado
+        // Opcional: Bloquear se não confirmou email
         if (!user.emailConfirmed) {
-            return res.status(403).json({ error: 'Email não confirmado. Verifique sua caixa de entrada.' });
+            return res.status(403).json({ error: 'Confirme seu e-mail antes de entrar.' });
         }
 
-        // Gera JWT
-        const jwtToken = jwt.sign(
-            {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                isAdmin: user.isAdmin
-            },
-            process.env.JWT_SECRET || 'secret',
+        const token = jwt.sign(
+            { id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin },
+            JWT_SECRET,
             { expiresIn: '7d' }
         );
 
         res.json({
-            token: jwtToken,
+            message: 'Login realizado!',
+            token,
             user: {
                 id: user.id,
-                email: user.email,
                 name: user.name,
+                email: user.email,
                 isAdmin: user.isAdmin
             }
         });
+
     } catch (error) {
-        console.error('Erro no login:', error);
-        res.status(500).json({ error: 'Erro ao fazer login' });
+        console.error("Erro no login:", error);
+        res.status(500).json({ error: 'Erro ao fazer login.' });
     }
 });
 
 /**
  * GET /api/auth/me
- * Retorna informações do usuário autenticado
+ * Retorna dados do usuário logado
  */
-router.get('/me', authenticate, async (req, res) => {
+router.get('/me', async (req, res) => {
     try {
-        const users = await loadUsers();
-        const user = users.find(u => u.id === req.user.id);
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'Sem token.' });
 
-        if (!user) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
 
-        res.json({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            isAdmin: user.isAdmin,
-            emailConfirmed: user.emailConfirmed
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: { id: true, name: true, email: true, isAdmin: true, emailConfirmed: true }
         });
+
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+        res.json(user);
+
     } catch (error) {
-        console.error('Erro ao buscar usuário:', error);
-        res.status(500).json({ error: 'Erro ao buscar informações do usuário' });
+        res.status(401).json({ error: 'Token inválido ou expirado.' });
     }
 });
 
 module.exports = router;
-
