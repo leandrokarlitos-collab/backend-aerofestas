@@ -19,6 +19,7 @@
             align-items: center;
             justify-content: center;
         }
+
         .glassmorphism {
             background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(10px);
@@ -37,56 +38,54 @@
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label class="block text-white mb-2 font-medium">Email</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        required 
-                        class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                        placeholder="seu@email.com"
-                    >
+                    <input type="email"
+                           id="email"
+                           required
+                           class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                           placeholder="seu@email.com">
                 </div>
 
                 <div>
                     <label class="block text-white mb-2 font-medium">Senha</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        required 
-                        class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                        placeholder="••••••••"
-                    >
+                    <input type="password"
+                           id="password"
+                           required
+                           class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                           placeholder="••••••••">
+                    <div class="flex justify-end mt-2">
+                        <a href="forgot-password.html" class="text-sm text-white/80 hover:text-white hover:underline transition-colors">
+                            Esqueci a senha
+                        </a>
+                    </div>
                 </div>
 
                 <div id="errorMessage" class="hidden bg-red-500/80 text-white p-3 rounded-lg text-sm"></div>
                 <div id="successMessage" class="hidden bg-green-500/80 text-white p-3 rounded-lg text-sm"></div>
 
-                <button 
-                    type="submit" 
-                    class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-white/90 transition-colors shadow-lg"
-                >
+                <button type="submit"
+                        class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-white/90 transition-colors shadow-lg">
                     <i class="fas fa-sign-in-alt mr-2"></i>Entrar
                 </button>
             </form>
 
             <div class="mt-6 text-center">
-                <a 
-                    href="register.html" 
-                    class="text-white/90 hover:text-white underline text-sm"
-                >
+                <a href="register.html"
+                   class="text-white/90 hover:text-white underline text-sm">
                     <i class="fas fa-user-plus mr-1"></i>Primeiro acesso? Cadastre-se aqui
                 </a>
             </div>
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
-    <script>
+    <script type="module">
+        import { login, isAuthenticated } from './js/auth.js';
+
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
 
         // Verifica se já está logado
-        if (isAuthenticated()) {
+        if (typeof isAuthenticated === 'function' && isAuthenticated()) {
             const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || 'Dashboard.html';
             sessionStorage.removeItem('redirectAfterLogin');
             window.location.href = redirectUrl;
@@ -94,29 +93,35 @@
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const submitBtn = loginForm.querySelector('button[type="submit"]');
-            
+
             // Limpa mensagens
             errorMessage.classList.add('hidden');
             successMessage.classList.add('hidden');
-            
+
             // Desabilita botão
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Entrando...';
 
             try {
+                // Tenta fazer login usando a função importada do auth.js
+                // Se der erro de importação, o catch vai pegar
+                if (typeof login !== 'function') {
+                    throw new Error("Erro no script de autenticação. Recarregue a página.");
+                }
+
                 await login(email, password);
-                
+
                 // Sucesso
                 successMessage.textContent = 'Login realizado com sucesso! Redirecionando...';
                 successMessage.classList.remove('hidden');
-                
+
                 // Redireciona
                 setTimeout(() => {
-                    const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || 'Dashboard.html';
+                    const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || 'Agenda de eventos.html'; // Mudado para Agenda como padrão
                     sessionStorage.removeItem('redirectAfterLogin');
                     window.location.href = redirectUrl;
                 }, 1000);
@@ -130,4 +135,3 @@
     </script>
 </body>
 </html>
-

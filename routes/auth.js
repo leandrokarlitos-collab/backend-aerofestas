@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // Instale se não tiver: npm install bcryptjs
+const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Configurações
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo-super-secreto-aero';
+// Ajuste para o seu domínio real do Firebase
+const FRONTEND_URL = 'https://sistema-operante-aerofestas.web.app';
 
-// --- CONFIGURAÇÃO DO GMAIL (MESMA DO SERVER.JS) ---
+// --- CONFIGURAÇÃO DO GMAIL ---
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -20,139 +21,173 @@ const transporter = nodemailer.createTransport({
 
 /**
  * POST /api/auth/register
- * Registra novo usuário no PostgreSQL e envia e-mail
+ * Cadastro com Link de Confirmação
  */
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
-        }
+        if (!name || !email || !password) return res.status(400).json({ error: 'Preencha todos os campos.' });
 
-        // 1. Verifica se usuário já existe no Banco
-        const existingUser = await prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() }
-        });
+        const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+        if (existingUser) return res.status(400).json({ error: 'E-mail já cadastrado.' });
 
-        if (existingUser) {
-            return res.status(400).json({ error: 'E-mail já cadastrado.' });
-        }
-
-        // 2. Criptografa a senha
         const hashedPassword = await bcrypt.hash(password, 10);
+        const verificationToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-        // 3. Gera token de confirmação
-        const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
-        // 4. Cria usuário no Banco de Dados
         const newUser = await prisma.user.create({
             data: {
                 name: name.trim(),
                 email: email.toLowerCase().trim(),
                 password: hashedPassword,
-                isAdmin: false,
-                emailConfirmed: false,
                 verificationToken: verificationToken
             }
         });
 
-        console.log(`👤 Usuário criado no banco: ${newUser.email}`);
+        // Link clicável
+        const confirmLink = `${FRONTEND_URL}/confirm-email.html?token=${verificationToken}`;
 
-        // 5. Envia E-mail pelo Gmail
         const mailOptions = {
             from: `"Aero Festas" <${process.env.GMAIL_USER}>`,
             to: newUser.email,
             subject: 'Confirme seu cadastro - Aero Festas 🎈',
             html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                    <h2 style="color: #4f46e5;">Bem-vindo, ${newUser.name}!</h2>
-                    <p>Seu cadastro foi realizado com sucesso.</p>
-                    <p>Para ativar sua conta, use o código abaixo ou clique no link (se houver página de confirmação):</p>
-                    
-                    <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0;">
-                        ${verificationToken}
-                    </div>
-
-                    <p style="color: #666; font-size: 12px;">Se você não criou esta conta, ignore este e-mail.</p>
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Bem-vindo, ${newUser.name}!</h2>
+                    <p>Clique no botão abaixo para confirmar seu e-mail e ativar sua conta:</p>
+                    <a href="${confirmLink}" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Confirmar E-mail</a>
+                    <p style="margin-top: 20px;">Ou use este código: <b>${verificationToken}</b></p>
                 </div>
             `
         };
 
-        await transporter.sendMail(mailOptions);
-        console.log(`📧 E-mail de confirmação enviado para ${newUser.email}`);
+        transporter.sendMail(mailOptions).catch(err => console.error("Erro email:", err));
 
-        res.status(201).json({
-            message: 'Cadastro realizado! Verifique seu e-mail.',
-            userId: newUser.id
-        });
+        res.status(201).json({ message: 'Cadastro realizado! Verifique seu e-mail.', userId: newUser.id });
 
     } catch (error) {
-        console.error("❌ Erro no Registro:", error);
-        res.status(500).json({ error: 'Erro interno ao cadastrar.' });
+        console.error("Erro no Registro:", error);
+        res.status(500).json({ error: 'Erro interno.' });
     }
 });
 
 /**
- * POST /api/auth/confirm-email
- * Confirma o cadastro com o token
+ * POST /api/auth/forgot-password
+ * Solicita recuperação de senha
  */
-router.post('/confirm-email', async (req, res) => {
+router.post('/forgot-password', async (req, res) => {
     try {
-        const { token } = req.body;
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'E-mail obrigatório.' });
 
-        if (!token) return res.status(400).json({ error: 'Token obrigatório.' });
+        const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-        // Busca usuário com esse token
-        const user = await prisma.user.findFirst({
-            where: { verificationToken: token }
-        });
+        // Gera token de recuperação e validade (1 hora)
+        const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const expires = new Date();
+        expires.setHours(expires.getHours() + 1);
 
-        if (!user) {
-            return res.status(400).json({ error: 'Token inválido ou já utilizado.' });
-        }
-
-        // Atualiza usuário para confirmado
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                emailConfirmed: true,
-                verificationToken: null // Limpa o token para não usar de novo
+                resetPasswordToken: resetToken,
+                resetPasswordExpires: expires
             }
         });
 
-        res.json({ message: 'E-mail confirmado com sucesso! Faça login.' });
+        const resetLink = `${FRONTEND_URL}/reset-password.html?token=${resetToken}`;
+
+        const mailOptions = {
+            from: `"Aero Festas" <${process.env.GMAIL_USER}>`,
+            to: user.email,
+            subject: 'Recuperação de Senha - Aero Festas 🔑',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Recuperação de Senha</h2>
+                    <p>Você solicitou a troca de senha. Clique abaixo para criar uma nova:</p>
+                    <a href="${resetLink}" style="background-color: #ef4444; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Redefinir Senha</a>
+                    <p>Este link expira em 1 hora.</p>
+                </div>
+            `
+        };
+
+        transporter.sendMail(mailOptions).catch(err => console.error("Erro email reset:", err));
+
+        res.json({ message: 'E-mail de recuperação enviado!' });
 
     } catch (error) {
-        console.error("Erro na confirmação:", error);
-        res.status(500).json({ error: 'Erro ao confirmar e-mail.' });
+        console.error("Erro Forgot Password:", error);
+        res.status(500).json({ error: 'Erro interno.' });
     }
 });
 
 /**
- * POST /api/auth/login
- * Login simples com JWT
+ * POST /api/auth/reset-password
+ * Define a nova senha usando o token
  */
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) return res.status(400).json({ error: 'Dados incompletos.' });
+
+        // Busca usuário com token válido e data não expirada
+        const user = await prisma.user.findFirst({
+            where: {
+                resetPasswordToken: token,
+                resetPasswordExpires: { gt: new Date() } // Expiração maior que agora
+            }
+        });
+
+        if (!user) return res.status(400).json({ error: 'Token inválido ou expirado.' });
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetPasswordToken: null,   // Limpa o token
+                resetPasswordExpires: null
+            }
+        });
+
+        res.json({ message: 'Senha alterada com sucesso! Faça login.' });
+
+    } catch (error) {
+        console.error("Erro Reset Password:", error);
+        res.status(500).json({ error: 'Erro interno.' });
+    }
+});
+
+// --- DEMAIS ROTAS EXISTENTES (Confirm, Login, Me) ---
+
+router.post('/confirm-email', async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token) return res.status(400).json({ error: 'Token obrigatório.' });
+
+        const user = await prisma.user.findFirst({ where: { verificationToken: token } });
+        if (!user) return res.status(400).json({ error: 'Token inválido.' });
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { emailConfirmed: true, verificationToken: null }
+        });
+
+        res.json({ message: 'E-mail confirmado!' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao confirmar.' });
+    }
+});
+
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
 
-        const user = await prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() }
-        });
-
-        if (!user) {
-            return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
-        }
-
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) {
-            return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
-        }
-
-        // Opcional: Bloquear se não confirmou email
-        if (!user.emailConfirmed) {
-            return res.status(403).json({ error: 'Confirme seu e-mail antes de entrar.' });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ error: 'Credenciais inválidas.' });
         }
 
         const token = jwt.sign(
@@ -164,43 +199,24 @@ router.post('/login', async (req, res) => {
         res.json({
             message: 'Login realizado!',
             token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                isAdmin: user.isAdmin
-            }
+            user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin }
         });
-
     } catch (error) {
-        console.error("Erro no login:", error);
         res.status(500).json({ error: 'Erro ao fazer login.' });
     }
 });
 
-/**
- * GET /api/auth/me
- * Retorna dados do usuário logado
- */
 router.get('/me', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader) return res.status(401).json({ error: 'Sem token.' });
-
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET);
-
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.id },
-            select: { id: true, name: true, email: true, isAdmin: true, emailConfirmed: true }
-        });
-
+        const user = await prisma.user.findUnique({ where: { id: decoded.id } });
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-
-        res.json(user);
-
+        res.json({ id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin, emailConfirmed: user.emailConfirmed });
     } catch (error) {
-        res.status(401).json({ error: 'Token inválido ou expirado.' });
+        res.status(401).json({ error: 'Token inválido.' });
     }
 });
 

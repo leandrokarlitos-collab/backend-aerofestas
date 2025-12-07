@@ -2,105 +2,53 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmar Email - Sistema Operante</title>
+    <title>Confirmando E-mail...</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-        }
-    </style>
 </head>
-<body>
-    <div class="w-full max-w-md mx-4">
-        <div class="glassmorphism rounded-2xl shadow-2xl p-8">
-            <div class="text-center mb-8">
-                <div class="mb-4">
-                    <i class="fas fa-envelope-circle-check text-6xl text-white"></i>
-                </div>
-                <h1 class="text-3xl font-bold text-white mb-2">Confirmar Email</h1>
-                <p class="text-white/80">Validando seu cadastro...</p>
-            </div>
-
-            <div id="loading" class="text-center">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-                <p class="text-white">Processando confirmação...</p>
-            </div>
-
-            <div id="successMessage" class="hidden text-center">
-                <div class="mb-4">
-                    <i class="fas fa-check-circle text-6xl text-green-400"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-white mb-2">Email Confirmado!</h2>
-                <p class="text-white/80 mb-6">Seu cadastro foi confirmado com sucesso. Agora você pode fazer login.</p>
-                <a 
-                    href="login.html" 
-                    class="inline-block bg-white text-purple-600 py-3 px-6 rounded-lg font-semibold hover:bg-white/90 transition-colors shadow-lg"
-                >
-                    <i class="fas fa-sign-in-alt mr-2"></i>Ir para Login
-                </a>
-            </div>
-
-            <div id="errorMessage" class="hidden text-center">
-                <div class="mb-4">
-                    <i class="fas fa-exclamation-circle text-6xl text-red-400"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-white mb-2">Erro na Confirmação</h2>
-                <p id="errorText" class="text-white/80 mb-6"></p>
-                <a 
-                    href="login.html" 
-                    class="inline-block bg-white text-purple-600 py-3 px-6 rounded-lg font-semibold hover:bg-white/90 transition-colors shadow-lg"
-                >
-                    <i class="fas fa-arrow-left mr-2"></i>Voltar para Login
-                </a>
-            </div>
-        </div>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-md text-center max-w-md w-full">
+        <h2 id="status" class="text-xl font-bold mb-4">Verificando...</h2>
+        <p id="message" class="text-gray-600 mb-4">Aguarde um momento.</p>
+        <a href="login.html" id="btn" class="hidden bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Ir para Login</a>
     </div>
 
-    <script src="js/auth.js"></script>
-    <script>
-        (async function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
+    <script type="module">
+        import { api } from './js/api.js'; // Garanta que api.js esteja acessível ou use fetch direto
 
-            const loading = document.getElementById('loading');
-            const successMessage = document.getElementById('successMessage');
-            const errorMessage = document.getElementById('errorMessage');
-            const errorText = document.getElementById('errorText');
+        // Função auxiliar caso api.js não tenha confirmEmail
+        async function confirm(token) {
+            const res = await fetch('https://backend-aerofestas-production.up.railway.app/api/auth/confirm-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            return await res.json();
+        }
 
-            if (!token) {
-                loading.classList.add('hidden');
-                errorMessage.classList.remove('hidden');
-                errorText.textContent = 'Token de confirmação não fornecido. Verifique o link do email.';
-                return;
-            }
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const statusEl = document.getElementById('status');
+        const msgEl = document.getElementById('message');
+        const btn = document.getElementById('btn');
 
-            try {
-                await confirmEmail(token);
-                loading.classList.add('hidden');
-                successMessage.classList.remove('hidden');
-            } catch (error) {
-                loading.classList.add('hidden');
-                errorMessage.classList.remove('hidden');
-                errorText.textContent = error.message || 'Erro ao confirmar email. O token pode ter expirado.';
-            }
-        })();
+        if (token) {
+            confirm(token).then(data => {
+                if (data.message) {
+                    statusEl.textContent = "Sucesso! 🎉";
+                    statusEl.className = "text-xl font-bold mb-4 text-green-600";
+                    msgEl.textContent = "Seu e-mail foi confirmado.";
+                    btn.classList.remove('hidden');
+                } else {
+                    throw new Error(data.error);
+                }
+            }).catch(err => {
+                statusEl.textContent = "Erro";
+                statusEl.className = "text-xl font-bold mb-4 text-red-600";
+                msgEl.textContent = "Token inválido ou expirado.";
+            });
+        } else {
+            msgEl.textContent = "Link inválido (sem token).";
+        }
     </script>
 </body>
 </html>
-
