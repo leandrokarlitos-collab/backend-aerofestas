@@ -2306,12 +2306,19 @@
             // Atualiza a lista local com o que voltou do servidor (importante para ter o ID real)
             const savedEvent = response.data || response; // Depende de como seu back retorna
             
+            // Criar objeto híbrido para a UI com os dados da API + brinquedos locais
+            const eventForUI = {
+                ...savedEvent,
+                toys: toysForCurrentEvent,
+                items: toysForCurrentEvent
+            };
+            
             // Atualiza a lista local 'events' para refletir na tela sem precisar recarregar tudo do zero
             if (eventId) {
                 const index = events.findIndex(e => e.id === eventId);
-                if (index !== -1) events[index] = savedEvent;
+                if (index !== -1) events[index] = eventForUI;
             } else {
-                events.push(savedEvent);
+                events.push(eventForUI);
             }
 
             // Opcional: Manter sync com localStorage apenas como backup de leitura, 
@@ -2319,7 +2326,7 @@
             // saveData('events', events); 
 
             // Sincroniza com CRM (mantido local por enquanto)
-            syncEventToCRM(savedEvent);
+            syncEventToCRM(eventForUI);
 
             hideModal(eventModal);
             renderAll();

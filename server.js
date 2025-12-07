@@ -260,6 +260,7 @@ app.post('/api/admin/events', async (req, res) => {
             where: { id: eventId },
             update: eventData,
             create: eventData
+            include: { items: { include: { toy: true } } }
         });
 
         console.log("✅ Evento salvo com sucesso! ID:", savedEvent.id);
