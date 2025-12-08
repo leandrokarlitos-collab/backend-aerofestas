@@ -113,3 +113,18 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
+
+// --- FINANÇAS ---
+
+model Transaction {
+  id          String   @id // Usaremos String para manter os IDs do JSON ("176217...")
+  description String
+  amount      Float
+  type        String   // "EXPENSE" (Gasto) ou "REVENUE" (Receita - opcional se usar Events)
+  date        String   // YYYY-MM-DD
+  category    String?  // Ex: "Combustível", "Alimentação"
+  paymentMethod String? // PIX, Boleto, etc.
+  
+  // Relacionamentos opcionais se quiser ligar a contas fixas depois
+  // fixedAccountId String? 
+}

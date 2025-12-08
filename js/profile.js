@@ -1,18 +1,17 @@
-// API_BASE_URL já está definido em auth.js
-// Usa window.location.origin diretamente ou a constante de auth.js
+// js/profile.js
+import { getToken, removeToken, getUserData, saveUserData, API_BASE_URL } from './auth.js';
 
 /**
  * Obtém perfil do usuário autenticado
  */
-async function getProfile() {
+export async function getProfile() {
     try {
         const token = getToken();
         if (!token) {
             throw new Error('Não autenticado');
         }
 
-        const apiBase = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : window.location.origin;
-        const response = await fetch(`${apiBase}/api/profile`, {
+        const response = await fetch(`${API_BASE_URL}/api/profile`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -37,15 +36,14 @@ async function getProfile() {
 /**
  * Atualiza perfil (nome, email)
  */
-async function updateProfile(profileData) {
+export async function updateProfile(profileData) {
     try {
         const token = getToken();
         if (!token) {
             throw new Error('Não autenticado');
         }
 
-        const apiBase = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : window.location.origin;
-        const response = await fetch(`${apiBase}/api/profile`, {
+        const response = await fetch(`${API_BASE_URL}/api/profile`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -78,15 +76,14 @@ async function updateProfile(profileData) {
 /**
  * Altera senha
  */
-async function changePassword(currentPassword, newPassword) {
+export async function changePassword(currentPassword, newPassword) {
     try {
         const token = getToken();
         if (!token) {
             throw new Error('Não autenticado');
         }
 
-        const apiBase = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : window.location.origin;
-        const response = await fetch(`${apiBase}/api/profile/password`, {
+        const response = await fetch(`${API_BASE_URL}/api/profile/password`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -109,4 +106,3 @@ async function changePassword(currentPassword, newPassword) {
         throw error;
     }
 }
-

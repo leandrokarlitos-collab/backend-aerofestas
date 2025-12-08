@@ -199,6 +199,57 @@ app.post('/api/migrar-completo', async (req, res) => {
         }
     }
 
+        if (financeDataV30) {
+            console.log("💰 Migrando dados financeiros...");
+
+            // 6a. Gastos Gerais
+            if (financeDataV30.gastos) {
+                for (const g of financeDataV30.gastos) {
+                    await prisma.transaction.upsert({
+                        where: { id: String(g.id) },
+                        update: {},
+                        create: {
+                            id: String(g.id),
+                            description: g.descricao || "Gasto sem descrição",
+                            amount: parseFloat(g.valor) || 0,
+                            type: 'EXPENSE',
+                            date: g.data, // Formato YYYY-MM-DD do JSON
+                            category: g.categoria || 'Outros',
+                            paymentMethod: g.pagamento || null
+                        }
+                    });
+                }
+            }
+
+            // 6b. Pagamentos de Monitores (Também são gastos)
+            if (financeDataV30.pagamentosMonitores) {
+                for (const p of financeDataV30.pagamentosMonitores) {
+                    await prisma.transaction.upsert({
+                        where: { id: String(p.id) },
+                        update: {},
+                        create: {
+                            id: String(p.id),
+                            description: `Pagamento Monitor: ${p.nome}`,
+                            amount: parseFloat(p.pagamento) || 0,
+                            type: 'EXPENSE',
+                            date: p.data,
+                            category: 'Salários/Monitores',
+                            paymentMethod: 'PIX' // Assumindo padrão ou pegar do JSON se tiver
+                        }
+                    });
+                }
+            }
+        }
+
+        console.log("✅ Migração finalizada com sucesso!");
+        res.json({ success: true, message: "Todos os dados foram migrados!" });
+
+    } catch (error) {
+        console.error("❌ Erro durante a migração:", error);
+        res.status(500).json({ error: error.message, stack: error.stack });
+    }
+});
+
     console.log("✅ Migração finalizada com sucesso!");
     res.json({ success: true, message: "Todos os dados foram migrados!" });
 
