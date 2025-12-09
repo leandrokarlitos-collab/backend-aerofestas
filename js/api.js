@@ -1,61 +1,79 @@
 // js/api.js
+import { getToken } from './auth.js';
 
-// URL do seu backend no Railway (sem barra no final)
-const BASE_URL = "https://backend-aerofestas-production.up.railway.app/api";
+export const API_BASE_URL = "https://backend-aerofestas-production.up.railway.app";
+const BASE_URL = `${API_BASE_URL}/api`;
 
 export const api = {
     // 🧸 BRINQUEDOS
     getBrinquedos: async () => {
         try {
             const res = await fetch(`${BASE_URL}/admin/toys`);
-            if (!res.ok) throw new Error('Falha ao buscar brinquedos');
-            return await res.json();
-        } catch (error) {
-            console.error("Erro API Toys:", error);
-            return []; // Retorna array vazio para não quebrar a tela
-        }
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
     },
 
     // 👥 CLIENTES
     getClientes: async () => {
         try {
             const res = await fetch(`${BASE_URL}/admin/clients`);
-            if (!res.ok) throw new Error('Falha ao buscar clientes');
-            return await res.json();
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    // 📅 EVENTOS (Receitas)
+    getEventos: async () => {
+        try {
+            const res = await fetch(`${BASE_URL}/admin/events-full`);
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    // 💰 TRANSAÇÕES (Gastos/Despesas) - ESSENCIAL PARA O FINANCEIRO
+    getTransacoes: async () => {
+        try {
+            const token = getToken();
+            if (!token) return [];
+
+            const res = await fetch(`${BASE_URL}/finance/transactions`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            // O backend retorna todas as transações.
+            // Vamos filtrar aqui ou usar tudo, dependendo da necessidade.
+            return res.ok ? await res.json() : [];
         } catch (error) {
-            console.error("Erro API Clients:", error);
+            console.error("Erro API Transações:", error);
             return [];
         }
     },
 
-    // 📅 EVENTOS (Completo com itens)
-    getEventos: async () => {
+    // 📊 RESUMO FINANCEIRO (Cards do Dashboard)
+    getFinanceiro: async (mes, ano) => {
         try {
-            // Usando a rota nova que criamos no server.js atualizado
-            const res = await fetch(`${BASE_URL}/admin/events-full`);
-            if (!res.ok) throw new Error('Falha ao buscar eventos');
-            return await res.json();
-        } catch (error) {
-            console.error("Erro API Events:", error);
-            return [];
-        }
+            const token = getToken();
+            if (!token) return null;
+            const query = mes && ano ? `?month=${mes}&year=${ano}` : '';
+            const res = await fetch(`${BASE_URL}/finance/dashboard${query}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) { return null; }
     },
 
     // 💾 SALVAR EVENTO
     salvarEvento: async (evento) => {
         try {
+            const token = getToken();
             const res = await fetch(`${BASE_URL}/admin/events`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(evento)
             });
-            if (!res.ok) throw new Error('Falha ao salvar evento');
-            return await res.json();
-        } catch (error) {
-            console.error("Erro API Save Event:", error);
-            throw error;
-        }
+            return res.ok ? await res.json() : null;
+        } catch (error) { throw error; }
     }
 };
