@@ -336,6 +336,32 @@ app.post('/api/admin/events', async (req, res) => {
     }
 });
 
+// --- DELETAR EVENTO ---
+app.delete('/api/admin/events/:id', async (req, res) => {
+    const eventId = parseFloat(req.params.id);
+    
+    if (isNaN(eventId)) {
+        return res.status(400).json({ error: "ID inválido" });
+    }
+    
+    try {
+        // Primeiro deleta os itens associados ao evento
+        await prisma.eventItem.deleteMany({ 
+            where: { eventId: eventId } 
+        });
+        
+        // Depois deleta o evento
+        await prisma.event.delete({ 
+            where: { id: eventId } 
+        });
+        
+        res.json({ success: true, message: "Evento excluído com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao deletar evento:", error);
+        res.status(500).json({ error: "Erro ao excluir evento" });
+    }
+});
+
 // --- ROTAS FINAIS ---
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);

@@ -79,8 +79,8 @@ export const api = {
     getCategoriasGastos: async () => {
         try {
             const token = getToken();
-            const res = await fetch(`${BASE_URL}/finance/categories/expenses`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
+            const res = await fetch(`${BASE_URL}/finance/categories/expenses`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             return res.ok ? await res.json() : [];
         } catch (e) { return []; }
@@ -90,8 +90,8 @@ export const api = {
     getCategoriasFixas: async () => {
         try {
             const token = getToken();
-            const res = await fetch(`${BASE_URL}/finance/categories/fixed`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
+            const res = await fetch(`${BASE_URL}/finance/categories/fixed`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             return res.ok ? await res.json() : [];
         } catch (e) { return []; }
@@ -110,6 +110,21 @@ export const api = {
             });
             return res.ok ? await res.json() : null;
         } catch (error) { throw error; }
+    },
+
+    // Deletar Evento
+    deletarEvento: async (eventoId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events/${eventoId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) {
+            console.error('Erro ao deletar evento:', error);
+            throw error;
+        }
     },
 
     // Salvar Gasto/Transação

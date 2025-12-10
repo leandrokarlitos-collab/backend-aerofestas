@@ -45,15 +45,15 @@ const API_BASE_URL = "https://backend-aerofestas-production.up.railway.app";
 function injectUserMenu(userData) {
     if (document.getElementById('user-menu-container')) return;
 
-    // Mudei para FIXED BOTTOM-LEFT para não atrapalhar o menu superior
+    // Menu no canto inferior esquerdo com design elegante
     const container = document.createElement('div');
     container.id = 'user-menu-container';
-    container.className = 'fixed bottom-4 left-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-gray-200 transition-all hover:shadow-xl';
+    container.className = 'fixed bottom-4 left-4 z-50 flex items-center gap-3 bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 transition-all duration-300 hover:scale-105';
 
     // 1. Ícone de Perfil
     const profileBtn = document.createElement('a');
     profileBtn.href = 'profile.html';
-    profileBtn.className = 'w-8 h-8 flex items-center justify-center bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200 transition-colors';
+    profileBtn.className = 'w-9 h-9 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg';
     profileBtn.innerHTML = '<i class="fas fa-user text-sm"></i>';
     profileBtn.title = "Meu Perfil";
 
@@ -68,28 +68,28 @@ function injectUserMenu(userData) {
     // 3. Botão ADMIN (Só aparece se for admin)
     if (userData.isAdmin) {
         const divider = document.createElement('div');
-        divider.className = 'w-px h-4 bg-gray-300 mx-1';
+        divider.className = 'w-px h-5 bg-gray-200 mx-1';
         container.appendChild(divider);
 
         const adminBtn = document.createElement('a');
-        adminBtn.href = 'admin.html'; // Certifique-se que esta página existe ou será criada
-        adminBtn.className = 'text-purple-600 hover:text-purple-800 transition-colors text-sm font-bold flex items-center gap-1';
-        adminBtn.innerHTML = '<i class="fas fa-user-shield"></i>';
+        adminBtn.href = 'admin.html';
+        adminBtn.className = 'flex items-center justify-center w-9 h-9 text-purple-600 hover:bg-purple-50 rounded-xl transition-all duration-200';
+        adminBtn.innerHTML = '<i class="fas fa-user-shield text-sm"></i>';
         adminBtn.title = "Painel Admin";
         container.appendChild(adminBtn);
     }
 
     // 4. Divisor e Logout
     const divider2 = document.createElement('div');
-    divider2.className = 'w-px h-4 bg-gray-300 mx-1';
+    divider2.className = 'w-px h-5 bg-gray-200 mx-1';
     container.appendChild(divider2);
 
     const logoutBtn = document.createElement('button');
-    logoutBtn.className = 'text-gray-400 hover:text-red-500 transition-colors';
-    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i>';
+    logoutBtn.className = 'flex items-center justify-center w-9 h-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200';
+    logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt text-sm"></i>';
     logoutBtn.title = "Sair";
     logoutBtn.onclick = () => {
-        if (confirm('Sair do sistema?')) {
+        if (confirm('Deseja sair do sistema?')) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('userData');
             window.location.href = 'login.html';
