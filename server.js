@@ -11,7 +11,7 @@ const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
 const historyRoutes = require('./routes/history');
 const financeRoutes = require('./routes/finance');
-    
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -46,7 +46,7 @@ app.post('/api/send-email', async (req, res) => {
     }
 });
 
-// --- ROTA DE MIGRAÇÃO (COM FINANCEIRO) ---
+// --- ROTA DE MIGRAÇÃO (COM FINANCEIRO COMPLETO) ---
 app.post('/api/migrar-completo', async (req, res) => {
     req.setTimeout(900000); // 15 minutos
 
@@ -74,7 +74,6 @@ app.post('/api/migrar-completo', async (req, res) => {
                     }
                 });
 
-                // Desempenho
                 if (m.desempenho) {
                     for (const d of m.desempenho) {
                         await prisma.desempenho.upsert({
@@ -161,7 +160,6 @@ app.post('/api/migrar-completo', async (req, res) => {
                     precoFinal = listaItens.reduce((acc, item) => acc + (parseFloat(item.price || 0) * (item.quantity || 1)), 0);
                 }
 
-                // Limpa itens antigos para recriar
                 try { await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } }); } catch (e) { }
 
                 const dadosEvento = {
@@ -183,9 +181,9 @@ app.post('/api/migrar-completo', async (req, res) => {
             }
         }
 
-        // 6. FINANCEIRO (GASTOS E PAGAMENTOS)
+        // 6. FINANCEIRO
         if (financeDataV30) {
-            // Gastos Gerais
+            // 6a. Gastos Gerais
             if (financeDataV30.gastos) {
                 console.log(`💰 Processando ${financeDataV30.gastos.length} gastos...`);
                 for (const g of financeDataV30.gastos) {
@@ -205,7 +203,7 @@ app.post('/api/migrar-completo', async (req, res) => {
                     });
                 }
             }
-            // Pagamentos de Monitores
+            // 6b. Pagamentos de Monitores
             if (financeDataV30.pagamentosMonitores) {
                 console.log(`💰 Processando ${financeDataV30.pagamentosMonitores.length} pagamentos de monitores...`);
                 for (const p of financeDataV30.pagamentosMonitores) {
@@ -225,14 +223,29 @@ app.post('/api/migrar-completo', async (req, res) => {
                     });
                 }
             }
+            // 6d. CADASTRO DE CONTAS BANCÁRIAS (Novo bloco adicionado)
+            if (financeDataV30.contas) {
+                console.log(`🏦 Processando ${financeDataV30.contas.length} contas bancárias...`);
+                for (const c of financeDataV30.contas) {
+                    await prisma.bankAccount.upsert({
+                        where: { id: String(c.id) },
+                        update: {},
+                        create: {
+                            id: String(c.id),
+                            name: c.nome,
+                            bank: c.banco,
+                            type: c.tipo,
+                            agency: c.agencia || null,
+                            number: c.numero || null
+                        }
+                    });
+                }
+            }
             // 6e. CADASTRO DE CONTAS FIXAS
             if (financeDataV30.contasFixas) {
                 console.log(`📅 Processando ${financeDataV30.contasFixas.length} cadastros de contas fixas...`);
                 for (const c of financeDataV30.contasFixas) {
-                    // Valida o tipo de recorrência (se não vier, assume 'permanente')
                     let tipoRecorrencia = c.tipoRecorrencia || "permanente";
-
-                    // Normaliza para minúsculo para evitar "Mensal" e "mensal" duplicados
                     tipoRecorrencia = tipoRecorrencia.toLowerCase();
 
                     await prisma.fixedExpense.upsert({
@@ -244,13 +257,8 @@ app.post('/api/migrar-completo', async (req, res) => {
                             amount: parseFloat(c.valor) || 0,
                             dueDay: parseInt(c.diaVencimento) || 10,
                             category: c.categoria || "Geral",
-
-                            // Aqui garantimos que salve: mensal, anual ou permanente
                             recurrenceType: tipoRecorrencia,
-
-                            // Captura a Data de Início (importante para 'mensal' e 'anual')
                             startDate: c.dataInicio || null,
-
                             installments: c.numParcelas ? parseInt(c.numParcelas) : null,
                             attachments: c.anexos ? JSON.stringify(c.anexos) : null
                         }
@@ -284,15 +292,12 @@ app.get('/api/admin/events-full', async (req, res) => {
     });
     res.json(events);
 });
-// GET Contas Bancárias
 app.get('/api/finance/accounts', async (req, res) => {
     try {
         const accounts = await prisma.bankAccount.findMany({ orderBy: { name: 'asc' } });
         res.json(accounts);
     } catch (e) { res.status(500).json({ error: "Erro ao buscar contas" }); }
 });
-
-// GET Contas Fixas (Cadastros)
 app.get('/api/finance/fixed-expenses', async (req, res) => {
     try {
         const fixed = await prisma.fixedExpense.findMany({ orderBy: { dueDay: 'asc' } });
