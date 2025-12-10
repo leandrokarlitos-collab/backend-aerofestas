@@ -19,6 +19,11 @@
 
         // Garante que o jsPDF esteja disponível
         window.jsPDF = window.jspdf.jsPDF;
+        
+        // Torna api e funções acessíveis globalmente
+        window.api = api;
+        window.API_BASE_URL = API_BASE_URL;
+        window.getToken = getToken;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const getById = id => document.getElementById(id);
