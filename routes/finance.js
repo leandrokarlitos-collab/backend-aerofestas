@@ -163,4 +163,54 @@ router.delete('/:type/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao deletar" }); }
 });
 
+// POST Seed - Popular categorias padrão (executar uma vez)
+router.post('/seed-categories', async (req, res) => {
+    try {
+        // Categorias de Gastos Padrão
+        const gastoCategorias = [
+            { id: 'gc-1', name: 'Transporte' },
+            { id: 'gc-2', name: 'Combustível' },
+            { id: 'gc-3', name: 'Manutenção' },
+            { id: 'gc-4', name: 'Alimentação' },
+            { id: 'gc-5', name: 'Insumos' },
+            { id: 'gc-6', name: 'Limpeza' },
+            { id: 'gc-7', name: 'Impostos' },
+            { id: 'gc-8', name: 'Outros' }
+        ];
+
+        // Categorias de Contas Fixas Padrão
+        const fixedCategorias = [
+            { id: 'cfc-1', name: 'Aluguel' },
+            { id: 'cfc-2', name: 'Energia' },
+            { id: 'cfc-3', name: 'Água' },
+            { id: 'cfc-4', name: 'Internet' },
+            { id: 'cfc-5', name: 'Telefone' },
+            { id: 'cfc-6', name: 'Impostos MEI' },
+            { id: 'cfc-7', name: 'Seguros' },
+            { id: 'cfc-8', name: 'Salários' }
+        ];
+
+        // Criar categorias (usando createMany com skipDuplicates)
+        await prisma.expenseCategory.createMany({
+            data: gastoCategorias,
+            skipDuplicates: true
+        });
+
+        await prisma.fixedExpenseCategory.createMany({
+            data: fixedCategorias,
+            skipDuplicates: true
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Categorias padrão criadas com sucesso!',
+            gastoCategorias: gastoCategorias.length,
+            fixedCategorias: fixedCategorias.length
+        });
+    } catch (e) { 
+        console.error("Erro ao criar categorias:", e);
+        res.status(500).json({ error: "Erro ao criar categorias padrão" }); 
+    }
+});
+
 module.exports = router;
