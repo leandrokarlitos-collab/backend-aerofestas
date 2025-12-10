@@ -34,6 +34,7 @@
             async function loadDataFromCloud() {
                 try {
                     console.log("☁️ Sincronizando com o servidor...");
+                    console.log("📍 URL da API:", api ? "API carregada" : "API não carregada");
 
                     // Busca tudo em paralelo para ser rápido
                     const [eventosCloud, transacoesCloud, contasCloud, fixasCloud, catGastos, catFixas] = await Promise.all([
@@ -44,6 +45,15 @@
                         api.getCategoriasGastos(),
                         api.getCategoriasFixas()
                     ]);
+                    
+                    console.log("📊 Dados recebidos:", {
+                        eventos: eventosCloud?.length || 0,
+                        transacoes: transacoesCloud?.length || 0,
+                        contas: contasCloud?.length || 0,
+                        contasFixas: fixasCloud?.length || 0,
+                        catGastos: catGastos?.length || 0,
+                        catFixas: catFixas?.length || 0
+                    });
 
                     // 1. Mapeia Eventos
                     state.eventos = eventosCloud.map(evt => ({
@@ -91,12 +101,20 @@
                     // 6. Mapeia Categorias de Contas Fixas
                     state.contaFixaCategorias = catFixas.map(c => ({ id: c.id, nome: c.name }));
 
-                    console.log("✅ Dados sincronizados!", state);
+                    console.log("✅ Dados sincronizados!", {
+                        eventos: state.eventos.length,
+                        gastos: state.gastos.length,
+                        contas: state.contas.length,
+                        contasFixas: state.contasFixas.length,
+                        gastoCategorias: state.gastoCategorias?.length || 0,
+                        contaFixaCategorias: state.contaFixaCategorias?.length || 0
+                    });
                     renderAll(); // Atualiza tudo (gráficos, tabelas, etc.)
 
                 } catch (error) {
-                    console.error("Erro cloud:", error);
-                    showToast("Modo Offline (Erro ao conectar servidor)", true);
+                    console.error("❌ Erro ao carregar dados do servidor:", error);
+                    console.error("Detalhes do erro:", error.message, error.stack);
+                    showToast("Erro ao conectar com o servidor. Verifique o console.", true);
                 }
             }
             // --- 2. RENDERIZAÇÃO ---
