@@ -14,7 +14,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <script type="module">
-        import { api } from './js/api.js';
+        import { api, API_BASE_URL } from './js/api.js';
+        import { getToken } from './js/auth.js';
 
         // Garante que o jsPDF esteja disponível
         window.jsPDF = window.jspdf.jsPDF;
@@ -100,6 +101,33 @@
 
                     // 6. Mapeia Categorias de Contas Fixas
                     state.contaFixaCategorias = catFixas.map(c => ({ id: c.id, nome: c.name }));
+
+                    // 7. Se categorias estiverem vazias, popular com dados padrão
+                    if (catGastos.length === 0 || catFixas.length === 0) {
+                        console.log("⚠️ Categorias vazias! Populando banco de dados...");
+                        try {
+                            const token = getToken ? getToken() : null;
+                            const seedRes = await fetch(`${API_BASE_URL}/api/finance/seed-categories`, {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': token ? `Bearer ${token}` : ''
+                                }
+                            });
+                            if (seedRes.ok) {
+                                console.log("✅ Categorias padrão criadas! Recarregando...");
+                                // Recarrega as categorias
+                                const [newCatGastos, newCatFixas] = await Promise.all([
+                                    api.getCategoriasGastos(),
+                                    api.getCategoriasFixas()
+                                ]);
+                                state.gastoCategorias = newCatGastos.map(c => ({ id: c.id, nome: c.name }));
+                                state.contaFixaCategorias = newCatFixas.map(c => ({ id: c.id, nome: c.name }));
+                            }
+                        } catch (seedError) {
+                            console.error("Erro ao popular categorias:", seedError);
+                        }
+                    }
 
                     console.log("✅ Dados sincronizados!", {
                         eventos: state.eventos.length,
