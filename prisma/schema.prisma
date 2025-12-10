@@ -151,3 +151,15 @@ model FixedExpense {
   installments   Int?
   attachments    String? // Guardaremos como JSON string se houver
 }
+
+// --- CATEGORIAS FINANCEIRAS ---
+
+model ExpenseCategory {
+  id   String @id
+  name String
+}
+
+model FixedExpenseCategory {
+  id   String @id
+  name String
+}

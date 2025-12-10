@@ -31,51 +31,74 @@
                 selectedMonth: new Date().toISOString().slice(0, 7) // YYYY-MM
             };
 
-            // --- 1. CARREGAMENTO DA NUVEM ---
             async function loadDataFromCloud() {
                 try {
-                    console.log("☁️ Buscando dados...");
+                    console.log("☁️ Sincronizando com o servidor...");
 
-                    // Busca Receitas (Eventos) e Despesas (Transações)
-                    const [eventosCloud, transacoesCloud] = await Promise.all([
+                    // Busca tudo em paralelo para ser rápido
+                    const [eventosCloud, transacoesCloud, contasCloud, fixasCloud, catGastos, catFixas] = await Promise.all([
                         api.getEventos(),
-                        api.getTransacoes()
+                        api.getTransacoes(), // Traz gastos e pagamentos
+                        api.getContas(),
+                        api.getContasFixas(),
+                        api.getCategoriasGastos(),
+                        api.getCategoriasFixas()
                     ]);
 
-                    // Mapeia Eventos
+                    // 1. Mapeia Eventos
                     state.eventos = eventosCloud.map(evt => ({
                         id: evt.id.toString(),
                         data: evt.date,
-                        empresa: "Aero Festas",
+                        empresa: "Aero Festas", // Ajuste se tiver no banco
                         contratante: evt.clientName,
                         local: "",
                         items: evt.items?.map(i => ({ nome: i.toy?.name, valor: 0 })) || [],
-                        valor: evt.price || 0
+                        valor: evt.price || 0,
+                        isSynced: true
                     }));
 
-                    // Mapeia Gastos
+                    // 2. Mapeia Gastos e Pagamentos (Separando pelo tipo/categoria)
                     state.gastos = transacoesCloud
-                        .filter(t => t.type === 'EXPENSE')
+                        .filter(t => t.type === 'EXPENSE' && !t.category?.includes('Salário') && !t.description?.includes('Pgto Monitor'))
                         .map(t => ({
                             id: t.id,
                             data: t.date,
                             descricao: t.description,
                             categoria: t.category || "Geral",
-                            conta: "Caixa",
+                            contaId: t.accountId, // Se tiver
+                            conta: "Caixa", // Ajustar busca de nome depois
                             pagamento: t.paymentMethod || "Outro",
                             valor: t.amount,
                             comprovantes: []
                         }));
 
-                    console.log("✅ Dados carregados.");
-                    renderAll();
+                    // 3. Mapeia Contas Bancárias
+                    state.contas = contasCloud.map(c => ({
+                        id: c.id, nome: c.name, banco: c.bank, tipo: c.type, agencia: c.agency, numero: c.number
+                    }));
+
+                    // 4. Mapeia Contas Fixas (Cadastros)
+                    state.contasFixas = fixasCloud.map(c => ({
+                        id: c.id, descricao: c.description, valor: c.amount, diaVencimento: c.dueDay,
+                        categoria: c.category, tipoRecorrencia: c.recurrenceType,
+                        dataInicio: c.startDate, numParcelas: c.installments,
+                        anexos: c.attachments ? JSON.parse(c.attachments) : []
+                    }));
+
+                    // 5. Mapeia Categorias de Gastos
+                    state.gastoCategorias = catGastos.map(c => ({ id: c.id, nome: c.name }));
+
+                    // 6. Mapeia Categorias de Contas Fixas
+                    state.contaFixaCategorias = catFixas.map(c => ({ id: c.id, nome: c.name }));
+
+                    console.log("✅ Dados sincronizados!", state);
+                    renderAll(); // Atualiza tudo (gráficos, tabelas, etc.)
 
                 } catch (error) {
-                    console.error("Erro ao carregar:", error);
-                    showToast("Erro de conexão com o servidor.", true);
+                    console.error("Erro cloud:", error);
+                    showToast("Modo Offline (Erro ao conectar servidor)", true);
                 }
             }
-
             // --- 2. RENDERIZAÇÃO ---
             const renderAll = () => {
                 const monthInput = getById('month-filter-global');
@@ -1997,31 +2020,111 @@
         window.removeTempItem = (index) => { state.currentEventItems.splice(index, 1); renderTempItems(); };
         getById('btn-add-item').addEventListener('click', () => { const nome = getById('item-nome').value; const valor = parseFloat(getById('item-valor').value); if (nome && valor > 0) { state.currentEventItems.push({ nome, valor }); renderTempItems(); getById('item-nome').value = ''; getById('item-valor').value = ''; getById('item-nome').focus(); } });
         getById('form-evento').addEventListener('submit', e => { e.preventDefault(); if (state.currentEventItems.length === 0) { showToast('Adicione pelo menos um item ao evento.'); return; } const valorTotal = state.currentEventItems.reduce((acc, item) => acc + item.valor, 0); state.eventos.push({ id: Date.now().toString(), data: getById('evento-data').value, empresa: getById('evento-empresa').value, contratante: getById('evento-contratante').value, local: getById('evento-local').value, items: state.currentEventItems, valor: valorTotal }); state.currentEventItems = []; renderTempItems(); getById('form-evento').reset(); hideModal(getById('add-entrada-modal')); renderAll(); showToast('Evento salvo com sucesso!', false);});
-        getById('form-gasto').addEventListener('submit', e => { e.preventDefault(); const contaId = getById('gasto-conta').value; const contaSelecionada = state.contas.find(c => c.id === contaId); if (!contaSelecionada) { showToast('Por favor, selecione uma conta de saída válida.'); return; } const categoria = getById('gasto-categoria').value; if (!categoria) { showToast('Por favor, selecione uma categoria.'); return; } state.gastos.push({ id: Date.now().toString(), data: getById('gasto-data').value, descricao: getById('gasto-descricao').value, categoria: categoria, contaId: contaSelecionada.id, conta: contaSelecionada.nome, pagamento: getById('gasto-pagamento').value, valor: parseFloat(getById('gasto-valor').value), comprovantes: [] }); e.target.reset(); hideModal(getById('add-gasto-modal')); renderAll(); showToast('Gasto adicionado com sucesso!', false);});
-        getById('form-cadastro-conta').addEventListener('submit', e => { e.preventDefault(); state.contas.push({ id: Date.now().toString(), nome: getById('cadastro-conta-nome').value, banco: getById('cadastro-conta-banco').value, tipo: getById('cadastro-conta-tipo').value, agencia: getById('cadastro-conta-agencia').value, numero: getById('cadastro-conta-numero').value }); e.target.reset(); renderAll(); showToast('Conta salva com sucesso!', false); });
         
-        // NOVO: Handlers para forms de categoria
-        getById('form-gasto-categoria').addEventListener('submit', e => {
+        // --- LISTENERS DE FORMULÁRIOS (COM API) ---
+        
+        // Listener para formulário de gasto
+        getById('form-gasto').addEventListener('submit', async e => {
             e.preventDefault();
-            const nome = getById('gasto-categoria-nome').value.trim();
-            if (nome && !state.gastoCategorias.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
-                state.gastoCategorias.push({ id: `gc-${Date.now()}`, nome });
+            const contaId = getById('gasto-conta').value;
+            const categoria = getById('gasto-categoria').value;
+
+            // Validações
+            if (!contaId) {
+                showToast('Por favor, selecione uma conta de saída válida.');
+                return;
+            }
+            if (!categoria) {
+                showToast('Por favor, selecione uma categoria.');
+                return;
+            }
+
+            // Dados do formulário
+            const novoGasto = {
+                id: Date.now().toString(),
+                data: getById('gasto-data').value,
+                description: getById('gasto-descricao').value,
+                category: categoria,
+                contaId: contaId,
+                paymentMethod: getById('gasto-pagamento').value,
+                amount: parseFloat(getById('gasto-valor').value),
+                type: 'EXPENSE' 
+            };
+
+            // Salva no Servidor
+            showToast('Salvando gasto...', false);
+            const sucesso = await api.salvarTransacao(novoGasto);
+
+            if (sucesso) {
+                await loadDataFromCloud(); // Recarrega dados do servidor
                 e.target.reset();
-                renderAll();
-                showToast('Categoria de gasto salva!', false);
+                hideModal(getById('add-gasto-modal'));
+                showToast('Gasto salvo no servidor!', false);
+            } else {
+                showToast('Erro ao salvar no servidor.', true);
+            }
+        });
+
+        // Listener para formulário de conta bancária
+        getById('form-cadastro-conta').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const novaConta = {
+                id: Date.now().toString(),
+                name: getById('cadastro-conta-nome').value,
+                bank: getById('cadastro-conta-banco').value,
+                type: getById('cadastro-conta-tipo').value,
+                agency: getById('cadastro-conta-agencia').value,
+                number: getById('cadastro-conta-numero').value
+            };
+            
+            showToast('Salvando conta...', false);
+            const sucesso = await api.salvarConta(novaConta);
+            
+            if (sucesso) {
+                await loadDataFromCloud();
+                e.target.reset();
+                showToast('Conta bancária salva no servidor!', false);
+            } else {
+                showToast('Erro ao salvar conta.', true);
+            }
+        });
+
+        // Listener para formulário de categoria de gastos
+        getById('form-gasto-categoria').addEventListener('submit', async (e) => {
+            e.preventDefault(); // CRÍTICO: evita reload da página
+            const nome = getById('gasto-categoria-nome').value.trim();
+            
+            if (nome && !state.gastoCategorias.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
+                showToast('Salvando categoria...', false);
+                const sucesso = await api.salvarCategoriaGasto(nome);
+                if (sucesso) {
+                    await loadDataFromCloud(); // Recarrega do servidor
+                    e.target.reset();
+                    showToast('Categoria salva no servidor!', false);
+                } else {
+                    showToast('Erro ao salvar categoria.', true);
+                }
             } else if (nome) {
                 showToast('Essa categoria já existe.');
             }
         });
 
-        getById('form-conta-fixa-categoria').addEventListener('submit', e => {
-            e.preventDefault();
+        // Listener para formulário de categoria de contas fixas
+        getById('form-conta-fixa-categoria').addEventListener('submit', async (e) => {
+            e.preventDefault(); // CRÍTICO: evita reload da página
             const nome = getById('cf-categoria-nome').value.trim();
+            
             if (nome && !state.contaFixaCategorias.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
-                state.contaFixaCategorias.push({ id: `cfc-${Date.now()}`, nome });
-                e.target.reset();
-                renderAll();
-                showToast('Categoria de conta fixa salva!', false);
+                showToast('Salvando categoria...', false);
+                const sucesso = await api.salvarCategoriaFixa(nome);
+                if (sucesso) {
+                    await loadDataFromCloud(); // Recarrega do servidor
+                    e.target.reset();
+                    showToast('Categoria de conta fixa salva no servidor!', false);
+                } else {
+                    showToast('Erro ao salvar categoria.', true);
+                }
             } else if (nome) {
                 showToast('Essa categoria já existe.');
             }
@@ -2038,11 +2141,15 @@
 
         getById('form-conta-fixa').addEventListener('submit', async e => {
             e.preventDefault();
+
+            // 1. Validação de Categoria
             const categoria = getById('conta-fixa-categoria').value;
             if (!categoria) {
                 showToast('Por favor, selecione uma categoria para a conta fixa.');
                 return;
             }
+
+            // 2. Processamento de Anexos
             const anexoInput = getById('conta-fixa-anexo');
             const files = anexoInput.files;
             let anexos = [];
@@ -2050,30 +2157,52 @@
                 try {
                     const filePromises = Array.from(files).map(readFileAsDataURL);
                     anexos = await Promise.all(filePromises);
-                } catch (error) { console.error("Erro ao ler arquivos:", error); showToast('Houve um erro ao processar os anexos.'); return; }
+                } catch (error) {
+                    console.error("Erro ao ler arquivos:", error);
+                    showToast('Houve um erro ao processar os anexos.');
+                    return;
+                }
             }
+
+            // 3. Validação de Recorrência
             const tipoRecorrencia = getById('conta-fixa-tipo-recorrencia').value;
             const dataInicio = getById('conta-fixa-data-inicio').value;
             const numParcelas = parseInt(getById('conta-fixa-num-parcelas').value);
+
             if (tipoRecorrencia === 'parcelada' && (!dataInicio || isNaN(numParcelas) || numParcelas < 1)) {
                 showToast('Para contas parceladas, preencha o Mês de Início e um Nº de Parcelas válido.');
                 return;
             }
-            state.contasFixas.push({
+
+            // 4. Montagem do Objeto
+            const novaFixa = {
                 id: Date.now().toString(),
-                descricao: getById('conta-fixa-descricao').value,
-                valor: parseFloat(getById('conta-fixa-valor').value),
-                diaVencimento: parseInt(getById('conta-fixa-dia-vencimento').value),
-                categoria: categoria,
-                anexos: anexos,
-                tipoRecorrencia: tipoRecorrencia,
-                dataInicio: tipoRecorrencia === 'parcelada' ? dataInicio : null,
-                numParcelas: tipoRecorrencia === 'parcelada' ? numParcelas : null
-            });
-            e.target.reset();
-            parcelamentoContainer.classList.add('hidden');
-            renderAll();
-            showToast('Conta fixa cadastrada com sucesso!', false);
+                description: getById('conta-fixa-descricao').value,
+                amount: parseFloat(getById('conta-fixa-valor').value),
+                dueDay: parseInt(getById('conta-fixa-dia-vencimento').value),
+                category: categoria,
+                recurrenceType: tipoRecorrencia,
+                startDate: tipoRecorrencia === 'parcelada' ? dataInicio : null,
+                installments: tipoRecorrencia === 'parcelada' ? numParcelas : null,
+                attachments: anexos
+            };
+
+            // 5. Envio para a Nuvem
+            showToast('Salvando conta fixa...', false);
+            const sucesso = await api.salvarContaFixa(novaFixa);
+
+            if (sucesso) {
+                // Recarrega dados do servidor
+                await loadDataFromCloud();
+                
+                e.target.reset();
+                if (typeof parcelamentoContainer !== 'undefined') {
+                    parcelamentoContainer.classList.add('hidden');
+                }
+                showToast('Conta fixa cadastrada no servidor!', false);
+            } else {
+                showToast('Erro ao salvar no servidor.', true);
+            }
         });
         
         // --- SEÇÃO MONITORES ---
@@ -2274,7 +2403,7 @@
         });
         
         // --- LÓGICA DE DELETAR, EDITAR E VISUALIZAR ---
-        window.handleDelete = (id, tipo) => { 
+        window.handleDelete = async (id, tipo) => { 
             if (confirm(`Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.`)) { 
                 if (tipo === 'monitores' && state.pagamentosMonitores.some(p => p.monitorId === id)) { showToast('Este monitor não pode ser excluído pois possui pagamentos registrados.'); return; } 
                 if (tipo === 'contas' && state.gastos.some(g => g.contaId === id)) { showToast('Esta conta não pode ser excluída pois está em uso em um ou mais gastos.'); return; }
@@ -2303,9 +2432,32 @@
                         if (monitor) monitor.desempenho = monitor.desempenho.filter(d => d.pagamentoId !== id);
                     }
                 }
-                state[tipo] = state[tipo].filter(item => item.id !== id); 
-                renderAll(); 
-                showToast('Item excluído com sucesso!', false);
+                
+                // Mapeamento de tipos para API (backend)
+                const tipoApiMap = {
+                    'gastoCategorias': 'categories-expenses',
+                    'contaFixaCategorias': 'categories-fixed',
+                    'gastos': 'transactions',
+                    'contas': 'accounts',
+                    'contasFixas': 'fixed-expenses'
+                };
+                
+                // Se for um tipo que precisa ser deletado do servidor
+                if (tipoApiMap[tipo]) {
+                    showToast('Excluindo...', false);
+                    const sucesso = await api.deletarItem(id, tipoApiMap[tipo]);
+                    if (sucesso) {
+                        await loadDataFromCloud(); // Recarrega do servidor
+                        showToast('Item excluído com sucesso!', false);
+                    } else {
+                        showToast('Erro ao excluir item do servidor.', true);
+                    }
+                } else {
+                    // Para tipos locais (monitores, pagamentos, etc)
+                    state[tipo] = state[tipo].filter(item => item.id !== id); 
+                    renderAll(); 
+                    showToast('Item excluído com sucesso!', false);
+                }
             } 
         };
         
@@ -3027,7 +3179,7 @@ async function handleChatSend() {
 
 
         // --- INICIALIZAÇÃO ---
-        migrateData();
+        loadDataFromCloud();
         getById('month-filter-global').value = state.selectedMonth;
         setupMonthFilters();
         getById('export-gastos-pdf-btn').addEventListener('click', exportarGastosPDF);
