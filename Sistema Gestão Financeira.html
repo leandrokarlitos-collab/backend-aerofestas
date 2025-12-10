@@ -14,11 +14,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <script type="module">
-        import { api, API_BASE_URL } from './js/api.js';
-        import { getToken } from './js/auth.js';
+        import { api, API_BASE_URL } from './js/api.js?v=1.1';
+        import { getToken } from './js/auth.js?v=1.1';
 
         // Garante que o jsPDF esteja disponível
         window.jsPDF = window.jspdf.jsPDF;
+        
+        // Versão do código para debug
+        console.log("🔧 Sistema Financeiro v1.1 - Carregado");
         
         // Torna api e funções acessíveis globalmente
         window.api = api;
@@ -26,10 +29,11 @@
         window.getToken = getToken;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log("✅ DOMContentLoaded iniciado");
             const getById = id => document.getElementById(id);
             
-            // Garante que api esteja acessível neste escopo
-            const apiClient = window.api || api;
+            // Usa sempre window.api para garantir acesso
+            const apiClient = window.api;
 
             // Estado Inicial
             let state = {
@@ -150,11 +154,24 @@
                                 ]);
                                 state.gastoCategorias = newCatGastos.map(c => ({ id: c.id, nome: c.name }));
                                 state.contaFixaCategorias = newCatFixas.map(c => ({ id: c.id, nome: c.name }));
+                                console.log("🔄 Categorias atualizadas após seed:", {
+                                    gastoCategorias: state.gastoCategorias.length,
+                                    contaFixaCategorias: state.contaFixaCategorias.length
+                                });
                             }
                         } catch (seedError) {
                             console.error("Erro ao popular categorias:", seedError);
                         }
                     }
+                    
+                    console.log("📋 State final após carregar tudo:", {
+                        eventos: state.eventos.length,
+                        gastos: state.gastos.length,
+                        contas: state.contas.length,
+                        contasFixas: state.contasFixas.length,
+                        gastoCategorias: state.gastoCategorias.length,
+                        contaFixaCategorias: state.contaFixaCategorias.length
+                    });
 
                     console.log("✅ Dados sincronizados!", {
                         eventos: state.eventos.length,
@@ -1677,12 +1694,18 @@
             }).join('');
             
             // Tabela de Categorias de Contas Fixas
-             getById('tabela-cf-categorias-db').querySelector('tbody').innerHTML = state.contaFixaCategorias.map(c => `
-                <tr>
-                    <td>${c.nome}</td>
-                    <td>${createActionButtons(c, 'contaFixaCategorias')}</td>
-                </tr>
-            `).join('');
+            console.log("🎨 Renderizando categorias de contas fixas:", state.contaFixaCategorias?.length || 0);
+            const tabelaCfCat = getById('tabela-cf-categorias-db');
+            if (tabelaCfCat && tabelaCfCat.querySelector('tbody')) {
+                tabelaCfCat.querySelector('tbody').innerHTML = state.contaFixaCategorias.map(c => `
+                    <tr>
+                        <td>${c.nome}</td>
+                        <td>${createActionButtons(c, 'contaFixaCategorias')}</td>
+                    </tr>
+                `).join('');
+            } else {
+                console.error("❌ Elemento tabela-cf-categorias-db não encontrado!");
+            }
         };
 
         const renderTables = () => {
@@ -1751,12 +1774,18 @@
             }).join('');
             
             // Tabela de Categorias de Gastos
-            getById('tabela-gasto-categorias-db').querySelector('tbody').innerHTML = state.gastoCategorias.map(c => `
-                <tr>
-                    <td>${c.nome}</td>
-                    <td>${createActionButtons(c, 'gastoCategorias')}</td>
-                </tr>
-            `).join('');
+            console.log("🎨 Renderizando categorias de gastos:", state.gastoCategorias?.length || 0);
+            const tabelaGastoCat = getById('tabela-gasto-categorias-db');
+            if (tabelaGastoCat && tabelaGastoCat.querySelector('tbody')) {
+                tabelaGastoCat.querySelector('tbody').innerHTML = state.gastoCategorias.map(c => `
+                    <tr>
+                        <td>${c.nome}</td>
+                        <td>${createActionButtons(c, 'gastoCategorias')}</td>
+                    </tr>
+                `).join('');
+            } else {
+                console.error("❌ Elemento tabela-gasto-categorias-db não encontrado!");
+            }
             
             renderContasFixasTables();
         };
