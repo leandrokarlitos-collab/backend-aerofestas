@@ -31,9 +31,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("✅ DOMContentLoaded iniciado");
             const getById = id => document.getElementById(id);
-            
-            // Usa sempre window.api para garantir acesso
-            const apiClient = window.api;
 
             // Estado Inicial
             let state = {
@@ -51,12 +48,12 @@
 
                     // Busca tudo em paralelo para ser rápido
                     const [eventosCloud, transacoesCloud, contasCloud, fixasCloud, catGastos, catFixas] = await Promise.all([
-                        apiClient.getEventos(),
-                        apiClient.getTransacoes(), // Traz gastos e pagamentos
-                        apiClient.getContas(),
-                        apiClient.getContasFixas(),
-                        apiClient.getCategoriasGastos(),
-                        apiClient.getCategoriasFixas()
+                        window.api.getEventos(),
+                        window.api.getTransacoes(), // Traz gastos e pagamentos
+                        window.api.getContas(),
+                        window.api.getContasFixas(),
+                        window.api.getCategoriasGastos(),
+                        window.api.getCategoriasFixas()
                     ]);
                     
                     console.log("📊 Dados recebidos:", {
@@ -149,8 +146,8 @@
                                 console.log("✅ Categorias padrão criadas! Recarregando...");
                                 // Recarrega as categorias
                                 const [newCatGastos, newCatFixas] = await Promise.all([
-                                    apiClient.getCategoriasGastos(),
-                                    apiClient.getCategoriasFixas()
+                                    window.api.getCategoriasGastos(),
+                                    window.api.getCategoriasFixas()
                                 ]);
                                 state.gastoCategorias = newCatGastos.map(c => ({ id: c.id, nome: c.name }));
                                 state.contaFixaCategorias = newCatFixas.map(c => ({ id: c.id, nome: c.name }));
@@ -2169,7 +2166,7 @@
 
             // Salva no Servidor
             showToast('Salvando gasto...', false);
-            const sucesso = await apiClient.salvarTransacao(novoGasto);
+            const sucesso = await window.api.salvarTransacao(novoGasto);
 
             if (sucesso) {
                 await loadDataFromCloud(); // Recarrega dados do servidor
@@ -2195,7 +2192,7 @@
             };
             
             showToast('Salvando conta...', false);
-            const sucesso = await apiClient.salvarConta(novaConta);
+            const sucesso = await window.api.salvarConta(novaConta);
             
             if (sucesso) {
                 await loadDataFromCloud();
@@ -2213,7 +2210,7 @@
             
             if (nome && !state.gastoCategorias.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
                 showToast('Salvando categoria...', false);
-                const sucesso = await apiClient.salvarCategoriaGasto(nome);
+                const sucesso = await window.api.salvarCategoriaGasto(nome);
                 if (sucesso) {
                     await loadDataFromCloud(); // Recarrega do servidor
                     e.target.reset();
@@ -2233,7 +2230,7 @@
             
             if (nome && !state.contaFixaCategorias.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
                 showToast('Salvando categoria...', false);
-                const sucesso = await apiClient.salvarCategoriaFixa(nome);
+                const sucesso = await window.api.salvarCategoriaFixa(nome);
                 if (sucesso) {
                     await loadDataFromCloud(); // Recarrega do servidor
                     e.target.reset();
@@ -2305,7 +2302,7 @@
 
             // 5. Envio para a Nuvem
             showToast('Salvando conta fixa...', false);
-            const sucesso = await apiClient.salvarContaFixa(novaFixa);
+            const sucesso = await window.api.salvarContaFixa(novaFixa);
 
             if (sucesso) {
                 // Recarrega dados do servidor
@@ -2561,7 +2558,7 @@
                 // Se for um tipo que precisa ser deletado do servidor
                 if (tipoApiMap[tipo]) {
                     showToast('Excluindo...', false);
-                    const sucesso = await apiClient.deletarItem(id, tipoApiMap[tipo]);
+                    const sucesso = await window.api.deletarItem(id, tipoApiMap[tipo]);
                     if (sucesso) {
                         await loadDataFromCloud(); // Recarrega do servidor
                         showToast('Item excluído com sucesso!', false);
