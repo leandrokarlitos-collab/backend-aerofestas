@@ -28,6 +28,9 @@
         window.API_BASE_URL = API_BASE_URL;
         window.getToken = getToken;
 
+        // Declara loadDataFromCloud como global para ser acessível em ambos os DOMContentLoaded
+        let loadDataFromCloud;
+
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("✅ DOMContentLoaded iniciado");
             const getById = id => document.getElementById(id);
@@ -41,7 +44,8 @@
                 selectedMonth: new Date().toISOString().slice(0, 7) // YYYY-MM
             };
 
-            async function loadDataFromCloud() {
+            // Atribui a função à variável global
+            loadDataFromCloud = async function() {
                 try {
                     console.log("☁️ Sincronizando com o servidor...");
                     console.log("📍 URL da API:", api ? "API carregada" : "API não carregada");
@@ -185,7 +189,11 @@
                     console.error("Detalhes do erro:", error.message, error.stack);
                     showToast("Erro ao conectar com o servidor. Verifique o console.", true);
                 }
-            }
+            };
+            
+            // Torna a função acessível globalmente também via window
+            window.loadDataFromCloud = loadDataFromCloud;
+            
             // --- 2. RENDERIZAÇÃO ---
             const renderAll = () => {
                 const monthInput = getById('month-filter-global');
