@@ -1227,6 +1227,132 @@
             };
             // FIM DA MODIFICAÇÃO
 
+            // --- FUNÇÃO PARA RENDERIZAR O CALENDÁRIO ---
+            const renderCalendar = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+
+                // Atualiza o cabeçalho do mês/ano
+                monthYearHeader.textContent = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+
+                // Primeiro dia do mês e total de dias
+                const firstDay = new Date(year, month, 1).getDay();
+                const lastDate = new Date(year, month + 1, 0).getDate();
+
+                // Limpa o calendário
+                calendarBody.innerHTML = '';
+
+                let dayCounter = 1;
+
+                // Cria 6 semanas (linhas) no calendário
+                for (let week = 0; week < 6; week++) {
+                    const row = document.createElement('tr');
+
+                    // Cria 7 dias (colunas) para cada semana
+                    for (let day = 0; day < 7; day++) {
+                        const cell = document.createElement('td');
+                        cell.className = 'border border-gray-200 p-2 h-24 align-top cursor-pointer hover:bg-indigo-50 transition-colors';
+
+                        // Verifica se deve renderizar um dia do mês
+                        if ((week === 0 && day < firstDay) || dayCounter > lastDate) {
+                            cell.classList.add('bg-gray-50'); // Célula vazia
+                            row.appendChild(cell);
+                            continue;
+                        }
+
+                        const currentDayNumber = dayCounter;
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`;
+
+                        // Eventos neste dia
+                        const dayEvents = events.filter(e => e.date === dateStr);
+
+                        // Verifica se é hoje
+                        const hoje = new Date();
+                        const isToday = (
+                            hoje.getFullYear() === year &&
+                            hoje.getMonth() === month &&
+                            hoje.getDate() === currentDayNumber
+                        );
+
+                        // Número do dia
+                        const dayNumberSpan = document.createElement('span');
+                        dayNumberSpan.className = `text-sm font-semibold ${isToday ? 'bg-indigo-500 text-white px-2 py-1 rounded-full' : 'text-gray-700'}`;
+                        dayNumberSpan.textContent = currentDayNumber;
+
+                        cell.appendChild(dayNumberSpan);
+
+                        // Badges de eventos
+                        if (dayEvents.length > 0) {
+                            const badge = document.createElement('div');
+                            badge.className = 'mt-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium inline-block';
+                            badge.textContent = `${dayEvents.length} evento${dayEvents.length !== 1 ? 's' : ''}`;
+                            cell.appendChild(badge);
+                        }
+
+                        // Click handler
+                        cell.addEventListener('click', () => {
+                            selectedDate = dateStr;
+                            const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(dateStr + 'T00:00:00'));
+                            selectedDayText.textContent = `Eventos para ${formattedDate}`;
+                            renderDayEvents(dateStr);
+                            showModal(dayEventsModal);
+                        });
+
+                        row.appendChild(cell);
+                        dayCounter++;
+                    }
+
+                    calendarBody.appendChild(row);
+
+                    if (dayCounter > lastDate) break;
+                }
+
+                // Atualiza o total mensal
+                calculateAndDisplayMonthlyTotal();
+            };
+
+            // --- FUNÇÃO PARA RENDERIZAR EMPRESAS ---
+            const renderCompanies = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+
+                companyListDiv.innerHTML = '';
+
+                if (companies.length === 0) {
+                    companyListDiv.innerHTML = '<p class="text-sm text-gray-500">Nenhuma empresa cadastrada.</p>';
+                    return;
+                }
+
+                companies.forEach(company => {
+                    // Calcula faturamento da empresa no mês atual
+                    const companyEvents = events.filter(e => {
+                        const eventDate = new Date(e.date + 'T00:00:00');
+                        return eventDate.getFullYear() === year &&
+                            eventDate.getMonth() === month &&
+                            e.yourCompanyId === company.id;
+                    });
+
+                    const revenue = companyEvents.reduce((sum, evt) => sum + (evt.price || 0), 0);
+
+                    const companyDiv = document.createElement('div');
+                    companyDiv.className = 'bg-white/50 p-3 rounded-lg border border-gray-200 flex justify-between items-center';
+                    companyDiv.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">${company.name}</p>
+                            <p class="text-xs text-gray-500">Faturamento: ${formatCurrency(revenue)}</p>
+                        </div>
+                    `;
+                    companyListDiv.appendChild(companyDiv);
+                });
+            };
+
+            // --- FUNÇÃO PARA RENDERIZAR TUDO ---
+            const renderAll = () => {
+                renderCalendar();
+                renderCompanies();
+                renderToys();
+            };
+
             const calculateAndDisplayMonthlyTotal = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
@@ -3487,33 +3613,7 @@
                 }
             });
 
-            const initCollapsible = (header, content, icon, storageKey) => {
-                const setVisibility = (collapse) => {
-                    if (collapse) {
-                        content.style.maxHeight = '0px';
-                        content.style.paddingTop = '0px';
-                        content.style.opacity = '0';
-                        icon.classList.add('rotate-180');
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + 40 + 'px'; // Add padding
-                        content.style.paddingTop = '1rem';
-                        content.style.opacity = '1';
-                        icon.classList.remove('rotate-180');
-                    }
-                };
-
-                const isCollapsed = localStorage.getItem(storageKey) === 'collapsed';
-                setVisibility(isCollapsed);
-
-                header.addEventListener('click', () => {
-                    const isCurrentlyCollapsed = content.style.maxHeight === '0px';
-                    localStorage.setItem(storageKey, isCurrentlyCollapsed ? 'expanded' : 'collapsed');
-                    setVisibility(!isCurrentlyCollapsed);
-                });
-            };
-
-            initCollapsible(toggleToysHeader, toysContentWrapper, toysIcon, 'toysSectionCollapsed');
-            initCollapsible(toggleCompaniesHeader, companiesContentWrapper, companiesIcon, 'companiesSectionCollapsed');
+            // REMOVIDO: Código antigo dos collapsibles (agora usa sistema de tabs moderno)
 
 
             // --- INÍCIO: Funções de Notificação de Aniversário ---
