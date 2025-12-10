@@ -1227,7 +1227,9 @@
             };
             // FIM DA MODIFICAÇÃO
 
-            // --- FUNÇÃO PARA RENDERIZAR O CALENDÁRIO ---
+            // REMOVIDO: Funções duplicadas renderCalendar, renderCompanies e renderAll
+            // (As funções originais já existem na linha 1689+)
+            /*
             const renderCalendar = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
@@ -1346,12 +1348,12 @@
                 });
             };
 
-            // --- FUNÇÃO PARA RENDERIZAR TUDO ---
             const renderAll = () => {
                 renderCalendar();
                 renderCompanies();
                 renderToys();
             };
+            */
 
             const calculateAndDisplayMonthlyTotal = () => {
                 const year = currentDate.getFullYear();
