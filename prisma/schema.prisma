@@ -128,3 +128,26 @@ model Transaction {
   // Relacionamentos opcionais se quiser ligar a contas fixas depois
   // fixedAccountId String? 
 }
+
+// --- CADASTROS FINANCEIROS ---
+
+model BankAccount {
+  id      String  @id
+  name    String
+  bank    String
+  type    String
+  agency  String?
+  number  String?
+}
+
+model FixedExpense {
+  id             String  @id
+  description    String
+  amount         Float
+  dueDay         Int
+  category       String
+  recurrenceType String  @default("permanente") // "permanente" ou "parcelada"
+  startDate      String? // "YYYY-MM"
+  installments   Int?
+  attachments    String? // Guardaremos como JSON string se houver
+}
