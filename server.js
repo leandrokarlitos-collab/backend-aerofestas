@@ -225,6 +225,38 @@ app.post('/api/migrar-completo', async (req, res) => {
                     });
                 }
             }
+            // 6e. CADASTRO DE CONTAS FIXAS
+            if (financeDataV30.contasFixas) {
+                console.log(`📅 Processando ${financeDataV30.contasFixas.length} cadastros de contas fixas...`);
+                for (const c of financeDataV30.contasFixas) {
+                    // Valida o tipo de recorrência (se não vier, assume 'permanente')
+                    let tipoRecorrencia = c.tipoRecorrencia || "permanente";
+
+                    // Normaliza para minúsculo para evitar "Mensal" e "mensal" duplicados
+                    tipoRecorrencia = tipoRecorrencia.toLowerCase();
+
+                    await prisma.fixedExpense.upsert({
+                        where: { id: String(c.id) },
+                        update: {},
+                        create: {
+                            id: String(c.id),
+                            description: c.descricao || c.nome || "Conta Fixa",
+                            amount: parseFloat(c.valor) || 0,
+                            dueDay: parseInt(c.diaVencimento) || 10,
+                            category: c.categoria || "Geral",
+
+                            // Aqui garantimos que salve: mensal, anual ou permanente
+                            recurrenceType: tipoRecorrencia,
+
+                            // Captura a Data de Início (importante para 'mensal' e 'anual')
+                            startDate: c.dataInicio || null,
+
+                            installments: c.numParcelas ? parseInt(c.numParcelas) : null,
+                            attachments: c.anexos ? JSON.stringify(c.anexos) : null
+                        }
+                    });
+                }
+            }
         }
 
         console.log("✅ Migração finalizada!");
@@ -251,6 +283,21 @@ app.get('/api/admin/events-full', async (req, res) => {
         orderBy: { date: 'desc' }
     });
     res.json(events);
+});
+// GET Contas Bancárias
+app.get('/api/finance/accounts', async (req, res) => {
+    try {
+        const accounts = await prisma.bankAccount.findMany({ orderBy: { name: 'asc' } });
+        res.json(accounts);
+    } catch (e) { res.status(500).json({ error: "Erro ao buscar contas" }); }
+});
+
+// GET Contas Fixas (Cadastros)
+app.get('/api/finance/fixed-expenses', async (req, res) => {
+    try {
+        const fixed = await prisma.fixedExpense.findMany({ orderBy: { dueDay: 'asc' } });
+        res.json(fixed);
+    } catch (e) { res.status(500).json({ error: "Erro ao buscar contas fixas" }); }
 });
 
 // --- SALVAR EVENTO ---
