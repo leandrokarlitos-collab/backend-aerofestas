@@ -1612,91 +1612,99 @@
             const tabelaElement = getById('tabela-contas-fixas-db');
             if (!tabelaElement) {
                 console.error("❌ Elemento tabela-contas-fixas-db não encontrado!");
-                return;
-            }
-            
-            const tbody = tabelaElement.querySelector('tbody');
-            if (!tbody) {
-                console.error("❌ tbody de tabela-contas-fixas-db não encontrado!");
-                return;
-            }
-            
-            tbody.innerHTML = state.contasFixas.map(cf => {
-                const anexoHtml = cf.anexos && cf.anexos.length > 0
-                    ? `<button onclick="openAttachmentViewer('${cf.id}', 'contasFixas')" class="text-indigo-600 hover:text-indigo-800 text-lg" title="Ver ${cf.anexos.length} anexo(s)">
-                           <i class="fa-solid fa-folder-open"></i> <span class="text-sm font-bold">${cf.anexos.length}</span>
-                       </button>`
-                    : `<span class="text-gray-400">-</span>`;
-                
-                let recorrenciaHtml = '<span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-200 rounded-full">Permanente</span>';
-                if (cf.tipoRecorrencia === 'parcelada') {
-                    recorrenciaHtml = `<span class="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 rounded-full">${cf.numParcelas || 'N/A'}x</span> 
-                                        <span class="text-xs text-gray-600">(Início: ${formatarMesAno(cf.dataInicio)})</span>`;
-                }
+            } else {
+                const tbody = tabelaElement.querySelector('tbody');
+                if (!tbody) {
+                    console.error("❌ tbody de tabela-contas-fixas-db não encontrado!");
+                } else {
+                    tbody.innerHTML = state.contasFixas.map(cf => {
+                        const anexoHtml = cf.anexos && cf.anexos.length > 0
+                            ? `<button onclick="openAttachmentViewer('${cf.id}', 'contasFixas')" class="text-indigo-600 hover:text-indigo-800 text-lg" title="Ver ${cf.anexos.length} anexo(s)">
+                                   <i class="fa-solid fa-folder-open"></i> <span class="text-sm font-bold">${cf.anexos.length}</span>
+                               </button>`
+                            : `<span class="text-gray-400">-</span>`;
+                        
+                        let recorrenciaHtml = '<span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-200 rounded-full">Permanente</span>';
+                        if (cf.tipoRecorrencia === 'parcelada') {
+                            recorrenciaHtml = `<span class="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 rounded-full">${cf.numParcelas || 'N/A'}x</span> 
+                                                <span class="text-xs text-gray-600">(Início: ${formatarMesAno(cf.dataInicio)})</span>`;
+                        }
 
-                return `<tr>
-                            <td>${cf.descricao}</td>
-                            <td>${formatarMoeda(cf.valor)}</td>
-                            <td>${cf.diaVencimento}</td>
-                            <td>${cf.categoria}</td>
-                            <td>${recorrenciaHtml}</td>
-                            <td class="text-center">${anexoHtml}</td>
-                            <td>${createActionButtons(cf, 'contasFixas')}</td>
-                        </tr>`;
-            }).join('');
+                        return `<tr>
+                                    <td>${cf.descricao}</td>
+                                    <td>${formatarMoeda(cf.valor)}</td>
+                                    <td>${cf.diaVencimento}</td>
+                                    <td>${cf.categoria}</td>
+                                    <td>${recorrenciaHtml}</td>
+                                    <td class="text-center">${anexoHtml}</td>
+                                    <td>${createActionButtons(cf, 'contasFixas')}</td>
+                                </tr>`;
+                    }).join('');
+                }
+            }
 
             // Tabela de Lançamento de Contas Fixas do Mês (Filtrada)
-            const [year, month] = state.selectedMonth.split('-').map(Number);
-            const selectedDate = new Date(year, month - 1, 1);
-            const gastosDoMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
+            const tabelaMesElement = getById('tabela-contas-fixas-mes');
+            if (!tabelaMesElement) {
+                console.error("❌ Elemento tabela-contas-fixas-mes não encontrado!");
+            } else {
+                const tbodyMes = tabelaMesElement.querySelector('tbody');
+                if (!tbodyMes) {
+                    console.error("❌ tbody de tabela-contas-fixas-mes não encontrado!");
+                } else {
+                    const [year, month] = state.selectedMonth.split('-').map(Number);
+                    const selectedDate = new Date(year, month - 1, 1);
+                    const gastosDoMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
 
-            const contasFixasDoMes = state.contasFixas.filter(cf => {
-                const tipo = cf.tipoRecorrencia || 'permanente';
-                if (tipo === 'permanente') return true;
-                if (tipo === 'parcelada' && cf.dataInicio && cf.numParcelas) {
-                    try {
-                        const [startYear, startMonthNum] = cf.dataInicio.split('-').map(Number);
-                        const startDate = new Date(startYear, startMonthNum - 1, 1);
-                        const endDate = new Date(startDate);
-                        endDate.setMonth(endDate.getMonth() + parseInt(cf.numParcelas));
-                        return selectedDate >= startDate && selectedDate < endDate;
-                    } catch (e) { console.error("Erro ao calcular data da parcela:", e, cf); return false; }
-                }
-                return true;
-            });
+                    const contasFixasDoMes = state.contasFixas.filter(cf => {
+                        const tipo = cf.tipoRecorrencia || 'permanente';
+                        if (tipo === 'permanente') return true;
+                        if (tipo === 'parcelada' && cf.dataInicio && cf.numParcelas) {
+                            try {
+                                const [startYear, startMonthNum] = cf.dataInicio.split('-').map(Number);
+                                const startDate = new Date(startYear, startMonthNum - 1, 1);
+                                const endDate = new Date(startDate);
+                                endDate.setMonth(endDate.getMonth() + parseInt(cf.numParcelas));
+                                return selectedDate >= startDate && selectedDate < endDate;
+                            } catch (e) { console.error("Erro ao calcular data da parcela:", e, cf); return false; }
+                        }
+                        return true;
+                    });
 
-            getById('tabela-contas-fixas-mes').querySelector('tbody').innerHTML = contasFixasDoMes.map(cf => {
-                const vencimento = `${String(cf.diaVencimento).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
-                let descricaoHtml = cf.descricao;
-                if (cf.tipoRecorrencia === 'parcelada') {
-                    const [startYear, startMonthNum] = cf.dataInicio.split('-').map(Number);
-                    const monthsDiff = (year - startYear) * 12 + (month - startMonthNum);
-                    const currentInstallment = monthsDiff + 1;
-                    descricaoHtml += ` <span class="text-xs text-gray-500 font-normal">(Parcela ${currentInstallment} de ${cf.numParcelas})</span>`;
+                    tbodyMes.innerHTML = contasFixasDoMes.map(cf => {
+                        const vencimento = `${String(cf.diaVencimento).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                        let descricaoHtml = cf.descricao;
+                        if (cf.tipoRecorrencia === 'parcelada') {
+                            const [startYear, startMonthNum] = cf.dataInicio.split('-').map(Number);
+                            const monthsDiff = (year - startYear) * 12 + (month - startMonthNum);
+                            const currentInstallment = monthsDiff + 1;
+                            descricaoHtml += ` <span class="text-xs text-gray-500 font-normal">(Parcela ${currentInstallment} de ${cf.numParcelas})</span>`;
+                        }
+                        const gastoCorrespondente = gastosDoMes.find(g => g.contaFixaId === cf.id);
+                        const isPaid = !!gastoCorrespondente;
+                        const statusHtml = isPaid ? `<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Lançado</span>` : `<span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">Pendente</span>`;
+                        const actionHtml = isPaid ? `<button class="action-btn text-gray-400" disabled title="Gasto já lançado"><i class="fa-solid fa-check"></i> Lançado</button>` : `<button class="shiny-btn text-sm py-1 px-2" onclick="lancarGastoFixo('${cf.id}')">Lançar</button>`;
+                        const valorPagoHtml = isPaid ? formatarMoeda(gastoCorrespondente.valor) : '-';
+                        const dataPagHtml = isPaid ? formatarData(gastoCorrespondente.data) : '-';
+                        const comprovantes = gastoCorrespondente?.comprovantes;
+                        const comprovanteHtml = comprovantes && comprovantes.length > 0
+                            ? `<button onclick="openAttachmentViewer('${gastoCorrespondente.id}', 'gastos')" class="text-indigo-600 hover:text-indigo-800 text-lg" title="Ver ${comprovantes.length} comprovante(s)">
+                                   <i class="fa-solid fa-receipt"></i> <span class="text-sm font-bold">${comprovantes.length}</span>
+                               </button>`
+                            : `-`;
+                        return `<tr>
+                            <td>${descricaoHtml}</td>
+                            <td>${formatarMoeda(cf.valor)}</td>
+                            <td>${vencimento}</td>
+                            <td>${statusHtml}</td>
+                            <td>${valorPagoHtml}</td>
+                            <td>${dataPagHtml}</td>
+                            <td class="text-center">${comprovanteHtml}</td>
+                            <td>${actionHtml}</td>
+                        </tr>`;
+                    }).join('');
                 }
-                const gastoCorrespondente = gastosDoMes.find(g => g.contaFixaId === cf.id);
-                const isPaid = !!gastoCorrespondente;
-                const statusHtml = isPaid ? `<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Lançado</span>` : `<span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">Pendente</span>`;
-                const actionHtml = isPaid ? `<button class="action-btn text-gray-400" disabled title="Gasto já lançado"><i class="fa-solid fa-check"></i> Lançado</button>` : `<button class="shiny-btn text-sm py-1 px-2" onclick="lancarGastoFixo('${cf.id}')">Lançar</button>`;
-                const valorPagoHtml = isPaid ? formatarMoeda(gastoCorrespondente.valor) : '-';
-                const dataPagHtml = isPaid ? formatarData(gastoCorrespondente.data) : '-';
-                const comprovantes = gastoCorrespondente?.comprovantes;
-                const comprovanteHtml = comprovantes && comprovantes.length > 0
-                    ? `<button onclick="openAttachmentViewer('${gastoCorrespondente.id}', 'gastos')" class="text-indigo-600 hover:text-indigo-800 text-lg" title="Ver ${comprovantes.length} comprovante(s)">
-                           <i class="fa-solid fa-receipt"></i> <span class="text-sm font-bold">${comprovantes.length}</span>
-                       </button>`
-                    : `-`;
-                return `<tr>
-                    <td>${descricaoHtml}</td>
-                    <td>${formatarMoeda(cf.valor)}</td>
-                    <td>${vencimento}</td>
-                    <td>${statusHtml}</td>
-                    <td>${valorPagoHtml}</td>
-                    <td>${dataPagHtml}</td>
-                    <td class="text-center">${comprovanteHtml}</td>
-                    <td>${actionHtml}</td>
-                </tr>`;
-            }).join('');
+            }
             
             // Tabela de Categorias de Contas Fixas
             console.log("🎨 Renderizando categorias de contas fixas:", state.contaFixaCategorias?.length || 0);
