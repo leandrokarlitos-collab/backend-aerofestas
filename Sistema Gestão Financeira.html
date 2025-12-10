@@ -89,12 +89,31 @@
                     }));
 
                     // 4. Mapeia Contas Fixas (Cadastros)
-                    state.contasFixas = fixasCloud.map(c => ({
-                        id: c.id, descricao: c.description, valor: c.amount, diaVencimento: c.dueDay,
-                        categoria: c.category, tipoRecorrencia: c.recurrenceType,
-                        dataInicio: c.startDate, numParcelas: c.installments,
-                        anexos: c.attachments ? JSON.parse(c.attachments) : []
-                    }));
+                    state.contasFixas = fixasCloud.map(c => {
+                        let anexos = [];
+                        try {
+                            if (c.attachments) {
+                                anexos = typeof c.attachments === 'string' ? JSON.parse(c.attachments) : c.attachments;
+                            }
+                        } catch (e) {
+                            console.warn('Erro ao parsear anexos da conta fixa:', c.id, e);
+                            anexos = [];
+                        }
+                        
+                        return {
+                            id: c.id,
+                            descricao: c.description,
+                            valor: c.amount,
+                            diaVencimento: c.dueDay,
+                            categoria: c.category,
+                            tipoRecorrencia: c.recurrenceType || 'permanente',
+                            dataInicio: c.startDate,
+                            numParcelas: c.installments,
+                            anexos: anexos
+                        };
+                    });
+                    
+                    console.log("💰 Contas Fixas carregadas:", state.contasFixas.length, state.contasFixas);
 
                     // 5. Mapeia Categorias de Gastos
                     state.gastoCategorias = catGastos.map(c => ({ id: c.id, nome: c.name }));
@@ -1557,8 +1576,22 @@
         };
         
         const renderContasFixasTables = () => {
+            console.log("🔄 Renderizando contas fixas:", state.contasFixas?.length || 0);
+            
             // Tabela de Contas Fixas Cadastradas (DB)
-            getById('tabela-contas-fixas-db').querySelector('tbody').innerHTML = state.contasFixas.map(cf => {
+            const tabelaElement = getById('tabela-contas-fixas-db');
+            if (!tabelaElement) {
+                console.error("❌ Elemento tabela-contas-fixas-db não encontrado!");
+                return;
+            }
+            
+            const tbody = tabelaElement.querySelector('tbody');
+            if (!tbody) {
+                console.error("❌ tbody de tabela-contas-fixas-db não encontrado!");
+                return;
+            }
+            
+            tbody.innerHTML = state.contasFixas.map(cf => {
                 const anexoHtml = cf.anexos && cf.anexos.length > 0
                     ? `<button onclick="openAttachmentViewer('${cf.id}', 'contasFixas')" class="text-indigo-600 hover:text-indigo-800 text-lg" title="Ver ${cf.anexos.length} anexo(s)">
                            <i class="fa-solid fa-folder-open"></i> <span class="text-sm font-bold">${cf.anexos.length}</span>
