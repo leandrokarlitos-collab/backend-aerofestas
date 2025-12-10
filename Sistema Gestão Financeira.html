@@ -3177,47 +3177,6 @@ async function handleChatSend() {
         doc.save("Relatorio_Salarios.pdf");
         });
 
-
-        // --- INICIALIZAÇÃO ---
-        loadDataFromCloud();
-        getById('month-filter-global').value = state.selectedMonth;
-        setupMonthFilters();
-        getById('export-gastos-pdf-btn').addEventListener('click', exportarGastosPDF);
-        renderAll();
-        
-        // Botão "Criar PDF" na aba de Entradas
-        document.getElementById("export-entradas-pdf-btn").addEventListener("click", () => {
-            const tabela = document.getElementById("tabela-eventos");
-            if (!tabela) return alert("Tabela de entradas não encontrada");
-
-            const doc = new jsPDF();
-            doc.text("Relatório de Entradas", 14, 20);
-            window.jspdf.autoTable(doc, { html: tabela });
-            doc.save("Relatorio_Entradas.pdf");
-        });
-
-        // Botão "Criar PDF" na aba Monitores
-        document.getElementById("export-monitores-pdf-btn").addEventListener("click", () => {
-            const tabela = document.getElementById("tabela-monitores-db");
-            if (!tabela) return alert("Tabela de monitores não encontrada");
-
-            const doc = new jsPDF();
-            doc.text("Relatório de Monitores", 14, 20);
-            window.jspdf.autoTable(doc, { html: tabela });
-            doc.save("Relatorio_Monitores.pdf");
-        });
-
-        // Botão "Criar PDF" na seção Salários
-        document.getElementById("export-salarios-pdf-btn").addEventListener("click", () => {
-            const tabela = document.getElementById("tabela-pagamentos-monitores");
-            if (!tabela) return alert("Tabela de salários não encontrada");
-
-            const doc = new jsPDF();
-            doc.text("Relatório de Salários", 14, 20);
-            window.jspdf.autoTable(doc, { html: tabela });
-            doc.save("Relatorio_Salarios.pdf");
-        });
-
     });
     </script>
 
