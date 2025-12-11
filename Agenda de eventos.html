@@ -2809,7 +2809,10 @@
                     document.getElementById('event-end-time').value = eventToEdit.endTime;
                     discountTypeEl.value = eventToEdit.discountType || 'fixed';
                     discountValueEl.value = eventToEdit.discountValue || 0;
-                    toysForCurrentEvent = JSON.parse(JSON.stringify(eventToEdit.toys));
+
+                    // CORRIGIDO: Verifica se toys ou items existem antes de fazer parse
+                    const eventToys = eventToEdit.toys || eventToEdit.items || [];
+                    toysForCurrentEvent = JSON.parse(JSON.stringify(eventToys));
 
                     // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
                     deliveryFeeEl.value = eventToEdit.deliveryFee || 0;
