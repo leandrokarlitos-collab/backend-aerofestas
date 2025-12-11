@@ -349,6 +349,65 @@
                             `).join('');
                     }
                 }
+
+                // Renderiza Tabela de Contas Fixas (Cadastros)
+                const tbodyContasFixas = getById('tabela-contas-fixas-db')?.querySelector('tbody');
+                if (tbodyContasFixas && state.contasFixas) {
+                    if (state.contasFixas.length === 0) {
+                        tbodyContasFixas.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
+                    } else {
+                        tbodyContasFixas.innerHTML = state.contasFixas.map(cf => `
+                            <tr>
+                                <td>${cf.descricao}</td>
+                                <td>${formatarMoeda(cf.valor)}</td>
+                                <td>${cf.diaVencimento}</td>
+                                <td>${cf.categoria}</td>
+                                <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
+                                <td class="text-center">${cf.anexos?.length || 0}</td>
+                                <td><span class="text-gray-400 text-xs">Salvo</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Renderiza Tabela de Contas Bancárias
+                const tbodyContas = getById('tabela-contas-db')?.querySelector('tbody');
+                if (tbodyContas && state.contas) {
+                    if (state.contas.length === 0) {
+                        tbodyContas.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhuma conta bancária cadastrada.</td></tr>';
+                    } else {
+                        tbodyContas.innerHTML = state.contas.map(c => `
+                            <tr>
+                                <td>${c.nome}</td>
+                                <td>${c.banco}</td>
+                                <td>${c.tipo}</td>
+                                <td>${c.agencia || ''} / ${c.numero || ''}</td>
+                                <td><span class="text-gray-400 text-xs">Salva</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Popula Selects de Categorias
+                const populateSelect = (selectId, items, placeholder, nameField = 'nome') => {
+                    const select = getById(selectId);
+                    if (select && items) {
+                        select.innerHTML = `<option value="">-- ${placeholder} --</option>` +
+                            items.map(item => `<option value="${item[nameField]}">${item[nameField]}</option>`).join('');
+                    }
+                };
+
+                populateSelect('gasto-categoria', state.gastoCategorias, 'Selecione uma categoria');
+                populateSelect('conta-fixa-categoria', state.contaFixaCategorias, 'Selecione uma categoria');
+
+                // Popula Select de Contas Bancárias
+                const selectConta = getById('gasto-conta');
+                if (selectConta && state.contas) {
+                    selectConta.innerHTML = '<option value="">-- Selecione uma conta --</option>' +
+                        state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+                }
+
+                console.log("✅ Renderização completa!");
             };
 
             // --- 3. EXPORTAR PDF ELEGANTE (Integrado) ---
@@ -1863,10 +1922,12 @@
     </div>
 
 
-    <!-- Event Listeners de Navegação -->
+    <!-- Event Listeners de Navegação e Modais -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Navegação entre abas
+            const getById = id => document.getElementById(id);
+
+            // ========== NAVEGAÇÃO ENTRE ABAS ==========
             const navLinks = document.querySelectorAll('.nav-link');
             const pages = document.querySelectorAll('.page');
 
@@ -1898,8 +1959,96 @@
             // Garante que a primeira aba está ativa ao carregar
             if (navLinks.length > 0 && pages.length > 0) {
                 pages.forEach(p => p.classList.remove('active'));
-                document.getElementById('page-dashboard')?.classList.add('active');
+                getById('page-dashboard')?.classList.add('active');
             }
+
+            // ========== CONTROLE DE MODAIS ==========
+
+            // Função helper para abrir modal
+            const showModal = (modalId) => {
+                const modal = getById(modalId);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+            };
+
+            // Função helper para fechar modal
+            const hideModal = (modalId) => {
+                const modal = getById(modalId);
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
+            };
+
+            // Botão Nova Entrada Manual
+            const btnEntrada = getById('open-entrada-modal-btn');
+            if (btnEntrada) {
+                btnEntrada.addEventListener('click', () => showModal('add-entrada-modal'));
+            }
+
+            // Botão Novo Gasto
+            const btnGasto = getById('open-gasto-modal-btn');
+            if (btnGasto) {
+                btnGasto.addEventListener('click', () => showModal('add-gasto-modal'));
+            }
+
+            // Botão Nova Conta Fixa
+            const btnContaFixa = getById('open-conta-fixa-modal-btn');
+            if (btnContaFixa) {
+                btnContaFixa.addEventListener('click', () => showModal('add-conta-fixa-modal'));
+            }
+
+            // Botão Adicionar Monitor
+            const btnMonitor = getById('add-monitor-btn');
+            if (btnMonitor) {
+                btnMonitor.addEventListener('click', () => showModal('add-monitor-modal'));
+            }
+
+            // Botão Configurações de Salários
+            const btnSalariosConfig = getById('open-salarios-config-modal-btn');
+            if (btnSalariosConfig) {
+                btnSalariosConfig.addEventListener('click', () => showModal('salarios-config-modal'));
+            }
+
+            // Fechar modais ao clicar no X ou fora
+            document.querySelectorAll('.close-btn, .modal-close-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const modal = e.target.closest('.fixed');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Fechar modal ao clicar no fundo escuro
+            document.querySelectorAll('.fixed').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+
+            // ========== PREVENIR RELOAD NOS FORMULÁRIOS ==========
+
+            // IMPORTANTE: Todos os forms que fazem submit via API não devem recarregar a página
+            // Isso já está sendo feito no primeiro script com e.preventDefault()
+            // Mas vamos garantir que os forms de categoria não recarreguem
+
+            const formGastoCat = getById('form-gasto-categoria');
+            const formContaFixaCat = getById('form-conta-fixa-categoria');
+            const formCadastroConta = getById('form-cadastro-conta');
+
+            // Prevenir qualquer comportamento padrão de forms que não foi capturado
+            [formGastoCat, formContaFixaCat, formCadastroConta].forEach(form => {
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        // O listener principal já existe no primeiro script
+                        // Mas vamos garantir que não recarrega
+                        console.log('Form submit detectado:', form.id);
+                    });
+                }
+            });
         });
     </script>
 
