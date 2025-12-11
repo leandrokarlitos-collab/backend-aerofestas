@@ -1390,8 +1390,12 @@
 
                 let bookedInOverlap = 0;
                 overlappingEvents.forEach(event => {
-                    event.toys.forEach(eventToy => {
-                        if (eventToy.id === toyId) {
+                    // CORRIGIDO: Verificar tanto 'toys' quanto 'items' (compatibilidade com API)
+                    const eventToys = event.toys || event.items || [];
+                    eventToys.forEach(eventToy => {
+                        // Verificar tanto 'id' quanto 'toyId' (compatibilidade)
+                        const eventToyId = eventToy.id || eventToy.toyId;
+                        if (eventToyId === toyId) {
                             bookedInOverlap += eventToy.quantity;
                         }
                     });
