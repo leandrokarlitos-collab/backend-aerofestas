@@ -285,6 +285,10 @@ app.get('/api/admin/clients', async (req, res) => {
     const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
     res.json(clients);
 });
+app.get('/api/admin/companies', async (req, res) => {
+    const companies = await prisma.company.findMany({ orderBy: { name: 'asc' } });
+    res.json(companies);
+});
 app.get('/api/admin/events-full', async (req, res) => {
     const events = await prisma.event.findMany({
         include: { items: { include: { toy: true } } },
@@ -339,22 +343,22 @@ app.post('/api/admin/events', async (req, res) => {
 // --- DELETAR EVENTO ---
 app.delete('/api/admin/events/:id', async (req, res) => {
     const eventId = parseFloat(req.params.id);
-    
+
     if (isNaN(eventId)) {
         return res.status(400).json({ error: "ID inválido" });
     }
-    
+
     try {
         // Primeiro deleta os itens associados ao evento
-        await prisma.eventItem.deleteMany({ 
-            where: { eventId: eventId } 
+        await prisma.eventItem.deleteMany({
+            where: { eventId: eventId }
         });
-        
+
         // Depois deleta o evento
-        await prisma.event.delete({ 
-            where: { id: eventId } 
+        await prisma.event.delete({
+            where: { id: eventId }
         });
-        
+
         res.json({ success: true, message: "Evento excluído com sucesso!" });
     } catch (error) {
         console.error("Erro ao deletar evento:", error);

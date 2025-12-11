@@ -29,6 +29,16 @@ export const api = {
         } catch (e) { return []; }
     },
 
+    getEmpresas: async () => {
+        try {
+            const res = await fetch(`${BASE_URL}/admin/companies`);
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error('Erro ao buscar empresas:', e);
+            return [];
+        }
+    },
+
     // 💰 FINANCEIRO (Extrato)
     getTransacoes: async () => {
         try {

@@ -1161,7 +1161,7 @@
 
             // Carrega dados da API
             let toys = await api.getBrinquedos();
-            let companies = JSON.parse(localStorage.getItem('companies')) || [];
+            let companies = await api.getEmpresas(); // CORRIGIDO: agora busca do banco de dados
             let events = await api.getEventos();
             let clients = await api.getClientes();
 
@@ -2487,16 +2487,22 @@
                 if (event) showEventModal(event.date, event);
             };
 
-            const handleDeleteEvent = (eventId) => {
-                if (confirm('Tem certeza que deseja excluir este evento?')) {
-                    const eventToDelete = events.find(e => e.id === eventId);
-                    if (!eventToDelete) return;
+            const handleDeleteEvent = async (eventId) => {
+                if (!confirm('Tem certeza que deseja excluir este evento?')) {
+                    return;
+                }
 
-                    // 1. Remove from Agenda
+                const eventToDelete = events.find(e => e.id === eventId);
+                if (!eventToDelete) return;
+
+                try {
+                    // 1. Chama a API para deletar do banco de dados
+                    await api.deletarEvento(eventId);
+
+                    // 2. Remove da lista local
                     events = events.filter(e => e.id !== eventId);
-                    saveData('events', events);
 
-                    // 2. Sync deletion with CRM
+                    // 3. Sync deletion with CRM
                     let crmClients = JSON.parse(localStorage.getItem('crmToyClients_v8')) || [];
                     const clientIndex = crmClients.findIndex(c => c.nome.toLowerCase() === eventToDelete.clientName.toLowerCase());
 
@@ -2507,7 +2513,7 @@
                         localStorage.setItem('crmToyClients_v8', JSON.stringify(crmClients));
                     }
 
-                    // 3. Sync deletion with Financial System
+                    // 4. Sync deletion with Financial System
                     let financeData = JSON.parse(localStorage.getItem('financeDataV21')) || { eventos: [] };
                     const financialEventId = `agenda-${eventId}`;
                     const initialLength = financeData.eventos.length;
@@ -2518,10 +2524,15 @@
 
                     showToast('Evento removido de todos os sistemas!', false);
 
-
-                    // 4. Re-render UI
+                    // 5. Re-render UI
                     renderAll();
                     checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
+
+                    // 6. Atualiza modal se estava aberto
+                    if (selectedDate) renderDayEvents(selectedDate);
+                } catch (error) {
+                    console.error('Erro ao deletar evento:', error);
+                    showToast('Erro ao excluir evento do servidor!', true);
                 }
             };
 
