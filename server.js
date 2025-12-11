@@ -321,11 +321,58 @@ app.post('/api/admin/events', async (req, res) => {
 
         if (evt.id) await prisma.eventItem.deleteMany({ where: { eventId: eventId } });
 
+        // Dados completos do evento
         const data = {
-            id: eventId, date: evt.date, clientName: evt.clientName,
+            id: eventId,
+            date: evt.date,
+            clientName: evt.clientName,
             yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
-            startTime: evt.startTime, endTime: evt.endTime,
+            startTime: evt.startTime,
+            endTime: evt.endTime,
             price: evt.price ? parseFloat(evt.price) : 0,
+
+            // Campos adicionais do cliente
+            clientType: evt.clientType,
+            clientCpf: evt.clientCpf,
+            clientRg: evt.clientRg,
+            clientDob: evt.clientDob,
+            clientPhone: evt.clientPhone,
+            clientPhoneBackup: evt.clientPhoneBackup,
+
+            // Campos PJ
+            cnpj: evt.cnpj,
+            companyAddress: evt.companyAddress,
+            repName: evt.repName,
+            repCpf: evt.repCpf,
+            repPhone: evt.repPhone,
+            repPhoneBackup: evt.repPhoneBackup,
+
+            // Endereço do evento
+            clientAddress: evt.clientAddress,
+            contractAddress: evt.contractAddress,
+            cep: evt.cep,
+            complemento: evt.complemento,
+            bairro: evt.bairro,
+            cidade: evt.cidade,
+            uf: evt.uf,
+
+            // Financeiro
+            subtotal: evt.subtotal ? parseFloat(evt.subtotal) : 0,
+            discountType: evt.discountType,
+            discountValue: evt.discountValue ? parseFloat(evt.discountValue) : 0,
+            deliveryFee: evt.deliveryFee ? parseFloat(evt.deliveryFee) : 0,
+            paymentStatus: evt.paymentStatus,
+            signalAmount: evt.signalAmount ? parseFloat(evt.signalAmount) : 0,
+            signalReceived: evt.signalReceived || false,
+            paymentDetails: evt.paymentDetails,
+
+            // Outros
+            monitor: evt.monitor,
+            eventObservations: evt.eventObservations,
+            isBirthday: evt.isBirthday || false,
+            birthdayPersonName: evt.birthdayPersonName,
+            birthdayPersonDob: evt.birthdayPersonDob,
+
             items: { create: itens }
         };
 
@@ -335,8 +382,8 @@ app.post('/api/admin/events', async (req, res) => {
         });
         res.json({ success: true, data: saved });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Erro ao salvar" });
+        console.error('Erro ao salvar evento:', error);
+        res.status(500).json({ error: "Erro ao salvar evento", details: error.message });
     }
 });
 

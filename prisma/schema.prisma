@@ -46,18 +46,60 @@ model Event {
   date         String
   clientName   String?
   
-  // Ligação com a Empresa (Correção do Erro 500)
+  // Ligação com a Empresa
   yourCompanyId Float?
   company       Company? @relation(fields: [yourCompanyId], references: [id])
 
   // Relação com itens
   items        EventItem[]
   
-  // Outros campos úteis que seu frontend envia (Opcional adicionar agora ou depois)
+  // Horários
   startTime    String?
   endTime      String?
-  price        Float?
-  status       String? 
+  
+  // Dados do Cliente PF
+  clientType   String?
+  clientCpf    String?
+  clientRg     String?
+  clientDob    String?
+  clientPhone  String?
+  clientPhoneBackup String?
+  
+  // Dados do Cliente PJ
+  cnpj         String?
+  companyAddress String?
+  repName      String?
+  repCpf       String?
+  repPhone     String?
+  repPhoneBackup String?
+  
+  // Endereço do Evento
+  clientAddress    String?
+  contractAddress  String?
+  cep              String?
+  complemento      String?
+  bairro           String?
+  cidade           String?
+  uf               String?
+  
+  // Financeiro
+  price            Float?
+  subtotal         Float?
+  discountType     String?
+  discountValue    Float?
+  deliveryFee      Float?
+  paymentStatus    String?
+  signalAmount     Float?
+  signalReceived   Boolean?
+  paymentDetails   String?
+  
+  // Outros
+  monitor              String?
+  eventObservations    String?
+  isBirthday           Boolean?
+  birthdayPersonName   String?
+  birthdayPersonDob    String?
+  status               String? 
 }
 
 model EventItem {
