@@ -3538,8 +3538,18 @@
                     return;
                 }
 
-                if (quantity > selectedToy.quantity) {
-                    showToast(`Estoque total insuficiente! Temos apenas ${selectedToy.quantity} unidade(s) de ${selectedToy.name} no estoque.`, true);
+                // CORRIGIDO: Verificar quantidade JÁ ADICIONADA ao evento atual
+                const alreadyInCart = toysForCurrentEvent
+                    .filter(t => t.id === selectedToyId)
+                    .reduce((sum, t) => sum + t.quantity, 0);
+
+                const totalQuantity = alreadyInCart + quantity;
+
+                if (totalQuantity > selectedToy.quantity) {
+                    const msg = alreadyInCart > 0
+                        ? `Você já adicionou ${alreadyInCart} unidade(s). Total seria ${totalQuantity}, mas temos apenas ${selectedToy.quantity} de ${selectedToy.name} no estoque.`
+                        : `Estoque total insuficiente! Temos apenas ${selectedToy.quantity} unidade(s) de ${selectedToy.name} no estoque.`;
+                    showToast(msg, true);
                     return;
                 }
 
