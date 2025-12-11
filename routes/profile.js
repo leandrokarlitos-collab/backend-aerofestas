@@ -110,6 +110,8 @@ router.get('/', authenticate, async (req, res) => {
             id: user.id,
             name: user.name,
             email: user.email,
+            phone: user.phone || '',
+            photoUrl: user.photoUrl || null,
             isAdmin: user.isAdmin,
             emailConfirmed: user.emailConfirmed,
             createdAt: user.createdAt,
@@ -131,7 +133,7 @@ router.get('/', authenticate, async (req, res) => {
  */
 router.put('/', authenticate, async (req, res) => {
     try {
-        const { name, email } = req.body;
+        const { name, email, phone, photoUrl } = req.body;
         const users = await loadUsers();
         const userIndex = users.findIndex(u => u.id === req.user.id);
 
@@ -168,6 +170,18 @@ router.put('/', authenticate, async (req, res) => {
             user.name = name.trim();
         }
 
+        // Atualiza telefone
+        if (phone !== undefined && phone.trim() !== (user.phone || '')) {
+            changes.phone = { old: user.phone || '', new: phone.trim() };
+            user.phone = phone.trim();
+        }
+
+        // Atualiza foto de perfil (base64 ou URL)
+        if (photoUrl !== undefined) {
+            changes.photoUrl = { old: user.photoUrl || null, new: photoUrl || null };
+            user.photoUrl = photoUrl || null;
+        }
+
         // Se houve alterações
         if (Object.keys(changes).length > 0) {
             user.updatedBy = req.user.id;
@@ -192,6 +206,8 @@ router.put('/', authenticate, async (req, res) => {
                     id: user.id,
                     name: user.name,
                     email: user.email,
+                    phone: user.phone,
+                    photoUrl: user.photoUrl,
                     emailConfirmed: user.emailConfirmed,
                     updatedAt: user.updatedAt
                 },
