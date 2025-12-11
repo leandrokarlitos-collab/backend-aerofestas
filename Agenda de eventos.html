@@ -1401,11 +1401,11 @@
                     console.log(`     Evento ${event.id}: ${eventToys.length} itens`);
 
                     eventToys.forEach(eventToy => {
-                        // Verificar múltiplos formatos:
-                        // 1. eventToy.id (formato antigo localStorage)
-                        // 2. eventToy.toyId (formato API direto)
-                        // 3. eventToy.toy.id (formato API com objeto aninhado)
-                        const eventToyId = eventToy.id || eventToy.toyId || (eventToy.toy && eventToy.toy.id);
+                        // CORRIGIDO: Ordem de prioridade correta!
+                        // 1. eventToy.toyId (formato API correto - ID do Toy)
+                        // 2. eventToy.toy.id (formato API com objeto aninhado)
+                        // 3. eventToy.id (formato antigo localStorage - ÚLTIMO porque pode ser ID do EventItem!)
+                        const eventToyId = eventToy.toyId || (eventToy.toy && eventToy.toy.id) || eventToy.id;
 
                         console.log(`       Item: toyId=${eventToyId}, qty=${eventToy.quantity}`);
 
