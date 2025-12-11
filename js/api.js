@@ -204,7 +204,7 @@ export const api = {
 
     // Excluir Item Genérico
     deletarItem: async (id, tipo) => {
-        // tipo: 'transactions', 'accounts', 'fixed-expenses'
+        // tipo: 'transactions', 'accounts', 'fixed-expenses', 'categories-expenses', 'categories-fixed'
         try {
             const token = getToken();
             await fetch(`${BASE_URL}/finance/${tipo}/${id}`, {
@@ -213,5 +213,231 @@ export const api = {
             });
             return true;
         } catch (e) { return false; }
+    },
+
+    // --- MONITORES ---
+
+    getMonitores: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error("Erro ao buscar monitores:", e);
+            return [];
+        }
+    },
+
+    salvarMonitor: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao salvar monitor:", e);
+            return false;
+        }
+    },
+
+    atualizarMonitor: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao atualizar monitor:", e);
+            return false;
+        }
+    },
+
+    deletarMonitor: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao deletar monitor:", e);
+            return false;
+        }
+    },
+
+    // --- DESEMPENHO ---
+
+    salvarDesempenho: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/desempenho`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao salvar desempenho:", e);
+            return false;
+        }
+    },
+
+    // --- PAGAMENTOS DE MONITORES ---
+
+    getPagamentosMonitores: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/pagamentos-monitores`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error("Erro ao buscar pagamentos:", e);
+            return [];
+        }
+    },
+
+    salvarPagamentoMonitor: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/pagamentos-monitores`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao salvar pagamento:", e);
+            return false;
+        }
+    },
+
+    deletarPagamentoMonitor: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/pagamentos-monitores/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao deletar pagamento:", e);
+            return false;
+        }
+    },
+
+    // --- FUNCIONÁRIOS ---
+
+    getFuncionarios: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/funcionarios`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error("Erro ao buscar funcionários:", e);
+            return [];
+        }
+    },
+
+    salvarFuncionario: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/funcionarios`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao salvar funcionário:", e);
+            return false;
+        }
+    },
+
+    deletarFuncionario: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/funcionarios/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao deletar funcionário:", e);
+            return false;
+        }
+    },
+
+    // --- FAIXAS DE COMISSÃO ---
+
+    getFaixasComissao: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/faixas-comissao`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error("Erro ao buscar faixas:", e);
+            return [];
+        }
+    },
+
+    salvarFaixaComissao: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/faixas-comissao`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao salvar faixa:", e);
+            return false;
+        }
+    },
+
+    deletarFaixaComissao: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/faixas-comissao/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao deletar faixa:", e);
+            return false;
+        }
     }
 };

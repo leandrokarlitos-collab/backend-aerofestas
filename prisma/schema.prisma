@@ -116,27 +116,62 @@ model EventItem {
 // --- SEÇÃO FINANCEIRA E RH ---
 
 model Monitor {
-  id            String       @id
-  nome          String
-  nascimento    String?
-  telefone      String?
-  email         String?
-  endereco      String?
-  cnh           Boolean?     @default(false)
-  cnhCategoria  String?
-  fotoPerfil    String?
-  desempenho    Desempenho[]
+  id                String              @id
+  nome              String
+  nascimento        String?
+  telefone          String?
+  email             String?
+  endereco          String?
+  observacoes       String?
+  cnh               Boolean?            @default(false)
+  cnhCategoria      String?
+  fotoPerfil        String?             // Base64 ou URL
+  fotoDocumento     String?             // Base64 ou URL
+  habilidades       String?             // JSON: {forca, agilidade, proatividade, comunicacao, disponibilidade, respeito}
+  desempenho        Desempenho[]
+  pagamentos        PagamentoMonitor[]
 }
 
 model Desempenho {
-  id          String   @id
-  data        String
-  descricao   String?
-  nota        String?
-  obs         String?
-  detalhes    String?
-  monitorId   String
-  monitor     Monitor  @relation(fields: [monitorId], references: [id])
+  id              String   @id
+  data            String
+  descricao       String?
+  nota            String?  // Nota de 0-10
+  obs             String?
+  detalhes        String?  // JSON com checklist
+  pagamentoId     String?  // Liga ao pagamento específico
+  monitorId       String
+  monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+}
+
+model PagamentoMonitor {
+  id              String   @id
+  data            String   // YYYY-MM-DD
+  monitorId       String
+  monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  nome            String   // Nome do monitor (denormalizado para performance)
+  valorBase       Float    // Valor da diária base
+  adicional       Float    // Adicional de motorista
+  horasExtras     Float    // Valor de horas extras
+  pagamento       Float    // Total = valorBase + adicional + horasExtras
+  statusPagamento String   @default("Executado") // "Executado" ou "Pendente"
+  horaEntrada     String?  // HH:MM
+  horaSaida       String?  // HH:MM
+  numEventos      Float?   // Número de eventos entregues (para cálculo de adicional)
+}
+
+model Funcionario {
+  id           String  @id
+  nome         String
+  salarioFixo  Float
+  va           Float   // Vale Alimentação
+  vt           Float   // Vale Transporte
+}
+
+model FaixaComissao {
+  id         String  @id
+  ateValor   Float   // Faturamento até esse valor
+  percentual Float   // Percentual de comissão (ex: 0.02 = 2%)
 }
 
 model User {

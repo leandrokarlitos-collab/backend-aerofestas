@@ -151,14 +151,14 @@ router.post('/categories/fixed', async (req, res) => {
 router.delete('/:type/:id', async (req, res) => {
     try {
         const { type, id } = req.params;
-        
+
         if (type === 'transactions') await prisma.transaction.delete({ where: { id } });
         else if (type === 'accounts') await prisma.bankAccount.delete({ where: { id } });
         else if (type === 'fixed-expenses') await prisma.fixedExpense.delete({ where: { id } });
         else if (type === 'categories-expenses') await prisma.expenseCategory.delete({ where: { id } });
         else if (type === 'categories-fixed') await prisma.fixedExpenseCategory.delete({ where: { id } });
         else return res.status(400).json({ error: "Tipo inválido" });
-        
+
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: "Erro ao deletar" }); }
 });
@@ -201,15 +201,315 @@ router.post('/seed-categories', async (req, res) => {
             skipDuplicates: true
         });
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'Categorias padrão criadas com sucesso!',
             gastoCategorias: gastoCategorias.length,
             fixedCategorias: fixedCategorias.length
         });
-    } catch (e) { 
+    } catch (e) {
         console.error("Erro ao criar categorias:", e);
-        res.status(500).json({ error: "Erro ao criar categorias padrão" }); 
+        res.status(500).json({ error: "Erro ao criar categorias padrão" });
+    }
+});
+
+// --- MONITORES ---
+
+// GET /api/finance/monitores
+router.get('/monitores', async (req, res) => {
+    try {
+        const monitores = await prisma.monitor.findMany({
+            include: {
+                desempenho: true,
+                pagamentos: true
+            },
+            orderBy: { nome: 'asc' }
+        });
+        res.json(monitores);
+    } catch (e) {
+        console.error("Erro ao buscar monitores:", e);
+        res.status(500).json({ error: "Erro ao buscar monitores" });
+    }
+});
+
+// POST /api/finance/monitores
+router.post('/monitores', async (req, res) => {
+    try {
+        const m = req.body;
+        const novoMonitor = await prisma.monitor.create({
+            data: {
+                id: m.id || Date.now().toString(),
+                nome: m.nome,
+                nascimento: m.nascimento,
+                telefone: m.telefone,
+                email: m.email,
+                endereco: m.endereco,
+                observacoes: m.observacoes,
+                cnh: m.cnh || false,
+                cnhCategoria: m.cnhCategoria,
+                fotoPerfil: m.fotoPerfil,
+                fotoDocumento: m.fotoDocumento,
+                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null
+            }
+        });
+        res.json(novoMonitor);
+    } catch (e) {
+        console.error("Erro ao criar monitor:", e);
+        res.status(500).json({ error: "Erro ao criar monitor" });
+    }
+});
+
+// PUT /api/finance/monitores/:id
+router.put('/monitores/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const m = req.body;
+        const updated = await prisma.monitor.update({
+            where: { id },
+            data: {
+                nome: m.nome,
+                nascimento: m.nascimento,
+                telefone: m.telefone,
+                email: m.email,
+                endereco: m.endereco,
+                observacoes: m.observacoes,
+                cnh: m.cnh,
+                cnhCategoria: m.cnhCategoria,
+                fotoPerfil: m.fotoPerfil,
+                fotoDocumento: m.fotoDocumento,
+                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null
+            }
+        });
+        res.json(updated);
+    } catch (e) {
+        console.error("Erro ao atualizar monitor:", e);
+        res.status(500).json({ error: "Erro ao atualizar monitor" });
+    }
+});
+
+// DELETE /api/finance/monitores/:id
+router.delete('/monitores/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.monitor.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Erro ao deletar monitor:", e);
+        res.status(500).json({ error: "Erro ao deletar monitor" });
+    }
+});
+
+// --- DESEMPENHO (NOTAS) ---
+
+// POST /api/finance/desempenho
+router.post('/desempenho', async (req, res) => {
+    try {
+        const d = req.body;
+        const novoDesempenho = await prisma.desempenho.create({
+            data: {
+                id: d.id || Date.now().toString(),
+                data: d.data,
+                descricao: d.descricao,
+                nota: d.nota,
+                obs: d.obs,
+                detalhes: d.detalhes ? JSON.stringify(d.detalhes) : null,
+                pagamentoId: d.pagamentoId,
+                monitorId: d.monitorId
+            }
+        });
+        res.json(novoDesempenho);
+    } catch (e) {
+        console.error("Erro ao criar desempenho:", e);
+        res.status(500).json({ error: "Erro ao criar desempenho" });
+    }
+});
+
+// --- PAGAMENTOS DE MONITORES ---
+
+// GET /api/finance/pagamentos-monitores
+router.get('/pagamentos-monitores', async (req, res) => {
+    try {
+        const pagamentos = await prisma.pagamentoMonitor.findMany({
+            orderBy: { data: 'desc' },
+            take: 500
+        });
+        res.json(pagamentos);
+    } catch (e) {
+        console.error("Erro ao buscar pagamentos:", e);
+        res.status(500).json({ error: "Erro ao buscar pagamentos" });
+    }
+});
+
+// POST /api/finance/pagamentos-monitores
+router.post('/pagamentos-monitores', async (req, res) => {
+    try {
+        const p = req.body;
+        const novoPagamento = await prisma.pagamentoMonitor.create({
+            data: {
+                id: p.id || Date.now().toString(),
+                data: p.data,
+                monitorId: p.monitorId,
+                nome: p.nome,
+                valorBase: parseFloat(p.valorBase),
+                adicional: parseFloat(p.adicional) || 0,
+                horasExtras: parseFloat(p.horasExtras) || 0,
+                pagamento: parseFloat(p.pagamento),
+                statusPagamento: p.statusPagamento || 'Executado',
+                horaEntrada: p.horaEntrada,
+                horaSaida: p.horaSaida,
+                numEventos: p.numEventos ? parseFloat(p.numEventos) : null
+            }
+        });
+        res.json(novoPagamento);
+    } catch (e) {
+        console.error("Erro ao criar pagamento:", e);
+        res.status(500).json({ error: "Erro ao criar pagamento" });
+    }
+});
+
+// DELETE /api/finance/pagamentos-monitores/:id
+router.delete('/pagamentos-monitores/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.pagamentoMonitor.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Erro ao deletar pagamento:", e);
+        res.status(500).json({ error: "Erro ao deletar pagamento" });
+    }
+});
+
+// --- FUNCIONÁRIOS (SISTEMA DE SALÁRIOS) ---
+
+// GET /api/finance/funcionarios
+router.get('/funcionarios', async (req, res) => {
+    try {
+        const funcionarios = await prisma.funcionario.findMany({
+            orderBy: { nome: 'asc' }
+        });
+        res.json(funcionarios);
+    } catch (e) {
+        console.error("Erro ao buscar funcionários:", e);
+        res.status(500).json({ error: "Erro ao buscar funcionários" });
+    }
+});
+
+// POST /api/finance/funcionarios
+router.post('/funcionarios', async (req, res) => {
+    try {
+        const f = req.body;
+        const novoFuncionario = await prisma.funcionario.create({
+            data: {
+                id: f.id || Date.now().toString(),
+                nome: f.nome,
+                salarioFixo: parseFloat(f.salarioFixo),
+                va: parseFloat(f.va),
+                vt: parseFloat(f.vt)
+            }
+        });
+        res.json(novoFuncionario);
+    } catch (e) {
+        console.error("Erro ao criar funcionário:", e);
+        res.status(500).json({ error: "Erro ao criar funcionário" });
+    }
+});
+
+// DELETE /api/finance/funcionarios/:id
+router.delete('/funcionarios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.funcionario.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Erro ao deletar funcionário:", e);
+        res.status(500).json({ error: "Erro ao deletar funcionário" });
+    }
+});
+
+// --- FAIXAS DE COMISSÃO ---
+
+// GET /api/finance/faixas-comissao
+router.get('/faixas-comissao', async (req, res) => {
+    try {
+        const faixas = await prisma.faixaComissao.findMany({
+            orderBy: { ateValor: 'asc' }
+        });
+        res.json(faixas);
+    } catch (e) {
+        console.error("Erro ao buscar faixas:", e);
+        res.status(500).json({ error: "Erro ao buscar faixas" });
+    }
+});
+
+// POST /api/finance/faixas-comissao
+router.post('/faixas-comissao', async (req, res) => {
+    try {
+        const f = req.body;
+        const novaFaixa = await prisma.faixaComissao.create({
+            data: {
+                id: f.id || Date.now().toString(),
+                ateValor: parseFloat(f.ateValor),
+                percentual: parseFloat(f.percentual)
+            }
+        });
+        res.json(novaFaixa);
+    } catch (e) {
+        console.error("Erro ao criar faixa:", e);
+        res.status(500).json({ error: "Erro ao criar faixa" });
+    }
+});
+
+// DELETE /api/finance/faixas-comissao/:id
+router.delete('/faixas-comissao/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.faixaComissao.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Erro ao deletar faixa:", e);
+        res.status(500).json({ error: "Erro ao deletar faixa" });
+    }
+});
+
+// --- SEED INICIAL DE FUNCIONÁRIOS E COMISSÃO ---
+
+router.post('/seed-salarios', async (req, res) => {
+    try {
+        // Cria funcionário padrão se não existir
+        const funcionariosPadrão = [
+            { id: 'func-default-1', nome: 'Funcionário 1', salarioFixo: 2200, va: 390, vt: 223.60 }
+        ];
+
+        await prisma.funcionario.createMany({
+            data: funcionariosPadrão,
+            skipDuplicates: true
+        });
+
+        // Cria faixas de comissão padrão
+        const faixasPadrão = [
+            { id: 'com-1', ateValor: 45000, percentual: 0.02 },
+            { id: 'com-2', ateValor: 55000, percentual: 0.025 },
+            { id: 'com-3', ateValor: 65000, percentual: 0.03 },
+            { id: 'com-4', ateValor: 75000, percentual: 0.035 },
+            { id: 'com-5', ateValor: 85000, percentual: 0.04 },
+            { id: 'com-6', ateValor: 95000, percentual: 0.045 },
+            { id: 'com-7', ateValor: 99999999, percentual: 0.05 }
+        ];
+
+        await prisma.faixaComissao.createMany({
+            data: faixasPadrão,
+            skipDuplicates: true
+        });
+
+        res.json({
+            success: true,
+            message: 'Dados de salário inicializados!',
+            funcionarios: funcionariosPadrão.length,
+            faixas: faixasPadrão.length
+        });
+    } catch (e) {
+        console.error("Erro ao criar seeds de salário:", e);
+        res.status(500).json({ error: "Erro ao inicializar salários" });
     }
 });
 
