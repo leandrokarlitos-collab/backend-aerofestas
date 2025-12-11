@@ -1370,14 +1370,19 @@
             const getToyAvailabilityForDateTime = (toyId, dateStr, startTime, endTime, eventIdToIgnore = null) => {
                 const toy = toys.find(t => t.id === toyId);
                 if (!toy) {
+                    console.warn('🚫 Brinquedo não encontrado:', toyId);
                     return { total: 0, unavailable: 0, available: 0 };
                 }
 
                 const totalQuantity = toy.quantity;
+                console.log(`📦 Verificando disponibilidade para ${toy.name} (ID: ${toyId})`);
+                console.log(`   Total em estoque: ${totalQuantity}`);
+                console.log(`   Data: ${dateStr}, Horário: ${startTime} - ${endTime}`);
 
                 const eventsOnSameDate = events.filter(e => {
                     return e.date === dateStr && e.id !== eventIdToIgnore;
                 });
+                console.log(`   Eventos na mesma data: ${eventsOnSameDate.length}`);
 
                 const timesOverlap = (startA, endA, startB, endB) => {
                     if (!startA || !endA || !startB || !endB) return false;
@@ -1387,21 +1392,33 @@
                 const overlappingEvents = eventsOnSameDate.filter(event =>
                     timesOverlap(startTime, endTime, event.startTime, event.endTime)
                 );
+                console.log(`   Eventos com horário conflitante: ${overlappingEvents.length}`);
 
                 let bookedInOverlap = 0;
                 overlappingEvents.forEach(event => {
                     // CORRIGIDO: Verificar tanto 'toys' quanto 'items' (compatibilidade com API)
                     const eventToys = event.toys || event.items || [];
+                    console.log(`     Evento ${event.id}: ${eventToys.length} itens`);
+
                     eventToys.forEach(eventToy => {
-                        // Verificar tanto 'id' quanto 'toyId' (compatibilidade)
-                        const eventToyId = eventToy.id || eventToy.toyId;
+                        // Verificar múltiplos formatos:
+                        // 1. eventToy.id (formato antigo localStorage)
+                        // 2. eventToy.toyId (formato API direto)
+                        // 3. eventToy.toy.id (formato API com objeto aninhado)
+                        const eventToyId = eventToy.id || eventToy.toyId || (eventToy.toy && eventToy.toy.id);
+
+                        console.log(`       Item: toyId=${eventToyId}, qty=${eventToy.quantity}`);
+
                         if (eventToyId === toyId) {
                             bookedInOverlap += eventToy.quantity;
+                            console.log(`       ✓ Match! Reservado: ${eventToy.quantity}`);
                         }
                     });
                 });
 
                 const availableQuantity = totalQuantity - bookedInOverlap;
+
+                console.log(`   📊 Resultado: ${bookedInOverlap} reservado(s), ${availableQuantity} disponível(is)`);
 
                 return {
                     total: totalQuantity,
