@@ -407,7 +407,82 @@
                         state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
                 }
 
+                // Renderiza Tabela de Lançamento de Contas Fixas do Mês
+                const tbodyContasFixasMes = getById('tabela-contas-fixas-mes')?.querySelector('tbody');
+                if (tbodyContasFixasMes) {
+                    const contasDoMes = getContasFixasDoMes(state.selectedMonth);
+                    if (contasDoMes.length === 0) {
+                        tbodyContasFixasMes.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma conta fixa ativa neste mês.</td></tr>';
+                    } else {
+                        tbodyContasFixasMes.innerHTML = contasDoMes.map(cf => `
+                            <tr>
+                                <td>${cf.descricao}</td>
+                                <td>${formatarMoeda(cf.valor)}</td>
+                                <td>${cf.diaVencimento}</td>
+                                <td>${cf.categoria}</td>
+                                <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
+                                <td class="text-center">${cf.anexos?.length || 0}</td>
+                                <td><span class="text-gray-400 text-xs">Ativa</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Renderiza Tabela de Categorias de Gastos
+                const tbodyGastoCategorias = getById('tabela-gasto-categorias-db')?.querySelector('tbody');
+                if (tbodyGastoCategorias && state.gastoCategorias) {
+                    if (state.gastoCategorias.length === 0) {
+                        tbodyGastoCategorias.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-500">Nenhuma categoria cadastrada.</td></tr>';
+                    } else {
+                        tbodyGastoCategorias.innerHTML = state.gastoCategorias.map(cat => `
+                            <tr>
+                                <td>${cat.nome}</td>
+                                <td><span class="text-gray-400 text-xs">Salva</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Renderiza Tabela de Categorias de Contas Fixas
+                const tbodyCFCategorias = getById('tabela-cf-categorias-db')?.querySelector('tbody');
+                if (tbodyCFCategorias && state.contaFixaCategorias) {
+                    if (state.contaFixaCategorias.length === 0) {
+                        tbodyCFCategorias.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-500">Nenhuma categoria cadastrada.</td></tr>';
+                    } else {
+                        tbodyCFCategorias.innerHTML = state.contaFixaCategorias.map(cat => `
+                            <tr>
+                                <td>${cat.nome}</td>
+                                <td><span class="text-gray-400 text-xs">Salva</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
                 console.log("✅ Renderização completa!");
+            };
+
+            // NOTA: Função auxiliar para filtrar contas fixas ativas em um mês
+            const getContasFixasDoMes = (mesAno) => {
+                if (!state.contasFixas || state.contasFixas.length === 0) return [];
+
+                const [ano, mes] = mesAno.split('-').map(Number);
+
+                return state.contasFixas.filter(cf => {
+                    // Se for permanente, sempre aparece
+                    if (cf.tipoRecorrencia === 'permanente') return true;
+
+                    // Se for parcelada, verifica se está no intervalo
+                    if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
+                        const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
+                        const dataInicio = new Date(anoInicio, mesInicio - 1);
+                        const dataFim = new Date(anoInicio, mesInicio - 1 + cf.numParcelas);
+                        const dataAtual = new Date(ano, mes - 1);
+
+                        return dataAtual >= dataInicio && dataAtual < dataFim;
+                    }
+
+                    return false;
+                });
             };
 
             // --- 3. EXPORTAR PDF ELEGANTE (Integrado) ---
@@ -2049,6 +2124,66 @@
                     });
                 }
             });
+
+            // ========== EVENT LISTENERS DE FORMULÁRIOS ===========
+
+            // Formulário de Conta Fixa
+            const formContaFixa = getById('form-conta-fixa');
+            if (formContaFixa) {
+                formContaFixa.addEventListener('submit', async (e) => {
+                    e.preventDefault(); // IMPORTANTE: Previne reload!
+
+                    console.log('📝 Salvando conta fixa...');
+
+                    // Coleta dados do formulário
+                    const descricao = getById('conta-fixa-descricao').value;
+                    const valor = parseFloat(getById('conta-fixa-valor').value);
+                    const diaVencimento = parseInt(getById('conta-fixa-dia-vencimento').value);
+                    const categoria = getById('conta-fixa-categoria').value;
+                    const tipoRecorrencia = getById('conta-fixa-tipo-recorrencia').value;
+
+                    let dataInicio = null;
+                    let numParcelas = null;
+
+                    if (tipoRecorrencia === 'parcelada') {
+                        dataInicio = getById('conta-fixa-data-inicio').value;
+                        numParcelas = parseInt(getById('conta-fixa-num-parcelas').value);
+                    }
+
+                    // Processa anexos (se houver)
+                    const anexosInput = getById('conta-fixa-anexo');
+                    const anexosArray = [];
+
+                    if (anexosInput && anexosInput.files.length > 0) {
+                        // Aqui você pode processar arquivos se necessário
+                        // Por enquanto, vamos apenas contar
+                        console.log(`${anexosInput.files.length} anexo(s) selecionado(s)`);
+                    }
+
+                    const novaConta = {
+                        id: Date.now().toString(),
+                        description: descricao,
+                        amount: valor,
+                        dueDay: diaVencimento,
+                        category: categoria,
+                        recurrence: tipoRecorrencia,
+                        startDate: dataInicio,
+                        installments: numParcelas,
+                        attachments: JSON.stringify(anexosArray) // Sempre um JSON válido
+                    };
+
+                    // Salva via API
+                    const sucesso = await window.api.salvarContaFixa(novaConta);
+
+                    if (sucesso) {
+                        formContaFixa.reset();
+                        await window.loadDataFromCloud(); // Recarrega
+                        alert('Conta fixa cadastrada com sucesso!');
+                    } else {
+                        alert('Erro ao salvar conta fixa.');
+                    }
+                });
+            }
         });
     </script>
 
