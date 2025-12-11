@@ -154,47 +154,69 @@ function injectPremiumUserMenu(userData) {
     // Container principal
     const container = document.createElement('div');
     container.id = 'user-menu-container';
-    container.className = 'fixed bottom-4 left-4 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border border-white/20 transition-all duration-300';
+    container.className = 'fixed bottom-4 left-4 z-50 flex items-center gap-3 rounded-2xl shadow-2xl border border-white/20 transition-all duration-300';
+
+    // Verifica estado salvo no localStorage
+    const isCollapsed = localStorage.getItem('userMenuCollapsed') === 'true';
+
+    // Ajusta padding baseado no estado
+    container.style.padding = isCollapsed ? '0.75rem' : '0.75rem 1.25rem';
 
     // Glassmorphism background
-    container.style.cssText = `
+    container.style.cssText += `
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
         backdrop-filter: blur(20px) saturate(180%);
         -webkit-backdrop-filter: blur(20px) saturate(180%);
     `;
 
-    // Verifica estado salvo no localStorage
-    const isCollapsed = localStorage.getItem('userMenuCollapsed') === 'true';
+    // ============================================
+    // 1. AVATAR/FOTO DO PERFIL (Sempre visível + Toggle)
+    // ============================================
+    const avatarBtn = document.createElement('button');
+    avatarBtn.className = 'user-menu-btn w-11 h-11 flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white rounded-full hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 flex-shrink-0';
+    avatarBtn.style.animation = 'pulseGlow 3s ease-in-out infinite';
 
-    // 1. Botão Toggle (Chevron)
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = `toggle-menu-btn user-menu-btn w-10 h-10 flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white rounded-xl hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-2xl ${isCollapsed ? 'rotated' : ''}`;
-    toggleBtn.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
-    toggleBtn.title = isCollapsed ? "Expandir Menu" : "Recolher Menu";
-    toggleBtn.style.animation = 'pulseGlow 3s ease-in-out infinite';
+    // Se houver foto do perfil, usa. Senão, usa ícone
+    if (userData.photoUrl) {
+        avatarBtn.style.backgroundImage = `url(${userData.photoUrl})`;
+        avatarBtn.style.backgroundSize = 'cover';
+        avatarBtn.style.backgroundPosition = 'center';
+    } else {
+        // Pega iniciais do nome
+        const initials = userData.name
+            .split(' ')
+            .map(n => n[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+        avatarBtn.innerHTML = `<span class="font-bold text-sm">${initials}</span>`;
+    }
 
-    // Wrapper para os itens do menu (que serão escondidos/mostrados)
+    avatarBtn.title = isCollapsed ? `${userData.name} - Clique para expandir` : `${userData.name} - Clique para recolher`;
+
+    // ============================================
+    // 2. MENU ITEMS (Escondíveis)
+    // ============================================
     const menuItems = document.createElement('div');
     menuItems.className = 'flex items-center gap-3 transition-all duration-300 overflow-hidden';
     menuItems.style.maxWidth = isCollapsed ? '0px' : '400px';
     menuItems.style.opacity = isCollapsed ? '0' : '1';
 
-    // 2. Ícone de Perfil
-    const profileBtn = document.createElement('a');
-    profileBtn.href = 'profile.html';
-    profileBtn.className = 'user-menu-btn w-10 h-10 flex items-center justify-center bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-xl hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 shadow-md hover:shadow-xl hover:scale-110';
-    profileBtn.innerHTML = '<i class="fas fa-user text-sm"></i>';
-    profileBtn.title = "Meu Perfil";
+    // Link para perfil
+    const profileLink = document.createElement('a');
+    profileLink.href = 'profile.html';
+    profileLink.className = 'text-sm font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-700 hover:to-purple-700 whitespace-nowrap transition-all duration-200';
+    profileLink.textContent = 'Perfil';
+    profileLink.title = "Ver meu perfil";
+    menuItems.appendChild(profileLink);
 
-    // 3. Nome do Usuário
+    // Nome do Usuário
     const userName = document.createElement('span');
-    userName.className = 'text-sm font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:block whitespace-nowrap';
-    userName.textContent = userData.name.split(' ')[0];
-
-    menuItems.appendChild(profileBtn);
+    userName.className = 'text-xs text-gray-500 hidden sm:block whitespace-nowrap';
+    userName.textContent = `(${userData.name.split(' ')[0]})`;
     menuItems.appendChild(userName);
 
-    // 4. Botão ADMIN (Só aparece se for admin)
+    // Botão ADMIN (Só aparece se for admin)
     if (userData.isAdmin) {
         const divider = document.createElement('div');
         divider.className = 'w-px h-6 bg-gradient-to-b from-transparent via-purple-300 to-transparent mx-1';
@@ -208,7 +230,7 @@ function injectPremiumUserMenu(userData) {
         menuItems.appendChild(adminBtn);
     }
 
-    // 5. Divisor e Logout
+    // Divisor e Logout
     const divider2 = document.createElement('div');
     divider2.className = 'w-px h-6 bg-gradient-to-b from-transparent via-gray-300 to-transparent mx-1';
     menuItems.appendChild(divider2);
@@ -226,23 +248,25 @@ function injectPremiumUserMenu(userData) {
     };
     menuItems.appendChild(logoutBtn);
 
-    // Evento de toggle
-    toggleBtn.onclick = () => {
+    // ============================================
+    // 3. EVENTO DE TOGGLE (No avatar)
+    // ============================================
+    avatarBtn.onclick = () => {
         const isCurrentlyCollapsed = menuItems.style.maxWidth === '0px';
 
         if (isCurrentlyCollapsed) {
             // Expandir
             menuItems.style.maxWidth = '400px';
             menuItems.style.opacity = '1';
-            toggleBtn.classList.remove('rotated');
-            toggleBtn.title = "Recolher Menu";
+            container.style.padding = '0.75rem 1.25rem';
+            avatarBtn.title = `${userData.name} - Clique para recolher`;
             localStorage.setItem('userMenuCollapsed', 'false');
         } else {
             // Recolher
             menuItems.style.maxWidth = '0px';
             menuItems.style.opacity = '0';
-            toggleBtn.classList.add('rotated');
-            toggleBtn.title = "Expandir Menu";
+            container.style.padding = '0.75rem';
+            avatarBtn.title = `${userData.name} - Clique para expandir`;
             localStorage.setItem('userMenuCollapsed', 'true');
         }
     };
@@ -361,8 +385,8 @@ function injectPremiumUserMenu(userData) {
     // FIM DA FUNCIONALIDADE DE DRAG & DROP
     // ========================================
 
-    // Monta o menu
-    container.appendChild(toggleBtn);
+    // Monta o menu (Avatar sempre visível + Menu items)
+    container.appendChild(avatarBtn);
     container.appendChild(menuItems);
     document.body.appendChild(container);
 }
