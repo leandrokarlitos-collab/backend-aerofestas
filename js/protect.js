@@ -249,9 +249,18 @@ function injectPremiumUserMenu(userData) {
     menuItems.appendChild(logoutBtn);
 
     // ============================================
-    // 3. EVENTO DE TOGGLE (No avatar)
+    // 3. EVENTO DE CLICK DO AVATAR
     // ============================================
-    avatarBtn.onclick = () => {
+    avatarBtn.onclick = (e) => {
+        e.stopPropagation(); // Impede propagação para o container
+
+        // Shift + Click = Ir para perfil
+        if (e.shiftKey) {
+            window.location.href = 'profile.html';
+            return;
+        }
+
+        // Click simples = Toggle menu
         const isCurrentlyCollapsed = menuItems.style.maxWidth === '0px';
 
         if (isCurrentlyCollapsed) {
@@ -259,14 +268,14 @@ function injectPremiumUserMenu(userData) {
             menuItems.style.maxWidth = '400px';
             menuItems.style.opacity = '1';
             container.style.padding = '0.75rem 1.25rem';
-            avatarBtn.title = `${userData.name} - Clique para recolher`;
+            avatarBtn.title = `${userData.name} - Clique: toggle | Shift+Clique: perfil`;
             localStorage.setItem('userMenuCollapsed', 'false');
         } else {
             // Recolher
             menuItems.style.maxWidth = '0px';
             menuItems.style.opacity = '0';
             container.style.padding = '0.75rem';
-            avatarBtn.title = `${userData.name} - Clique para expandir`;
+            avatarBtn.title = `${userData.name} - Clique: toggle | Shift+Clique: perfil`;
             localStorage.setItem('userMenuCollapsed', 'true');
         }
     };
@@ -365,13 +374,96 @@ function injectPremiumUserMenu(userData) {
         }
     });
 
-    // Double click - reseta posição
-    container.addEventListener('dblclick', () => {
+    // ========================================
+    // 📱 TOUCH EVENTS PARA MOBILE
+    // ========================================
+
+    // Touch start - inicia drag no mobile
+    container.addEventListener('touchstart', (e) => {
+        // Ignora se tocou em um botão/link
+        if (e.target.closest('a, button')) return;
+
+        const touch = e.touches[0];
+        isDragging = true;
+        container.style.transition = 'none';
+
+        initialX = touch.clientX - xOffset;
+        initialY = touch.clientY - yOffset;
+    }, { passive: true });
+
+    // Touch move - arrasta no mobile
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+
+        const touch = e.touches[0];
+        currentX = touch.clientX - initialX;
+        currentY = touch.clientY - initialY;
+
+        // LIMITES DA VIEWPORT
+        const menuRect = container.getBoundingClientRect();
+        const maxX = window.innerWidth - menuRect.width;
+        const maxY = window.innerHeight - menuRect.height;
+
+        currentX = Math.max(-50, Math.min(currentX, maxX + 50));
+        currentY = Math.max(-20, Math.min(currentY, maxY + 20));
+
+        xOffset = currentX;
+        yOffset = currentY;
+
+        container.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        container.style.bottom = 'auto';
+        container.style.left = 'auto';
+        container.style.top = '1rem';
+    }, { passive: true });
+
+    // Touch end - finaliza drag no mobile
+    document.addEventListener('touchend', () => {
+        if (isDragging) {
+            isDragging = false;
+            container.style.transition = 'all 0.3s ease';
+
+            localStorage.setItem('userMenuPosition', JSON.stringify({
+                x: xOffset,
+                y: yOffset
+            }));
+        }
+    });
+
+    // ========================================
+    // LONG PRESS NO AVATAR PARA MOBILE
+    // ========================================
+    let longPressTimer;
+    const LONG_PRESS_DURATION = 500; // 500ms
+
+    avatarBtn.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+            // Long press detectado - vai para perfil
+            window.location.href = 'profile.html';
+        }, LONG_PRESS_DURATION);
+    }, { passive: true });
+
+    avatarBtn.addEventListener('touchend', () => {
+        clearTimeout(longPressTimer);
+    });
+
+    avatarBtn.addEventListener('touchmove', () => {
+        clearTimeout(longPressTimer);
+    });
+
+    // Double click - reseta posição (só no container, não nos botões)
+    container.addEventListener('dblclick', (e) => {
+        // Ignora se clicar nos botões
+        if (e.target.closest('button, a')) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
         xOffset = 0;
         yOffset = 0;
         container.style.transform = 'translate(0, 0)';
         container.style.bottom = '1rem';
         container.style.left = '1rem';
+        container.style.top = 'auto'; // IMPORTANTE: Remove top fixo
         localStorage.removeItem('userMenuPosition');
 
         // Feedback visual
