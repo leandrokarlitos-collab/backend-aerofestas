@@ -3531,6 +3531,19 @@
                     return;
                 }
 
+                // NOVA VALIDAÇÃO: Verifica se a quantidade solicitada excede o estoque TOTAL
+                const selectedToy = toys.find(t => t.id === selectedToyId);
+                if (!selectedToy) {
+                    showToast('Brinquedo não encontrado!', true);
+                    return;
+                }
+
+                if (quantity > selectedToy.quantity) {
+                    showToast(`Estoque total insuficiente! Temos apenas ${selectedToy.quantity} unidade(s) de ${selectedToy.name} no estoque.`, true);
+                    return;
+                }
+
+                // Validação de disponibilidade por horário (conflitos com outros eventos)
                 const availability = getToyAvailabilityForDateTime(selectedToyId, eventDate, startTime, endTime, eventId);
 
                 if (quantity > availability.available) {
