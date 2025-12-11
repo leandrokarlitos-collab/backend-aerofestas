@@ -2759,15 +2759,19 @@
                     console.log("Enviando para API:", eventData);
                     const response = await api.salvarEvento(eventData); // Chama o api.js
 
-                    console.log("Sucesso API:", response);
+                    console.log("✅ Sucesso API:", response);
+                    console.log("📦 Items retornados:", response.data?.items);
+
                     // Atualiza a lista local com o que voltou do servidor (importante para ter o ID real)
                     const savedEvent = response.data || response; // Depende de como seu back retorna
 
-                    // Criar objeto híbrido para a UI com os dados da API + brinquedos locais
+                    // CORRIGIDO: Usar os dados da API como estão, sem sobrescrever items
+                    // A API já retorna items com a estrutura correta (item.toy.id)
                     const eventForUI = {
                         ...savedEvent,
-                        toys: toysForCurrentEvent,
-                        items: toysForCurrentEvent
+                        // Mantém compatibilidade: se API não retornar items, usa local
+                        toys: savedEvent.items || toysForCurrentEvent,
+                        items: savedEvent.items || toysForCurrentEvent
                     };
 
                     // Atualiza a lista local 'events' para refletir na tela sem precisar recarregar tudo do zero
