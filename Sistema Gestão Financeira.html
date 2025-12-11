@@ -422,7 +422,14 @@
                                 <td>${cf.categoria}</td>
                                 <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
                                 <td class="text-center">${cf.anexos?.length || 0}</td>
-                                <td><span class="text-gray-400 text-xs">Ativa</span></td>
+                                <td>
+                                    <button class="action-btn edit-btn" onclick="alert('Editar conta ID: ${cf.id}')" title="Editar">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </button>
+                                    <button class="action-btn delete-btn" onclick="if(confirm('Excluir esta conta?')) { deletarContaFixa('${cf.id}'); }" title="Excluir">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `).join('');
                     }
@@ -437,7 +444,11 @@
                         tbodyGastoCategorias.innerHTML = state.gastoCategorias.map(cat => `
                             <tr>
                                 <td>${cat.nome}</td>
-                                <td><span class="text-gray-400 text-xs">Salva</span></td>
+                                <td>
+                                    <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaGasto('${cat.id}'); }" title="Excluir">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `).join('');
                     }
@@ -452,13 +463,49 @@
                         tbodyCFCategorias.innerHTML = state.contaFixaCategorias.map(cat => `
                             <tr>
                                 <td>${cat.nome}</td>
-                                <td><span class="text-gray-400 text-xs">Salva</span></td>
+                                <td>
+                                    <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaContaFixa('${cat.id}'); }" title="Excluir">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `).join('');
                     }
                 }
 
                 console.log("✅ Renderização completa!");
+            };
+
+            // ========== FUNÇÕES GLOBAIS DE DELETE ==========
+
+            window.deletarContaFixa = async (id) => {
+                const sucesso = await window.api.deletarItem('contas-fixas', id);
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    alert('Conta fixa excluída com sucesso!');
+                } else {
+                    alert('Erro ao excluir conta fixa.');
+                }
+            };
+
+            window.deletarCategoriaGasto = async (id) => {
+                const sucesso = await window.api.deletarItem('categorias-gastos', id);
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    alert('Categoria excluída com sucesso!');
+                } else {
+                    alert('Erro ao excluir categoria.');
+                }
+            };
+
+            window.deletarCategoriaContaFixa = async (id) => {
+                const sucesso = await window.api.deletarItem('categorias-fixas', id);
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    alert('Categoria excluída com sucesso!');
+                } else {
+                    alert('Erro ao excluir categoria.');
+                }
             };
 
             // NOTA: Função auxiliar para filtrar contas fixas ativas em um mês
@@ -1241,7 +1288,7 @@
                         </div>
 
                         <div id="conta-fixa-parcelamento-container"
-                            class="hidden md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            class="hidden md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                             <div>
                                 <label for="conta-fixa-data-inicio" class="block text-sm font-medium text-gray-700">Mês
                                     de Início (YYYY-MM)</label>
@@ -1252,6 +1299,32 @@
                                     de Parcelas</label>
                                 <input type="number" id="conta-fixa-num-parcelas" min="1" step="1"
                                     class="form-input w-full mt-1" placeholder="12">
+                            </div>
+                            <div>
+                                <label for="conta-fixa-periodicidade-parcelada"
+                                    class="block text-sm font-medium text-gray-700">Periodicidade</label>
+                                <select id="conta-fixa-periodicidade-parcelada" class="form-input w-full mt-1">
+                                    <option value="mensal">Mensal</option>
+                                    <option value="quinzenal">Quinzenal</option>
+                                    <option value="semestral">Semestral</option>
+                                    <option value="anual">Anual</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="conta-fixa-permanente-container"
+                            class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <div>
+                                <label for="conta-fixa-periodicidade-permanente"
+                                    class="block text-sm font-medium text-gray-700">Periodicidade</label>
+                                <select id="conta-fixa-periodicidade-permanente" class="form-input w-full mt-1">
+                                    <option value="mensal">Mensal</option>
+                                    <option value="quinzenal">Quinzenal</option>
+                                    <option value="bimestral">Bimestral</option>
+                                    <option value="trimestral">Trimestral</option>
+                                    <option value="semestral">Semestral</option>
+                                    <option value="anual">Anual</option>
+                                </select>
                             </div>
                         </div>
 
@@ -2127,6 +2200,34 @@
 
             // ========== EVENT LISTENERS DE FORMULÁRIOS ===========
 
+            // Alterna campos de conta fixa baseado no tipo de recorrência
+            const tipoRecorrenciaSelect = getById('conta-fixa-tipo-recorrencia');
+            const parcelamentoContainer = getById('conta-fixa-parcelamento-container');
+            const permanenteContainer = getById('conta-fixa-permanente-container');
+
+            if (tipoRecorrenciaSelect && parcelamentoContainer && permanenteContainer) {
+                // Inicializa no estado correto
+                const estadoInicial = tipoRecorrenciaSelect.value;
+                if (estadoInicial === 'parcelada') {
+                    parcelamentoContainer.classList.remove('hidden');
+                    permanenteContainer.classList.add('hidden');
+                } else {
+                    parcelamentoContainer.classList.add('hidden');
+                    permanenteContainer.classList.remove('hidden');
+                }
+
+                // Listener para mudanças
+                tipoRecorrenciaSelect.addEventListener('change', (e) => {
+                    if (e.target.value === 'parcelada') {
+                        parcelamentoContainer.classList.remove('hidden');
+                        permanenteContainer.classList.add('hidden');
+                    } else {
+                        parcelamentoContainer.classList.add('hidden');
+                        permanenteContainer.classList.remove('hidden');
+                    }
+                });
+            }
+
             // Formulário de Conta Fixa
             const formContaFixa = getById('form-conta-fixa');
             if (formContaFixa) {
@@ -2144,10 +2245,14 @@
 
                     let dataInicio = null;
                     let numParcelas = null;
+                    let periodicidade = 'mensal'; // Padrão
 
                     if (tipoRecorrencia === 'parcelada') {
                         dataInicio = getById('conta-fixa-data-inicio').value;
                         numParcelas = parseInt(getById('conta-fixa-num-parcelas').value);
+                        periodicidade = getById('conta-fixa-periodicidade-parcelada').value;
+                    } else {
+                        periodicidade = getById('conta-fixa-periodicidade-permanente').value;
                     }
 
                     // Processa anexos (se houver)
@@ -2167,6 +2272,7 @@
                         dueDay: diaVencimento,
                         category: categoria,
                         recurrence: tipoRecorrencia,
+                        periodicity: periodicidade, // NOVO CAMPO
                         startDate: dataInicio,
                         installments: numParcelas,
                         attachments: JSON.stringify(anexosArray) // Sempre um JSON válido
