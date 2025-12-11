@@ -2,78 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { hashPassword, comparePassword } = require('../utils/crypto');
-const fs = require('fs').promises;
-const path = require('path');
+const { PrismaClient } = require('@prisma/client');
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
-const HISTORY_FILE = path.join(__dirname, '..', 'data', 'user_history.json');
-
-// Garante que os arquivos de dados existam
-async function ensureDataFiles() {
-    const dataDir = path.join(__dirname, '..', 'data');
-    try {
-        await fs.mkdir(dataDir, { recursive: true });
-    } catch (error) {
-        // Pasta já existe
-    }
-
-    try {
-        await fs.access(USERS_FILE);
-    } catch {
-        await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2));
-    }
-
-    try {
-        await fs.access(HISTORY_FILE);
-    } catch {
-        await fs.writeFile(HISTORY_FILE, JSON.stringify([], null, 2));
-    }
-}
-
-// Carrega usuários do arquivo
-async function loadUsers() {
-    try {
-        await ensureDataFiles();
-        const data = await fs.readFile(USERS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
-
-// Salva usuários no arquivo
-async function saveUsers(users) {
-    await ensureDataFiles();
-    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-}
-
-// Carrega histórico do arquivo
-async function loadHistory() {
-    try {
-        await ensureDataFiles();
-        const data = await fs.readFile(HISTORY_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
-
-// Salva histórico no arquivo
-async function saveHistory(history) {
-    await ensureDataFiles();
-    await fs.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
-}
-
-// Adiciona entrada no histórico
-async function addHistoryEntry(entry) {
-    const history = await loadHistory();
-    history.push({
-        id: Date.now().toString(),
-        ...entry,
-        timestamp: new Date().toISOString()
-    });
-    await saveHistory(history);
-}
+const prisma = new PrismaClient();
 
 /**
  * GET /api/profile
@@ -81,29 +12,23 @@ async function addHistoryEntry(entry) {
  */
 router.get('/', authenticate, async (req, res) => {
     try {
-        const users = await loadUsers();
-        const user = users.find(u => u.id === req.user.id);
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                photoUrl: true,
+                isAdmin: true,
+                emailConfirmed: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
 
         if (!user) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
-
-        // Busca informações de quem criou e alterou
-        let createdByInfo = null;
-        let updatedByInfo = null;
-
-        if (user.createdBy && user.createdBy !== 'system') {
-            const creator = users.find(u => u.id === user.createdBy);
-            if (creator) {
-                createdByInfo = { id: creator.id, name: creator.name, email: creator.email };
-            }
-        }
-
-        if (user.updatedBy && user.updatedBy !== 'system') {
-            const updater = users.find(u => u.id === user.updatedBy);
-            if (updater) {
-                updatedByInfo = { id: updater.id, name: updater.name, email: updater.email };
-            }
         }
 
         res.json({
@@ -115,11 +40,7 @@ router.get('/', authenticate, async (req, res) => {
             isAdmin: user.isAdmin,
             emailConfirmed: user.emailConfirmed,
             createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-            createdBy: user.createdBy,
-            updatedBy: user.updatedBy,
-            createdByInfo,
-            updatedByInfo
+            updatedAt: user.updatedAt
         });
     } catch (error) {
         console.error('Erro ao buscar perfil:', error);
@@ -129,89 +50,83 @@ router.get('/', authenticate, async (req, res) => {
 
 /**
  * PUT /api/profile
- * Atualizar perfil (nome, email)
+ * Atualizar perfil (nome, email, telefone, foto)
  */
 router.put('/', authenticate, async (req, res) => {
     try {
         const { name, email, phone, photoUrl } = req.body;
-        const users = await loadUsers();
-        const userIndex = users.findIndex(u => u.id === req.user.id);
 
-        if (userIndex === -1) {
+        // Busca usuário atual
+        const currentUser = await prisma.user.findUnique({
+            where: { id: req.user.id }
+        });
+
+        if (!currentUser) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
 
-        const user = users[userIndex];
-        const changes = {};
+        const updateData = {};
+        let emailChanged = false;
 
-        // Validação de email
-        if (email !== undefined) {
+        // Valida e atualiza email
+        if (email !== undefined && email !== currentUser.email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 return res.status(400).json({ error: 'Email inválido' });
             }
 
-            // Verifica se email já existe em outro usuário
-            const emailExists = users.find(u => u.id !== req.user.id && u.email.toLowerCase() === email.toLowerCase());
+            // Verifica se email já existe
+            const emailExists = await prisma.user.findFirst({
+                where: {
+                    email: email.toLowerCase(),
+                    NOT: { id: req.user.id }
+                }
+            });
+
             if (emailExists) {
                 return res.status(400).json({ error: 'Email já está em uso' });
             }
 
-            if (user.email !== email) {
-                changes.email = { old: user.email, new: email };
-                user.email = email.toLowerCase().trim();
-                user.emailConfirmed = false; // Requer nova confirmação se email mudou
-            }
+            updateData.email = email.toLowerCase().trim();
+            updateData.emailConfirmed = false; // Requer nova confirmação
+            emailChanged = true;
         }
 
         // Atualiza nome
-        if (name !== undefined && name.trim() !== user.name) {
-            changes.name = { old: user.name, new: name.trim() };
-            user.name = name.trim();
+        if (name !== undefined && name.trim() !== currentUser.name) {
+            updateData.name = name.trim();
         }
 
         // Atualiza telefone
-        if (phone !== undefined && phone.trim() !== (user.phone || '')) {
-            changes.phone = { old: user.phone || '', new: phone.trim() };
-            user.phone = phone.trim();
+        if (phone !== undefined) {
+            updateData.phone = phone.trim() || null;
         }
 
-        // Atualiza foto de perfil (base64 ou URL)
+        // Atualiza foto de perfil
         if (photoUrl !== undefined) {
-            changes.photoUrl = { old: user.photoUrl || null, new: photoUrl || null };
-            user.photoUrl = photoUrl || null;
+            updateData.photoUrl = photoUrl || null;
         }
 
         // Se houve alterações
-        if (Object.keys(changes).length > 0) {
-            user.updatedBy = req.user.id;
-            user.updatedAt = new Date().toISOString();
-
-            await saveUsers(users);
-
-            // Registra no histórico
-            await addHistoryEntry({
-                userId: user.id,
-                userEmail: user.email,
-                userName: user.name,
-                action: 'update',
-                changedBy: req.user.id,
-                changedByName: req.user.name,
-                changes
+        if (Object.keys(updateData).length > 0) {
+            const updatedUser = await prisma.user.update({
+                where: { id: req.user.id },
+                data: updateData,
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    photoUrl: true,
+                    emailConfirmed: true,
+                    updatedAt: true
+                }
             });
 
             res.json({
                 message: 'Perfil atualizado com sucesso',
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    photoUrl: user.photoUrl,
-                    emailConfirmed: user.emailConfirmed,
-                    updatedAt: user.updatedAt
-                },
-                emailRequiresConfirmation: changes.email !== undefined
+                user: updatedUser,
+                emailRequiresConfirmation: emailChanged
             });
         } else {
             res.json({ message: 'Nenhuma alteração realizada' });
@@ -238,14 +153,13 @@ router.put('/password', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
         }
 
-        const users = await loadUsers();
-        const userIndex = users.findIndex(u => u.id === req.user.id);
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id }
+        });
 
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
-
-        const user = users[userIndex];
 
         // Verifica senha atual
         const passwordMatch = await comparePassword(currentPassword, user.password);
@@ -254,21 +168,10 @@ router.put('/password', authenticate, async (req, res) => {
         }
 
         // Atualiza senha
-        user.password = await hashPassword(newPassword);
-        user.updatedBy = req.user.id;
-        user.updatedAt = new Date().toISOString();
-
-        await saveUsers(users);
-
-        // Registra no histórico
-        await addHistoryEntry({
-            userId: user.id,
-            userEmail: user.email,
-            userName: user.name,
-            action: 'update',
-            changedBy: req.user.id,
-            changedByName: req.user.name,
-            changes: { password: { old: '***', new: '***' } }
+        const hashedPassword = await hashPassword(newPassword);
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: { password: hashedPassword }
         });
 
         res.json({ message: 'Senha alterada com sucesso' });
@@ -279,4 +182,3 @@ router.put('/password', authenticate, async (req, res) => {
 });
 
 module.exports = router;
-
