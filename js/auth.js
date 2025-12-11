@@ -1,5 +1,5 @@
 // Aponta direto para o servidor no Railway
-const API_BASE_URL = "https://backend-aerofestas-production.up.railway.app";
+export const API_BASE_URL = "https://backend-aerofestas-production.up.railway.app";
 
 // --- FUNÇÕES DE TOKEN (USO INTERNO E EXTERNO) ---
 
