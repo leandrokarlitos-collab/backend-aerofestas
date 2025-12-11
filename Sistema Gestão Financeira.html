@@ -407,31 +407,116 @@
                         state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
                 }
 
-                // Renderiza Tabela de Lançamento de Contas Fixas do Mês
-                const tbodyContasFixasMes = getById('tabela-contas-fixas-mes')?.querySelector('tbody');
-                if (tbodyContasFixasMes) {
+                // Renderiza Cards de Lançamento de Contas Fixas do Mês (VISUAL UPGRADE)
+                const containerContasFixasMes = getById('tabela-contas-fixas-mes')?.closest('.table-wrapper');
+                if (containerContasFixasMes) {
                     const contasDoMes = getContasFixasDoMes(state.selectedMonth);
+
                     if (contasDoMes.length === 0) {
-                        tbodyContasFixasMes.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma conta fixa ativa neste mês.</td></tr>';
+                        containerContasFixasMes.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-inbox text-4xl mb-2"></i><p>Nenhuma conta fixa ativa neste mês.</p></div>';
                     } else {
-                        tbodyContasFixasMes.innerHTML = contasDoMes.map(cf => `
-                            <tr>
-                                <td>${cf.descricao}</td>
-                                <td>${formatarMoeda(cf.valor)}</td>
-                                <td>${cf.diaVencimento}</td>
-                                <td>${cf.categoria}</td>
-                                <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
-                                <td class="text-center">${cf.anexos?.length || 0}</td>
-                                <td>
-                                    <button class="action-btn edit-btn" onclick="alert('Editar conta ID: ${cf.id}')" title="Editar">
-                                        <i class="fa-solid fa-pencil"></i>
-                                    </button>
-                                    <button class="action-btn delete-btn" onclick="if(confirm('Excluir esta conta?')) { deletarContaFixa('${cf.id}'); }" title="Excluir">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('');
+                        // Para cada conta, verifica status
+                        const [anoMes, mesMes] = state.selectedMonth.split('-').map(Number);
+                        const hoje = new Date();
+                        const diaHoje = hoje.getDate();
+                        const mesHoje = hoje.getMonth() + 1;
+                        const anoHoje = hoje.getFullYear();
+                        const ehMesAtual = (anoMes === anoHoje && mesMes === mesHoje);
+
+                        const cardsHTML = contasDoMes.map(cf => {
+                            // Calcula número da parcela (se parcelada)
+                            let parcelaAtual = null;
+                            if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
+                                const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
+                                const mesesPassados = (anoMes - anoInicio) * 12 + (mesMes - mesInicio);
+                                parcelaAtual = mesesPassados + 1;
+                            }
+
+                            // Verifica se já foi lançada (procura nos gastos)
+                            const foiLancada = state.gastos.some(g =>
+                                g.data.startsWith(state.selectedMonth) &&
+                                g.descricao.includes(cf.descricao) &&
+                                g.descricao.includes('[Conta Fixa]')
+                            );
+
+                            // Verifica se está atrasada
+                            const estaAtrasada = ehMesAtual && diaHoje > cf.diaVencimento && !foiLancada;
+
+                            // Define status e cores
+                            let statusClass, statusIcon, statusText, statusBadge;
+                            if (foiLancada) {
+                                statusClass = 'border-l-4 border-green-500 bg-green-50/50';
+                                statusIcon = 'fa-circle-check text-green-600';
+                                statusText = 'Pago';
+                                statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">✓ PAGO</span>';
+                            } else if (estaAtrasada) {
+                                statusClass = 'border-l-4 border-red-500 bg-red-50/50 animate-pulse';
+                                statusIcon = 'fa-circle-exclamation text-red-600';
+                                statusText = 'Atrasado';
+                                statusBadge = '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full animate-pulse">⚠ ATRASADA</span>';
+                            } else {
+                                statusClass = 'border-l-4 border-yellow-500 bg-yellow-50/50';
+                                statusIcon = 'fa-clock text-yellow-600';
+                                statusText = 'Pendente';
+                                statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">⏳ PENDENTE</span>';
+                            }
+
+                            return `
+                                <div class="glassmorphism ${statusClass} p-4 rounded-lg mb-3 hover:shadow-lg transition-all duration-300">
+                                    <!-- Cabeçalho do Card -->
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <i class="fa-solid ${statusIcon} text-lg"></i>
+                                                <h4 class="font-bold text-gray-800 text-base">${cf.descricao}</h4>
+                                            </div>
+                                            <div class="flex items-center gap-2 flex-wrap mt-1">
+                                                ${statusBadge}
+                                                ${parcelaAtual ? `<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">📊 Parcela ${parcelaAtual}/${cf.numParcelas}</span>` : '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">♾️ PERMANENTE</span>'}
+                                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">${cf.categoria}</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right ml-3">
+                                            <p class="text-2xl font-bold ${estaAtrasada ? 'text-red-600' : 'text-gray-800'}">${formatarMoeda(cf.valor)}</p>
+                                            <p class="text-xs text-gray-500">Venc: dia ${cf.diaVencimento}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Informações Adicionais -->
+                                    <div class="flex items-center justify-between text-xs text-gray-600 mb-3 pb-3 border-b border-gray-200">
+                                        <span><i class="fa-solid fa-calendar-days mr-1"></i> ${cf.tipoRecorrencia === 'parcelada' ? `Parcelada (${cf.numParcelas}x)` : 'Permanente'}</span>
+                                        ${cf.anexos && cf.anexos.length > 0 ? `<span><i class="fa-solid fa-paperclip mr-1"></i> ${cf.anexos.length} anexo(s)</span>` : ''}
+                                    </div>
+                                    
+                                    <!-- Botões de Ação -->
+                                    <div class="flex gap-2 flex-wrap">
+                                        ${!foiLancada ? `
+                                            <button class="shiny-btn px-3 py-1.5 rounded text-sm flex-1 min-w-[120px]" 
+                                                    onclick="lancarGastoDeContaFixa('${cf.id}')" 
+                                                    title="Lançar como Gasto">
+                                                <i class="fa-solid fa-money-bill-wave mr-1"></i> Lançar Gasto
+                                            </button>
+                                        ` : `
+                                            <div class="flex-1 px-3 py-1.5 bg-green-100 text-green-800 rounded text-sm text-center font-semibold">
+                                                <i class="fa-solid fa-check-double mr-1"></i> Já Lançado
+                                            </div>
+                                        `}
+                                        <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm transition-colors" 
+                                                onclick="alert('Editar conta ID: ${cf.id}')" 
+                                                title="Editar">
+                                            <i class="fa-solid fa-pencil"></i>
+                                        </button>
+                                        <button class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded text-sm transition-colors" 
+                                                onclick="if(confirm('Excluir esta conta?')) { deletarContaFixa('${cf.id}'); }" 
+                                                title="Excluir">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        containerContasFixasMes.innerHTML = cardsHTML;
                     }
                 }
 
@@ -505,6 +590,84 @@
                     alert('Categoria excluída com sucesso!');
                 } else {
                     alert('Erro ao excluir categoria.');
+                }
+            };
+
+            // ========== FUNÇÃO DE LANÇAR GASTO DE CONTA FIXA ==========
+
+            window.lancarGastoDeContaFixa = async (contaFixaId) => {
+                // Encontra a conta fixa
+                const contaFixa = state.contasFixas.find(cf => cf.id === contaFixaId);
+                if (!contaFixa) {
+                    alert('Conta fixa não encontrada!');
+                    return;
+                }
+
+                // Pede a data do pagamento ao usuário
+                const dataPagamento = prompt(
+                    `Lançar gasto: ${contaFixa.descricao}\n` +
+                    `Valor: ${formatarMoeda(contaFixa.valor)}\n\n` +
+                    `Digite a data do pagamento (YYYY-MM-DD):`,
+                    new Date().toISOString().split('T')[0]
+                );
+
+                if (!dataPagamento) {
+                    return; // Usuário cancelou
+                }
+
+                // Valida a data
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(dataPagamento)) {
+                    alert('Data inválida! Use o formato YYYY-MM-DD');
+                    return;
+                }
+
+                // Pede a conta de saída
+                if (state.contas.length === 0) {
+                    alert('Nenhuma conta bancária cadastrada! Cadastre uma conta primeiro.');
+                    return;
+                }
+
+                let contaId = null;
+                if (state.contas.length === 1) {
+                    contaId = state.contas[0].id;
+                } else {
+                    const contasOpcoes = state.contas.map((c, i) => `${i + 1}. ${c.nome} (${c.banco})`).join('\n');
+                    const contaEscolha = prompt(
+                        `Selecione a conta de saída:\n${contasOpcoes}\n\nDigite o número:`,
+                        '1'
+                    );
+                    if (!contaEscolha) return;
+                    const index = parseInt(contaEscolha) - 1;
+                    if (index >= 0 && index < state.contas.length) {
+                        contaId = state.contas[index].id;
+                    } else {
+                        alert('Conta inválida!');
+                        return;
+                    }
+                }
+
+                // Cria o gasto
+                const novoGasto = {
+                    id: Date.now().toString(),
+                    date: dataPagamento,
+                    description: `${contaFixa.descricao} [Conta Fixa]`,
+                    category: contaFixa.categoria,
+                    accountId: contaId,
+                    paymentMethod: 'Conta Fixa',
+                    amount: contaFixa.valor,
+                    type: 'EXPENSE'
+                };
+
+                console.log('💰 Lançando gasto de conta fixa:', novoGasto);
+
+                // Salva via API
+                const sucesso = await window.api.salvarTransacao(novoGasto);
+
+                if (sucesso) {
+                    await window.loadDataFromCloud(); // Recarrega
+                    alert(`Gasto lançado com sucesso!\n\n${contaFixa.descricao}: ${formatarMoeda(contaFixa.valor)}`);
+                } else {
+                    alert('Erro ao lançar gasto.');
                 }
             };
 
@@ -1342,8 +1505,9 @@
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Lançamento de Contas Fixas do Mês</h2>
                     <p class="text-sm text-gray-500 mb-4">Aqui são listadas as contas (permanentes ou parcelas) ativas
                         para o mês selecionado.</p>
-                    <div class="table-wrapper">
-                        <table id="tabela-contas-fixas-mes">
+                    <div class="table-wrapper" id="contas-fixas-cards-container">
+                        <!-- Os cards serão gerados dinamicamente aqui -->
+                        <table id="tabela-contas-fixas-mes" class="hidden">
                             <thead>
                                 <tr>
                                     <th>Descrição</th>
