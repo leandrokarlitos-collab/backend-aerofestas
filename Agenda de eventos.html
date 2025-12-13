@@ -3435,32 +3435,31 @@ PARA EVENTOS formal e completo. Use as seguintes informações para preencher o 
 - Endereço: ${yourCompany.address || 'Não informado'}
 - Telefone: ${yourCompany.phone || 'Não informado'}
 - E-mail: ${yourCompany.email || 'Não informado'}
-- Representante Legal: ${yourCompany.repName || 'Não informado'}, portador do documento ${yourCompany.repDoc || 'Não
-informado'}
+- Representante Legal: ${yourCompany.repName || 'Não informado'}, portador do documento ${yourCompany.repDoc || 'Não informado'}
 
-${ contratantePromptSection }
+${contratantePromptSection}
 
 - ** OBJETO DO CONTRATO(Lista de Equipamentos / Serviços):**
-                    ${ toyListString }
+                    ${toyListString}
 
-- ** DATA E HORA DO EVENTO:** ${ formattedEventDate }, das ${ event.startTime } às ${ event.endTime }.
-- ** LOCAL DE INSTALAÇÃO / EVENTO:** ${ fullEventAddressContract || 'O mesmo endereço do contratante.' }
-- ** DETALHE DO EVENTO:** ${ birthdayContractPrompt }
+- ** DATA E HORA DO EVENTO:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.
+- ** LOCAL DE INSTALAÇÃO / EVENTO:** ${fullEventAddressContract || 'O mesmo endereço do contratante.'}
+- ** DETALHE DO EVENTO:** ${birthdayContractPrompt}
 
-${ financePromptSection }
+${financePromptSection}
 
-- ** CONDIÇÕES DE PAGAMENTO ESPECÍFICAS:** ${ paymentDetailsText }. ${ paymentDataText }
+- ** CONDIÇÕES DE PAGAMENTO ESPECÍFICAS:** ${paymentDetailsText}. ${paymentDataText}
 
 O contrato deve ser estruturado com um título claro("CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E
 EQUIPAMENTOS PARA EVENTOS"), qualificação completa das partes e cláusulas numeradas, incluindo:
 1. ** CLÁUSULA PRIMEIRA - DO OBJETO:** Descrever a locação dos equipamentos / brinquedos listados para o evento na data,
-                        hora e local especificados.${ birthdayContractPrompt } Mencionar que inclui montagem e desmontagem.
+                        hora e local especificados.${birthdayContractPrompt} Mencionar que inclui montagem e desmontagem.
 2. ** CLÁUSULA SEGUNDA - DOS SERVIÇOS:** Listar os serviços inclusos: a) Fornecimento dos equipamentos; b) Montagem e
         desmontagem; c) Fornecimento de mão de obra(monitores, se aplicável, caso contrário omitir);
         3. ** CLÁUSULA TERCEIRA - DO PRAZO:** Definir o prazo determinado do contrato, correspondendo exatamente à data e
 horários de início e término do evento.
-4. ** CLÁUSULA QUARTA - DO VALOR E PAGAMENTO:** Mencionar o valor total(${ formatCurrency(valorTotal) }), a taxa de
-        entrega(${ formatCurrency(frete) }), e USAR EXATAMENTE as "CONDIÇÕES DE PAGAMENTO ESPECÍFICAS" e o "STATUS FINANCEIRO"
+4. ** CLÁUSULA QUARTA - DO VALOR E PAGAMENTO:** Mencionar o valor total(${formatCurrency(valorTotal)}), a taxa de
+        entrega(${formatCurrency(frete)}), e USAR EXATAMENTE as "CONDIÇÕES DE PAGAMENTO ESPECÍFICAS" e o "STATUS FINANCEIRO"
             (especialmente o valor do sinal) fornecidos acima.
 5. ** CLÁUSULA QUINTA - DAS DESPESAS:** Informar que o valor pago engloba todas as despesas da CONTRATADA(material,
                 transporte, mão de obra, impostos, etc.), constituindo a única remuneração devida.
@@ -3485,349 +3484,353 @@ quaisquer controvérsias, com renúncia a qualquer outro.
 Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tudo quanto se encontra disposto neste
         instrumento, assinam - no, em 02(duas) vias de igual teor e forma.", local, data e linhas para as assinaturas da
         CONTRATADA(representada por seu responsável) e do CONTRATANTE.
-** Local e data:** Aparecida de Goiânia, GO, ${ todayFormatted }.
+** Local e data:** Aparecida de Goiânia, GO, ${todayFormatted}.
         `;
 
-const contract = await callGeminiAPI(prompt, buttonElement);
+                const contract = await callGeminiAPI(prompt, buttonElement);
 
-if (contract) {
-showGeminiModal("Contrato de Locação (Gerado)", contract);
-openPrintWindow(`Contrato - ${ event.clientName } `, contract);
-}
-};
-// --- FIM DA MODIFICAÇÃO ---
+                if (contract) {
+                    showGeminiModal("Contrato de Locação (Gerado)", contract);
+                    openPrintWindow(`Contrato - ${event.clientName} `, contract);
+                }
+            };
+            // --- FIM DA MODIFICAÇÃO ---
 
-const toggleClientTypeFields = () => {
-if (clientTypePjRadio.checked) {
-pjFieldsDiv.classList.remove('hidden');
-pfFieldsDiv.classList.add('hidden');
-pjCompanyNameInput.required = true;
-clientNameInput.required = false;
-} else {
-pfFieldsDiv.classList.remove('hidden');
-pjFieldsDiv.classList.add('hidden');
-clientNameInput.required = true;
-pjCompanyNameInput.required = false;
-}
-};
+            const toggleClientTypeFields = () => {
+                if (clientTypePjRadio.checked) {
+                    pjFieldsDiv.classList.remove('hidden');
+                    pfFieldsDiv.classList.add('hidden');
+                    pjCompanyNameInput.required = true;
+                    clientNameInput.required = false;
+                } else {
+                    pfFieldsDiv.classList.remove('hidden');
+                    pjFieldsDiv.classList.add('hidden');
+                    clientNameInput.required = true;
+                    pjCompanyNameInput.required = false;
+                }
+            };
 
-// --- INÍCIO DA MODIFICAÇÃO: Nova função para campos de Aniversariante ---
-const toggleBirthdayFields = () => {
-if (isBirthdayCheckbox.checked) {
-birthdayFieldsDiv.classList.remove('hidden');
-} else {
-birthdayFieldsDiv.classList.add('hidden');
-}
-};
-// --- FIM DA MODIFICAÇÃO ---
+            // --- INÍCIO DA MODIFICAÇÃO: Nova função para campos de Aniversariante ---
+            const toggleBirthdayFields = () => {
+                if (isBirthdayCheckbox.checked) {
+                    birthdayFieldsDiv.classList.remove('hidden');
+                } else {
+                    birthdayFieldsDiv.classList.add('hidden');
+                }
+            };
+            // --- FIM DA MODIFICAÇÃO ---
 
-// --- INICIALIZAÇÃO E EVENT LISTENERS ---
+            // --- INICIALIZAÇÃO E EVENT LISTENERS ---
 
-clientNameInput.addEventListener('input', (e) => {
-const client = clients.find(c => c.name === e.target.value);
-if (client) {
-document.getElementById('client-phone').value = client.phone || '';
-// document.getElementById('client-address').value = client.address || ''; // Não preencher endereço para não confundir
-com endereço do evento
-document.getElementById('client-cpf').value = client.cpf || '';
-document.getElementById('client-rg').value = client.rg || '';
-document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONADO } });
-    eventModal.addEventListener('focusin', ()=> {
-    clientSuggestionsDatalist.innerHTML = '';
-    clients.forEach(client => {
-    const option = document.createElement('option');
-    option.value = client.name;
-    clientSuggestionsDatalist.appendChild(option);
-    });
-    });
+            clientNameInput.addEventListener('input', (e) => {
+                const client = clients.find(c => c.name === e.target.value);
+                if (client) {
+                    document.getElementById('client-phone').value = client.phone || '';
+                    // document.getElementById('client-address').value = client.address || ''; // Não preencher endereço para não confundir com endereço do evento
+                    document.getElementById('client-cpf').value = client.cpf || '';
+                    document.getElementById('client-rg').value = client.rg || '';
+                    document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONADO } });
+                    eventModal.addEventListener('focusin', () => {
+                        clientSuggestionsDatalist.innerHTML = '';
+                        clients.forEach(client => {
+                            const option = document.createElement('option');
+                            option.value = client.name;
+                            clientSuggestionsDatalist.appendChild(option);
+                        });
+                    });
 
-    prevMonthBtn.addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() - 1);
-    // --- INÍCIO DA MODIFICAÇÃO: Atualizar faturamento das empresas ao mudar o mês ---
-    selectedDate = null;
-    hideModal(dayEventsModal);
-    renderCalendar();
-    renderCompanies(); // Atualiza os totais das empresas
-    checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES // --- FIM DA MODIFICAÇÃO --- });
-        nextMonthBtn.addEventListener('click', ()=> {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        // --- INÍCIO DA MODIFICAÇÃO: Atualizar faturamento das empresas ao mudar o mês ---
-        selectedDate = null;
-        hideModal(dayEventsModal);
-        renderCalendar();
-        renderCompanies(); // Atualiza os totais das empresas
-        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES // --- FIM DA MODIFICAÇÃO --- });
-            addToyBtn.addEventListener('click', handleAddToy); exportToysPdfBtn.addEventListener('click',
-            handleExportToysPDF); // Event listener para o PDF addCompanyBtn.addEventListener('click',
+                    prevMonthBtn.addEventListener('click', () => {
+                        currentDate.setMonth(currentDate.getMonth() - 1);
+                        // --- INÍCIO DA MODIFICAÇÃO: Atualizar faturamento das empresas ao mudar o mês ---
+                        selectedDate = null;
+                        hideModal(dayEventsModal);
+                        renderCalendar();
+                        renderCompanies(); // Atualiza os totais das empresas
+                        checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES // --- FIM DA MODIFICAÇÃO --- });
+                        nextMonthBtn.addEventListener('click', () => {
+                            currentDate.setMonth(currentDate.getMonth() + 1);
+                            // --- INÍCIO DA MODIFICAÇÃO: Atualizar faturamento das empresas ao mudar o mês ---
+                            selectedDate = null;
+                            hideModal(dayEventsModal);
+                            renderCalendar();
+                            renderCompanies(); // Atualiza os totais das empresas
+                            checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES // --- FIM DA MODIFICAÇÃO --- });
+                            addToyBtn.addEventListener('click', handleAddToy); exportToysPdfBtn.addEventListener('click',
+                                handleExportToysPDF); // Event listener para o PDF addCompanyBtn.addEventListener('click',
             handleAddCompany); // MODIFICADO: Mover o listener de submit do form para o botão "Salvar" do wizard //
-            eventForm.addEventListener('submit', handleFormSubmit); // REMOVIDO saveStepBtn.addEventListener('click',
+                        eventForm.addEventListener('submit', handleFormSubmit); // REMOVIDO saveStepBtn.addEventListener('click',
             handleFormSubmit); // ADICIONADO cancelBtn.addEventListener('click', ()=> hideModal(eventModal));
 
-            // INÍCIO: Listeners de Navegação do Wizard
-            nextStepBtn.addEventListener('click', () => {
-            if (validateStep(currentStep)) {
-            if (currentStep < totalSteps) { showStep(currentStep + 1); } } }); prevStepBtn.addEventListener('click',
-                ()=> {
-                if (currentStep > 1) {
-                showStep(currentStep - 1);
-                }
-                });
-                // FIM: Listeners de Navegação do Wizard
+                    // INÍCIO: Listeners de Navegação do Wizard
+                    nextStepBtn.addEventListener('click', () => {
+                        if (validateStep(currentStep)) {
+                            if (currentStep < totalSteps) { showStep(currentStep + 1); }
+                        }
+                    }); prevStepBtn.addEventListener('click',
+                        () => {
+                            if (currentStep > 1) {
+                                showStep(currentStep - 1);
+                            }
+                        });
+                    // FIM: Listeners de Navegação do Wizard
 
-                clientTypePfRadio.addEventListener('change', toggleClientTypeFields);
-                clientTypePjRadio.addEventListener('change', toggleClientTypeFields);
-                isBirthdayCheckbox.addEventListener('change', toggleBirthdayFields); // <-- ADICIONADO // INÍCIO DA
+                    clientTypePfRadio.addEventListener('change', toggleClientTypeFields);
+                    clientTypePjRadio.addEventListener('change', toggleClientTypeFields);
+                    isBirthdayCheckbox.addEventListener('change', toggleBirthdayFields); // <-- ADICIONADO // INÍCIO DA
                     MODIFICAÇÃO: Sincronizar campo de data visível com campo hidden const
-                    eventDateVisibleEl=document.getElementById('event-date-visible'); if (eventDateVisibleEl) {
-                    eventDateVisibleEl.addEventListener('change', ()=> {
-                    document.getElementById('event-date').value = eventDateVisibleEl.value;
-                    });
-                    }
+                        eventDateVisibleEl = document.getElementById('event-date-visible'); if (eventDateVisibleEl) {
+                            eventDateVisibleEl.addEventListener('change', () => {
+                                document.getElementById('event-date').value = eventDateVisibleEl.value;
+                            });
+                        }
                     // FIM DA MODIFICAÇÃO
 
                     addToyToEventBtn.addEventListener('click', () => {
-                    const selectedToyId = parseInt(toySelectModalEl.value);
-                    const quantity = parseInt(document.getElementById('toy-quantity-modal').value);
-                    const price = parseFloat(document.getElementById('toy-price-modal').value);
-                    // INÍCIO DA MODIFICAÇÃO: Usar campo de data visível
-                    const eventDate = document.getElementById('event-date-visible').value ||
-                    document.getElementById('event-date').value;
-                    // FIM DA MODIFICAÇÃO
-                    const eventId = document.getElementById('event-id').value ?
-                    parseInt(document.getElementById('event-id').value) : null;
-                    const startTime = document.getElementById('event-start-time').value;
-                    const endTime = document.getElementById('event-end-time').value;
+                        const selectedToyId = parseInt(toySelectModalEl.value);
+                        const quantity = parseInt(document.getElementById('toy-quantity-modal').value);
+                        const price = parseFloat(document.getElementById('toy-price-modal').value);
+                        // INÍCIO DA MODIFICAÇÃO: Usar campo de data visível
+                        const eventDate = document.getElementById('event-date-visible').value ||
+                            document.getElementById('event-date').value;
+                        // FIM DA MODIFICAÇÃO
+                        const eventId = document.getElementById('event-id').value ?
+                            parseInt(document.getElementById('event-id').value) : null;
+                        const startTime = document.getElementById('event-start-time').value;
+                        const endTime = document.getElementById('event-end-time').value;
 
-                    if (!selectedToyId || quantity < 1 || isNaN(price)) { showToast('Selecione um brinquedo e insira
+                        if (!selectedToyId || quantity < 1 || isNaN(price)) {
+                            showToast('Selecione um brinquedo e insira
                         quantidade e valor válidos.', true); return; } if (!startTime || !endTime) { showToast('Por
                         favor, defina o horário de início e término do evento.', true); return; } if (endTime
-                        <=startTime) { showToast('O horário de término deve ser após o horário de início.', true);
-                        return; } // NOVA VALIDAÇÃO: Verifica se a quantidade solicitada excede o estoque TOTAL const
-                        selectedToy=toys.find(t=> t.id === selectedToyId);
-                        if (!selectedToy) {
-                        showToast('Brinquedo não encontrado!', true);
-                        return;
-                        }
+                                <= startTime) {
+                                showToast('O horário de término deve ser após o horário de início.', true);
+                                return;
+                            } // NOVA VALIDAÇÃO: Verifica se a quantidade solicitada excede o estoque TOTAL const
+                            selectedToy = toys.find(t => t.id === selectedToyId);
+                            if (!selectedToy) {
+                                showToast('Brinquedo não encontrado!', true);
+                                return;
+                            }
 
-                        // CORRIGIDO: Verificar quantidade JÁ ADICIONADA ao evento atual
-                        const alreadyInCart = toysForCurrentEvent
-                        .filter(t => t.id === selectedToyId)
-                        .reduce((sum, t) => sum + t.quantity, 0);
+                            // CORRIGIDO: Verificar quantidade JÁ ADICIONADA ao evento atual
+                            const alreadyInCart = toysForCurrentEvent
+                                .filter(t => t.id === selectedToyId)
+                                .reduce((sum, t) => sum + t.quantity, 0);
 
-                        const totalQuantity = alreadyInCart + quantity;
+                            const totalQuantity = alreadyInCart + quantity;
 
-                        if (totalQuantity > selectedToy.quantity) {
-                        const msg = alreadyInCart > 0
-                        ? `Você já adicionou ${ alreadyInCart } unidade(s).Total seria ${ totalQuantity }, mas temos apenas
-                        ${ selectedToy.quantity } de ${ selectedToy.name } no estoque.`
-                        : `Estoque total insuficiente! Temos apenas ${ selectedToy.quantity } unidade(s) de
-                        ${ selectedToy.name } no estoque.`;
-                        showToast(msg, true);
-                        return;
-                        }
+                            if (totalQuantity > selectedToy.quantity) {
+                                const msg = alreadyInCart > 0
+                                    ? `Você já adicionou ${alreadyInCart} unidade(s).Total seria ${totalQuantity}, mas temos apenas
+                        ${selectedToy.quantity} de ${selectedToy.name} no estoque.`
+                                    : `Estoque total insuficiente! Temos apenas ${selectedToy.quantity} unidade(s) de
+                        ${selectedToy.name} no estoque.`;
+                                showToast(msg, true);
+                                return;
+                            }
 
-                        // Validação de disponibilidade por horário (conflitos com outros eventos)
-                        const availability = getToyAvailabilityForDateTime(selectedToyId, eventDate, startTime, endTime,
-                        eventId);
+                            // Validação de disponibilidade por horário (conflitos com outros eventos)
+                            const availability = getToyAvailabilityForDateTime(selectedToyId, eventDate, startTime, endTime,
+                                eventId);
 
-                        if (quantity > availability.available) {
-                        const availableText = availability.available > 0 ? `Apenas ${ availability.available } unidade(s)
+                            if (quantity > availability.available) {
+                                const availableText = availability.available > 0 ? `Apenas ${availability.available} unidade(s)
         disponível(is)` : `Nenhuma unidade disponível`;
-                        showToast(`Estoque insuficiente! ${ availableText } para este horário.`, true);
-                        return;
-                        }
+                                showToast(`Estoque insuficiente! ${availableText} para este horário.`, true);
+                                return;
+                            }
 
-                        toysForCurrentEvent.push({ id: selectedToyId, quantity, price });
-                        renderSelectedToysInModal();
-                        updateFinalPrice();
-                        toySelectModalEl.value = '';
-                        document.getElementById('toy-quantity-modal').value = '1';
-                        document.getElementById('toy-price-modal').value = '';
+                            toysForCurrentEvent.push({ id: selectedToyId, quantity, price });
+                            renderSelectedToysInModal();
+                            updateFinalPrice();
+                            toySelectModalEl.value = '';
+                            document.getElementById('toy-quantity-modal').value = '1';
+                            document.getElementById('toy-price-modal').value = '';
                         });
 
-                        [discountTypeEl, discountValueEl].forEach(el => el.addEventListener('input', updateFinalPrice));
+                    [discountTypeEl, discountValueEl].forEach(el => el.addEventListener('input', updateFinalPrice));
 
-                        // INÍCIO DA MODIFICAÇÃO: Listeners para novos campos
-                        deliveryFeeEl.addEventListener('input', updateFinalPrice);
-                        cepSearchBtn.addEventListener('click', handleCepSearch);
-                        // FIM DA MODIFICAÇÃO
+                    // INÍCIO DA MODIFICAÇÃO: Listeners para novos campos
+                    deliveryFeeEl.addEventListener('input', updateFinalPrice);
+                    cepSearchBtn.addEventListener('click', handleCepSearch);
+                    // FIM DA MODIFICAÇÃO
 
-                        settingsBtn.addEventListener('click', showApiKeyModal);
-                        cancelApiKeyBtn.addEventListener('click', () => hideModal(apiKeyModal));
-                        closeDayEventsModalBtn.addEventListener('click', () => hideModal(dayEventsModal));
+                    settingsBtn.addEventListener('click', showApiKeyModal);
+                    cancelApiKeyBtn.addEventListener('click', () => hideModal(apiKeyModal));
+                    closeDayEventsModalBtn.addEventListener('click', () => hideModal(dayEventsModal));
 
-                        // Fechar modal de eventos do dia ao clicar fora
-                        dayEventsModal.addEventListener('click', (e) => {
+                    // Fechar modal de eventos do dia ao clicar fora
+                    dayEventsModal.addEventListener('click', (e) => {
                         if (e.target === dayEventsModal) {
-                        hideModal(dayEventsModal);
+                            hideModal(dayEventsModal);
                         }
-                        });
+                    });
 
-                        // Event listeners para modal de filtro de eventos
-                        filterEventsBtn.addEventListener('click', showFilterEventsModal);
-                        closeFilterEventsModalBtn.addEventListener('click', () => hideModal(filterEventsModal));
-                        exportFilterEventsPdfBtn.addEventListener('click', handleExportFilterEventsPDF);
+                    // Event listeners para modal de filtro de eventos
+                    filterEventsBtn.addEventListener('click', showFilterEventsModal);
+                    closeFilterEventsModalBtn.addEventListener('click', () => hideModal(filterEventsModal));
+                    exportFilterEventsPdfBtn.addEventListener('click', handleExportFilterEventsPDF);
 
-                        // Fechar modal de filtro ao clicar fora
-                        filterEventsModal.addEventListener('click', (e) => {
+                    // Fechar modal de filtro ao clicar fora
+                    filterEventsModal.addEventListener('click', (e) => {
                         if (e.target === filterEventsModal) {
-                        hideModal(filterEventsModal);
+                            hideModal(filterEventsModal);
                         }
-                        });
+                    });
 
-                        // Event listeners para ordenação por coluna
-                        document.querySelectorAll('th[data-sort]').forEach(header => {
+                    // Event listeners para ordenação por coluna
+                    document.querySelectorAll('th[data-sort]').forEach(header => {
                         header.addEventListener('click', () => {
-                        handleSortColumn(header.dataset.sort);
+                            handleSortColumn(header.dataset.sort);
                         });
-                        });
+                    });
 
-                        // Event listeners para modal de notificações
-                        notificationsBtn.addEventListener('click', () => showModal(notificationsModal));
-                        closeNotificationsModalBtn.addEventListener('click', () => hideModal(notificationsModal));
+                    // Event listeners para modal de notificações
+                    notificationsBtn.addEventListener('click', () => showModal(notificationsModal));
+                    closeNotificationsModalBtn.addEventListener('click', () => hideModal(notificationsModal));
 
-                        // Fechar modal de notificações ao clicar fora
-                        notificationsModal.addEventListener('click', (e) => {
+                    // Fechar modal de notificações ao clicar fora
+                    notificationsModal.addEventListener('click', (e) => {
                         if (e.target === notificationsModal) {
-                        hideModal(notificationsModal);
+                            hideModal(notificationsModal);
                         }
-                        });
+                    });
 
-                        // Event listeners para modal de catálogo
-                        catalogSettingsBtn.addEventListener('click', () => showModal(catalogModal));
-                        closeCatalogModalBtn.addEventListener('click', () => hideModal(catalogModal));
+                    // Event listeners para modal de catálogo
+                    catalogSettingsBtn.addEventListener('click', () => showModal(catalogModal));
+                    closeCatalogModalBtn.addEventListener('click', () => hideModal(catalogModal));
 
-                        // Fechar modal de catálogo ao clicar fora
-                        catalogModal.addEventListener('click', (e) => {
+                    // Fechar modal de catálogo ao clicar fora
+                    catalogModal.addEventListener('click', (e) => {
                         if (e.target === catalogModal) {
-                        hideModal(catalogModal);
+                            hideModal(catalogModal);
                         }
-                        });
+                    });
 
-                        // NOVO: Event listeners para as Abas do Catálogo
-                        const switchCatalogTab = (tab) => {
+                    // NOVO: Event listeners para as Abas do Catálogo
+                    const switchCatalogTab = (tab) => {
                         // Atualizar botões
                         if (tab === 'toys') {
-                        catalogTabToys.classList.add('border-indigo-600', 'text-indigo-600');
-                        catalogTabToys.classList.remove('border-transparent', 'text-gray-500');
-                        catalogTabCompanies.classList.remove('border-indigo-600', 'text-indigo-600');
-                        catalogTabCompanies.classList.add('border-transparent', 'text-gray-500');
+                            catalogTabToys.classList.add('border-indigo-600', 'text-indigo-600');
+                            catalogTabToys.classList.remove('border-transparent', 'text-gray-500');
+                            catalogTabCompanies.classList.remove('border-indigo-600', 'text-indigo-600');
+                            catalogTabCompanies.classList.add('border-transparent', 'text-gray-500');
 
-                        // Mostrar/Esconder conteúdo
-                        catalogContentToys.classList.remove('hidden');
-                        catalogContentCompanies.classList.add('hidden');
+                            // Mostrar/Esconder conteúdo
+                            catalogContentToys.classList.remove('hidden');
+                            catalogContentCompanies.classList.add('hidden');
                         } else if (tab === 'companies') {
-                        catalogTabCompanies.classList.add('border-indigo-600', 'text-indigo-600');
-                        catalogTabCompanies.classList.remove('border-transparent', 'text-gray-500');
-                        catalogTabToys.classList.remove('border-indigo-600', 'text-indigo-600');
-                        catalogTabToys.classList.add('border-transparent', 'text-gray-500');
+                            catalogTabCompanies.classList.add('border-indigo-600', 'text-indigo-600');
+                            catalogTabCompanies.classList.remove('border-transparent', 'text-gray-500');
+                            catalogTabToys.classList.remove('border-indigo-600', 'text-indigo-600');
+                            catalogTabToys.classList.add('border-transparent', 'text-gray-500');
 
-                        // Mostrar/Esconder conteúdo
-                        catalogContentCompanies.classList.remove('hidden');
-                        catalogContentToys.classList.add('hidden');
+                            // Mostrar/Esconder conteúdo
+                            catalogContentCompanies.classList.remove('hidden');
+                            catalogContentToys.classList.add('hidden');
                         }
-                        };
+                    };
 
-                        catalogTabToys.addEventListener('click', () => switchCatalogTab('toys'));
-                        catalogTabCompanies.addEventListener('click', () => switchCatalogTab('companies'));
+                    catalogTabToys.addEventListener('click', () => switchCatalogTab('toys'));
+                    catalogTabCompanies.addEventListener('click', () => switchCatalogTab('companies'));
 
-                        // --- INÍCIO DA CORREÇÃO ---
-                        saveApiKeyBtn.addEventListener('click', saveApiKey);
-                        closeGeminiModalBtn.addEventListener('click', () => hideModal(geminiModal));
+                    // --- INÍCIO DA CORREÇÃO ---
+                    saveApiKeyBtn.addEventListener('click', saveApiKey);
+                    closeGeminiModalBtn.addEventListener('click', () => hideModal(geminiModal));
 
-                        // Novo listener para o botão de imprimir do modal
-                        printGeminiContentBtn.addEventListener('click', () => {
+                    // Novo listener para o botão de imprimir do modal
+                    printGeminiContentBtn.addEventListener('click', () => {
                         const title = geminiModalTitle.textContent;
                         const content = geminiModalContent.value;
                         openPrintWindow(title, content);
-                        });
+                    });
 
-                        copyGeminiContentBtn.addEventListener('click', () => {
+                    copyGeminiContentBtn.addEventListener('click', () => {
                         geminiModalContent.select();
                         try {
-                        document.execCommand('copy');
-                        showToast('Texto copiado!', false);
+                            document.execCommand('copy');
+                            showToast('Texto copiado!', false);
                         } catch (err) {
-                        showToast('Falha ao copiar. Use Ctrl+C.', true);
+                            showToast('Falha ao copiar. Use Ctrl+C.', true);
                         }
-                        });
+                    });
 
-                        // REMOVIDO: Código antigo dos collapsibles (agora usa sistema de tabs moderno)
+                    // REMOVIDO: Código antigo dos collapsibles (agora usa sistema de tabs moderno)
 
 
-                        // --- INÍCIO: Funções de Notificação de Aniversário ---
-                        const notificationsListEl = document.getElementById('notifications-list');
-                        const notificationsHeaderIcon = document.getElementById('notifications-header-icon'); // Pegar o
+                    // --- INÍCIO: Funções de Notificação de Aniversário ---
+                    const notificationsListEl = document.getElementById('notifications-list');
+                    const notificationsHeaderIcon = document.getElementById('notifications-header-icon'); // Pegar o
                         ícone do botão no header
 
-                        /**
-                        * Renderiza as notificações de aniversário na UI.
-                        * @param {Array} notifications - Um array de objetos de notificação.
-                        */
-                        const renderNotifications = (notifications) => {
+                    /**
+                    * Renderiza as notificações de aniversário na UI.
+                    * @param {Array} notifications - Um array de objetos de notificação.
+                    */
+                    const renderNotifications = (notifications) => {
                         notificationsListEl.innerHTML = '';
 
                         if (notifications.length === 0) {
-                        notificationsListEl.innerHTML = '<p class="text-sm text-gray-500">Nenhum aniversário próximo.
-                        </p>';
-                        if (notificationsHeaderIcon) {
+                            notificationsListEl.innerHTML = '<p class="text-sm text-gray-500">Nenhum aniversário próximo.
+                        </p > ';
+                    if (notificationsHeaderIcon) {
                         notificationsHeaderIcon.classList.remove('bell-pulse'); // Remover pulso
-                        }
-                        return;
-                        }
+                    }
+                    return;
+                }
 
-                        // Adicionar pulso se houver notificações
-                        if (notificationsHeaderIcon) {
-                        notificationsHeaderIcon.classList.add('bell-pulse');
-                        }
+                // Adicionar pulso se houver notificações
+                if (notificationsHeaderIcon) {
+                    notificationsHeaderIcon.classList.add('bell-pulse');
+                }
 
-                        // Ordenar: hoje primeiro, depois por menos dias
-                        notifications.sort((a, b) => a.dias - b.dias);
+                // Ordenar: hoje primeiro, depois por menos dias
+                notifications.sort((a, b) => a.dias - b.dias);
 
-                        notifications.forEach(notif => {
-                        const notifEl = document.createElement('div');
-                        notifEl.className = 'bg-white/50 p-3 rounded-md border border-gray-200 flex items-center
-                        space-x-3';
+                notifications.forEach(notif => {
+                    const notifEl = document.createElement('div');
+                    notifEl.className = 'bg-white/50 p-3 rounded-md border border-gray-200 flex items-center
+                    space - x - 3';
 
-                        let iconHtml = '';
-                        let textHtml = '';
-                        let bgColor = 'bg-white/50';
+                    let iconHtml = '';
+                    let textHtml = '';
+                    let bgColor = 'bg-white/50';
 
-                        // --- INÍCIO DA MODIFICAÇÃO: Formatar data do evento ---
-                        let eventDateStr = '';
-                        if (notif.eventDate) {
+                    // --- INÍCIO DA MODIFICAÇÃO: Formatar data do evento ---
+                    let eventDateStr = '';
+                    if (notif.eventDate) {
                         try {
-                        // Adiciona T00:00:00 para garantir consistência de fuso horário
-                        const d = new Date(notif.eventDate + "T00:00:00");
-                        // Formato MM/YYYY
-                        // eventDateStr = ` (Evento: ${ String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()})`;
-                        // --- INÍCIO DA CORREÇÃO: Formato DD/MM/YYYY ---
-                        eventDateStr = ` (Evento: ${ String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() +
-        1).padStart(2, '0')}/${d.getFullYear()})`;
-                        // --- FIM DA CORREÇÃO ---
+                            // Adiciona T00:00:00 para garantir consistência de fuso horário
+                            const d = new Date(notif.eventDate + "T00:00:00");
+                            // Formato MM/YYYY
+                            // eventDateStr = ` (Evento: ${ String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()})`;
+                            // --- INÍCIO DA CORREÇÃO: Formato DD/MM/YYYY ---
+                            eventDateStr = ` (Evento: ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() +
+                                1).padStart(2, '0')}/${d.getFullYear()})`;
+                            // --- FIM DA CORREÇÃO ---
                         } catch (err) { /* Ignora data inválida */ }
-                        }
-                        // --- FIM DA MODIFICAÇÃO ---
+                    }
+                    // --- FIM DA MODIFICAÇÃO ---
 
-                        if (notif.dias === 0) {
+                    if (notif.dias === 0) {
                         iconHtml = '<i class="fas fa-birthday-cake text-pink-500 text-2xl"></i>';
                         // MODIFICADO
-                        textHtml = `É o aniversário de < strong > ${ notif.nome }</strong > (${ notif.tipo }) hoje! < span
-        class="text-xs block text-gray-600" > Ref: ${ notif.clientName }${ eventDateStr }</span > `;
+                        textHtml = `É o aniversário de < strong > ${notif.nome}</strong > (${notif.tipo}) hoje! < span
+        class="text-xs block text-gray-600" > Ref: ${notif.clientName}${eventDateStr}</span > `;
                         bgColor = 'bg-pink-100/80 border-pink-300'; // Destaque especial
-                        } else {
+                    } else {
                         iconHtml = '<i class="fas fa-gift text-blue-500 text-xl"></i>';
                         // MODIFICADO
-                        textHtml = `Aniversário de < strong > ${ notif.nome }</strong > (${ notif.tipo }) em
-            < strong > ${ notif.dias } dias</strong >. < span class="text-xs block text-gray-600" > Ref:
-                            ${ notif.clientName }${ eventDateStr }</span > `;
+                        textHtml = `Aniversário de < strong > ${notif.nome}</strong > (${notif.tipo}) em
+            < strong > ${notif.dias} dias</strong >. < span class="text-xs block text-gray-600" > Ref:
+                            ${notif.clientName}${eventDateStr}</span > `;
                         bgColor = 'bg-blue-50/80';
-                        }
+                    }
 
-                        notifEl.className = `p - 3 rounded - md border flex items - center space - x - 3 ${ bgColor } `;
-                        // --- INÍCIO DA MODIFICAÇÃO: Adicionar botão de mensagem ---
-                        notifEl.innerHTML = `
-            < div > ${ iconHtml }</div >
+                    notifEl.className = `p - 3 rounded - md border flex items - center space - x - 3 ${bgColor} `;
+                    // --- INÍCIO DA MODIFICAÇÃO: Adicionar botão de mensagem ---
+                    notifEl.innerHTML = `
+            < div > ${iconHtml}</div >
                         <div class="flex-1"> <!-- ADICIONADO WRAPPER -->
                             <p class="text-sm text-gray-800">${textHtml}</p>
                         </div>
@@ -3838,205 +3841,228 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
                 <i class="fas fa-comment-dots"></i>
             </button>
         `;
-                        // --- FIM DA MODIFICAÇÃO ---
-                        notificationsListEl.appendChild(notifEl);
-                        });
+                    // --- FIM DA MODIFICAÇÃO ---
+                    notificationsListEl.appendChild(notifEl);
+                });
 
-                        // --- INÍCIO DA MODIFICAÇÃO: Adicionar listeners aos novos botões ---
-                        document.querySelectorAll('.birthday-message-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
+                // --- INÍCIO DA MODIFICAÇÃO: Adicionar listeners aos novos botões ---
+                document.querySelectorAll('.birthday-message-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
                         const target = e.currentTarget;
                         handleGenerateBirthdayMessage(
-                        target.dataset.nome,
-                        target.dataset.tipo,
-                        parseInt(target.dataset.dias, 10),
-                        target // Passa o botão para mostrar o spinner
+                            target.dataset.nome,
+                            target.dataset.tipo,
+                            parseInt(target.dataset.dias, 10),
+                            target // Passa o botão para mostrar o spinner
                         );
-                        });
-                        });
-                        // --- FIM DA MODIFICAÇÃO ---
-                        };
+                    });
+                });
+                // --- FIM DA MODIFICAÇÃO ---
+            };
 
-                        /**
-                        * Verifica todos os eventos por datas de aniversário próximas e renderiza as notificações.
-                        */
-                        const checkBirthdayNotifications = () => {
-                        // const aniversariantes = new Map(); // REMOVIDO
-                        const notificacoes = []; // <-- Criado aqui const hoje=new Date(); const
-                            anoAtual=hoje.getFullYear(); // Normaliza 'hoje' para meia-noite para comparações de dia
-                            inteiro const hojeTimestamp=new Date(anoAtual, hoje.getMonth(), hoje.getDate()).getTime();
-                            // Intervalos de dias para notificar const intervalos=[0, 7, 15, 30]; events.forEach(e=> {
-                            // --- INÍCIO DA MODIFICAÇÃO: Passar data do evento para a função ---
-                            const processarAniversario = (nome, dob, tipo, clientName, eventId, eventDate) => {
-                            if (!dob) return;
-                            try {
-                            const dobDate = new Date(dob + "T00:00:00");
-                            const dobMes = dobDate.getMonth();
-                            const dobDia = dobDate.getDate();
+            /**
+            * Verifica todos os eventos por datas de aniversário próximas e renderiza as notificações.
+            */
+            const checkBirthdayNotifications = () => {
+                // const aniversariantes = new Map(); // REMOVIDO
+                const notificacoes = []; // <-- Criado aqui const hoje=new Date(); const
+                anoAtual = hoje.getFullYear(); // Normaliza 'hoje' para meia-noite para comparações de dia
+                            inteiro const hojeTimestamp = new Date(anoAtual, hoje.getMonth(), hoje.getDate()).getTime();
+                // Intervalos de dias para notificar const intervalos=[0, 7, 15, 30]; events.forEach(e=> {
+                // --- INÍCIO DA MODIFICAÇÃO: Passar data do evento para a função ---
+                const processarAniversario = (nome, dob, tipo, clientName, eventId, eventDate) => {
+                    if (!dob) return;
+                    try {
+                        const dobDate = new Date(dob + "T00:00:00");
+                        const dobMes = dobDate.getMonth();
+                        const dobDia = dobDate.getDate();
 
-                            const aniversarioEsteAno = new Date(anoAtual, dobMes, dobDia).getTime();
-                            let diffDays = (aniversarioEsteAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
+                        const aniversarioEsteAno = new Date(anoAtual, dobMes, dobDia).getTime();
+                        let diffDays = (aniversarioEsteAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
 
-                            if (diffDays >= 0 && intervalos.includes(diffDays)) {
+                        if (diffDays >= 0 && intervalos.includes(diffDays)) {
                             notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate }); // Passa
                             eventDate
-                            } else if (diffDays < 0) { const aniversarioProximoAno=new Date(anoAtual + 1, dobMes,
-                                dobDia).getTime(); diffDays=(aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 *
-                                24); if (intervalos.includes(diffDays)) { notificacoes.push({ nome, tipo, dias:
-                                diffDays, clientName, eventId, eventDate }); // Passa eventDate } } } catch (error) {
-                                console.error("Erro ao processar data de aniversário:", dob, error); } }; // Adiciona
-                                contratante (PF) se tiver data de nascimento if (e.clientDob && e.clientType==='PF' &&
-                                e.clientName) { processarAniversario(e.clientName, e.clientDob, 'Contratante' ,
+                        } else if (diffDays < 0) {
+                            const aniversarioProximoAno = new Date(anoAtual + 1, dobMes,
+                                dobDia).getTime(); diffDays = (aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 *
+                                    24); if (intervalos.includes(diffDays)) {
+                                        notificacoes.push({
+                                            nome, tipo, dias:
+                                                diffDays, clientName, eventId, eventDate
+                                        }); // Passa eventDate } } } catch (error) {
+                                        console.error("Erro ao processar data de aniversário:", dob, error);
+                                    }
+                        }; // Adiciona
+                        contratante(PF) se tiver data de nascimento if (e.clientDob && e.clientType === 'PF' &&
+                            e.clientName) {
+                            processarAniversario(e.clientName, e.clientDob, 'Contratante',
                                 e.clientName, e.id, e.date); // Passa e.date } // Adiciona aniversariante do evento se
                                 tiver data de nascimento if (e.isBirthday && e.birthdayPersonDob &&
-                                e.birthdayPersonName) { processarAniversario(e.birthdayPersonName,
-                                e.birthdayPersonDob, 'Aniversariante' , e.clientName, e.id, e.date); // Passa e.date }
+                                e.birthdayPersonName) {
+                                processarAniversario(e.birthdayPersonName,
+                                    e.birthdayPersonDob, 'Aniversariante', e.clientName, e.id, e.date); // Passa e.date }
                                 // --- FIM DA MODIFICAÇÃO --- }); renderNotifications(notificacoes); }; // --- FIM:
-                                Funções de Notificação de Aniversário --- // --- LÓGICA PARA LIDAR COM PARÂMETROS DA URL
-                                (EDIÇÃO) --- const handleUrlParameters=()=> {
-                                const urlParams = new URLSearchParams(window.location.search);
-                                const eventIdToEdit = urlParams.get('editEvent');
-                                if (eventIdToEdit) {
-                                const eventIdNum = parseInt(eventIdToEdit, 10);
-                                const eventToEdit = events.find(e => e.id === eventIdNum);
-                                if (eventToEdit) {
-                                // Navega para o mês correto do evento
-                                currentDate = new Date(eventToEdit.date + 'T00:00:00');
-                                renderCalendar();
-                                // Simula o clique no dia e abre o modal de edição
-                                handleDayClick(eventToEdit.date);
-                                showEventModal(eventToEdit.date, eventToEdit);
-                                } else {
-                                showToast('Evento para edição não encontrado.', true);
-                                }
-                                } // <-- INÍCIO DA CORREÇÃO: Esta chave estava faltando // --- FIM DA MODIFICAÇÃO --- };
+                                Funções de Notificação de Aniversário-- - // --- LÓGICA PARA LIDAR COM PARÂMETROS DA URL
+                                    (EDIÇÃO)-- - const handleUrlParameters = () => {
+                                        const urlParams = new URLSearchParams(window.location.search);
+                                        const eventIdToEdit = urlParams.get('editEvent');
+                                        if (eventIdToEdit) {
+                                            const eventIdNum = parseInt(eventIdToEdit, 10);
+                                            const eventToEdit = events.find(e => e.id === eventIdNum);
+                                            if (eventToEdit) {
+                                                // Navega para o mês correto do evento
+                                                currentDate = new Date(eventToEdit.date + 'T00:00:00');
+                                                renderCalendar();
+                                                // Simula o clique no dia e abre o modal de edição
+                                                handleDayClick(eventToEdit.date);
+                                                showEventModal(eventToEdit.date, eventToEdit);
+                                            } else {
+                                                showToast('Evento para edição não encontrado.', true);
+                                            }
+                                        } // <-- INÍCIO DA CORREÇÃO: Esta chave estava faltando // --- FIM DA MODIFICAÇÃO --- };
                                     // --- INÍCIO DA MODIFICAÇÃO: Nova função para gerar mensagem de aniversário --- /**
-                                    * Gera uma mensagem de relacionamento (aniversário) usando a API Gemini. */ const
-                                    handleGenerateBirthdayMessage=async (nome, tipo, dias, buttonElement)=> {
-                                    let prompt = '';
-                                    // Usamos um nome genérico, pois a empresa específica não é armazenada na
-                                    notificação.
-                                    const companyName = "Nossa Equipe";
+                                    * Gera uma mensagem de relacionamento(aniversário) usando a API Gemini. */ const
+                                        handleGenerateBirthdayMessage = async (nome, tipo, dias, buttonElement) => {
+                                            let prompt = '';
+                                            // Usamos um nome genérico, pois a empresa específica não é armazenada na
+                                            notificação.
+                                            const companyName = "Nossa Equipe";
 
-                                    if (dias === 0) {
-                                    prompt = `Aja como um representante da empresa de aluguel de brinquedos
-        "${companyName}".Hoje é o aniversário de "${nome}"(que é nosso ${ tipo }).Escreva
+                                            if (dias === 0) {
+                                                prompt = `Aja como um representante da empresa de aluguel de brinquedos
+        "${companyName}".Hoje é o aniversário de "${nome}"(que é nosso ${tipo}).Escreva
                                     uma mensagem de "Feliz Aniversário" curta, amigável e calorosa para ser enviada via
         WhatsApp.Use emojis.Não precisa ser um texto de vendas, apenas de relacionamento.
                                     Termine com "Atenciosamente, Equipe ${companyName}".`;
-                                    } else {
-                                    prompt = `Aja como um representante da empresa de aluguel de brinquedos
-        "${companyName}".O aniversário de "${nome}"(que é nosso ${ tipo }) é em ${ dias }
+                                            } else {
+                                                prompt = `Aja como um representante da empresa de aluguel de brinquedos
+        "${companyName}".O aniversário de "${nome}"(que é nosso ${tipo}) é em ${dias}
         dias.Escreva uma mensagem de relacionamento amigável para ser enviada via WhatsApp,
             lembrando o cliente da data especial que se aproxima e desejando felicidades.Use
         emojis.Mantenha um tom de relacionamento, não de venda direta.Termine com
         "Atencitwosamente, Equipe ${companyName}".`;
-                                    }
-
-                                    const message = await callGeminiAPI(prompt, buttonElement);
-                                    if (message) {
-                                    showGeminiModal("Mensagem de Relacionamento", message);
-                                    }
-                                    };
-                                    // --- FIM DA MODIFICAÇÃO ---
-
-                                    // --- INÍCIO DA CORREÇÃO: Restaurando o código de partículas ---
-                                    const canvas = document.getElementById('particles-js');
-                                    const ctx = canvas.getContext('2d');
-                                    canvas.width = window.innerWidth;
-                                    canvas.height = window.innerHeight;
-
-                                    let particlesArray;
-
-                                    let mouse = {
-                                    x: null,
-                                    y: null,
-                                    radius: (canvas.height / 80) * (canvas.width / 80)
-                                    };
-
-                                    window.addEventListener('mousemove', (event) => {
-                                    mouse.x = event.x;
-                                    mouse.y = event.y;
-                                    });
-
-                                    class Particle {
-                                    constructor(x, y, directionX, directionY, size, color) {
-                                    this.x = x;
-                                    this.y = y;
-                                    this.directionX = directionX;
-                                    this.directionY = directionY;
-                                    this.size = size;
-                                    this.color = color;
-                                    }
-                                    draw() {
-                                    ctx.beginPath();
-                                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                                    ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
-                                    ctx.fill();
-                                    }
-                                    update() {
-                                    if (this.x > canvas.width || this.x < 0) { this.directionX=-this.directionX; } if
-                                        (this.y> canvas.height || this.y < 0) { this.directionY=-this.directionY; } let
-                                            dx=mouse.x - this.x; let dy=mouse.y - this.y; let distance=Math.sqrt(dx * dx
-                                            + dy * dy); if (distance < mouse.radius + this.size) { if (mouse.x < this.x
-                                            && this.x < canvas.width - this.size * 10) { this.x +=1; } if (mouse.x>
-                                            this.x && this.x > this.size * 10) {
-                                            this.x -= 1;
                                             }
-                                            if (mouse.y < this.y && this.y < canvas.height - this.size * 10) { this.y
-                                                +=1; } if (mouse.y> this.y && this.y > this.size * 10) {
-                                                this.y -= 1;
-                                                }
-                                                }
+
+                                            const message = await callGeminiAPI(prompt, buttonElement);
+                                            if (message) {
+                                                showGeminiModal("Mensagem de Relacionamento", message);
+                                            }
+                                        };
+                                        // --- FIM DA MODIFICAÇÃO ---
+
+                                        // --- INÍCIO DA CORREÇÃO: Restaurando o código de partículas ---
+                                        const canvas = document.getElementById('particles-js');
+                                        const ctx = canvas.getContext('2d');
+                                        canvas.width = window.innerWidth;
+                                        canvas.height = window.innerHeight;
+
+                                        let particlesArray;
+
+                                        let mouse = {
+                                            x: null,
+                                            y: null,
+                                            radius: (canvas.height / 80) * (canvas.width / 80)
+                                        };
+
+                                        window.addEventListener('mousemove', (event) => {
+                                            mouse.x = event.x;
+                                            mouse.y = event.y;
+                                        });
+
+                                        class Particle {
+                                            constructor(x, y, directionX, directionY, size, color) {
+                                                this.x = x;
+                                                this.y = y;
+                                                this.directionX = directionX;
+                                                this.directionY = directionY;
+                                                this.size = size;
+                                                this.color = color;
+                                            }
+                                            draw() {
+                                                ctx.beginPath();
+                                                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                                                ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
+                                                ctx.fill();
+                                            }
+                                            update() {
+                                                if (this.x > canvas.width || this.x < 0) { this.directionX = -this.directionX; } if
+                                                    (this.y > canvas.height || this.y < 0) { this.directionY = -this.directionY; } let
+                                                        dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx * dx
+                                                            + dy * dy); if (distance < mouse.radius + this.size) {
+                                                                if (mouse.x < this.x
+                                                                    && this.x < canvas.width - this.size * 10) { this.x += 1; } if (mouse.x >
+                                                                        this.x && this.x > this.size * 10) {
+                                                                    this.x -= 1;
+                                                                }
+                                                                if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
+                                                                    this.y
+                                                                        += 1;
+                                                                } if (mouse.y > this.y && this.y > this.size * 10) {
+                                                                    this.y -= 1;
+                                                                }
+                                                            }
                                                 this.x += this.directionX;
                                                 this.y += this.directionY;
                                                 this.draw();
+                                            }
+                                        }
+
+                                        function initParticles() {
+                                            particlesArray = [];
+                                            let numberOfParticles = (canvas.height * canvas.width) / 9000;
+                                            for (let i = 0; i < numberOfParticles; i++) {
+                                                let size = (Math.random() *
+                                                    2) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size *
+                                                        2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) -
+                                                            (size * 2)) + size * 2); let directionX = (Math.random() * .4) - .2;
+                                                let directionY = (Math.random() * .4) - .2; let
+                                                    color = 'rgba(100, 116, 139, 0.4)'; particlesArray.push(new
+                                                        Particle(x, y, directionX, directionY, size, color));
+                                            }
+                                        } function
+                                            connectParticles() {
+                                            let opacityValue = 1; for (let a = 0; a <
+                                                particlesArray.length; a++) {
+                                                for (let b = a; b <
+                                                    particlesArray.length; b++) {
+                                                    let distance = ((particlesArray[a].x -
+                                                        particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
+                                                        + ((particlesArray[a].y - particlesArray[b].y) *
+                                                            (particlesArray[a].y - particlesArray[b].y)); if (distance <
+                                                                (canvas.width / 7) * (canvas.height / 7)) {
+                                                        opacityValue = 1 -
+                                                            (distance / 20000); ctx.strokeStyle = `rgba(100, 116, 139,
+            ${opacityValue * 0.5})`; ctx.lineWidth = 1; ctx.beginPath();
+                                                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                                                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
+                                                    }
                                                 }
-                                                }
+                                            }
+                                        } function animateParticles() {
+                                            requestAnimationFrame(animateParticles); ctx.clearRect(0, 0,
+                                                innerWidth, innerHeight); for (let i = 0; i < particlesArray.length;
+                                                i++) { particlesArray[i].update(); } connectParticles();
+                                        }
+                                        window.addEventListener('resize', () => {
+                                            canvas.width = innerWidth;
+                                            canvas.height = innerHeight;
+                                            mouse.radius = ((canvas.height / 80) * (canvas.width / 80));
+                                            initParticles();
+                                        });
 
-                                                function initParticles() {
-                                                particlesArray = [];
-                                                let numberOfParticles = (canvas.height * canvas.width) / 9000;
-                                                for (let i = 0; i < numberOfParticles; i++) { let size=(Math.random() *
-                                                    2) + 1; let x=(Math.random() * ((innerWidth - size * 2) - (size *
-                                                    2)) + size * 2); let y=(Math.random() * ((innerHeight - size * 2) -
-                                                    (size * 2)) + size * 2); let directionX=(Math.random() * .4) - .2;
-                                                    let directionY=(Math.random() * .4) - .2; let
-                                                    color='rgba(100, 116, 139, 0.4)' ; particlesArray.push(new
-                                                    Particle(x, y, directionX, directionY, size, color)); } } function
-                                                    connectParticles() { let opacityValue=1; for (let a=0; a <
-                                                    particlesArray.length; a++) { for (let b=a; b <
-                                                    particlesArray.length; b++) { let distance=((particlesArray[a].x -
-                                                    particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
-                                                    + ((particlesArray[a].y - particlesArray[b].y) *
-                                                    (particlesArray[a].y - particlesArray[b].y)); if (distance <
-                                                    (canvas.width / 7) * (canvas.height / 7)) { opacityValue=1 -
-                                                    (distance / 20000); ctx.strokeStyle=`rgba(100, 116, 139,
-            ${ opacityValue * 0.5})`; ctx.lineWidth=1; ctx.beginPath();
-                                                    ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                                                    ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
-                                                    } } } } function animateParticles() {
-                                                    requestAnimationFrame(animateParticles); ctx.clearRect(0, 0,
-                                                    innerWidth, innerHeight); for (let i=0; i < particlesArray.length;
-                                                    i++) { particlesArray[i].update(); } connectParticles(); }
-                                                    window.addEventListener('resize', ()=> {
-                                                    canvas.width = innerWidth;
-                                                    canvas.height = innerHeight;
-                                                    mouse.radius = ((canvas.height / 80) * (canvas.width / 80));
-                                                    initParticles();
-                                                    });
+                                        window.addEventListener('mouseout', () => {
+                                            mouse.x = undefined;
+                                            mouse.y = undefined;
+                                        });
+                                        // --- FIM DA CORREÇÃO ---
 
-                                                    window.addEventListener('mouseout', () => {
-                                                    mouse.x = undefined;
-                                                    mouse.y = undefined;
-                                                    });
-                                                    // --- FIM DA CORREÇÃO ---
-
-                                                    initParticles();
-                                                    animateParticles();
-                                                    renderAll();
-                                                    checkBirthdayNotifications(); // <-- Chamada da nova função
-                                                        handleUrlParameters(); }); </script>
+                                        initParticles();
+                                        animateParticles();
+                                        renderAll();
+                                        checkBirthdayNotifications(); // <-- Chamada da nova função
+                                        handleUrlParameters();
+                                    }); </script>
 
     <!-- Sistema de Autenticação -->
     <script src="js/protect.js"></script>
