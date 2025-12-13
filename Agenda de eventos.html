@@ -3163,23 +3163,23 @@
                 printWindow.document.write(`
             <html>
                 <head>
-                    <title>Ordens de Serviço</title>
+                    <title>Ordens de Serviço<\/title>
                     <style>
-                        /* --- INÍCIO DAS MODIFICAÇÕES DE ESTILO --- */
+                        \/* --- INÍCIO DAS MODIFICAÇÕES DE ESTILO --- *\/
                         body { 
                             font-family: Arial, sans-serif; 
                             margin: 0; 
                             padding: 0;
-                            color: #000; /* Cor do texto preta */
+                            color: #000; \/* Cor do texto preta *\/
                             font-size: 10px; 
-                            font-weight: 500; /* Um pouco mais forte */
+                            font-weight: 500; \/* Um pouco mais forte *\/
                         }
                         .os-container {
                             width: 100%;
                             height: 49vh; 
                             padding: 10px 15px;
                             box-sizing: border-box; 
-                            border-bottom: 2px solid #000; /* Linha separadora forte e sólida */
+                            border-bottom: 2px solid #000; \/* Linha separadora forte e sólida *\/
                             page-break-inside: avoid !important; 
                             display: flex;
                             flex-direction: column;
@@ -3190,7 +3190,7 @@
                         }
                         .header { 
                             text-align: center; 
-                            border-bottom: 2px solid #000; /* Borda do cabeçalho mais forte */
+                            border-bottom: 2px solid #000; \/* Borda do cabeçalho mais forte *\/
                             padding-bottom: 5px; 
                             margin-bottom: 5px; 
                             flex-shrink: 0;
@@ -3200,7 +3200,7 @@
                         
                         .section { 
                             margin-bottom: 5px; 
-                            border-bottom: 1px solid #000; /* Linha da seção preta */
+                            border-bottom: 1px solid #000; \/* Linha da seção preta *\/
                             padding-bottom: 5px; 
                             flex-shrink: 0; 
                         }
@@ -3221,13 +3221,13 @@
                             grid-template-columns: 1fr 1fr; 
                             gap: 2px 10px; 
                         }
-                        .details-grid p { margin: 0; padding: 1px 0; font-weight: bold; } /* Texto dos detalhes mais forte */
+                        .details-grid p { margin: 0; padding: 1px 0; font-weight: bold; } \/* Texto dos detalhes mais forte *\/
                         .details-grid strong { 
                             display: block; 
                             font-size: 0.9em; 
                             color: #000; 
                             text-transform: uppercase; 
-                            font-weight: 900; /* Muito forte */
+                            font-weight: 900; \/* Muito forte *\/
                         }
                         
                         table { 
@@ -3236,15 +3236,15 @@
                             margin-top: 5px; 
                         }
                         th, td { 
-                            border: 1px solid #000; /* Borda da tabela preta */
+                            border: 1px solid #000; \/* Borda da tabela preta *\/
                             padding: 3px; 
                             text-align: left; 
                             font-size: 9px; 
-                            font-weight: bold; /* Texto da tabela forte */
+                            font-weight: bold; \/* Texto da tabela forte *\/
                         }
                         th { 
-                            background-color: #fff; /* Fundo branco para economizar tinta */
-                            font-weight: 900; /* Cabeçalho da tabela muito forte */
+                            background-color: #fff; \/* Fundo branco para economizar tinta *\/
+                            font-weight: 900; \/* Cabeçalho da tabela muito forte *\/
                         }
                         
                         .print-button { 
@@ -3266,7 +3266,7 @@
                             .os-container {
                                 height: 50vh; 
                                 padding: 10px 15px;
-                                border-bottom: 2px solid #000; /* Borda sólida também na impressão */
+                                border-bottom: 2px solid #000; \/* Borda sólida também na impressão *\/
                             }
                             .header h1 { font-size: 16px; font-weight: bold; }
                             .header p { font-size: 11px; font-weight: bold; }
@@ -3274,58 +3274,55 @@
                             th { background-color: #fff; font-weight: 900; }
                             .section { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #000; }
                         }
-                        /* --- FIM DAS MODIFICAÇÕES DE ESTILO --- */
-                    </style>
-                </head>
+                        \/* --- FIM DAS MODIFICAÇÕES DE ESTILO --- *\/
+                    <\/style>
+                <\/head>
                 <body>
                     ${allEventsHTML}
-                    <button class="print-button" onclick="window.print()">Imprimir Todas as Ordens</button>
-                    <script>
-                       // Tenta imprimir automaticamente após carregar
-                       // window.onload = function() { window.print(); }
-    </script>
-</body>
+                    <button class="print-button" onclick="window.print()">Imprimir Todas as Ordens<\/button>
+<\/body>
 
-</html>
+<\/html>
 `);
-printWindow.document.close();
-printWindow.focus();
-};
-// <!-- FIM DAS MODIFICAÇÕES DE IMPRESSÃO -->
+                printWindow.document.close();
+                printWindow.focus();
+            };
+            // <!-- FIM DAS MODIFICAÇÕES DE IMPRESSÃO -->
 
 
-const handleGenerateMessage = async (eventId, buttonElement) => {
-const event = events.find(e => e.id === eventId);
-if (!event) return;
-const yourCompany = companies.find(c => c.id === event.yourCompanyId);
-const customerName = event.clientType === 'PJ' ? event.repName || event.clientName : event.clientName;
+            const handleGenerateMessage = async (eventId, buttonElement) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return;
+                const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+                const customerName = event.clientType === 'PJ' ? event.repName || event.clientName : event.clientName;
 
-const toyNames = event.toys.map(eventToy => {
-const toy = toys.find(t => t.id === eventToy.id);
-if (!toy) return null;
-const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
-return `${toy.name}${quantityText}`;
-}).filter(Boolean).join(', ');
+                const toyNames = event.toys.map(eventToy => {
+                    const toy = toys.find(t => t.id === eventToy.id);
+                    if (!toy) return null;
+                    const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
+                    return `${toy.name}${quantityText}`;
+                }).filter(Boolean).join(', ');
 
-const dateObj = new Date(event.date + 'T00:00:00');
-const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric'
-}).format(dateObj);
-const companyName = yourCompany ? yourCompany.name : 'Nossa Equipe';
+                const dateObj = new Date(event.date + 'T00:00:00');
+                const formattedDate = new Intl.DateTimeFormat('pt-BR', {
+                    day: '2-digit', month: 'long', year: 'numeric'
+                }).format(dateObj);
+                const companyName = yourCompany ? yourCompany.name : 'Nossa Equipe';
 
-// INÍCIO DA MODIFICAÇÃO: Endereço completo para Mensagem
-const fullAddressMessage = [event.clientAddress, event.complemento, event.bairro, event.cidade]
-.filter(Boolean)
-.join(', ');
-// FIM DA MODIFICAÇÃO
+                // INÍCIO DA MODIFICAÇÃO: Endereço completo para Mensagem
+                const fullAddressMessage = [event.clientAddress, event.complemento, event.bairro, event.cidade]
+                    .filter(Boolean)
+                    .join(', ');
+                // FIM DA MODIFICAÇÃO
 
-// --- INÍCIO DA MODIFICAÇÃO: Adicionar nome do aniversariante ao prompt ---
-let birthdayPrompt = '';
-if (event.isBirthday && event.birthdayPersonName) {
-birthdayPrompt = `O evento é o aniversário de ${event.birthdayPersonName}.\n`;
-}
-// --- FIM DA MODIFICAÇÃO ---
+                // --- INÍCIO DA MODIFICAÇÃO: Adicionar nome do aniversariante ao prompt ---
+                let birthdayPrompt = '';
+                if (event.isBirthday && event.birthdayPersonName) {
+                    birthdayPrompt = `O evento é o aniversário de ${event.birthdayPersonName}.\n`;
+                }
+                // --- FIM DA MODIFICAÇÃO ---
 
-const prompt = `Aja como um representante da empresa de aluguel de brinquedos "${companyName}". Escreva uma mensagem de
+                const prompt = `Aja como um representante da empresa de aluguel de brinquedos "${companyName}". Escreva uma mensagem de
 confirmação amigável e profissional para ser enviada via WhatsApp para o cliente. Use emojis para deixar a mensagem mais
 agradável. Use as seguintes informações:\n- Nome do Cliente: ${customerName}\n- Data do Evento: ${formattedDate}\n-
 Horário: das ${event.startTime} às ${event.endTime}\n- Endereço de Entrega: ${fullAddressMessage || 'a confirmar'}\n-
@@ -3333,41 +3330,42 @@ Brinquedos Alugados: ${toyNames}\n- Valor Total: ${formatCurrency(event.price)}\
 confirmar todos os detalhes, agradecer a preferência e se colocar à disposição para qualquer dúvida. A mensagem DEVE
 terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
 
-const message = await callGeminiAPI(prompt, buttonElement);
-if (message) {
-showGeminiModal("Mensagem de Confirmação", message);
-}
-};
+                const message = await callGeminiAPI(prompt, buttonElement);
+                if (message) {
+                    showGeminiModal("Mensagem de Confirmação", message);
+                }
+            };
 
-// --- INÍCIO DA MODIFICAÇÃO: handleGenerateContract ---
-const handleGenerateContract = async (eventId, buttonElement) => {
-const event = events.find(e => e.id === eventId);
-if (!event) return;
-const yourCompany = companies.find(c => c.id === event.yourCompanyId);
-if (!yourCompany) {
-showToast("Selecione 'Sua Empresa' no evento para gerar o contrato.", true);
-return;
-}
+            // --- INÍCIO DA MODIFICAÇÃO: handleGenerateContract ---
+            const handleGenerateContract = async (eventId, buttonElement) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return;
+                const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+                if (!yourCompany) {
+                    showToast("Selecione 'Sua Empresa' no evento para gerar o contrato.", true);
+                    return;
+                }
 
-const toyListString = event.toys.map(eventToy => {
-const toy = toys.find(t => t.id === eventToy.id);
-if (!toy) return null;
-return `- ${eventToy.quantity}x ${toy.name}`;
-}).filter(Boolean).join('\n');
+                const toyListString = event.toys.map(eventToy => {
+                    const toy = toys.find(t => t.id === eventToy.id);
+                    if (!toy) return null;
+                    return `- ${eventToy.quantity}x ${toy.name}`;
+                }).filter(Boolean).join('\n');
 
-const dateObj = new Date(event.date + 'T00:00:00');
-const formattedEventDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric'
-}).format(dateObj);
-const todayFormatted = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
+                const dateObj = new Date(event.date + 'T00:00:00');
+                const formattedEventDate = new Intl.DateTimeFormat('pt-BR', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
+                }).format(dateObj);
+                const todayFormatted = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
 
-const fullEventAddressContract = [event.clientAddress, event.complemento, event.bairro, event.cidade, event.uf]
-.filter(Boolean)
-.join(', ');
+                const fullEventAddressContract = [event.clientAddress, event.complemento, event.bairro, event.cidade, event.uf]
+                    .filter(Boolean)
+                    .join(', ');
 
-let contratantePromptSection = '';
-if (event.clientType === 'PJ') {
-const sedeAddress = event.companyAddress || 'Não informado';
-contratantePromptSection = `
+                let contratantePromptSection = '';
+                if (event.clientType === 'PJ') {
+                    const sedeAddress = event.companyAddress || 'Não informado';
+                    contratantePromptSection = `
 - **CONTRATANTE:**
 - Razão Social: ${event.clientName}
 - CNPJ: ${event.cnpj || 'Não informado'}
@@ -3379,9 +3377,9 @@ contratantePromptSection = `
 - Telefone Principal (Representante): ${event.repPhone || 'Não informado'}
 - Telefone Reserva (Representante): ${event.repPhoneBackup || 'Não informado'}
 `;
-} else { // PF
-const residentialAddress = event.contractAddress || 'Não informado'; // Usa o novo campo
-contratantePromptSection = `
+                } else { // PF
+                    const residentialAddress = event.contractAddress || 'Não informado'; // Usa o novo campo
+                    contratantePromptSection = `
 - **CONTRATANTE:**
 - Nome Completo: ${event.clientName}
 - CPF: ${event.clientCpf || 'Não informado'}
@@ -3392,16 +3390,16 @@ contratantePromptSection = `
 - Telefone Principal: ${event.clientPhone || 'Não informado'}
 - Telefone Reserva: ${event.clientPhoneBackup || 'Não informado'}
 `;
-}
+                }
 
-const subtotal = event.subtotal;
-const discountAmount = event.discountType === 'fixed'
-? event.discountValue
-: (subtotal * event.discountValue / 100);
-const frete = event.deliveryFee || 0;
-const valorTotal = event.price;
+                const subtotal = event.subtotal;
+                const discountAmount = event.discountType === 'fixed'
+                    ? event.discountValue
+                    : (subtotal * event.discountValue / 100);
+                const frete = event.deliveryFee || 0;
+                const valorTotal = event.price;
 
-const financePromptSection = `
+                const financePromptSection = `
 - **VALORES:**
 - Subtotal (Brinquedos): ${formatCurrency(subtotal)}
 - Desconto: - ${formatCurrency(discountAmount)}
@@ -3414,22 +3412,20 @@ const financePromptSection = `
 - Sinal Recebido: ${event.signalReceived ? 'Sim' : 'Não'}
 `;
 
-const paymentDetailsText = event.paymentDetails
-? event.paymentDetails
-: `O pagamento de 50% do valor será efetuado via PIX no ato da assinatura deste contrato, e os 50% restantes no momento
-da entrega e montagem dos equipamentos.`;
+                const paymentDetailsText = event.paymentDetails
+                    ? event.paymentDetails
+                    : `O pagamento de 50% do valor será efetuado via PIX no ato da assinatura deste contrato, e os 50% restantes no momento da entrega e montagem dos equipamentos.`;
 
-// --- MODIFICAÇÃO CHAVE: Usar os dados da empresa salva ---
-const paymentDataText = (yourCompany.paymentInfo ? yourCompany.paymentInfo : 'Dados de pagamento não cadastrados na
-empresa.') + ' (Informação de pagamento da CONTRATADA)';
+                // --- MODIFICAÇÃO CHAVE: Usar os dados da empresa salva ---
+                const paymentDataText = (yourCompany.paymentInfo ? yourCompany.paymentInfo : 'Dados de pagamento não cadastrados na empresa.') + ' (Informação de pagamento da CONTRATADA)';
 
-let birthdayContractPrompt = '';
-if (event.isBirthday && event.birthdayPersonName) {
-birthdayContractPrompt = `O evento em questão é a festa de aniversário de ${event.birthdayPersonName}, a ser realizada
+                let birthdayContractPrompt = '';
+                if (event.isBirthday && event.birthdayPersonName) {
+                    birthdayContractPrompt = `O evento em questão é a festa de aniversário de ${event.birthdayPersonName}, a ser realizada
 no endereço e data especificados.`;
-}
+                }
 
-const prompt = `
+                const prompt = `
 Aja como um assistente jurídico. Crie um CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS
 PARA EVENTOS formal e completo. Use as seguintes informações para preencher o contrato:
 
@@ -3442,61 +3438,61 @@ PARA EVENTOS formal e completo. Use as seguintes informações para preencher o 
 - Representante Legal: ${yourCompany.repName || 'Não informado'}, portador do documento ${yourCompany.repDoc || 'Não
 informado'}
 
-${contratantePromptSection}
+${ contratantePromptSection }
 
-- **OBJETO DO CONTRATO (Lista de Equipamentos/Serviços):**
-${toyListString}
+- ** OBJETO DO CONTRATO(Lista de Equipamentos / Serviços):**
+                    ${ toyListString }
 
-- **DATA E HORA DO EVENTO:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.
-- **LOCAL DE INSTALAÇÃO/EVENTO:** ${fullEventAddressContract || 'O mesmo endereço do contratante.'}
-- **DETALHE DO EVENTO:** ${birthdayContractPrompt}
+- ** DATA E HORA DO EVENTO:** ${ formattedEventDate }, das ${ event.startTime } às ${ event.endTime }.
+- ** LOCAL DE INSTALAÇÃO / EVENTO:** ${ fullEventAddressContract || 'O mesmo endereço do contratante.' }
+- ** DETALHE DO EVENTO:** ${ birthdayContractPrompt }
 
-${financePromptSection}
+${ financePromptSection }
 
-- **CONDIÇÕES DE PAGAMENTO ESPECÍFICAS:** ${paymentDetailsText}. ${paymentDataText}
+- ** CONDIÇÕES DE PAGAMENTO ESPECÍFICAS:** ${ paymentDetailsText }. ${ paymentDataText }
 
-O contrato deve ser estruturado com um título claro ("CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E
+O contrato deve ser estruturado com um título claro("CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E
 EQUIPAMENTOS PARA EVENTOS"), qualificação completa das partes e cláusulas numeradas, incluindo:
-1. **CLÁUSULA PRIMEIRA - DO OBJETO:** Descrever a locação dos equipamentos/brinquedos listados para o evento na data,
-hora e local especificados. ${birthdayContractPrompt} Mencionar que inclui montagem e desmontagem.
-2. **CLÁUSULA SEGUNDA - DOS SERVIÇOS:** Listar os serviços inclusos: a) Fornecimento dos equipamentos; b) Montagem e
-desmontagem; c) Fornecimento de mão de obra (monitores, se aplicável, caso contrário omitir);
-3. **CLÁUSULA TERCEIRA - DO PRAZO:** Definir o prazo determinado do contrato, correspondendo exatamente à data e
+1. ** CLÁUSULA PRIMEIRA - DO OBJETO:** Descrever a locação dos equipamentos / brinquedos listados para o evento na data,
+                        hora e local especificados.${ birthdayContractPrompt } Mencionar que inclui montagem e desmontagem.
+2. ** CLÁUSULA SEGUNDA - DOS SERVIÇOS:** Listar os serviços inclusos: a) Fornecimento dos equipamentos; b) Montagem e
+        desmontagem; c) Fornecimento de mão de obra(monitores, se aplicável, caso contrário omitir);
+        3. ** CLÁUSULA TERCEIRA - DO PRAZO:** Definir o prazo determinado do contrato, correspondendo exatamente à data e
 horários de início e término do evento.
-4. **CLÁUSULA QUARTA - DO VALOR E PAGAMENTO:** Mencionar o valor total ( ${formatCurrency(valorTotal)} ), a taxa de
-entrega ( ${formatCurrency(frete)} ), e USAR EXATAMENTE as "CONDIÇÕES DE PAGAMENTO ESPECÍFICAS" e o "STATUS FINANCEIRO"
-(especialmente o valor do sinal) fornecidos acima.
-5. **CLÁUSULA QUINTA - DAS DESPESAS:** Informar que o valor pago engloba todas as despesas da CONTRATADA (material,
-transporte, mão de obra, impostos, etc.), constituindo a única remuneração devida.
-6. **CLÁUSULA SEXTA - DAS OBRIGAÇÕES DA CONTRATADA:** Garantir a entrega dos equipamentos em perfeitas condições de uso
+4. ** CLÁUSULA QUARTA - DO VALOR E PAGAMENTO:** Mencionar o valor total(${ formatCurrency(valorTotal) }), a taxa de
+        entrega(${ formatCurrency(frete) }), e USAR EXATAMENTE as "CONDIÇÕES DE PAGAMENTO ESPECÍFICAS" e o "STATUS FINANCEIRO"
+            (especialmente o valor do sinal) fornecidos acima.
+5. ** CLÁUSULA QUINTA - DAS DESPESAS:** Informar que o valor pago engloba todas as despesas da CONTRATADA(material,
+                transporte, mão de obra, impostos, etc.), constituindo a única remuneração devida.
+6. ** CLÁUSULA SEXTA - DAS OBRIGAÇÕES DA CONTRATADA:** Garantir a entrega dos equipamentos em perfeitas condições de uso
 e segurança, e realizar a montagem e desmontagem nos horários acordados.
-7. **CLÁUSULA SÉTIMA - DAS OBRIGAÇÕES DO CONTRATANTE:**
-- Fornecer local seguro, plano, limpo e com ponto de energia elétrica compatível e acessível.
+7. ** CLÁUSULA SÉTIMA - DAS OBRIGAÇÕES DO CONTRATANTE:**
+            - Fornecer local seguro, plano, limpo e com ponto de energia elétrica compatível e acessível.
 - Supervisionar o uso dos brinquedos por um adulto responsável.
-- Responsabilizar-se por danos por mau uso (sapatos, alimentos, objetos pontiagudos, excesso de peso/capacidade, etc.).
+- Responsabilizar - se por danos por mau uso(sapatos, alimentos, objetos pontiagudos, excesso de peso / capacidade, etc.).
 - Não mover os equipamentos do local de instalação.
-- Em caso de chuva/ventos fortes, desligar os infláveis e protegê-los.
-8. **CLÁUSULA OITAVA - DA RESCISÃO (CANCELAMENTO):** Incluir cláusula sobre cancelamento (Ex: "O cancelamento da locação
-por parte do CONTRATANTE com antecedência superior a 7 (sete) dias da data do evento implicará na devolução integral do
-valor pago a título de sinal. Cancelamentos realizados com 7 (sete) dias ou menos de antecedência da data do evento
-resultarão na retenção de 50% (cinquenta por cento) do valor total do contrato, a título de multa compensatória por
+- Em caso de chuva / ventos fortes, desligar os infláveis e protegê - los.
+8. ** CLÁUSULA OITAVA - DA RESCISÃO(CANCELAMENTO):** Incluir cláusula sobre cancelamento(Ex: "O cancelamento da locação
+por parte do CONTRATANTE com antecedência superior a 7(sete) dias da data do evento implicará na devolução integral do
+valor pago a título de sinal.Cancelamentos realizados com 7(sete) dias ou menos de antecedência da data do evento
+resultarão na retenção de 50 % (cinquenta por cento) do valor total do contrato, a título de multa compensatória por
 perdas e danos.").
-9. **CLÁUSULA NONA - DA RESPONSABILIDADE (PROBLEMAS EXTERNOS):** Isentar a CONTRATADA por mal funcionamento devido a
-problemas de energia elétrica, clima adverso (chuvas, ventos fortes) ou depredação por terceiros.
-10. **CLÁUSULA DÉCIMA - DO FORO:** Definir o foro da comarca da CONTRATADA (Ex: Aparecida de Goiânia, GO) para dirimir
+        9. ** CLÁUSULA NONA - DA RESPONSABILIDADE(PROBLEMAS EXTERNOS):** Isentar a CONTRATADA por mal funcionamento devido a
+problemas de energia elétrica, clima adverso(chuvas, ventos fortes) ou depredação por terceiros.
+10. ** CLÁUSULA DÉCIMA - DO FORO:** Definir o foro da comarca da CONTRATADA(Ex: Aparecida de Goiânia, GO) para dirimir
 quaisquer controvérsias, com renúncia a qualquer outro.
 
 Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tudo quanto se encontra disposto neste
-instrumento, assinam-no, em 02 (duas) vias de igual teor e forma.", local, data e linhas para as assinaturas da
-CONTRATADA (representada por seu responsável) e do CONTRATANTE.
-**Local e data:** Aparecida de Goiânia, GO, ${todayFormatted}.
-`;
+        instrumento, assinam - no, em 02(duas) vias de igual teor e forma.", local, data e linhas para as assinaturas da
+        CONTRATADA(representada por seu responsável) e do CONTRATANTE.
+** Local e data:** Aparecida de Goiânia, GO, ${ todayFormatted }.
+        `;
 
 const contract = await callGeminiAPI(prompt, buttonElement);
 
 if (contract) {
 showGeminiModal("Contrato de Locação (Gerado)", contract);
-openPrintWindow(`Contrato - ${event.clientName}`, contract);
+openPrintWindow(`Contrato - ${ event.clientName } `, contract);
 }
 };
 // --- FIM DA MODIFICAÇÃO ---
@@ -3622,10 +3618,10 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
 
                         if (totalQuantity > selectedToy.quantity) {
                         const msg = alreadyInCart > 0
-                        ? `Você já adicionou ${alreadyInCart} unidade(s). Total seria ${totalQuantity}, mas temos apenas
-                        ${selectedToy.quantity} de ${selectedToy.name} no estoque.`
-                        : `Estoque total insuficiente! Temos apenas ${selectedToy.quantity} unidade(s) de
-                        ${selectedToy.name} no estoque.`;
+                        ? `Você já adicionou ${ alreadyInCart } unidade(s).Total seria ${ totalQuantity }, mas temos apenas
+                        ${ selectedToy.quantity } de ${ selectedToy.name } no estoque.`
+                        : `Estoque total insuficiente! Temos apenas ${ selectedToy.quantity } unidade(s) de
+                        ${ selectedToy.name } no estoque.`;
                         showToast(msg, true);
                         return;
                         }
@@ -3635,9 +3631,9 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
                         eventId);
 
                         if (quantity > availability.available) {
-                        const availableText = availability.available > 0 ? `Apenas ${availability.available} unidade(s)
-                        disponível(is)` : `Nenhuma unidade disponível`;
-                        showToast(`Estoque insuficiente! ${availableText} para este horário.`, true);
+                        const availableText = availability.available > 0 ? `Apenas ${ availability.available } unidade(s)
+        disponível(is)` : `Nenhuma unidade disponível`;
+                        showToast(`Estoque insuficiente! ${ availableText } para este horário.`, true);
                         return;
                         }
 
@@ -3804,10 +3800,10 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
                         // Adiciona T00:00:00 para garantir consistência de fuso horário
                         const d = new Date(notif.eventDate + "T00:00:00");
                         // Formato MM/YYYY
-                        // eventDateStr = ` (Evento: ${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()})`;
+                        // eventDateStr = ` (Evento: ${ String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()})`;
                         // --- INÍCIO DA CORREÇÃO: Formato DD/MM/YYYY ---
-                        eventDateStr = ` (Evento: ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() +
-                        1).padStart(2, '0')}/${d.getFullYear()})`;
+                        eventDateStr = ` (Evento: ${ String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() +
+        1).padStart(2, '0')}/${d.getFullYear()})`;
                         // --- FIM DA CORREÇÃO ---
                         } catch (err) { /* Ignora data inválida */ }
                         }
@@ -3816,32 +3812,32 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
                         if (notif.dias === 0) {
                         iconHtml = '<i class="fas fa-birthday-cake text-pink-500 text-2xl"></i>';
                         // MODIFICADO
-                        textHtml = `É o aniversário de <strong>${notif.nome}</strong> (${notif.tipo}) hoje! <span
-                            class="text-xs block text-gray-600">Ref: ${notif.clientName}${eventDateStr}</span>`;
+                        textHtml = `É o aniversário de < strong > ${ notif.nome }</strong > (${ notif.tipo }) hoje! < span
+        class="text-xs block text-gray-600" > Ref: ${ notif.clientName }${ eventDateStr }</span > `;
                         bgColor = 'bg-pink-100/80 border-pink-300'; // Destaque especial
                         } else {
                         iconHtml = '<i class="fas fa-gift text-blue-500 text-xl"></i>';
                         // MODIFICADO
-                        textHtml = `Aniversário de <strong>${notif.nome}</strong> (${notif.tipo}) em
-                        <strong>${notif.dias} dias</strong>. <span class="text-xs block text-gray-600">Ref:
-                            ${notif.clientName}${eventDateStr}</span>`;
+                        textHtml = `Aniversário de < strong > ${ notif.nome }</strong > (${ notif.tipo }) em
+            < strong > ${ notif.dias } dias</strong >. < span class="text-xs block text-gray-600" > Ref:
+                            ${ notif.clientName }${ eventDateStr }</span > `;
                         bgColor = 'bg-blue-50/80';
                         }
 
-                        notifEl.className = `p-3 rounded-md border flex items-center space-x-3 ${bgColor}`;
+                        notifEl.className = `p - 3 rounded - md border flex items - center space - x - 3 ${ bgColor } `;
                         // --- INÍCIO DA MODIFICAÇÃO: Adicionar botão de mensagem ---
                         notifEl.innerHTML = `
-                        <div>${iconHtml}</div>
+            < div > ${ iconHtml }</div >
                         <div class="flex-1"> <!-- ADICIONADO WRAPPER -->
                             <p class="text-sm text-gray-800">${textHtml}</p>
                         </div>
-                        <!-- Botão de Relacionamento -->
-                        <button class="birthday-message-btn text-green-500 hover:text-green-600 text-lg shrink-0"
-                            title="✨ Criar Mensagem de Relacionamento" data-nome="${notif.nome}"
-                            data-tipo="${notif.tipo}" data-dias="${notif.dias}">
-                            <i class="fas fa-comment-dots"></i>
-                        </button>
-                        `;
+                        <!--Botão de Relacionamento-- >
+            <button class="birthday-message-btn text-green-500 hover:text-green-600 text-lg shrink-0"
+                title="✨ Criar Mensagem de Relacionamento" data-nome="${notif.nome}"
+                data-tipo="${notif.tipo}" data-dias="${notif.dias}">
+                <i class="fas fa-comment-dots"></i>
+            </button>
+        `;
                         // --- FIM DA MODIFICAÇÃO ---
                         notificationsListEl.appendChild(notifEl);
                         });
@@ -3924,17 +3920,17 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
 
                                     if (dias === 0) {
                                     prompt = `Aja como um representante da empresa de aluguel de brinquedos
-                                    "${companyName}". Hoje é o aniversário de "${nome}" (que é nosso ${tipo}). Escreva
+        "${companyName}".Hoje é o aniversário de "${nome}"(que é nosso ${ tipo }).Escreva
                                     uma mensagem de "Feliz Aniversário" curta, amigável e calorosa para ser enviada via
-                                    WhatsApp. Use emojis. Não precisa ser um texto de vendas, apenas de relacionamento.
+        WhatsApp.Use emojis.Não precisa ser um texto de vendas, apenas de relacionamento.
                                     Termine com "Atenciosamente, Equipe ${companyName}".`;
                                     } else {
                                     prompt = `Aja como um representante da empresa de aluguel de brinquedos
-                                    "${companyName}". O aniversário de "${nome}" (que é nosso ${tipo}) é em ${dias}
-                                    dias. Escreva uma mensagem de relacionamento amigável para ser enviada via WhatsApp,
-                                    lembrando o cliente da data especial que se aproxima e desejando felicidades. Use
-                                    emojis. Mantenha um tom de relacionamento, não de venda direta. Termine com
-                                    "Atencitwosamente, Equipe ${companyName}".`;
+        "${companyName}".O aniversário de "${nome}"(que é nosso ${ tipo }) é em ${ dias }
+        dias.Escreva uma mensagem de relacionamento amigável para ser enviada via WhatsApp,
+            lembrando o cliente da data especial que se aproxima e desejando felicidades.Use
+        emojis.Mantenha um tom de relacionamento, não de venda direta.Termine com
+        "Atencitwosamente, Equipe ${companyName}".`;
                                     }
 
                                     const message = await callGeminiAPI(prompt, buttonElement);
@@ -4016,7 +4012,7 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
                                                     (particlesArray[a].y - particlesArray[b].y)); if (distance <
                                                     (canvas.width / 7) * (canvas.height / 7)) { opacityValue=1 -
                                                     (distance / 20000); ctx.strokeStyle=`rgba(100, 116, 139,
-                                                    ${opacityValue * 0.5})`; ctx.lineWidth=1; ctx.beginPath();
+            ${ opacityValue * 0.5})`; ctx.lineWidth=1; ctx.beginPath();
                                                     ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
                                                     ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
                                                     } } } } function animateParticles() {
@@ -4042,9 +4038,9 @@ document.getElementById('client-dob').value = client.dob || ''; // <-- ADICIONAD
                                                     checkBirthdayNotifications(); // <-- Chamada da nova função
                                                         handleUrlParameters(); }); </script>
 
-                                                        <!-- Sistema de Autenticação -->
-                                                        <script src="js/protect.js"></script>
+    <!-- Sistema de Autenticação -->
+    <script src="js/protect.js"></script>
 
-                                                        </body>
+</body>
 
-                                                        </html>
+</html>
