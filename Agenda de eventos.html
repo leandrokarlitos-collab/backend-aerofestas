@@ -3296,8 +3296,11 @@
                 const yourCompany = companies.find(c => c.id === event.yourCompanyId);
                 const customerName = event.clientType === 'PJ' ? event.repName || event.clientName : event.clientName;
 
-                const toyNames = event.toys.map(eventToy => {
-                    const toy = toys.find(t => t.id === eventToy.id);
+                // CORREÇÃO: Suportar tanto event.toys quanto event.items
+                const eventToys = event.toys || event.items || [];
+                const toyNames = eventToys.map(eventToy => {
+                    const toyId = eventToy.id || eventToy.toyId; // Suporta ambos os formatos
+                    const toy = toys.find(t => t.id === toyId);
                     if (!toy) return null;
                     const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
                     return `${toy.name}${quantityText}`;
