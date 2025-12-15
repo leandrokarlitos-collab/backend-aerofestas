@@ -3581,13 +3581,15 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
 
                         clientTypePfRadio.addEventListener('change', toggleClientTypeFields);
                         clientTypePjRadio.addEventListener('change', toggleClientTypeFields);
-                        isBirthdayCheckbox.addEventListener('change', toggleBirthdayFields); // <-- ADICIONADO // INÍCIO DA
-                        MODIFICAÇÃO: Sincronizar campo de data visível com campo hidden const
-                            eventDateVisibleEl = document.getElementById('event-date-visible'); if (eventDateVisibleEl) {
-                                eventDateVisibleEl.addEventListener('change', () => {
-                                    document.getElementById('event-date').value = eventDateVisibleEl.value;
-                                });
-                            }
+                        isBirthdayCheckbox.addEventListener('change', toggleBirthdayFields); // <-- ADICIONADO
+
+                        // INÍCIO DA MODIFICAÇÃO: Sincronizar campo de data visível com campo hidden
+                        const eventDateVisibleEl = document.getElementById('event-date-visible');
+                        if (eventDateVisibleEl) {
+                            eventDateVisibleEl.addEventListener('change', () => {
+                                document.getElementById('event-date').value = eventDateVisibleEl.value;
+                            });
+                        }
                         // FIM DA MODIFICAÇÃO
 
                         addToyToEventBtn.addEventListener('click', () => {
