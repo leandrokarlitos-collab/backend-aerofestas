@@ -3628,8 +3628,10 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
                 if (endTime <= startTime) {
                     showToast('O horário de término deve ser após o horário de início.', true);
                     return;
-                } // NOVA VALIDAÇÃO: Verifica se a quantidade solicitada excede o estoque TOTAL const
-                selectedToy = toys.find(t => t.id === selectedToyId);
+                }
+
+                // NOVA VALIDAÇÃO: Verifica se a quantidade solicitada excede o estoque TOTAL
+                const selectedToy = toys.find(t => t.id === selectedToyId);
                 if (!selectedToy) {
                     showToast('Brinquedo não encontrado!', true);
                     return;
