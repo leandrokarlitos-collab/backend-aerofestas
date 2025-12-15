@@ -2947,7 +2947,12 @@
                     const toy = toys.find(t => t.id === toyId);
 
                     const quantity = eventToy.quantity || 1;
-                    const unitPrice = (eventToy.price !== undefined) ? eventToy.price : (toy ? toy.price : 0);
+                    // Prioridade: eventToy.toy.price (API nova) > eventToy.price (localStorage) > toy.price (global)
+                    const unitPrice = (eventToy.toy && eventToy.toy.price !== undefined)
+                        ? eventToy.toy.price
+                        : (eventToy.price !== undefined)
+                            ? eventToy.price
+                            : (toy ? toy.price : 0);
 
                     return {
                         name: toy ? toy.name : 'Brinquedo Removido',
