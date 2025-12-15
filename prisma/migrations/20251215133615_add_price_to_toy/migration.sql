@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Toy" ADD COLUMN     "price" DOUBLE PRECISION;
