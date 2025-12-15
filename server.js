@@ -152,6 +152,7 @@ app.post('/api/migrar-completo', async (req, res) => {
                 const listaItens = evt.toys || evt.itens || [];
                 const itensParaSalvar = listaItens.map(item => ({
                     quantity: parseInt(item.quantity) || 1,
+                    price: item.price ? parseFloat(item.price) : null, // Preço da locação
                     toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
                 })).filter(i => i.toyId !== null);
 
@@ -316,6 +317,7 @@ app.post('/api/admin/events', async (req, res) => {
     try {
         const itens = (evt.items || evt.toys || []).map(item => ({
             quantity: parseInt(item.quantity) || 1,
+            price: item.price ? parseFloat(item.price) : null, // Preço específico desta locação
             toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
         })).filter(i => i.toyId !== null);
 

@@ -105,6 +105,7 @@ model Event {
 model EventItem {
   id       Int   @id @default(autoincrement())
   quantity Int
+  price    Float? // Preço específico desta locação
   
   eventId  Float
   event    Event @relation(fields: [eventId], references: [id])

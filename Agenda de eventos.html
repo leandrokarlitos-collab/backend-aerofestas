@@ -2943,27 +2943,12 @@
                 }
 
                 const toyData = eventToys.map(eventToy => {
-                    // 🐛 DEBUG: Ver estrutura completa
-                    console.log('🔍 eventToy completo:', eventToy);
-                    console.log('  - eventToy.toy:', eventToy.toy);
-                    console.log('  - eventToy.toy?.price:', eventToy.toy?.price);
-                    console.log('  - eventToy.price:', eventToy.price);
-
-                    const toyId = eventToy.toyId || eventToy.id; // Prioriza toyId (API) sobre id (localStorage)
+                    const toyId = eventToy.toyId || eventToy.id;
                     const toy = toys.find(t => t.id === toyId);
 
-                    // 🐛 DEBUG: Verificar busca na lista global
-                    console.log('  - toyId buscado:', toyId);
-                    console.log('  - toy encontrado na lista global:', toy);
-                    console.log('  - toy?.price da lista global:', toy?.price);
-
                     const quantity = eventToy.quantity || 1;
-                    // Prioridade: eventToy.toy.price (API nova) > eventToy.price (localStorage) > toy.price (global)
-                    const unitPrice = (eventToy.toy && eventToy.toy.price !== undefined)
-                        ? eventToy.toy.price
-                        : (eventToy.price !== undefined)
-                            ? eventToy.price
-                            : (toy ? toy.price : 0);
+                    // Usa o preço salvo no EventItem (específico desta locação)
+                    const unitPrice = eventToy.price ? parseFloat(eventToy.price) : 0;
 
                     return {
                         name: toy ? toy.name : 'Brinquedo Removido',
