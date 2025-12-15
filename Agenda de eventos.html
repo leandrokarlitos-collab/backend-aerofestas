@@ -3873,211 +3873,218 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
                         */
                         const checkBirthdayNotifications = () => {
                             // const aniversariantes = new Map(); // REMOVIDO
-                            const notificacoes = []; // <-- Criado aqui const hoje=new Date(); const
-                            anoAtual = hoje.getFullYear(); // Normaliza 'hoje' para meia-noite para comparações de dia
-                            inteiro const hojeTimestamp = new Date(anoAtual, hoje.getMonth(), hoje.getDate()).getTime();
-                            // Intervalos de dias para notificar const intervalos=[0, 7, 15, 30]; events.forEach(e=> {
-                            // --- INÍCIO DA MODIFICAÇÃO: Passar data do evento para a função ---
-                            const processarAniversario = (nome, dob, tipo, clientName, eventId, eventDate) => {
-                                if (!dob) return;
-                                try {
-                                    const dobDate = new Date(dob + "T00:00:00");
-                                    const dobMes = dobDate.getMonth();
-                                    const dobDia = dobDate.getDate();
+                            const notificacoes = []; // <-- Criado aqui
+                            const hoje = new Date();
+                            const anoAtual = hoje.getFullYear();
 
-                                    const aniversarioEsteAno = new Date(anoAtual, dobMes, dobDia).getTime();
-                                    let diffDays = (aniversarioEsteAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
+                            // Normaliza 'hoje' para meia-noite para comparações de dia inteiro
+                            const hojeTimestamp = new Date(anoAtual, hoje.getMonth(), hoje.getDate()).getTime();
 
-                                    if (diffDays >= 0 && intervalos.includes(diffDays)) {
-                                        notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate }); // Passa
-                                        eventDate
-                                    } else if (diffDays < 0) {
-                                        const aniversarioProximoAno = new Date(anoAtual + 1, dobMes,
-                                            dobDia).getTime(); diffDays = (aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 *
-                                                24); if (intervalos.includes(diffDays)) {
-                                                    notificacoes.push({
-                                                        nome, tipo, dias:
-                                                            diffDays, clientName, eventId, eventDate
-                                                    }); // Passa eventDate } } } catch (error) {
-                                                    console.error("Erro ao processar data de aniversário:", dob, error);
-                                                }
-                                    };
+                            // Intervalos de dias para notificar
+                            const intervalos = [0, 7, 15, 30];
 
-                                    // Adiciona contratante (PF) se tiver data de nascimento
-                                    if (e.clientDob && e.clientType === 'PF' && e.clientName) {
-                                        processarAniversario(e.clientName, e.clientDob, 'Contratante', e.clientName, e.id, e.date); // Passa e.date
-                                    }
+                            events.forEach(e => {
+                                // --- INÍCIO DA MODIFICAÇÃO: Passar data do evento para a função ---
+                                const processarAniversario = (nome, dob, tipo, clientName, eventId, eventDate) => {
+                                    if (!dob) return;
+                                    try {
+                                        const dobDate = new Date(dob + "T00:00:00");
+                                        const dobMes = dobDate.getMonth();
+                                        const dobDia = dobDate.getDate();
 
-                                    // Adiciona aniversariante do evento se tiver data de nascimento
-                                    if (e.isBirthday && e.birthdayPersonDob && e.birthdayPersonName) {
-                                        processarAniversario(e.birthdayPersonName, e.birthdayPersonDob, 'Aniversariante', e.clientName, e.id, e.date); // Passa e.date
-                                    }
-                                }); // --- FIM DA MODIFICAÇÃO ---
+                                        const aniversarioEsteAno = new Date(anoAtual, dobMes, dobDia).getTime();
+                                        let diffDays = (aniversarioEsteAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
 
-                    renderNotifications(notificacoes);
-                };
-                // --- FIM: Funções de Notificação de Aniversário ---
+                                        if (diffDays >= 0 && intervalos.includes(diffDays)) {
+                                            notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate }); // Passa
+                                            eventDate
+                                        } else if (diffDays < 0) {
+                                            const aniversarioProximoAno = new Date(anoAtual + 1, dobMes,
+                                                dobDia).getTime(); diffDays = (aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 *
+                                                    24); if (intervalos.includes(diffDays)) {
+                                                        notificacoes.push({
+                                                            nome, tipo, dias:
+                                                                diffDays, clientName, eventId, eventDate
+                                                        }); // Passa eventDate } } } catch (error) {
+                                                        console.error("Erro ao processar data de aniversário:", dob, error);
+                                                    }
+                                        };
 
-                // --- LÓGICA PARA LIDAR COM PARÂMETROS DA URL (EDIÇÃO) ---
-                const handleUrlParameters = () => {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const eventIdToEdit = urlParams.get('editEvent');
-                    if (eventIdToEdit) {
-                        const eventIdNum = parseInt(eventIdToEdit, 10);
-                        const eventToEdit = events.find(e => e.id === eventIdNum);
-                        if (eventToEdit) {
-                            // Navega para o mês correto do evento
-                            currentDate = new Date(eventToEdit.date + 'T00:00:00');
-                            renderCalendar();
-                            // Simula o clique no dia e abre o modal de edição
-                            handleDayClick(eventToEdit.date);
-                            showEventModal(eventToEdit.date, eventToEdit);
-                        } else {
-                            showToast('Evento para edição não encontrado.', true);
-                        }
-                    } // <-- INÍCIO DA CORREÇÃO: Esta chave estava faltando // --- FIM DA MODIFICAÇÃO --- };
-                    // --- INÍCIO DA MODIFICAÇÃO: Nova função para gerar mensagem de aniversário ---
-                    // Gera uma mensagem de relacionamento (aniversário) usando a API Gemini.
-                    const handleGenerateBirthdayMessage = async (nome, tipo, dias, buttonElement) => {
-                        let prompt = '';
-                        // Usamos um nome genérico, pois a empresa específica não é armazenada na
-                        notificação.
-                        const companyName = "Nossa Equipe";
+                                        // Adiciona contratante (PF) se tiver data de nascimento
+                                        if (e.clientDob && e.clientType === 'PF' && e.clientName) {
+                                            processarAniversario(e.clientName, e.clientDob, 'Contratante', e.clientName, e.id, e.date); // Passa e.date
+                                        }
 
-                        if (dias === 0) {
-                            prompt = `Aja como um representante da empresa de aluguel de brinquedos
+                                        // Adiciona aniversariante do evento se tiver data de nascimento
+                                        if (e.isBirthday && e.birthdayPersonDob && e.birthdayPersonName) {
+                                            processarAniversario(e.birthdayPersonName, e.birthdayPersonDob, 'Aniversariante', e.clientName, e.id, e.date); // Passa e.date
+                                        }
+                                    }); // --- FIM DA MODIFICAÇÃO ---
+
+                            renderNotifications(notificacoes);
+                        };
+                        // --- FIM: Funções de Notificação de Aniversário ---
+
+                        // --- LÓGICA PARA LIDAR COM PARÂMETROS DA URL (EDIÇÃO) ---
+                        const handleUrlParameters = () => {
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const eventIdToEdit = urlParams.get('editEvent');
+                            if (eventIdToEdit) {
+                                const eventIdNum = parseInt(eventIdToEdit, 10);
+                                const eventToEdit = events.find(e => e.id === eventIdNum);
+                                if (eventToEdit) {
+                                    // Navega para o mês correto do evento
+                                    currentDate = new Date(eventToEdit.date + 'T00:00:00');
+                                    renderCalendar();
+                                    // Simula o clique no dia e abre o modal de edição
+                                    handleDayClick(eventToEdit.date);
+                                    showEventModal(eventToEdit.date, eventToEdit);
+                                } else {
+                                    showToast('Evento para edição não encontrado.', true);
+                                }
+                            } // <-- INÍCIO DA CORREÇÃO: Esta chave estava faltando // --- FIM DA MODIFICAÇÃO --- };
+                            // --- INÍCIO DA MODIFICAÇÃO: Nova função para gerar mensagem de aniversário ---
+                            // Gera uma mensagem de relacionamento (aniversário) usando a API Gemini.
+                            const handleGenerateBirthdayMessage = async (nome, tipo, dias, buttonElement) => {
+                                let prompt = '';
+                                // Usamos um nome genérico, pois a empresa específica não é armazenada na
+                                notificação.
+                                const companyName = "Nossa Equipe";
+
+                                if (dias === 0) {
+                                    prompt = `Aja como um representante da empresa de aluguel de brinquedos
         "${companyName}".Hoje é o aniversário de "${nome}"(que é nosso ${tipo}).Escreva
                                     uma mensagem de "Feliz Aniversário" curta, amigável e calorosa para ser enviada via
         WhatsApp.Use emojis.Não precisa ser um texto de vendas, apenas de relacionamento.
                                     Termine com "Atenciosamente, Equipe ${companyName}".`;
-                        } else {
-                            prompt = `Aja como um representante da empresa de aluguel de brinquedos
+                                } else {
+                                    prompt = `Aja como um representante da empresa de aluguel de brinquedos
         "${companyName}".O aniversário de "${nome}"(que é nosso ${tipo}) é em ${dias}
         dias.Escreva uma mensagem de relacionamento amigável para ser enviada via WhatsApp,
             lembrando o cliente da data especial que se aproxima e desejando felicidades.Use
         emojis.Mantenha um tom de relacionamento, não de venda direta.Termine com
         "Atencitwosamente, Equipe ${companyName}".`;
-                        }
+                                }
 
-                        const message = await callGeminiAPI(prompt, buttonElement);
-                        if (message) {
-                            showGeminiModal("Mensagem de Relacionamento", message);
-                        }
-                    };
-                    // --- FIM DA MODIFICAÇÃO ---
+                                const message = await callGeminiAPI(prompt, buttonElement);
+                                if (message) {
+                                    showGeminiModal("Mensagem de Relacionamento", message);
+                                }
+                            };
+                            // --- FIM DA MODIFICAÇÃO ---
 
-                    // --- INÍCIO DA CORREÇÃO: Restaurando o código de partículas ---
-                    const canvas = document.getElementById('particles-js');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+                            // --- INÍCIO DA CORREÇÃO: Restaurando o código de partículas ---
+                            const canvas = document.getElementById('particles-js');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = window.innerWidth;
+                            canvas.height = window.innerHeight;
 
-                    let particlesArray;
+                            let particlesArray;
 
-                    let mouse = {
-                        x: null,
-                        y: null,
-                        radius: (canvas.height / 80) * (canvas.width / 80)
-                    };
+                            let mouse = {
+                                x: null,
+                                y: null,
+                                radius: (canvas.height / 80) * (canvas.width / 80)
+                            };
 
-                    window.addEventListener('mousemove', (event) => {
-                        mouse.x = event.x;
-                        mouse.y = event.y;
-                    });
+                            window.addEventListener('mousemove', (event) => {
+                                mouse.x = event.x;
+                                mouse.y = event.y;
+                            });
 
-                    class Particle {
-                        constructor(x, y, directionX, directionY, size, color) {
-                            this.x = x;
-                            this.y = y;
-                            this.directionX = directionX;
-                            this.directionY = directionY;
-                            this.size = size;
-                            this.color = color;
-                        }
-                        draw() {
-                            ctx.beginPath();
-                            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                            ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
-                            ctx.fill();
-                        }
-                        update() {
-                            if (this.x > canvas.width || this.x < 0) { this.directionX = -this.directionX; } if
-                                (this.y > canvas.height || this.y < 0) { this.directionY = -this.directionY; } let
-                                    dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx * dx
-                                        + dy * dy); if (distance < mouse.radius + this.size) {
-                                            if (mouse.x < this.x
-                                                && this.x < canvas.width - this.size * 10) { this.x += 1; } if (mouse.x >
-                                                    this.x && this.x > this.size * 10) {
-                                                this.x -= 1;
-                                            }
-                                            if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
-                                                this.y
-                                                    += 1;
-                                            } if (mouse.y > this.y && this.y > this.size * 10) {
-                                                this.y -= 1;
-                                            }
-                                        }
-                            this.x += this.directionX;
-                            this.y += this.directionY;
-                            this.draw();
-                        }
-                    }
-
-                    function initParticles() {
-                        particlesArray = [];
-                        let numberOfParticles = (canvas.height * canvas.width) / 9000;
-                        for (let i = 0; i < numberOfParticles; i++) {
-                            let size = (Math.random() *
-                                2) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size *
-                                    2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) -
-                                        (size * 2)) + size * 2); let directionX = (Math.random() * .4) - .2;
-                            let directionY = (Math.random() * .4) - .2; let
-                                color = 'rgba(100, 116, 139, 0.4)'; particlesArray.push(new
-                                    Particle(x, y, directionX, directionY, size, color));
-                        }
-                    } function
-                        connectParticles() {
-                        let opacityValue = 1; for (let a = 0; a <
-                            particlesArray.length; a++) {
-                            for (let b = a; b <
-                                particlesArray.length; b++) {
-                                let distance = ((particlesArray[a].x -
-                                    particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
-                                    + ((particlesArray[a].y - particlesArray[b].y) *
-                                        (particlesArray[a].y - particlesArray[b].y)); if (distance <
-                                            (canvas.width / 7) * (canvas.height / 7)) {
-                                    opacityValue = 1 -
-                                        (distance / 20000); ctx.strokeStyle = `rgba(100, 116, 139,
-            ${opacityValue * 0.5})`; ctx.lineWidth = 1; ctx.beginPath();
-                                    ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                                    ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
+                            class Particle {
+                                constructor(x, y, directionX, directionY, size, color) {
+                                    this.x = x;
+                                    this.y = y;
+                                    this.directionX = directionX;
+                                    this.directionY = directionY;
+                                    this.size = size;
+                                    this.color = color;
+                                }
+                                draw() {
+                                    ctx.beginPath();
+                                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                                    ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
+                                    ctx.fill();
+                                }
+                                update() {
+                                    if (this.x > canvas.width || this.x < 0) { this.directionX = -this.directionX; } if
+                                        (this.y > canvas.height || this.y < 0) { this.directionY = -this.directionY; } let
+                                            dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx * dx
+                                                + dy * dy); if (distance < mouse.radius + this.size) {
+                                                    if (mouse.x < this.x
+                                                        && this.x < canvas.width - this.size * 10) { this.x += 1; } if (mouse.x >
+                                                            this.x && this.x > this.size * 10) {
+                                                        this.x -= 1;
+                                                    }
+                                                    if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
+                                                        this.y
+                                                            += 1;
+                                                    } if (mouse.y > this.y && this.y > this.size * 10) {
+                                                        this.y -= 1;
+                                                    }
+                                                }
+                                    this.x += this.directionX;
+                                    this.y += this.directionY;
+                                    this.draw();
                                 }
                             }
-                        }
-                    } function animateParticles() {
-                        requestAnimationFrame(animateParticles); ctx.clearRect(0, 0,
-                            innerWidth, innerHeight); for (let i = 0; i < particlesArray.length;
-                            i++) { particlesArray[i].update(); } connectParticles();
-                    }
-                    window.addEventListener('resize', () => {
-                        canvas.width = innerWidth;
-                        canvas.height = innerHeight;
-                        mouse.radius = ((canvas.height / 80) * (canvas.width / 80));
-                        initParticles();
-                    });
 
-                    window.addEventListener('mouseout', () => {
-                        mouse.x = undefined;
-                        mouse.y = undefined;
-                    });
-                    // --- FIM DA CORREÇÃO ---
+                            function initParticles() {
+                                particlesArray = [];
+                                let numberOfParticles = (canvas.height * canvas.width) / 9000;
+                                for (let i = 0; i < numberOfParticles; i++) {
+                                    let size = (Math.random() *
+                                        2) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size *
+                                            2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) -
+                                                (size * 2)) + size * 2); let directionX = (Math.random() * .4) - .2;
+                                    let directionY = (Math.random() * .4) - .2; let
+                                        color = 'rgba(100, 116, 139, 0.4)'; particlesArray.push(new
+                                            Particle(x, y, directionX, directionY, size, color));
+                                }
+                            } function
+                                connectParticles() {
+                                let opacityValue = 1; for (let a = 0; a <
+                                    particlesArray.length; a++) {
+                                    for (let b = a; b <
+                                        particlesArray.length; b++) {
+                                        let distance = ((particlesArray[a].x -
+                                            particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
+                                            + ((particlesArray[a].y - particlesArray[b].y) *
+                                                (particlesArray[a].y - particlesArray[b].y)); if (distance <
+                                                    (canvas.width / 7) * (canvas.height / 7)) {
+                                            opacityValue = 1 -
+                                                (distance / 20000); ctx.strokeStyle = `rgba(100, 116, 139,
+            ${opacityValue * 0.5})`; ctx.lineWidth = 1; ctx.beginPath();
+                                            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                                            ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
+                                        }
+                                    }
+                                }
+                            } function animateParticles() {
+                                requestAnimationFrame(animateParticles); ctx.clearRect(0, 0,
+                                    innerWidth, innerHeight); for (let i = 0; i < particlesArray.length;
+                                    i++) { particlesArray[i].update(); } connectParticles();
+                            }
+                            window.addEventListener('resize', () => {
+                                canvas.width = innerWidth;
+                                canvas.height = innerHeight;
+                                mouse.radius = ((canvas.height / 80) * (canvas.width / 80));
+                                initParticles();
+                            });
 
-                    initParticles();
-                    animateParticles();
-                    renderAll();
-                    checkBirthdayNotifications(); // <-- Chamada da nova função
-                    handleUrlParameters();
-                }); </script>
+                            window.addEventListener('mouseout', () => {
+                                mouse.x = undefined;
+                                mouse.y = undefined;
+                            });
+                            // --- FIM DA CORREÇÃO ---
+
+                            initParticles();
+                            animateParticles();
+                            renderAll();
+                            checkBirthdayNotifications(); // <-- Chamada da nova função
+                            handleUrlParameters();
+                        }); </script>
 
     <!-- Sistema de Autenticação -->
     <script src="js/protect.js"></script>
