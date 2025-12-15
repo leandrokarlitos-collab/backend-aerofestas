@@ -2943,6 +2943,12 @@
                 }
 
                 const toyData = eventToys.map(eventToy => {
+                    // 🐛 DEBUG: Ver estrutura completa
+                    console.log('🔍 eventToy completo:', eventToy);
+                    console.log('  - eventToy.toy:', eventToy.toy);
+                    console.log('  - eventToy.toy?.price:', eventToy.toy?.price);
+                    console.log('  - eventToy.price:', eventToy.price);
+
                     const toyId = eventToy.toyId || eventToy.id; // Prioriza toyId (API) sobre id (localStorage)
                     const toy = toys.find(t => t.id === toyId);
 
