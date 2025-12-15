@@ -3896,30 +3896,29 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
                                         let diffDays = (aniversarioEsteAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
 
                                         if (diffDays >= 0 && intervalos.includes(diffDays)) {
-                                            notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate }); // Passa
-                                            eventDate
+                                            notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate });
                                         } else if (diffDays < 0) {
-                                            const aniversarioProximoAno = new Date(anoAtual + 1, dobMes,
-                                                dobDia).getTime(); diffDays = (aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 *
-                                                    24); if (intervalos.includes(diffDays)) {
-                                                        notificacoes.push({
-                                                            nome, tipo, dias:
-                                                                diffDays, clientName, eventId, eventDate
-                                                        }); // Passa eventDate } } } catch (error) {
-                                                        console.error("Erro ao processar data de aniversário:", dob, error);
-                                                    }
-                                        };
-
-                                        // Adiciona contratante (PF) se tiver data de nascimento
-                                        if (e.clientDob && e.clientType === 'PF' && e.clientName) {
-                                            processarAniversario(e.clientName, e.clientDob, 'Contratante', e.clientName, e.id, e.date); // Passa e.date
+                                            const aniversarioProximoAno = new Date(anoAtual + 1, dobMes, dobDia).getTime();
+                                            diffDays = (aniversarioProximoAno - hojeTimestamp) / (1000 * 60 * 60 * 24);
+                                            if (intervalos.includes(diffDays)) {
+                                                notificacoes.push({ nome, tipo, dias: diffDays, clientName, eventId, eventDate });
+                                            }
                                         }
+                                    } catch (error) {
+                                        console.error("Erro ao processar data de aniversário:", dob, error);
+                                    }
+                                };
 
-                                        // Adiciona aniversariante do evento se tiver data de nascimento
-                                        if (e.isBirthday && e.birthdayPersonDob && e.birthdayPersonName) {
-                                            processarAniversario(e.birthdayPersonName, e.birthdayPersonDob, 'Aniversariante', e.clientName, e.id, e.date); // Passa e.date
-                                        }
-                                    }); // --- FIM DA MODIFICAÇÃO ---
+                                // Adiciona contratante (PF) se tiver data de nascimento
+                                if (e.clientDob && e.clientType === 'PF' && e.clientName) {
+                                    processarAniversario(e.clientName, e.clientDob, 'Contratante', e.clientName, e.id, e.date); // Passa e.date
+                                }
+
+                                // Adiciona aniversariante do evento se tiver data de nascimento
+                                if (e.isBirthday && e.birthdayPersonDob && e.birthdayPersonName) {
+                                    processarAniversario(e.birthdayPersonName, e.birthdayPersonDob, 'Aniversariante', e.clientName, e.id, e.date); // Passa e.date
+                                }
+                            }); // --- FIM DA MODIFICAÇÃO ---
 
                             renderNotifications(notificacoes);
                         };
