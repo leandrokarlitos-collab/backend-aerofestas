@@ -2952,6 +2952,11 @@
                     const toyId = eventToy.toyId || eventToy.id; // Prioriza toyId (API) sobre id (localStorage)
                     const toy = toys.find(t => t.id === toyId);
 
+                    // 🐛 DEBUG: Verificar busca na lista global
+                    console.log('  - toyId buscado:', toyId);
+                    console.log('  - toy encontrado na lista global:', toy);
+                    console.log('  - toy?.price da lista global:', toy?.price);
+
                     const quantity = eventToy.quantity || 1;
                     // Prioridade: eventToy.toy.price (API nova) > eventToy.price (localStorage) > toy.price (global)
                     const unitPrice = (eventToy.toy && eventToy.toy.price !== undefined)
