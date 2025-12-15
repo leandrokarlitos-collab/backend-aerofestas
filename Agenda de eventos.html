@@ -2943,7 +2943,7 @@
                 }
 
                 const toyData = eventToys.map(eventToy => {
-                    const toyId = eventToy.id || eventToy.toyId;
+                    const toyId = eventToy.toyId || eventToy.id; // Prioriza toyId (API) sobre id (localStorage)
                     const toy = toys.find(t => t.id === toyId);
 
                     const quantity = eventToy.quantity || 1;
@@ -3299,7 +3299,7 @@
                 // CORREÇÃO: Suportar tanto event.toys quanto event.items
                 const eventToys = event.toys || event.items || [];
                 const toyNames = eventToys.map(eventToy => {
-                    const toyId = eventToy.id || eventToy.toyId; // Suporta ambos os formatos
+                    const toyId = eventToy.toyId || eventToy.id; // Prioriza toyId (API) sobre id (localStorage)
                     const toy = toys.find(t => t.id === toyId);
                     if (!toy) return null;
                     const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
