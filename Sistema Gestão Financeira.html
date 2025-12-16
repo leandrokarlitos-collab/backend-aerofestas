@@ -356,7 +356,8 @@
                         descricao: e.contratante,
                         detalhes: 'Itens do Evento',
                         valor: e.valor,
-                        ordem: 1
+                        deletavel: false,
+                        id: null
                     }));
 
                     const entradasManuais = receitasMes.map(r => ({
@@ -365,7 +366,8 @@
                         descricao: r.descricao,
                         detalhes: r.categoria,
                         valor: r.valor,
-                        ordem: 2
+                        deletavel: true,
+                        id: r.id
                     }));
 
                     const todasEntradas = [...entradasEventos, ...entradasManuais]
@@ -382,7 +384,16 @@
                                     <td>-</td>
                                     <td>${entry.detalhes}</td>
                                     <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
-                                    <td><span class="text-gray-400 text-xs">Salvo</span></td>
+                                    <td>
+                                        ${entry.deletavel
+                                ? `<button onclick="deletarEntradaManual('${entry.id}')" 
+                                                       class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm transition-colors"
+                                                       title="Deletar">
+                                                   <i class="fa-solid fa-trash-can"></i>
+                                               </button>`
+                                : '<span class="text-gray-400 text-xs">-</span>'
+                            }
+                                    </td>
                                 </tr>
                             `).join('');
                     }
@@ -628,6 +639,19 @@
                     alert('Categoria excluída com sucesso!');
                 } else {
                     alert('Erro ao excluir categoria.');
+                }
+            };
+
+            // Deletar Entrada Manual (Receita)
+            window.deletarEntradaManual = async (id) => {
+                if (!confirm('Deseja realmente excluir esta entrada manual?')) return;
+
+                const sucesso = await window.api.deletarItem('transactions', id);
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    alert('✅ Entrada manual excluída com sucesso!');
+                } else {
+                    alert('❌ Erro ao excluir entrada manual.');
                 }
             };
 
