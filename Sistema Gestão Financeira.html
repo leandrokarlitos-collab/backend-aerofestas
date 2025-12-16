@@ -41,6 +41,7 @@
             let state = {
                 eventos: [],
                 gastos: [],
+                receitas: [], // 🆕 Transações do tipo REVENUE (entradas manuais)
                 contas: [],
                 contasFixas: [],
                 selectedMonth: new Date().toISOString().slice(0, 7) // YYYY-MM
@@ -115,6 +116,18 @@
                             pagamento: t.paymentMethod || "Outro",
                             valor: t.amount,
                             comprovantes: []
+                        }));
+
+                    // 2.5. Mapeia Receitas (Transações do tipo REVENUE - entradas manuais)
+                    state.receitas = transacoesCloud
+                        .filter(t => t.type === 'REVENUE')
+                        .map(t => ({
+                            id: t.id,
+                            data: t.date,
+                            descricao: t.description,
+                            categoria: t.category || "Receita Avulsa",
+                            valor: t.amount,
+                            tipo: 'manual' // Flag para diferenciar de eventos
                         }));
 
                     // 3. Mapeia Contas Bancárias
@@ -297,9 +310,12 @@
                 // Filtra dados pelo mês selecionado
                 const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
                 const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
 
                 // Atualiza Cards do Dashboard
-                const receita = eventosMes.reduce((acc, e) => acc + (e.valor || 0), 0);
+                const receitaEventos = eventosMes.reduce((acc, e) => acc + (e.valor || 0), 0);
+                const receitaManuais = receitasMes.reduce((acc, r) => acc + (r.valor || 0), 0);
+                const receita = receitaEventos + receitaManuais;
                 const despesa = gastosMes.reduce((acc, g) => acc + (g.valor || 0), 0);
                 const saldo = receita - despesa;
 
@@ -330,20 +346,42 @@
                     }
                 }
 
-                // Renderiza Tabela de Entradas (Eventos)
+                // Renderiza Tabela de Entradas (Eventos + Receitas Manuais)
                 const tbodyEventos = getById('tabela-eventos')?.querySelector('tbody');
                 if (tbodyEventos) {
-                    if (eventosMes.length === 0) {
+                    // Combina eventos e receitas manuais
+                    const entradasEventos = eventosMes.map(e => ({
+                        data: e.data,
+                        tipo: '📅 Evento',
+                        descricao: e.contratante,
+                        detalhes: 'Itens do Evento',
+                        valor: e.valor,
+                        ordem: 1
+                    }));
+
+                    const entradasManuais = receitasMes.map(r => ({
+                        data: r.data,
+                        tipo: '💰 Entrada Avulsa',
+                        descricao: r.descricao,
+                        detalhes: r.categoria,
+                        valor: r.valor,
+                        ordem: 2
+                    }));
+
+                    const todasEntradas = [...entradasEventos, ...entradasManuais]
+                        .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+                    if (todasEntradas.length === 0) {
                         tbodyEventos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma entrada neste mês.</td></tr>';
                     } else {
-                        tbodyEventos.innerHTML = eventosMes.sort((a, b) => new Date(a.data) - new Date(b.data)).map(e => `
+                        tbodyEventos.innerHTML = todasEntradas.map(entry => `
                                 <tr>
-                                    <td>${formatarData(e.data)}</td>
-                                    <td>${e.empresa}</td>
-                                    <td>${e.contratante}</td>
+                                    <td>${formatarData(entry.data)}</td>
+                                    <td>${entry.tipo}</td>
+                                    <td>${entry.descricao}</td>
                                     <td>-</td>
-                                    <td>Itens do Evento</td>
-                                    <td class="font-bold text-green-600">${formatarMoeda(e.valor)}</td>
+                                    <td>${entry.detalhes}</td>
+                                    <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
                                     <td><span class="text-gray-400 text-xs">Salvo</span></td>
                                 </tr>
                             `).join('');
