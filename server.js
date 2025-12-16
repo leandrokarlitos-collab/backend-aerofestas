@@ -327,6 +327,7 @@ app.post('/api/admin/events', async (req, res) => {
         const data = {
             id: eventId,
             date: evt.date,
+            endDate: evt.endDate || null, // Data de término para eventos multi-dia
             clientName: evt.clientName,
             yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
             startTime: evt.startTime,

@@ -573,14 +573,23 @@
                     <div id="step-2" class="step-content hidden space-y-4">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Detalhes do Evento</h3>
 
-                        <!-- INÍCIO: Campo de Data Editável -->
-                        <div>
-                            <label for="event-date-visible" class="block text-sm font-medium text-gray-700 mb-1">Data do
-                                Evento</label>
-                            <input type="date" id="event-date-visible" required
-                                class="form-input w-full px-3 py-2 rounded-md">
+                        <!-- INÍCIO: Campos de Data (Início e Término) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="event-date-visible" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Data de Inicio</label>
+                                <input type="date" id="event-date-visible" required
+                                    class="form-input w-full px-3 py-2 rounded-md">
+                            </div>
+                            <div>
+                                <label for="event-end-date" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Data de Término <span class="text-gray-500 text-xs">(Opcional - Para eventos
+                                        multi-dia)</span></label>
+                                <input type="date" id="event-end-date" class="form-input w-full px-3 py-2 rounded-md">
+                                <p class="text-xs text-gray-500 mt-1">Deixe em branco para eventos de um único dia</p>
+                            </div>
                         </div>
-                        <!-- FIM: Campo de Data Editável -->
+                        <!-- FIM: Campos de Data -->
 
                         <!-- INÍCIO: Seção Aniversariante -->
                         <div class="mt-4">
@@ -2686,11 +2695,19 @@
                 const eventId = document.getElementById('event-id').value ? parseInt(document.getElementById('event-id').value) : null;
                 const clientType = document.querySelector('input[name="client-type"]:checked').value;
                 const eventDate = document.getElementById('event-date-visible').value;
+                const eventEndDate = document.getElementById('event-end-date').value; // Data de término (opcional)
+
+                // Validação: Data de término deve ser >= data de início
+                if (eventEndDate && eventEndDate < eventDate) {
+                    showToast('A data de término deve ser igual ou posterior à data de início.', true);
+                    return;
+                }
 
                 // Objeto base para envio à API
                 const eventData = {
                     id: eventId, // Se for nulo, a API cria novo. Se tiver ID, a API atualiza.
                     date: eventDate,
+                    endDate: eventEndDate || null, // Data de término para eventos multi-dia
                     clientType: clientType,
                     yourCompanyId: parseInt(document.getElementById('your-company-select').value),
                     clientAddress: document.getElementById('client-address').value,

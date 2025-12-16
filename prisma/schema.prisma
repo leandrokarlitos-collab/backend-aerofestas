@@ -43,7 +43,8 @@ model Company {
 
 model Event {
   id           Float    @id
-  date         String
+  date         String   // Data de início
+  endDate      String?  // Data de término (para eventos multi-dia)
   clientName   String?
   
   // Ligação com a Empresa
