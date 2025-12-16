@@ -1483,85 +1483,18 @@
 
             <div id="page-contas-fixas" class="page space-y-8">
                 <section class="glassmorphism p-6 rounded-lg">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Cadastrar Nova Conta Fixa</h2>
-                    <form id="form-conta-fixa" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                        <div><label for="conta-fixa-descricao"
-                                class="block text-sm font-medium text-gray-700">Descrição</label><input type="text"
-                                id="conta-fixa-descricao" required class="form-input w-full mt-1"
-                                placeholder="Ex: Aluguel do galpão"></div>
-                        <div><label for="conta-fixa-valor" class="block text-sm font-medium text-gray-700">Valor
-                                (R$)</label><input type="number" id="conta-fixa-valor" step="0.01" required
-                                class="form-input w-full mt-1" placeholder="750.00"></div>
-                        <div><label for="conta-fixa-dia-vencimento" class="block text-sm font-medium text-gray-700">Dia
-                                do Vencimento</label><input type="number" id="conta-fixa-dia-vencimento" min="1"
-                                max="31" required class="form-input w-full mt-1" placeholder="10"></div>
-                        <div>
-                            <label for="conta-fixa-categoria"
-                                class="block text-sm font-medium text-gray-700">Categoria</label>
-                            <select id="conta-fixa-categoria" required class="form-input w-full mt-1">
-                                <option value="">-- Selecione --</option>
-                            </select>
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Contas Fixas</h2>
+                        <div class="flex gap-2">
+                            <button id="open-categorias-cf-modal-btn" class="shiny-btn-outline px-4 py-2 rounded-md"
+                                title="Gerenciar Categorias">
+                                <i class="fa-solid fa-gear mr-2"></i> Categorias
+                            </button>
+                            <button id="open-conta-fixa-modal-btn" class="shiny-btn px-4 py-2 rounded-md">
+                                <i class="fa-solid fa-plus mr-2"></i> Cadastrar Conta Fixa
+                            </button>
                         </div>
-
-                        <div>
-                            <label for="conta-fixa-tipo-recorrencia"
-                                class="block text-sm font-medium text-gray-700">Tipo de Recorrência</label>
-                            <select id="conta-fixa-tipo-recorrencia" required class="form-input w-full mt-1">
-                                <option value="permanente" selected>Permanente (Contínua)</option>
-                                <option value="parcelada">Parcelada (Com Fim)</option>
-                            </select>
-                        </div>
-
-                        <div id="conta-fixa-parcelamento-container"
-                            class="hidden md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                            <div>
-                                <label for="conta-fixa-data-inicio" class="block text-sm font-medium text-gray-700">Mês
-                                    de Início (YYYY-MM)</label>
-                                <input type="month" id="conta-fixa-data-inicio" class="form-input w-full mt-1">
-                            </div>
-                            <div>
-                                <label for="conta-fixa-num-parcelas" class="block text-sm font-medium text-gray-700">Nº
-                                    de Parcelas</label>
-                                <input type="number" id="conta-fixa-num-parcelas" min="1" step="1"
-                                    class="form-input w-full mt-1" placeholder="12">
-                            </div>
-                            <div>
-                                <label for="conta-fixa-periodicidade-parcelada"
-                                    class="block text-sm font-medium text-gray-700">Periodicidade</label>
-                                <select id="conta-fixa-periodicidade-parcelada" class="form-input w-full mt-1">
-                                    <option value="mensal">Mensal</option>
-                                    <option value="quinzenal">Quinzenal</option>
-                                    <option value="semestral">Semestral</option>
-                                    <option value="anual">Anual</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div id="conta-fixa-permanente-container"
-                            class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                            <div>
-                                <label for="conta-fixa-periodicidade-permanente"
-                                    class="block text-sm font-medium text-gray-700">Periodicidade</label>
-                                <select id="conta-fixa-periodicidade-permanente" class="form-input w-full mt-1">
-                                    <option value="mensal">Mensal</option>
-                                    <option value="quinzenal">Quinzenal</option>
-                                    <option value="bimestral">Bimestral</option>
-                                    <option value="trimestral">Trimestral</option>
-                                    <option value="semestral">Semestral</option>
-                                    <option value="anual">Anual</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="lg:col-span-4">
-                            <label for="conta-fixa-anexo" class="block text-sm font-medium text-gray-700">Anexar
-                                Boletos/Faturas (Opcional)</label>
-                            <input type="file" id="conta-fixa-anexo" multiple
-                                class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        </div>
-                        <button type="submit" class="shiny-btn py-2 rounded-md lg:col-span-4"><i
-                                class="fa-solid fa-plus mr-2"></i> Adicionar Conta Fixa</button>
-                    </form>
+                    </div>
                 </section>
                 <section class="glassmorphism p-6 rounded-lg">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Lançamento de Contas Fixas do Mês</h2>
@@ -1580,52 +1513,6 @@
                                     <th>Data Pag.</th>
                                     <th class="text-center"><i class="fa-solid fa-paperclip"></i></th>
                                     <th>Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section class="glassmorphism p-6 rounded-lg">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Gerenciamento de Categorias de Contas Fixas</h2>
-                    <form id="form-conta-fixa-categoria" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div class="md:col-span-2">
-                            <label for="cf-categoria-nome" class="block text-sm font-medium text-gray-700">Nome da Nova
-                                Categoria</label>
-                            <input type="text" id="cf-categoria-nome" placeholder="Ex: Impostos MEI" required
-                                class="form-input w-full mt-1">
-                        </div>
-                        <button type="submit" class="shiny-btn py-2 rounded-md"><i class="fa-solid fa-save mr-2"></i>
-                            Salvar Categoria</button>
-                    </form>
-                    <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Categorias de Contas Fixas Cadastradas</h3>
-                    <div class="table-wrapper">
-                        <table id="tabela-cf-categorias-db">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section class="glassmorphism p-6 rounded-lg">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Contas Fixas Cadastradas (Banco de Dados)</h2>
-                    <div class="table-wrapper">
-                        <table id="tabela-contas-fixas-db">
-                            <thead>
-                                <tr>
-                                    <th>Descrição</th>
-                                    <th>Valor</th>
-                                    <th>Dia Venc.</th>
-                                    <th>Categoria</th>
-                                    <th>Recorrência</th>
-                                    <th>Anexos</th>
-                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -1687,7 +1574,8 @@
                                     <div><label for="pagamento-monitor-data"
                                             class="block text-sm font-medium text-gray-700">Data do Evento</label><input
                                             type="date" id="pagamento-monitor-data" required
-                                            class="form-input w-full mt-1"></div>
+                                            class="form-input w-full mt-1">
+                                    </div>
                                     <div class="lg:col-span-2"><label for="monitor-select"
                                             class="block text-sm font-medium text-gray-700">Selecione o
                                             Monitor</label><select id="monitor-select" required
@@ -1751,7 +1639,8 @@
                                             class="sm:col-span-2 border p-3 rounded-md bg-gray-50/50"></div>
                                         <div class="sm:col-span-2 text-right font-bold text-gray-700">Nota Calculada:
                                             <span id="pagamento-nota-calculada"
-                                                class="text-indigo-600 text-lg">0.0</span> / 10
+                                                class="text-indigo-600 text-lg">0.0</span> /
+                                            10
                                         </div>
                                         <div class="sm:col-span-2"><label for="pagamento-nota-obs"
                                                 class="text-xs">Observações</label><textarea id="pagamento-nota-obs"
@@ -1805,7 +1694,8 @@
 
                     <div class="mb-6">
                         <label for="salario-funcionario-select"
-                            class="block text-sm font-medium text-gray-700 mb-1">Selecionar Funcionário</label>
+                            class="block text-sm font-medium text-gray-700 mb-1">Selecionar
+                            Funcionário</label>
                         <select id="salario-funcionario-select" class="form-input w-full max-w-md"></select>
                     </div>
 
