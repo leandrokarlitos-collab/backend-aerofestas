@@ -2292,11 +2292,9 @@
                 }
             };
 
-            // Botão Nova Entrada Manual
-            const btnEntrada = getById('open-entrada-modal-btn');
-            if (btnEntrada) {
-                btnEntrada.addEventListener('click', () => showModal('add-entrada-modal'));
-            }
+
+            // Botão Nova Entrada Manual - implementado no final do script
+
 
             // Botão Novo Gasto
             const btnGasto = getById('open-gasto-modal-btn');
@@ -2451,6 +2449,51 @@
                         alert('Conta fixa cadastrada com sucesso!');
                     } else {
                         alert('Erro ao salvar conta fixa.');
+                    }
+                });
+            }
+
+            // ========== HANDLER PARA ENTRADA MANUALRet DE RECEITA ==========
+            const btnEntrada = document.getElementById('open-entrada-modal-btn');
+            if (btnEntrada) {
+                btnEntrada.addEventListener('click', async () => {
+                    // Prompt simples para criar entrada avulsa
+                    const data = prompt('Data da entrada (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+                    if (!data) return;
+
+                    const descricao = prompt('Descrição da entrada:', 'Receita Avulsa');
+                    if (!descricao) return;
+
+                    const valorStr = prompt('Valor (R$):', '');
+                    if (!valorStr) return;
+
+                    const valor = parseFloat(valorStr.replace(',', '.'));
+                    if (isNaN(valor) || valor <= 0) {
+                        alert('Valor inválido!');
+                        return;
+                    }
+
+                    // Cria transação de receita
+                    const novaReceita = {
+                        id: Date.now().toString(),
+                        date: data,
+                        description: descricao,
+                        amount: valor,
+                        type: 'REVENUE',
+                        category: 'Receita Avulsa',
+                        paymentMethod: 'Entrada Manual',
+                        eventId: null // Não vinculado a evento
+                    };
+
+                    console.log('💰 Criando entrada manual:', novaReceita);
+
+                    const sucesso = await window.api.salvarTransacao(novaReceita);
+
+                    if (sucesso) {
+                        await window.loadDataFromCloud();
+                        alert(`Entrada registrada com sucesso!\\n\\n${descricao}: ${formatarMoeda(valor)}`);
+                    } else {
+                        alert('Erro ao salvar entrada.');
                     }
                 });
             }
