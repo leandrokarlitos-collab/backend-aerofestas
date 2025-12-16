@@ -2869,6 +2869,13 @@
                     }
                     toysForCurrentEvent = JSON.parse(JSON.stringify(eventToys));
 
+                    // DEBUG: Verificar se o mapeamento funcionou
+                    console.log('🔍 DEBUG EDIÇÃO:', {
+                        'eventToEdit.items': eventToEdit.items,
+                        'eventToEdit.toys': eventToEdit.toys,
+                        'toysForCurrentEvent': toysForCurrentEvent
+                    });
+
                     // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
                     deliveryFeeEl.value = eventToEdit.deliveryFee || 0;
                     document.getElementById('event-monitor').value = eventToEdit.monitor || '';
