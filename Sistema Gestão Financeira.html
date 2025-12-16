@@ -1099,6 +1099,59 @@
             transform: translateY(-2px);
         }
 
+        /* Animações dos Modais */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-backdrop {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            animation: slideUp 0.3s ease-out;
+        }
+
+        /* Validação de Formulário */
+        .form-input.error {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .form-input.error:focus {
+            ring-color: #ef4444;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+
         .loader {
             width: 48px;
             height: 48px;
@@ -2516,8 +2569,10 @@
     </div>
 
     <!-- Modal: Cadastrar Conta Fixa -->
-    <div id="modal-conta-fixa" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+    <div id="modal-conta-fixa"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">Cadastrar Conta Fixa</h2>
                 <button id="close-conta-fixa-modal"
@@ -2593,15 +2648,24 @@
                     <input type="file" id="conta-fixa-anexo" multiple
                         class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 </div>
-                <button type="submit" class="shiny-btn py-2 rounded-md lg:col-span-4"><i
-                        class="fa-solid fa-plus mr-2"></i> Adicionar Conta Fixa</button>
+
+                <div class="lg:col-span-4 flex gap-3 pt-4">
+                    <button type="button" id="limpar-conta-fixa-btn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-md transition-colors">
+                        <i class="fa-solid fa-eraser mr-2"></i> Limpar
+                    </button>
+                    <button type="submit" class="flex-1 shiny-btn py-2 rounded-md"><i class="fa-solid fa-plus mr-2"></i>
+                        Adicionar Conta Fixa</button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Modal: Gerenciar Categorias -->
-    <div id="modal-categorias-cf" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+    <div id="modal-categorias-cf"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-gear mr-2"></i> Categorias de Contas
                     Fixas</h2>
@@ -2650,6 +2714,55 @@
             const btnAbrirCategorias = document.getElementById('open-categorias-cf-modal-btn');
             const btnFecharContaFixa = document.getElementById('close-conta-fixa-modal');
             const btnFecharCategorias = document.getElementById('close-categorias-cf-modal');
+            const btnLimparContaFixa = document.getElementById('limpar-conta-fixa-btn');
+            const formContaFixa = document.getElementById('form-conta-fixa');
+            const formCategoria = document.getElementById('form-conta-fixa-categoria');
+
+            // Função para mostrar toast
+            const showToastModal = (message, isError = false) => {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+                const toastIcon = document.getElementById('toast-icon');
+
+                if (toast && toastMessage && toastIcon) {
+                    toastMessage.textContent = message;
+                    toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+                    toast.className = isError
+                        ? 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3'
+                        : 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3';
+
+                    setTimeout(() => {
+                        toast.className = toast.className.replace('top-5', '-top-20');
+                    }, 3000);
+                }
+            };
+
+            // Validação de formulário
+            const validateForm = (form) => {
+                let isValid = true;
+                const inputs = form.querySelectorAll('input[required], select[required]');
+
+                inputs.forEach(input => {
+                    if (!input.value || input.value.trim() === '') {
+                        input.classList.add('error');
+                        isValid = false;
+                    } else {
+                        input.classList.remove('error');
+                    }
+                });
+
+                return isValid;
+            };
+
+            // Limpar erros ao digitar
+            const setupInputListeners = (form) => {
+                const inputs = form.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    input.addEventListener('input', () => {
+                        input.classList.remove('error');
+                    });
+                });
+            };
 
             // Abrir modal de Cadastrar Conta Fixa
             btnAbrirContaFixa?.addEventListener('click', () => {
@@ -2670,6 +2783,52 @@
             btnFecharCategorias?.addEventListener('click', () => {
                 modalCategoriasCF.classList.add('hidden');
             });
+
+            // Botão Limpar formulário de Conta Fixa
+            btnLimparContaFixa?.addEventListener('click', () => {
+                if (confirm('Deseja limpar todos os campos do formulário?')) {
+                    formContaFixa.reset();
+                    // Limpar erros
+                    formContaFixa.querySelectorAll('.error').forEach(input => {
+                        input.classList.remove('error');
+                    });
+                    showToastModal('Formulário limpo com sucesso!');
+                }
+            });
+
+            // Validação ao submeter Conta Fixa
+            formContaFixa?.addEventListener('submit', (e) => {
+                if (!validateForm(formContaFixa)) {
+                    e.preventDefault();
+                    showToastModal('Por favor, preencha todos os campos obrigatórios', true);
+                    return false;
+                }
+                // O submit normal acontecerá se validar
+                // Quando salvar com sucesso, mostrar toast
+                setTimeout(() => {
+                    showToastModal('Conta Fixa cadastrada com sucesso!');
+                }, 100);
+            });
+
+            // Validação ao submeter Categoria
+            formCategoria?.addEventListener('submit', (e) => {
+                const nomeCategoria = document.getElementById('cf-categoria-nome');
+                if (!nomeCategoria.value.trim()) {
+                    e.preventDefault();
+                    nomeCategoria.classList.add('error');
+                    showToastModal('Digite o nome da categoria', true);
+                    return false;
+                }
+                // Quando salvar com sucesso
+                setTimeout(() => {
+                    showToastModal('Categoria criada com sucesso!');
+                    nomeCategoria.value = '';
+                }, 100);
+            });
+
+            // Setup listeners para remover erros
+            setupInputListeners(formContaFixa);
+            setupInputListeners(formCategoria);
 
             // Fechar ao clicar fora do modal
             modalContaFixa?.addEventListener('click', (e) => {
@@ -2692,7 +2851,7 @@
                 }
             });
 
-            console.log('✅ Modais de Contas Fixas configurados');
+            console.log('✅ Modais de Contas Fixas configurados com animações e validação');
         });
     </script>
 
