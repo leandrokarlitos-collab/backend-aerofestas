@@ -2852,8 +2852,21 @@
                     discountTypeEl.value = eventToEdit.discountType || 'fixed';
                     discountValueEl.value = eventToEdit.discountValue || 0;
 
-                    // CORRIGIDO: Verifica se toys ou items existem antes de fazer parse
-                    const eventToys = eventToEdit.toys || eventToEdit.items || [];
+
+                    // CORRIGIDO: Mapeia items da API para o formato esperado pelo frontend
+                    let eventToys = [];
+                    if (eventToEdit.items && Array.isArray(eventToEdit.items)) {
+                        // Evento vindo da API: items = [{ toyId, quantity, price, toy: { id, name } }]
+                        eventToys = eventToEdit.items.map(item => ({
+                            id: item.toyId || item.toy?.id,
+                            name: item.toy?.name || 'Brinquedo',
+                            quantity: item.quantity || 1,
+                            price: item.price || 0
+                        }));
+                    } else if (eventToEdit.toys && Array.isArray(eventToEdit.toys)) {
+                        // Evento do localStorage: estrutura antiga
+                        eventToys = eventToEdit.toys;
+                    }
                     toysForCurrentEvent = JSON.parse(JSON.stringify(eventToys));
 
                     // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
