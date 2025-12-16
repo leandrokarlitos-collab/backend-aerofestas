@@ -2515,8 +2515,186 @@
         </div>
     </div>
 
+    <!-- Modal: Cadastrar Conta Fixa -->
+    <div id="modal-conta-fixa" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Cadastrar Conta Fixa</h2>
+                <button id="close-conta-fixa-modal"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-conta-fixa" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div><label for="conta-fixa-descricao"
+                        class="block text-sm font-medium text-gray-700">Descrição</label><input type="text"
+                        id="conta-fixa-descricao" required class="form-input w-full mt-1"
+                        placeholder="Ex: Aluguel do galpão"></div>
+                <div><label for="conta-fixa-valor" class="block text-sm font-medium text-gray-700">Valor
+                        (R$)</label><input type="number" id="conta-fixa-valor" step="0.01" required
+                        class="form-input w-full mt-1" placeholder="750.00"></div>
+                <div><label for="conta-fixa-dia-vencimento" class="block text-sm font-medium text-gray-700">Dia do
+                        Vencimento</label><input type="number" id="conta-fixa-dia-vencimento" min="1" max="31" required
+                        class="form-input w-full mt-1" placeholder="10"></div>
+                <div>
+                    <label for="conta-fixa-categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
+                    <select id="conta-fixa-categoria" required class="form-input w-full mt-1">
+                        <option value="">-- Selecione --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="conta-fixa-tipo-recorrencia" class="block text-sm font-medium text-gray-700">Tipo de
+                        Recorrência</label>
+                    <select id="conta-fixa-tipo-recorrencia" required class="form-input w-full mt-1">
+                        <option value="permanente" selected>Permanente (Contínua)</option>
+                        <option value="parcelada">Parcelada (Com Fim)</option>
+                    </select>
+                </div>
+
+                <div id="conta-fixa-parcelamento-container"
+                    class="hidden md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div><label for="conta-fixa-data-inicio" class="block text-sm font-medium text-gray-700">Mês de
+                            Início (YYYY-MM)</label><input type="month" id="conta-fixa-data-inicio"
+                            class="form-input w-full mt-1"></div>
+                    <div><label for="conta-fixa-num-parcelas" class="block text-sm font-medium text-gray-700">Nº de
+                            Parcelas</label><input type="number" id="conta-fixa-num-parcelas" min="1" step="1"
+                            class="form-input w-full mt-1" placeholder="12"></div>
+                    <div>
+                        <label for="conta-fixa-periodicidade-parcelada"
+                            class="block text-sm font-medium text-gray-700">Periodicidade</label>
+                        <select id="conta-fixa-periodicidade-parcelada" class="form-input w-full mt-1">
+                            <option value="mensal">Mensal</option>
+                            <option value="quinzenal">Quinzenal</option>
+                            <option value="semestral">Semestral</option>
+                            <option value="anual">Anual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="conta-fixa-permanente-container"
+                    class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div>
+                        <label for="conta-fixa-periodicidade-permanente"
+                            class="block text-sm font-medium text-gray-700">Periodicidade</label>
+                        <select id="conta-fixa-periodicidade-permanente" class="form-input w-full mt-1">
+                            <option value="mensal">Mensal</option>
+                            <option value="quinzenal">Quinzenal</option>
+                            <option value="bimestral">Bimestral</option>
+                            <option value="trimestral">Trimestral</option>
+                            <option value="semestral">Semestral</option>
+                            <option value="anual">Anual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4">
+                    <label for="conta-fixa-anexo" class="block text-sm font-medium text-gray-700">Anexar Boletos/Faturas
+                        (Opcional)</label>
+                    <input type="file" id="conta-fixa-anexo" multiple
+                        class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                </div>
+                <button type="submit" class="shiny-btn py-2 rounded-md lg:col-span-4"><i
+                        class="fa-solid fa-plus mr-2"></i> Adicionar Conta Fixa</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Gerenciar Categorias -->
+    <div id="modal-categorias-cf" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-gear mr-2"></i> Categorias de Contas
+                    Fixas</h2>
+                <button id="close-categorias-cf-modal"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-conta-fixa-categoria" class="space-y-4 mb-6">
+                <div>
+                    <label for="cf-categoria-nome" class="block text-sm font-medium text-gray-700 mb-2">Nome da Nova
+                        Categoria</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="cf-categoria-nome" placeholder="Ex: Impostos MEI" required
+                            class="form-input flex-1">
+                        <button type="submit" class="shiny-btn px-4 py-2 rounded-md"><i
+                                class="fa-solid fa-save mr-2"></i> Salvar</button>
+                    </div>
+                </div>
+            </form>
+
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
+            <div class="table-wrapper">
+                <table id="tabela-cf-categorias-db">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Sistema de Autenticação -->
     <script src="js/protect.js"></script>
+
+    <!-- Script: Controle dos Modais de Contas Fixas -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elementos dos modais
+            const modalContaFixa = document.getElementById('modal-conta-fixa');
+            const modalCategoriasCF = document.getElementById('modal-categorias-cf');
+            const btnAbrirContaFixa = document.getElementById('open-conta-fixa-modal-btn');
+            const btnAbrirCategorias = document.getElementById('open-categorias-cf-modal-btn');
+            const btnFecharContaFixa = document.getElementById('close-conta-fixa-modal');
+            const btnFecharCategorias = document.getElementById('close-categorias-cf-modal');
+
+            // Abrir modal de Cadastrar Conta Fixa
+            btnAbrirContaFixa?.addEventListener('click', () => {
+                modalContaFixa.classList.remove('hidden');
+            });
+
+            // Fechar modal de Cadastrar Conta Fixa
+            btnFecharContaFixa?.addEventListener('click', () => {
+                modalContaFixa.classList.add('hidden');
+            });
+
+            // Abrir modal de Categorias
+            btnAbrirCategorias?.addEventListener('click', () => {
+                modalCategoriasCF.classList.remove('hidden');
+            });
+
+            // Fechar modal de Categorias
+            btnFecharCategorias?.addEventListener('click', () => {
+                modalCategoriasCF.classList.add('hidden');
+            });
+
+            // Fechar ao clicar fora do modal
+            modalContaFixa?.addEventListener('click', (e) => {
+                if (e.target === modalContaFixa) {
+                    modalContaFixa.classList.add('hidden');
+                }
+            });
+
+            modalCategoriasCF?.addEventListener('click', (e) => {
+                if (e.target === modalCategoriasCF) {
+                    modalCategoriasCF.classList.add('hidden');
+                }
+            });
+
+            // Fechar com ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    modalContaFixa.classList.add('hidden');
+                    modalCategoriasCF.classList.add('hidden');
+                }
+            });
+
+            console.log('✅ Modais de Contas Fixas configurados');
+        });
+    </script>
 
 </body>
 
