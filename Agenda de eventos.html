@@ -2741,6 +2741,15 @@
                     birthdayPersonDob: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-dob').value : '',
                 };
 
+                // DEBUG: Verificar campos de endereço
+                console.log('📍 DEBUG ENDEREÇO:', {
+                    cep: eventData.cep,
+                    complemento: eventData.complemento,
+                    bairro: eventData.bairro,
+                    cidade: eventData.cidade,
+                    uf: eventData.uf
+                });
+
                 // Dados do Cliente (PF ou PJ)
                 if (clientType === 'PF') {
                     eventData.clientName = document.getElementById('client-name').value.trim();
