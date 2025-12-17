@@ -1089,41 +1089,50 @@
             const formatarMoeda = (valor) => (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
             /**
-             * Busca e calcula os dados financeiros do localStorage.
+             * Busca e calcula os dados financeiros da API.
              */
-            function getFinancialData() {
+            async function getFinancialData() {
                 try {
-                    const rawData = localStorage.getItem(FINANCE_STORAGE_KEY);
-                    if (!rawData) {
-                        return { error: "Sistema financeiro não inicializado." };
-                    }
-                    const state = JSON.parse(rawData);
+                    // Busca mês atual
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const monthNum = now.getMonth() + 1;
+                    const currentMonth = `${year}-${String(monthNum).padStart(2, '0')}`;
+                    const formattedMonth = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-                    // Usa o mês selecionado no sistema financeiro, ou o mês atual como padrão
-                    const currentMonth = state.selectedMonth || new Date().toISOString().slice(0, 7);
-                    const [year, monthNum] = currentMonth.split('-').map(Number);
-                    const formattedMonth = new Date(year, monthNum - 1, 5).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                    // Busca dados da API
+                    const [eventos, gastos, contasFixas] = await Promise.all([
+                        api.getEventos().catch(() => []),
+                        api.getGastos().catch(() => []),
+                        api.getContasFixas().catch(() => [])
+                    ]);
 
-                    const filterByMonth = (item) => item.data && item.data.startsWith(currentMonth);
+                    // Filtra por mês
+                    const filterByMonth = (items, dateField = 'date') => {
+                        return (items || []).filter(item => {
+                            const itemDate = item[dateField];
+                            if (!itemDate) return false;
+                            return itemDate.startsWith(currentMonth);
+                        });
+                    };
 
-                    const filteredEventos = (state.eventos || []).filter(filterByMonth);
-                    const filteredGastos = (state.gastos || []).filter(filterByMonth);
-                    const filteredPagamentos = (state.pagamentosMonitores || []).filter(filterByMonth);
+                    const filteredEventos = filterByMonth(eventos);
+                    const filteredGastos = filterByMonth(gastos);
 
-                    const totalReceitas = filteredEventos.reduce((acc, ev) => acc + (ev.valor || 0), 0);
+                    // Calcula receitas (soma dos eventos)
+                    const totalReceitas = filteredEventos.reduce((acc, ev) => acc + (parseFloat(ev.totalPrice) || 0), 0);
 
-                    const totalGastosGerais = filteredGastos.reduce((acc, g) => acc + (g.valor || 0), 0);
-                    const totalPagamentosMonitores = filteredPagamentos.reduce((acc, p) => acc + (p.pagamento || 0), 0);
-                    const totalDespesas = totalGastosGerais + totalPagamentosMonitores;
+                    // Calcula despesas
+                    const totalDespesas = filteredGastos.reduce((acc, g) => acc + (parseFloat(g.valor) || 0), 0);
 
+                    // Calcula saldo
                     const saldo = totalReceitas - totalDespesas;
 
-                    const contasFixas = state.contasFixas || [];
                     // Encontra IDs de gastos que são de contas fixas
                     const gastosFixosIds = new Set(filteredGastos.filter(g => g.contaFixaId).map(g => g.contaFixaId));
 
                     // Mapeia o status de cada conta fixa para o mês atual
-                    const contasFixasStatus = contasFixas.map(cf => {
+                    const contasFixasStatus = (contasFixas || []).map(cf => {
                         const vencimento = `${String(cf.diaVencimento).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
                         const isPaid = gastosFixosIds.has(cf.id);
                         return {
@@ -1139,28 +1148,28 @@
                         currentMonth,
                         formattedMonth,
                         totalReceitas,
-                        totalGastosGerais, // Para gráfico
-                        totalPagamentosMonitores, // Para gráfico
+                        totalGastosGerais: totalDespesas, // Para compatibilidade com gráficos
+                        totalPagamentosMonitores: 0, // Não usado no novo sistema
                         totalDespesas,
                         saldo,
                         contasFixasStatus
                     };
 
                 } catch (err) {
-                    console.error("Erro ao ler dados financeiros:", err);
-                    return { error: "Erro ao processar dados." };
+                    console.error("Erro ao carregar dados financeiros da API:", err);
+                    return { error: "Erro ao carregar dados do servidor." };
                 }
             }
 
             /**
              * Atualiza o widget do dashboard e pré-carrega o modal com dados.
              */
-            function loadFinancialSummary() {
-                const data = getFinancialData();
+            async function loadFinancialSummary() {
+                const data = await getFinancialData();
                 loadedFinancialData = data; // Armazena em cache para o modal
 
                 if (data.error) {
-                    financeWidgetLoading.textContent = data.error;
+                    financeWidgetLoading.innerHTML = `<p class="text-gray-500">${data.error}</p>`;
                     financeWidgetLoading.classList.remove('hidden');
                     financeWidgetContent.classList.add('hidden');
                     return;
