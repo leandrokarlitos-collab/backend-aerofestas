@@ -1462,74 +1462,20 @@
                         </table>
                     </div>
                 </section>
-                <section class="glassmorphism p-6 rounded-lg">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Cadastro de Contas de Saída</h2>
-                    <form id="form-cadastro-conta"
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                        <div><label for="cadastro-conta-nome" class="block text-sm font-medium text-gray-700">Nome da
-                                Conta</label><input type="text" id="cadastro-conta-nome"
-                                placeholder="Ex: Conta Principal" required class="form-input w-full mt-1"></div>
-                        <div><label for="cadastro-conta-banco"
-                                class="block text-sm font-medium text-gray-700">Instituição/Banco</label><input
-                                type="text" id="cadastro-conta-banco" placeholder="Ex: Banco Inter" required
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="cadastro-conta-tipo"
-                                class="block text-sm font-medium text-gray-700">Tipo</label><select
-                                id="cadastro-conta-tipo" required class="form-input w-full mt-1">
-                                <option>Conta Corrente</option>
-                                <option>Conta Poupança</option>
-                                <option>Conta de Pagamentos</option>
-                                <option>Outros</option>
-                            </select></div>
-                        <div><label for="cadastro-conta-agencia" class="block text-sm font-medium text-gray-700">Agência
-                                (Opcional)</label><input type="text" id="cadastro-conta-agencia" placeholder="0001"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="cadastro-conta-numero" class="block text-sm font-medium text-gray-700">Nº da
-                                Conta (Opcional)</label><input type="text" id="cadastro-conta-numero"
-                                placeholder="12345-6" class="form-input w-full mt-1"></div>
-                        <button type="submit" class="shiny-btn py-2 rounded-md"><i class="fa-solid fa-save mr-2"></i>
-                            Salvar Conta</button>
-                    </form>
-                    <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Contas Cadastradas</h3>
-                    <div class="table-wrapper">
-                        <table id="tabela-contas-db">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Instituição</th>
-                                    <th>Tipo</th>
-                                    <th>Agência/Conta</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </section>
 
                 <section class="glassmorphism p-6 rounded-lg">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Gerenciamento de Categorias de Gastos</h2>
-                    <form id="form-gasto-categoria" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div class="md:col-span-2">
-                            <label for="gasto-categoria-nome" class="block text-sm font-medium text-gray-700">Nome da
-                                Nova Categoria</label>
-                            <input type="text" id="gasto-categoria-nome" placeholder="Ex: Limpeza" required
-                                class="form-input w-full mt-1">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Configurações de Gastos</h2>
+                        <div class="flex gap-2">
+                            <button id="open-categorias-gastos-modal-btn" class="shiny-btn-outline px-4 py-2 rounded-md"
+                                title="Gerenciar Categorias de Gastos">
+                                <i class="fa-solid fa-tags mr-2"></i> Categorias
+                            </button>
+                            <button id="open-contas-bancarias-modal-btn" class="shiny-btn-outline px-4 py-2 rounded-md"
+                                title="Cadastrar Contas Bancárias">
+                                <i class="fa-solid fa-building-columns mr-2"></i> Contas Bancárias
+                            </button>
                         </div>
-                        <button type="submit" class="shiny-btn py-2 rounded-md"><i class="fa-solid fa-save mr-2"></i>
-                            Salvar Categoria</button>
-                    </form>
-                    <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Categorias de Gastos Cadastradas</h3>
-                    <div class="table-wrapper">
-                        <table id="tabela-gasto-categorias-db">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
                     </div>
                 </section>
             </div>
@@ -2701,6 +2647,112 @@
         </div>
     </div>
 
+    <!-- Modal: Contas Bancárias -->
+    <div id="modal-contas-bancarias"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-3xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-building-columns mr-2"></i> Contas
+                    Bancárias</h2>
+                <button id="close-contas-bancarias-modal"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-cadastro-conta" class="space-y-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="cadastro-conta-nome" class="block text-sm font-medium text-gray-700">Nome da
+                            Conta</label><input type="text" id="cadastro-conta-nome" placeholder="Ex: Conta Principal"
+                            required class="form-input w-full mt-1"></div>
+                    <div><label for="cadastro-conta-banco"
+                            class="block text-sm font-medium text-gray-700">Instituição/Banco</label><input type="text"
+                            id="cadastro-conta-banco" placeholder="Ex: Banco Inter" required
+                            class="form-input w-full mt-1"></div>
+                    <div><label for="cadastro-conta-tipo"
+                            class="block text-sm font-medium text-gray-700">Tipo</label><select id="cadastro-conta-tipo"
+                            required class="form-input w-full mt-1">
+                            <option>Conta Corrente</option>
+                            <option>Conta Poupança</option>
+                            <option>Conta de Pagamentos</option>
+                            <option>Outros</option>
+                        </select></div>
+                    <div><label for="cadastro-conta-agencia" class="block text-sm font-medium text-gray-700">Agência
+                            (Opcional)</label><input type="text" id="cadastro-conta-agencia" placeholder="0001"
+                            class="form-input w-full mt-1"></div>
+                    <div class="md:col-span-2"><label for="cadastro-conta-numero"
+                            class="block text-sm font-medium text-gray-700">Nº da Conta (Opcional)</label><input
+                            type="text" id="cadastro-conta-numero" placeholder="12345-6" class="form-input w-full mt-1">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="limpar-conta-bancaria-btn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-md transition-colors">
+                        <i class="fa-solid fa-eraser mr-2"></i> Limpar
+                    </button>
+                    <button type="submit" class="flex-1 shiny-btn py-2 rounded-md"><i class="fa-solid fa-save mr-2"></i>
+                        Salvar Conta</button>
+                </div>
+            </form>
+
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Contas Cadastradas</h3>
+            <div class="table-wrapper">
+                <table id="tabela-contas-db">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Instituição</th>
+                            <th>Tipo</th>
+                            <th>Agência/Conta</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Categorias de Gastos -->
+    <div id="modal-categorias-gastos"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-tags mr-2"></i> Categorias de Gastos
+                </h2>
+                <button id="close-categorias-gastos-modal"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-gasto-categoria" class="space-y-4 mb-6">
+                <div>
+                    <label for="gasto-categoria-nome" class="block text-sm font-medium text-gray-700 mb-2">Nome da Nova
+                        Categoria</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="gasto-categoria-nome" placeholder="Ex: Limpeza" required
+                            class="form-input flex-1">
+                        <button type="submit" class="shiny-btn px-4 py-2 rounded-md"><i
+                                class="fa-solid fa-save mr-2"></i> Salvar</button>
+                    </div>
+                </div>
+            </form>
+
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
+            <div class="table-wrapper">
+                <table id="tabela-gasto-categorias-db">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Sistema de Autenticação -->
     <script src="js/protect.js"></script>
 
@@ -2852,6 +2904,105 @@
             });
 
             console.log('✅ Modais de Contas Fixas configurados com animações e validação');
+
+            // ========== NOVOS MODAIS: Contas Bancárias e Categorias de Gastos ==========
+
+            const modalContasBancarias = document.getElementById('modal-contas-bancarias');
+            const modalCategoriasGastos = document.getElementById('modal-categorias-gastos');
+            const btnAbrirContasBancarias = document.getElementById('open-contas-bancarias-modal-btn');
+            const btnAbrirCategoriasGastos = document.getElementById('open-categorias-gastos-modal-btn');
+            const btnFecharContasBancarias = document.getElementById('close-contas-bancarias-modal');
+            const btnFecharCategoriasGastos = document.getElementById('close-categorias-gastos-modal');
+            const btnLimparContaBancaria = document.getElementById('limpar-conta-bancaria-btn');
+            const formContaBancaria = document.getElementById('form-cadastro-conta');
+            const formCategoriaGasto = document.getElementById('form-gasto-categoria');
+
+            // Abrir/Fechar Contas Bancárias
+            btnAbrirContasBancarias?.addEventListener('click', () => {
+                modalContasBancarias.classList.remove('hidden');
+            });
+
+            btnFecharContasBancarias?.addEventListener('click', () => {
+                modalContasBancarias.classList.add('hidden');
+            });
+
+            // Abrir/Fechar Categorias de Gastos
+            btnAbrirCategoriasGastos?.addEventListener('click', () => {
+                modalCategoriasGastos.classList.remove('hidden');
+            });
+
+            btnFecharCategoriasGastos?.addEventListener('click', () => {
+                modalCategoriasGastos.classList.add('hidden');
+            });
+
+            // Botão Limpar Conta Bancária
+            btnLimparContaBancaria?.addEventListener('click', () => {
+                if (confirm('Deseja limpar todos os campos do formulário?')) {
+                    formContaBancaria.reset();
+                    formContaBancaria.querySelectorAll('.error').forEach(input => {
+                        input.classList.remove('error');
+                    });
+                    showToastModal('Formulário limpo com sucesso!');
+                }
+            });
+
+            // Validação Conta Bancária
+            formContaBancaria?.addEventListener('submit', (e) => {
+                if (!validateForm(formContaBancaria)) {
+                    e.preventDefault();
+                    showToastModal('Por favor, preencha todos os campos obrigatórios', true);
+                    return false;
+                }
+                setTimeout(() => {
+                    showToastModal('Conta bancária cadastrada com sucesso!');
+                }, 100);
+            });
+
+            // Validação Categoria de Gasto
+            formCategoriaGasto?.addEventListener('submit', (e) => {
+                const nomeCategoria = document.getElementById('gasto-categoria-nome');
+                if (!nomeCategoria.value.trim()) {
+                    e.preventDefault();
+                    nomeCategoria.classList.add('error');
+                    showToastModal('Digite o nome da categoria', true);
+                    return false;
+                }
+                setTimeout(() => {
+                    showToastModal('Categoria de gasto criada com sucesso!');
+                    nomeCategoria.value = '';
+                }, 100);
+            });
+
+            // Setup listeners
+            setupInputListeners(formContaBancaria);
+            setupInputListeners(formCategoriaGasto);
+
+            // Fechar ao clicar fora
+            modalContasBancarias?.addEventListener('click', (e) => {
+                if (e.target === modalContasBancarias) {
+                    modalContasBancarias.classList.add('hidden');
+                }
+            });
+
+            modalCategoriasGastos?.addEventListener('click', (e) => {
+                if (e.target === modalCategoriasGastos) {
+                    modalCategoriasGastos.classList.add('hidden');
+                }
+            });
+
+            // Atualizar ESC para incluir novos modais
+            const originalEscListener = document.querySelector('[data-esc-listener]');
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    modalContasBancarias?.classList.add('hidden');
+                    modalCategoriasGastos?.classList.add('hidden');
+                    // Also close the original modals
+                    modalContaFixa.classList.add('hidden');
+                    modalCategoriasCF.classList.add('hidden');
+                }
+            });
+
+            console.log('✅ Modais de Gastos (Contas Bancárias e Categorias) configurados');
         });
     </script>
 
