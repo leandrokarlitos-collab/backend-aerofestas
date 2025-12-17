@@ -23,7 +23,7 @@ Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.color = '#6b7280';
 
 // Variáveis globais para armazenar instâncias dos gráficos
-let chartEmp null;
+let chartEmpresas = null;
 let chartDespGerais = null;
 let chartGastosCompras = null;
 let chartContasFixas = null;
@@ -47,7 +47,8 @@ function createGradient(ctx, colorTop, colorBottom) {
 function renderAllCharts(state) {
     const month = state.selectedMonth;
     renderEmpresasChart(state);
-    renderDespesasGeraisChart(state); renderGastosComprasChart(state);
+    renderDespesasGeraisChart(state);
+    renderGastosComprasChart(state);
     renderContasFixasChart(state);
     renderPagamentosMonitoresChart(state);
     renderDailyChart(state, month);
@@ -228,33 +229,34 @@ function renderContasFixasChart(state) {
     if (chartContasFixas) chartContasFixas.destroy();
 
     chartContasFixas = new Chart(ctx, {
-        type: 'bardata: {
+        type: 'bar',
+        data: {
             labels,
-        datasets: [{
-            label: 'Valor (R$)',
-            data: values,
-            backgroundColor: COLORS.blue,
-            borderColor: COLORS.blue,
-            borderWidth: 2,
-            borderRadius: 6
-        }]
-    },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
+            datasets: [{
+                label: 'Valor (R$)',
+                data: values,
+                backgroundColor: COLORS.blue,
+                borderColor: COLORS.blue,
+                borderWidth: 2,
+                borderRadius: 6
+            }]
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0,0,0,0.05)' }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
             },
-            x: {
-                grid: { display: false }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
             }
         }
-    }
     });
 }
 
