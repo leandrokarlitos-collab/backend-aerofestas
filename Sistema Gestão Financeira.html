@@ -47,6 +47,9 @@
                 selectedMonth: new Date().toISOString().slice(0, 7) // YYYY-MM
             };
 
+            // Torna o state acessível globalmente para os gráficos
+            window.state = state;
+
             // Atribui a função à variável global
             loadDataFromCloud = async function () {
                 try {
@@ -3003,6 +3006,33 @@
             });
 
             console.log('✅ Modais de Gastos (Contas Bancárias e Categorias) configurados');
+        });
+    </script>
+
+    <!-- Módulo de Gráficos Financeiros (Estilo Bolsa de Valores) -->
+    <script src="js/charts-financeiro.js"></script>
+
+    <!-- Script para chamar renderização dos gráficos -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Aguarda os dados serem carregados e renderiza gráficos
+            const observer = new MutationObserver(() => {
+                // Verifica se existe state global (criado pelo script principal)
+                if (window.state && window.renderAllCharts) {
+                    renderAllCharts(window.state);
+                    observer.disconnect();
+                }
+            });
+
+            // Observa mudanças no body para detectar quando dados são carregados
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // Fallback: tenta renderizar após 2 segundos
+            setTimeout(() => {
+                if (window.state && window.renderAllCharts) {
+                    renderAllCharts(window.state);
+                }
+            }, 2000);
         });
     </script>
 
