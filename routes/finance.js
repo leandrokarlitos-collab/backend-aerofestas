@@ -71,6 +71,29 @@ router.post('/transactions', async (req, res) => {
     }
 });
 
+// PUT /api/finance/transactions/:id (Atualizar Gasto)
+router.put('/transactions/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const t = req.body;
+        const updated = await prisma.transaction.update({
+            where: { id },
+            data: {
+                description: t.description,
+                amount: parseFloat(t.amount),
+                type: t.type,
+                date: t.date,
+                category: t.category,
+                paymentMethod: t.paymentMethod
+            }
+        });
+        res.json(updated);
+    } catch (error) {
+        console.error("Erro ao atualizar transação:", error);
+        res.status(500).json({ error: "Erro ao atualizar" });
+    }
+});
+
 // POST /api/finance/accounts (Salvar Conta Bancária)
 router.post('/accounts', async (req, res) => {
     try {

@@ -30,12 +30,46 @@
         window.API_BASE_URL = API_BASE_URL;
         window.getToken = getToken;
 
-        // Declara loadDataFromCloud como global para ser acessível em ambos os DOMContentLoaded
-        let loadDataFromCloud;
+        // Definição de funções auxiliares globais
+        const getById = id => document.getElementById(id);
+        window.getById = getById;
+
+        const showToastModal = (message, isError = false) => {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            if (toast && toastMessage && toastIcon) {
+                toastMessage.textContent = message;
+                toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+                toast.className = isError
+                    ? 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3'
+                    : 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3';
+
+                setTimeout(() => {
+                    toast.className = toast.className.replace('top-5', '-top-20');
+                }, 3000);
+            }
+        };
+        window.showToastModal = showToastModal;
+
+        const validateForm = (form) => {
+            let isValid = true;
+            const inputs = form.querySelectorAll('input[required], select[required]');
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    input.classList.add('border-red-500');
+                    isValid = false;
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+            return isValid;
+        };
+        window.validateForm = validateForm;
 
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("✅ DOMContentLoaded iniciado");
-            const getById = id => document.getElementById(id);
 
             // Estado Inicial
             let state = {
@@ -343,7 +377,20 @@
                                     <td>${g.conta}</td>
                                     <td>${g.pagamento}</td>
                                     <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
-                                    <td><span class="text-gray-400 text-xs">Salvo</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button onclick="editarGasto('${g.id}')" 
+                                                    class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                                    title="Editar Gasto">
+                                                <i class="fa-solid fa-edit"></i>
+                                            </button>
+                                            <button onclick="deletarGasto('${g.id}')" 
+                                                    class="text-red-600 hover:text-red-900 transition-colors"
+                                                    title="Excluir Gasto">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             `).join('');
                     }
@@ -689,6 +736,40 @@
                 } else {
                     showToastModal('❌ Erro ao excluir entrada manual.', true);
                 }
+            };
+
+            window.deletarGasto = async (id) => {
+                if (!confirm('Deseja realmente excluir este gasto?')) return;
+                const sucesso = await window.api.deletarItem(id, 'transactions');
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    showToastModal('✅ Gasto excluído com sucesso!');
+                } else {
+                    showToastModal('❌ Erro ao excluir gasto.', true);
+                }
+            };
+
+            window.editarGasto = (id) => {
+                const gasto = state.gastos.find(g => g.id === id);
+                if (!gasto) return;
+
+                const form = getById('form-gasto');
+                const modal = getById('add-gasto-modal');
+
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-id', id);
+
+                getById('gasto-data').value = gasto.data;
+                getById('gasto-descricao').value = gasto.descricao;
+                getById('gasto-valor').value = gasto.valor;
+                getById('gasto-categoria').value = gasto.categoria;
+                getById('gasto-pagamento').value = gasto.pagamento;
+                getById('gasto-conta').value = gasto.contaId || '';
+
+                const btnSubmit = form.querySelector('button[type="submit"]');
+                if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar Gasto';
+
+                modal.classList.remove('hidden');
             };
 
             // ========== FUNÇÕES GLOBAIS DE EDIÇÃO ==========
@@ -2614,7 +2695,15 @@
             };
 
             // ========== LISTENERS PARA ABRIR MODAIS ==========
-            getById('open-gasto-modal-btn')?.addEventListener('click', () => showModal('add-gasto-modal'));
+            getById('open-gasto-modal-btn')?.addEventListener('click', () => {
+                const form = getById('form-gasto');
+                form.reset();
+                form.removeAttribute('data-mode');
+                form.removeAttribute('data-id');
+                const btnSubmit = form.querySelector('button[type="submit"]');
+                if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Adicionar Gasto';
+                showModal('add-gasto-modal');
+            });
             getById('add-monitor-btn')?.addEventListener('click', () => showModal('add-monitor-modal'));
             getById('open-salarios-config-modal-btn')?.addEventListener('click', () => showModal('salarios-config-modal'));
 
@@ -2705,7 +2794,8 @@
             const formCategoria = document.getElementById('form-conta-fixa-categoria');
 
             // Função para mostrar toast
-            const showToastModal = (message, isError = false) => {
+            showToastModal = (message, isError = false) => {
+                window.showToastModal = showToastModal; // Garante acesso global redundante
                 const toast = document.getElementById('toast');
                 const toastMessage = document.getElementById('toast-message');
                 const toastIcon = document.getElementById('toast-icon');
@@ -2724,7 +2814,8 @@
             };
 
             // Validação de formulário
-            const validateForm = (form) => {
+            validateForm = (form) => {
+                window.validateForm = validateForm;
                 let isValid = true;
                 const inputs = form.querySelectorAll('input[required], select[required]');
 
@@ -2861,6 +2952,9 @@
                 formGasto.addEventListener('submit', async (e) => {
                     e.preventDefault();
 
+                    const mode = formGasto.getAttribute('data-mode');
+                    const id = formGasto.getAttribute('data-id');
+
                     const data = getById('gasto-data').value;
                     const descricao = getById('gasto-descricao').value.trim();
                     const valor = parseFloat(getById('gasto-valor').value);
@@ -2873,7 +2967,7 @@
                         return;
                     }
 
-                    const novoGasto = {
+                    const dadosGasto = {
                         date: data,
                         description: descricao,
                         amount: valor,
@@ -2883,9 +2977,15 @@
                         accountId: contaId
                     };
 
-                    const sucesso = await window.api.salvarTransacao(novoGasto);
+                    let sucesso;
+                    if (mode === 'edit' && id) {
+                        sucesso = await window.api.atualizarTransacao(id, dadosGasto);
+                    } else {
+                        sucesso = await window.api.salvarTransacao(dadosGasto);
+                    }
+
                     if (sucesso) {
-                        showToastModal('✅ Gasto registrado com sucesso!');
+                        showToastModal(mode === 'edit' ? '✅ Gasto atualizado!' : '✅ Gasto registrado!');
                         formGasto.reset();
                         hideModal('add-gasto-modal');
                         await window.loadDataFromCloud();

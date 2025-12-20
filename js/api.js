@@ -149,6 +149,18 @@ export const api = {
             return res.ok;
         } catch (e) { return false; }
     },
+    // Atualizar Gasto/Transação
+    atualizarTransacao: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/transactions/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
 
     // Salvar Conta Bancária
     salvarConta: async (dados) => {
