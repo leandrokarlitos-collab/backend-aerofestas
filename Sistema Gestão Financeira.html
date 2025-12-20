@@ -464,9 +464,13 @@
 
                 // Popula Select de Contas Bancárias
                 const selectConta = getById('gasto-conta');
-                if (selectConta && state.contas) {
-                    selectConta.innerHTML = '<option value="">-- Selecione uma conta --</option>' +
+                const selectContaCF = getById('lancamento-cf-conta');
+                if (state.contas) {
+                    const options = '<option value="">-- Selecione uma conta --</option>' +
                         state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+
+                    if (selectConta) selectConta.innerHTML = options;
+                    if (selectContaCF) selectContaCF.innerHTML = options;
                 }
 
                 // Renderiza Cards de Lançamento de Contas Fixas do Mês (VISUAL UPGRADE)
@@ -741,82 +745,69 @@
 
             // ========== FUNÇÃO DE LANÇAR GASTO DE CONTA FIXA ==========
 
-            window.lancarGastoDeContaFixa = async (contaFixaId) => {
-                // Encontra a conta fixa
+            // ========== FUNÇÃO DE LANÇAR GASTO DE CONTA FIXA ==========
+
+            window.lancarGastoDeContaFixa = (contaFixaId) => {
                 const contaFixa = state.contasFixas.find(cf => cf.id === contaFixaId);
-                if (!contaFixa) {
-                    alert('Conta fixa não encontrada!');
-                    return;
-                }
+                if (!contaFixa) return showToastModal('Conta fixa não encontrada!', true);
 
-                // Pede a data do pagamento ao usuário
-                const dataPagamento = prompt(
-                    `Lançar gasto: ${contaFixa.descricao}\n` +
-                    `Valor: ${formatarMoeda(contaFixa.valor)
-                    } \n\n` +
-                    `Digite a data do pagamento(YYYY - MM - DD): `,
-                    new Date().toISOString().split('T')[0]
-                );
+                const modal = getById('lancamento-conta-fixa-modal');
+                const form = getById('form-lancamento-conta-fixa');
 
-                if (!dataPagamento) {
-                    return; // Usuário cancelou
-                }
+                getById('lancamento-cf-descricao').value = contaFixa.descricao;
+                getById('lancamento-cf-valor').value = contaFixa.valor;
+                getById('lancamento-cf-data').value = new Date().toISOString().split('T')[0];
 
-                // Valida a data
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(dataPagamento)) {
-                    alert('Data inválida! Use o formato YYYY-MM-DD');
-                    return;
-                }
+                form.setAttribute('data-id', contaFixa.id);
+                modal.classList.remove('hidden');
+            };
 
-                // Pede a conta de saída
-                if (state.contas.length === 0) {
-                    alert('Nenhuma conta bancária cadastrada! Cadastre uma conta primeiro.');
-                    return;
-                }
+            const formLancamentoCF = getById('form-lancamento-conta-fixa');
+            formLancamentoCF?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const cfId = formLancamentoCF.getAttribute('data-id');
+                const cf = state.contasFixas.find(c => c.id === cfId);
 
-                let contaId = null;
-                if (state.contas.length === 1) {
-                    contaId = state.contas[0].id;
-                } else {
-                    const contasOpcoes = state.contas.map((c, i) => `${i + 1}. ${c.nome} (${c.banco})`).join('\n');
-                    const contaEscolha = prompt(
-                        `Selecione a conta de saída: \n${contasOpcoes} \n\nDigite o número: `,
-                        '1'
-                    );
-                    if (!contaEscolha) return;
-                    const index = parseInt(contaEscolha) - 1;
-                    if (index >= 0 && index < state.contas.length) {
-                        contaId = state.contas[index].id;
-                    } else {
-                        alert('Conta inválida!');
-                        return;
-                    }
-                }
-
-                // Cria o gasto
-                const novoGasto = {
-                    id: Date.now().toString(),
-                    date: dataPagamento,
-                    description: `${contaFixa.descricao} [Conta Fixa]`,
-                    category: contaFixa.categoria,
-                    accountId: contaId,
-                    paymentMethod: 'Conta Fixa',
-                    amount: contaFixa.valor,
+                const dados = {
+                    date: getById('lancamento-cf-data').value,
+                    description: `${getById('lancamento-cf-descricao').value} [Conta Fixa]`,
+                    amount: parseFloat(getById('lancamento-cf-valor').value),
+                    category: cf ? cf.category : 'Outros',
+                    accountId: getById('lancamento-cf-conta').value,
+                    paymentMethod: 'Transferência/Débito',
                     type: 'EXPENSE'
                 };
 
-                console.log('💰 Lançando gasto de conta fixa:', novoGasto);
-
-                // Salva via API
-                const sucesso = await window.api.salvarTransacao(novoGasto);
-
+                const sucesso = await window.api.salvarTransacao(dados);
                 if (sucesso) {
-                    await window.loadDataFromCloud(); // Recarrega
-                    alert(`Gasto lançado com sucesso!\n\n${contaFixa.descricao}: ${formatarMoeda(contaFixa.valor)} `);
+                    showToastModal('✅ Gasto de conta fixa lançado!');
+                    getById('lancamento-conta-fixa-modal').classList.add('hidden');
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
                 } else {
-                    alert('Erro ao lançar gasto.');
+                    showToastModal('Erro ao lançar gasto.', true);
                 }
-            };
+            });
+
+            // ESC para fechar novo modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    getById('lancamento-conta-fixa-modal')?.classList.add('hidden');
+                }
+            });
+
+            // Fechar ao clicar fora
+            const modalLCF = getById('lancamento-conta-fixa-modal');
+            modalLCF?.addEventListener('click', (e) => {
+                if (e.target === modalLCF) modalLCF.classList.add('hidden');
+            });
+
+            // Close button de todos os modais (generic)
+            document.querySelectorAll('.close-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.closest('.fixed')?.classList.add('hidden');
+                    btn.closest('.modal-backdrop')?.classList.add('hidden');
+                });
+            });
 
             // NOTA: Função auxiliar para filtrar contas fixas ativas em um mês
             const getContasFixasDoMes = (mesAno) => {
@@ -2874,7 +2865,8 @@
                     const descricao = getById('gasto-descricao').value.trim();
                     const valor = parseFloat(getById('gasto-valor').value);
                     const categoria = getById('gasto-categoria').value;
-                    const metodo = getById('gasto-metodo').value;
+                    const metodo = getById('gasto-pagamento').value;
+                    const contaId = getById('gasto-conta').value;
 
                     if (!data || !descricao || isNaN(valor) || valor <= 0) {
                         showToastModal('Preencha os campos obrigatórios corretamente.', true);
@@ -2887,7 +2879,8 @@
                         amount: valor,
                         type: 'EXPENSE',
                         category: categoria,
-                        paymentMethod: metodo
+                        paymentMethod: metodo,
+                        accountId: contaId
                     };
 
                     const sucesso = await window.api.salvarTransacao(novoGasto);
@@ -3111,6 +3104,7 @@
             setupInputListeners(formAddFuncionario);
             setupInputListeners(formAddComissao);
             if (formMonitor) setupInputListeners(formMonitor);
+            if (formLancamentoCF) setupInputListeners(formLancamentoCF);
 
             // Fechar ao clicar fora
             modalContasBancarias?.addEventListener('click', (e) => {
