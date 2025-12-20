@@ -610,6 +610,12 @@
                     }
                 }
 
+                // Renderiza os gráficos com os dados atualizados
+                if (window.renderAllCharts && typeof window.renderAllCharts === 'function') {
+                    console.log('📊 Atualizando gráficos para o mês:', state.selectedMonth);
+                    window.renderAllCharts(state);
+                }
+
                 console.log("✅ Renderização completa!");
             };
 
@@ -671,8 +677,9 @@
                 // Pede a data do pagamento ao usuário
                 const dataPagamento = prompt(
                     `Lançar gasto: ${contaFixa.descricao}\n` +
-                    `Valor: ${formatarMoeda(contaFixa.valor)}\n\n` +
-                    `Digite a data do pagamento (YYYY-MM-DD):`,
+                    `Valor: ${formatarMoeda(contaFixa.valor)
+                    } \n\n` +
+                    `Digite a data do pagamento(YYYY - MM - DD): `,
                     new Date().toISOString().split('T')[0]
                 );
 
@@ -698,7 +705,7 @@
                 } else {
                     const contasOpcoes = state.contas.map((c, i) => `${i + 1}. ${c.nome} (${c.banco})`).join('\n');
                     const contaEscolha = prompt(
-                        `Selecione a conta de saída:\n${contasOpcoes}\n\nDigite o número:`,
+                        `Selecione a conta de saída: \n${contasOpcoes} \n\nDigite o número: `,
                         '1'
                     );
                     if (!contaEscolha) return;
@@ -730,7 +737,7 @@
 
                 if (sucesso) {
                     await window.loadDataFromCloud(); // Recarrega
-                    alert(`Gasto lançado com sucesso!\n\n${contaFixa.descricao}: ${formatarMoeda(contaFixa.valor)}`);
+                    alert(`Gasto lançado com sucesso!\n\n${contaFixa.descricao}: ${formatarMoeda(contaFixa.valor)} `);
                 } else {
                     alert('Erro ao lançar gasto.');
                 }
