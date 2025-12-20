@@ -67,8 +67,8 @@ function renderEmpresasChart(state) {
     // Agrupa por empresa
     const empresas = {};
     eventosDoMes.forEach(evt => {
-        const emp = evt.company || 'Sem Empresa';
-        empresas[emp] = (empresas[emp] || 0) + (parseFloat(evt.totalPrice) || 0);
+        const emp = evt.empresa || 'Sem Empresa';
+        empresas[emp] = (empresas[emp] || 0) + (parseFloat(evt.valor) || 0);
     });
 
     const labels = Object.keys(empresas);
@@ -181,7 +181,7 @@ function renderGastosComprasChart(state) {
     // Separa por tipo de pagamento
     const tipos = {};
     gastosDoMes.forEach(gasto => {
-        const tipo = gasto.metodoPagamento || 'Não especificado';
+        const tipo = gasto.pagamento || 'Não especificado';
         tipos[tipo] = (tipos[tipo] || 0) + (parseFloat(gasto.valor) || 0);
     });
 
@@ -267,18 +267,25 @@ function renderPagamentosMonitoresChart(state) {
     const ctx = document.getElementById('pagamentos-monitores-chart')?.getContext('2d');
     if (!ctx) return;
 
-    // Este gráfico precisa de dados de pagamentos de monitores
-    // Por enquanto vou criar um exemplo básico
+    const pagamentosDoMes = (state.pagamentosMonitores || []).filter(p => p.data && p.data.startsWith(state.selectedMonth));
+
+    const pagamentosPorMonitor = {};
+    pagamentosDoMes.forEach(p => {
+        pagamentosPorMonitor[p.nome] = (pagamentosPorMonitor[p.nome] || 0) + (parseFloat(p.valor) || 0);
+    });
+
+    const labels = Object.keys(pagamentosPorMonitor);
+    const data = Object.values(pagamentosPorMonitor);
 
     if (chartPagMonitores) chartPagMonitores.destroy();
 
     chartPagMonitores = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Monitor 1', 'Monitor 2', 'Monitor 3'],
+            labels: labels.length > 0 ? labels : ['Nenhum dado'],
             datasets: [{
                 label: 'Pagamentos (R$)',
-                data: [1200, 1500, 980],
+                data: data.length > 0 ? data : [0],
                 backgroundColor: COLORS.purple,
                 borderRadius: 6
             }]
@@ -320,8 +327,11 @@ function renderDailyChart(state, month) {
     // Processa eventos (receitas)
     (state.eventos || []).forEach(evt => {
         if (evt.date && evt.date.startsWith(month)) {
-            const day = parseInt(evt.date.split('-')[2]) - 1;
-            receitasPorDia[day] += parseFloat(evt.totalPrice) || 0;
+            const dayStr = evt.date.split('-')[2];
+            const day = parseInt(dayStr) - 1;
+            if (day >= 0 && day < daysInMonth) {
+                receitasPorDia[day] += parseFloat(evt.valor) || 0;
+            }
         }
     });
 
@@ -446,19 +456,43 @@ function renderMonitorPerformanceChart(state) {
     const ctx = document.getElementById('monitor-geral-performance-chart')?.getContext('2d');
     if (!ctx) return;
 
+    const monitores = state.monitores || [];
+    let avgForca = 0, avgAgil = 0, avgProat = 0, avgComun = 0, avgDisp = 0, avgResp = 0;
+
+    if (monitores.length > 0) {
+        monitores.forEach(m => {
+            if (m.habilidades) {
+                avgForca += m.habilidades.forca || 0;
+                avgAgil += m.habilidades.agilidade || 0;
+                avgProat += m.habilidades.proatividade || 0;
+                avgComun += m.habilidades.comunicacao || 0;
+                avgDisp += m.habilidades.disponibilidade || 0;
+                avgResp += m.habilidades.respeito || 0;
+            }
+        });
+        avgForca /= monitores.length;
+        avgAgil /= monitores.length;
+        avgProat /= monitores.length;
+        avgComun /= monitores.length;
+        avgDisp /= monitores.length;
+        avgResp /= monitores.length;
+    }
+
     if (chartMonitorPerf) chartMonitorPerf.destroy();
 
     chartMonitorPerf = new Chart(ctx, {
         type: 'polarArea',
         data: {
-            labels: ['Pontualidade', 'Qualidade', 'Feedback', 'Eventos'],
+            labels: ['Força', 'Agilidade', 'Proatividade', 'Comunicação', 'Dispo.', 'Respeito'],
             datasets: [{
-                data: [85, 90, 78, 92],
+                data: [avgForca, avgAgil, avgProat, avgComun, avgDisp, avgResp].map(v => v * 10), // Escala 0-100
                 backgroundColor: [
                     'rgba(16, 185, 129, 0.6)',
                     'rgba(59, 130, 246, 0.6)',
                     'rgba(139, 92, 246, 0.6)',
-                    'rgba(245, 158, 11, 0.6)'
+                    'rgba(245, 158, 11, 0.6)',
+                    '#3b82f699',
+                    '#ec489999'
                 ],
                 borderWidth: 2,
                 borderColor: '#fff'
@@ -470,7 +504,7 @@ function renderMonitorPerformanceChart(state) {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { padding: 15 }
+                    labels: { padding: 15, font: { size: 10 } }
                 }
             },
             scales: {
