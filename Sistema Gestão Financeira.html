@@ -2726,7 +2726,7 @@
 
                 const dados = {
                     description: document.getElementById('conta-fixa-descricao').value,
-                    value: parseFloat(document.getElementById('conta-fixa-valor').value),
+                    amount: parseFloat(document.getElementById('conta-fixa-valor').value),
                     dueDay: parseInt(document.getElementById('conta-fixa-dia-vencimento').value),
                     category: document.getElementById('conta-fixa-categoria').value,
                     recurrenceType: document.getElementById('conta-fixa-tipo-recorrencia').value
@@ -2734,10 +2734,7 @@
 
                 if (dados.recurrenceType === 'parcelada') {
                     dados.startDate = document.getElementById('conta-fixa-data-inicio').value;
-                    dados.numInstallments = parseInt(document.getElementById('conta-fixa-num-parcelas').value);
-                    dados.periodicity = document.getElementById('conta-fixa-periodicidade-parcelada').value;
-                } else {
-                    dados.periodicity = document.getElementById('conta-fixa-periodicidade-permanente').value;
+                    dados.installments = parseInt(document.getElementById('conta-fixa-num-parcelas').value);
                 }
 
                 const sucesso = await window.api.salvarContaFixa(dados);
@@ -2777,6 +2774,44 @@
             });
 
             console.log('✅ Modais de Contas Fixas configurados com animações e validação');
+
+            // ========== HANDLER PARA NOVO GASTO (MODAL) ==========
+            const formGasto = getById('form-gasto');
+            if (formGasto) {
+                formGasto.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const data = getById('gasto-data').value;
+                    const descricao = getById('gasto-descricao').value.trim();
+                    const valor = parseFloat(getById('gasto-valor').value);
+                    const categoria = getById('gasto-categoria').value;
+                    const metodo = getById('gasto-metodo').value;
+
+                    if (!data || !descricao || isNaN(valor) || valor <= 0) {
+                        showToastModal('Preencha os campos obrigatórios corretamente.', true);
+                        return;
+                    }
+
+                    const novoGasto = {
+                        date: data,
+                        description: descricao,
+                        amount: valor,
+                        type: 'EXPENSE',
+                        category: categoria,
+                        paymentMethod: metodo
+                    };
+
+                    const sucesso = await window.api.salvarTransacao(novoGasto);
+                    if (sucesso) {
+                        showToastModal('✅ Gasto registrado com sucesso!');
+                        formGasto.reset();
+                        hideModal('add-gasto-modal');
+                        await window.loadDataFromCloud();
+                    } else {
+                        showToastModal('Erro ao salvar gasto.', true);
+                    }
+                });
+            }
 
             // ========== NOVOS MODAIS: Contas Bancárias e Categorias de Gastos ==========
 
@@ -2849,11 +2884,11 @@
                 }
 
                 const dados = {
-                    nome: document.getElementById('cadastro-conta-nome').value,
-                    banco: document.getElementById('cadastro-conta-banco').value,
-                    tipo: document.getElementById('cadastro-conta-tipo').value,
-                    agencia: document.getElementById('cadastro-conta-agencia').value,
-                    numero: document.getElementById('cadastro-conta-numero').value
+                    name: document.getElementById('cadastro-conta-nome').value,
+                    bank: document.getElementById('cadastro-conta-banco').value,
+                    type: document.getElementById('cadastro-conta-tipo').value,
+                    agency: document.getElementById('cadastro-conta-agencia').value,
+                    number: document.getElementById('cadastro-conta-numero').value
                 };
 
                 const sucesso = await window.api.salvarConta(dados);
@@ -2864,6 +2899,42 @@
                     if (window.loadDataFromCloud) await window.loadDataFromCloud();
                 } else {
                     showToastModal('Erro ao salvar conta bancária', true);
+                }
+            });
+
+            // ========== HANDLER PARA CADASTRAR MONITOR (MODAL) ==========
+            const formMonitor = getById('form-cadastro-monitor');
+            formMonitor?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!validateForm(formMonitor)) return;
+
+                const dados = {
+                    nome: getById('cadastro-monitor-nome').value,
+                    nascimento: getById('cadastro-monitor-nascimento').value,
+                    telefone: getById('cadastro-monitor-telefone').value,
+                    email: getById('cadastro-monitor-email').value,
+                    endereco: getById('cadastro-monitor-endereco').value,
+                    observacoes: getById('cadastro-monitor-observacoes').value,
+                    cnh: getById('cadastro-monitor-cnh').value === 'sim',
+                    cnhCategoria: getById('cadastro-monitor-cnh-categoria').value,
+                    habilidades: {
+                        forca: parseInt(getById('habilidade-forca').value),
+                        agilidade: parseInt(getById('habilidade-agilidade').value),
+                        proatividade: parseInt(getById('habilidade-proatividade').value),
+                        comunicacao: parseInt(getById('habilidade-comunicacao').value),
+                        disponibilidade: parseInt(getById('habilidade-disponibilidade').value),
+                        respeito: parseInt(getById('habilidade-respeito').value)
+                    }
+                };
+
+                const sucesso = await window.api.salvarMonitor(dados);
+                if (sucesso) {
+                    showToastModal('✅ Monitor cadastrado com sucesso!');
+                    formMonitor.reset();
+                    hideModal('add-monitor-modal');
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar monitor.', true);
                 }
             });
 
@@ -2887,9 +2958,56 @@
                 }
             });
 
+            // ========== HANDLERS PARA CONFIGURAÇÕES DE SALÁRIOS ==========
+            const formAddFuncionario = getById('form-add-funcionario');
+            formAddFuncionario?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!validateForm(formAddFuncionario)) return;
+
+                const dados = {
+                    nome: getById('funcionario-nome').value,
+                    salarioFixo: parseFloat(getById('funcionario-salario').value),
+                    va: parseFloat(getById('funcionario-va').value),
+                    vt: parseFloat(getById('funcionario-vt').value)
+                };
+
+                const sucesso = await window.api.salvarFuncionario(dados);
+                if (sucesso) {
+                    showToastModal('Funcionário cadastrado com sucesso!');
+                    formAddFuncionario.reset();
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar funcionário', true);
+                }
+            });
+
+            const formAddComissao = getById('form-add-comissao');
+            formAddComissao?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!validateForm(formAddComissao)) return;
+
+                const dados = {
+                    ateValor: parseFloat(getById('comissao-atevalor').value),
+                    percentual: parseFloat(getById('comissao-percentual').value) / 100
+                };
+
+                const sucesso = await window.api.salvarFaixaComissao(dados);
+                if (sucesso) {
+                    showToastModal('Faixa de comissão cadastrada!');
+                    formAddComissao.reset();
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar faixa', true);
+                }
+            });
+
             // Setup listeners
             setupInputListeners(formContaBancaria);
             setupInputListeners(formCategoriaGasto);
+            setupInputListeners(formGasto);
+            setupInputListeners(formAddFuncionario);
+            setupInputListeners(formAddComissao);
+            if (formMonitor) setupInputListeners(formMonitor);
 
             // Fechar ao clicar fora
             modalContasBancarias?.addEventListener('click', (e) => {
