@@ -1371,32 +1371,47 @@
                 </section>
                 <section id="charts-section" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="glassmorphism p-6 rounded-lg">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Receita por Empresa (Mês)</h3><canvas
-                            id="empresas-chart"></canvas>
+                        <h3 class="text-center font-bold text-gray-700 mb-4">Receita por Empresa (Mês)</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="empresas-chart"></canvas>
+                        </div>
                     </div>
                     <div class="glassmorphism p-6 rounded-lg">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Distribuição de Despesas (Mês)</h3><canvas
-                            id="despesas-gerais-chart"></canvas>
+                        <h3 class="text-center font-bold text-gray-700 mb-4">Distribuição de Despesas (Mês)</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="despesas-gerais-chart"></canvas>
+                        </div>
                     </div>
                     <div class="glassmorphism p-6 rounded-lg">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Gastos & Compras (Mês)</h3><canvas
-                            id="gastos-compras-chart"></canvas>
+                        <h3 class="text-center font-bold text-gray-700 mb-4">Gastos & Compras (Mês)</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="gastos-compras-chart"></canvas>
+                        </div>
                     </div>
                     <div class="glassmorphism p-6 rounded-lg">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Contas Fixas (Mês)</h3><canvas
-                            id="contas-fixas-chart"></canvas>
+                        <h3 class="text-center font-bold text-gray-700 mb-4">Contas Fixas (Mês)</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="contas-fixas-chart"></canvas>
+                        </div>
                     </div>
                     <div class="glassmorphism p-6 rounded-lg lg:col-span-2">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Pagamentos Monitores (Mês)</h3><canvas
-                            id="pagamentos-monitores-chart"></canvas>
+                        <h3 class="text-center font-bold text-gray-700 mb-4">Pagamentos Monitores (Mês)</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="pagamentos-monitores-chart"></canvas>
+                        </div>
                     </div>
                     <div class="glassmorphism p-6 rounded-lg lg:col-span-2">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Fluxo de Caixa Diário (Mês)</h3><canvas
-                            id="daily-chart"></canvas>
+                        <h3 class="text-center font-bold text-gray-700 mb-4">Fluxo de Caixa Diário (Mês)</h3>
+                        <div style="position: relative; height: 400px;">
+                            <canvas id="daily-chart"></canvas>
+                        </div>
                     </div>
                     <div class="glassmorphism p-6 rounded-lg lg:col-span-2">
                         <h3 class="text-center font-bold text-gray-700 mb-4">Média Geral de Desempenho dos Monitores
-                        </h3><canvas id="monitor-geral-performance-chart"></canvas>
+                        </h3>
+                        <div style="position: relative; height: 350px;">
+                            <canvas id="monitor-geral-performance-chart"></canvas>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -3012,29 +3027,8 @@
     <!-- Módulo de Gráficos Financeiros (Estilo Bolsa de Valores) -->
     <script src="js/charts-financeiro.js"></script>
 
-    <!-- Script para chamar renderização dos gráficos -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Aguarda os dados serem carregados e renderiza gráficos
-            const observer = new MutationObserver(() => {
-                // Verifica se existe state global (criado pelo script principal)
-                if (window.state && window.renderAllCharts) {
-                    renderAllCharts(window.state);
-                    observer.disconnect();
-                }
-            });
-
-            // Observa mudanças no body para detectar quando dados são carregados
-            observer.observe(document.body, { childList: true, subtree: true });
-
-            // Fallback: tenta renderizar após 2 segundos
-            setTimeout(() => {
-                if (window.state && window.renderAllCharts) {
-                    renderAllCharts(window.state);
-                }
-            }, 2000);
-        });
-    </script>
+    <!-- Script de inicialização dos gráficos (previne loop infinito) -->
+    <script src="js/charts-init.js"></script>
 
 </body>
 
