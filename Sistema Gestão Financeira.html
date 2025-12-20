@@ -2212,276 +2212,7 @@
 
     <!-- Event Listeners de Navegação e Modais -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const getById = id => document.getElementById(id);
-
-            // ========== NAVEGAÇÃO ENTRE ABAS ==========
-            const navLinks = document.querySelectorAll('.nav-link');
-            const pages = document.querySelectorAll('.page');
-
-            navLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                    const targetPage = link.getAttribute('data-target');
-
-                    // Remove active de todos os links
-                    navLinks.forEach(l => {
-                        l.classList.remove('active', 'shiny-btn');
-                        l.classList.add('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
-                    });
-
-                    // Adiciona active no link clicado
-                    link.classList.add('active', 'shiny-btn');
-                    link.classList.remove('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
-
-                    // Esconde todas as páginas
-                    pages.forEach(page => page.classList.remove('active'));
-
-                    // Mostra a página selecionada
-                    const selectedPage = document.getElementById(`page-${targetPage}`);
-                    if (selectedPage) {
-                        selectedPage.classList.add('active');
-                    }
-                });
-            });
-
-            // Garante que a primeira aba está ativa ao carregar
-            if (navLinks.length > 0 && pages.length > 0) {
-                pages.forEach(p => p.classList.remove('active'));
-                getById('page-dashboard')?.classList.add('active');
-            }
-
-            // ========== CONTROLE DE MODAIS ==========
-
-            // Função helper para abrir modal
-            const showModal = (modalId) => {
-                const modal = getById(modalId);
-                if (modal) {
-                    modal.classList.remove('hidden');
-                }
-            };
-
-            // Função helper para fechar modal
-            const hideModal = (modalId) => {
-                const modal = getById(modalId);
-                if (modal) {
-                    modal.classList.add('hidden');
-                }
-            };
-
-
-            // Botão Nova Entrada Manual - implementado no final do script
-
-
-            // Botão Novo Gasto
-            const btnGasto = getById('open-gasto-modal-btn');
-            if (btnGasto) {
-                btnGasto.addEventListener('click', () => showModal('add-gasto-modal'));
-            }
-
-            // Botão Nova Conta Fixa
-            const btnContaFixa = getById('open-conta-fixa-modal-btn');
-            if (btnContaFixa) {
-                btnContaFixa.addEventListener('click', () => showModal('add-conta-fixa-modal'));
-            }
-
-            // Botão Adicionar Monitor
-            const btnMonitor = getById('add-monitor-btn');
-            if (btnMonitor) {
-                btnMonitor.addEventListener('click', () => showModal('add-monitor-modal'));
-            }
-
-            // Botão Configurações de Salários
-            const btnSalariosConfig = getById('open-salarios-config-modal-btn');
-            if (btnSalariosConfig) {
-                btnSalariosConfig.addEventListener('click', () => showModal('salarios-config-modal'));
-            }
-
-            // Fechar modais ao clicar no X ou fora
-            document.querySelectorAll('.close-btn, .modal-close-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const modal = e.target.closest('.fixed');
-                    if (modal) {
-                        modal.classList.add('hidden');
-                    }
-                });
-            });
-
-            // Fechar modal ao clicar no fundo escuro
-            document.querySelectorAll('.fixed').forEach(modal => {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.classList.add('hidden');
-                    }
-                });
-            });
-
-            // ========== PREVENIR RELOAD NOS FORMULÁRIOS ==========
-
-            // IMPORTANTE: Todos os forms que fazem submit via API não devem recarregar a página
-            // Isso já está sendo feito no primeiro script com e.preventDefault()
-            // Mas vamos garantir que os forms de categoria não recarreguem
-
-            const formGastoCat = getById('form-gasto-categoria');
-            const formContaFixaCat = getById('form-conta-fixa-categoria');
-            const formCadastroConta = getById('form-cadastro-conta');
-
-            // Prevenir qualquer comportamento padrão de forms que não foi capturado
-            [formGastoCat, formContaFixaCat, formCadastroConta].forEach(form => {
-                if (form) {
-                    form.addEventListener('submit', (e) => {
-                        // O listener principal já existe no primeiro script
-                        // Mas vamos garantir que não recarrega
-                        console.log('Form submit detectado:', form.id);
-                    });
-                }
-            });
-
-            // ========== EVENT LISTENERS DE FORMULÁRIOS ===========
-
-            // Alterna campos de conta fixa baseado no tipo de recorrência
-            const tipoRecorrenciaSelect = getById('conta-fixa-tipo-recorrencia');
-            const parcelamentoContainer = getById('conta-fixa-parcelamento-container');
-            const permanenteContainer = getById('conta-fixa-permanente-container');
-
-            if (tipoRecorrenciaSelect && parcelamentoContainer && permanenteContainer) {
-                // Inicializa no estado correto
-                const estadoInicial = tipoRecorrenciaSelect.value;
-                if (estadoInicial === 'parcelada') {
-                    parcelamentoContainer.classList.remove('hidden');
-                    permanenteContainer.classList.add('hidden');
-                } else {
-                    parcelamentoContainer.classList.add('hidden');
-                    permanenteContainer.classList.remove('hidden');
-                }
-
-                // Listener para mudanças
-                tipoRecorrenciaSelect.addEventListener('change', (e) => {
-                    if (e.target.value === 'parcelada') {
-                        parcelamentoContainer.classList.remove('hidden');
-                        permanenteContainer.classList.add('hidden');
-                    } else {
-                        parcelamentoContainer.classList.add('hidden');
-                        permanenteContainer.classList.remove('hidden');
-                    }
-                });
-            }
-
-            // Formulário de Conta Fixa
-            const formContaFixa = getById('form-conta-fixa');
-            if (formContaFixa) {
-                formContaFixa.addEventListener('submit', async (e) => {
-                    e.preventDefault(); // IMPORTANTE: Previne reload!
-
-                    console.log('📝 Salvando conta fixa...');
-
-                    // Coleta dados do formulário
-                    const descricao = getById('conta-fixa-descricao').value;
-                    const valor = parseFloat(getById('conta-fixa-valor').value);
-                    const diaVencimento = parseInt(getById('conta-fixa-dia-vencimento').value);
-                    const categoria = getById('conta-fixa-categoria').value;
-                    const tipoRecorrencia = getById('conta-fixa-tipo-recorrencia').value;
-
-                    let dataInicio = null;
-                    let numParcelas = null;
-                    let periodicidade = 'mensal'; // Padrão
-
-                    if (tipoRecorrencia === 'parcelada') {
-                        dataInicio = getById('conta-fixa-data-inicio').value;
-                        numParcelas = parseInt(getById('conta-fixa-num-parcelas').value);
-                        periodicidade = getById('conta-fixa-periodicidade-parcelada').value;
-                    } else {
-                        periodicidade = getById('conta-fixa-periodicidade-permanente').value;
-                    }
-
-                    // Processa anexos (se houver)
-                    const anexosInput = getById('conta-fixa-anexo');
-                    const anexosArray = [];
-
-                    if (anexosInput && anexosInput.files.length > 0) {
-                        // Aqui você pode processar arquivos se necessário
-                        // Por enquanto, vamos apenas contar
-                        console.log(`${anexosInput.files.length} anexo(s) selecionado(s)`);
-                    }
-
-                    const novaConta = {
-                        id: Date.now().toString(),
-                        description: descricao,
-                        amount: valor,
-                        dueDay: diaVencimento,
-                        category: categoria,
-                        recurrence: tipoRecorrencia,
-                        periodicity: periodicidade, // NOVO CAMPO
-                        startDate: dataInicio,
-                        installments: numParcelas,
-                        attachments: JSON.stringify(anexosArray) // Sempre um JSON válido
-                    };
-
-                    // Salva via API
-                    const sucesso = await window.api.salvarContaFixa(novaConta);
-
-                    if (sucesso) {
-                        formContaFixa.reset();
-                        await window.loadDataFromCloud(); // Recarrega
-                        alert('Conta fixa cadastrada com sucesso!');
-                    } else {
-                        alert('Erro ao salvar conta fixa.');
-                    }
-                });
-            }
-
-            // ========== HANDLER PARA ENTRADA MANUAL DE RECEITA (MODAL) ==========
-            const btnEntrada = document.getElementById('open-entrada-modal-btn');
-            const modalEntrada = document.getElementById('modal-entrada-manual');
-            const formEntrada = document.getElementById('form-entrada-manual');
-
-            if (btnEntrada && modalEntrada && formEntrada) {
-                // Abre modal e preenche data atual
-                btnEntrada.addEventListener('click', () => {
-                    modalEntrada.style.display = 'flex';
-                    document.getElementById('entrada-data').value = new Date().toISOString().split('T')[0];
-                    document.getElementById('entrada-descricao').value = '';
-                    document.getElementById('entrada-valor').value = '';
-                });
-
-                // Handler do formulário
-                formEntrada.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-
-                    const data = document.getElementById('entrada-data').value;
-                    const descricao = document.getElementById('entrada-descricao').value.trim();
-                    const valor = parseFloat(document.getElementById('entrada-valor').value);
-
-                    if (!data || !descricao || isNaN(valor) || valor <= 0) {
-                        alert('Por favor, preencha todos os campos corretamente.');
-                        return;
-                    }
-
-                    // Cria transação de receita
-                    const novaReceita = {
-                        id: Date.now().toString(),
-                        date: data,
-                        description: descricao,
-                        amount: valor,
-                        type: 'REVENUE',
-                        category: 'Receita Avulsa',
-                        paymentMethod: 'Entrada Manual',
-                        eventId: null // Não vinculado a evento
-                    };
-
-                    console.log('💰 Criando entrada manual:', novaReceita);
-
-                    const sucesso = await window.api.salvarTransacao(novaReceita);
-
-                    if (sucesso) {
-                        modalEntrada.style.display = 'none';
-                        await window.loadDataFromCloud();
-                        alert(`✅ Entrada registrada com sucesso!\\n\\n${descricao}: R$ ${valor.toFixed(2).replace('.', ',')}`);
-                    } else {
-                        alert('❌ Erro ao salvar entrada. Tente novamente.');
-                    }
-                });
-            }
-        });
+        // Este script agora é vazio pois foi consolidado no script ao final do arquivo
     </script>
 
     <!-- Modal de Entrada Manual de Receita -->
@@ -2784,6 +2515,118 @@
     <!-- Script: Controle dos Modais de Contas Fixas -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const getById = id => document.getElementById(id);
+
+            // ========== NAVEGAÇÃO ENTRE ABAS ==========
+            const navLinks = document.querySelectorAll('.nav-link');
+            const pages = document.querySelectorAll('.page');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    const targetPage = link.getAttribute('data-target');
+                    navLinks.forEach(l => {
+                        l.classList.remove('active', 'shiny-btn');
+                        l.classList.add('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
+                    });
+                    link.classList.add('active', 'shiny-btn');
+                    link.classList.remove('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
+                    pages.forEach(page => page.classList.remove('active'));
+                    const selectedPage = document.getElementById(`page-${targetPage}`);
+                    if (selectedPage) selectedPage.classList.add('active');
+                });
+            });
+
+            // ========== CONTROLE DE MODAIS (HELPERS) ==========
+            const showModal = (modalId) => {
+                const modal = getById(modalId);
+                if (modal) modal.classList.remove('hidden');
+            };
+
+            const hideModal = (modalId) => {
+                const modal = getById(modalId);
+                if (modal) modal.classList.add('hidden');
+            };
+
+            // ========== LISTENERS PARA ABRIR MODAIS ==========
+            getById('open-gasto-modal-btn')?.addEventListener('click', () => showModal('add-gasto-modal'));
+            getById('add-monitor-btn')?.addEventListener('click', () => showModal('add-monitor-modal'));
+            getById('open-salarios-config-modal-btn')?.addEventListener('click', () => showModal('salarios-config-modal'));
+
+            // Fechar modais ao clicar no X ou fora
+            document.querySelectorAll('.close-btn, .modal-close-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const modal = e.target.closest('.fixed');
+                    if (modal) modal.classList.add('hidden');
+                });
+            });
+
+            // ========== EVENT LISTENERS DE FORMULÁRIOS ===========
+
+            // Alterna campos de conta fixa baseado no tipo de recorrência
+            const tipoRecorrenciaSelect = getById('conta-fixa-tipo-recorrencia');
+            const parcelamentoContainer = getById('conta-fixa-parcelamento-container');
+            const permanenteContainer = getById('conta-fixa-permanente-container');
+
+            if (tipoRecorrenciaSelect && parcelamentoContainer && permanenteContainer) {
+                const updateContainers = (val) => {
+                    if (val === 'parcelada') {
+                        parcelamentoContainer.classList.remove('hidden');
+                        permanenteContainer.classList.add('hidden');
+                    } else {
+                        parcelamentoContainer.classList.add('hidden');
+                        permanenteContainer.classList.remove('hidden');
+                    }
+                };
+                updateContainers(tipoRecorrenciaSelect.value);
+                tipoRecorrenciaSelect.addEventListener('change', (e) => updateContainers(e.target.value));
+            }
+
+            // ========== HANDLER PARA ENTRADA MANUAL DE RECEITA (MODAL) ==========
+            const btnEntrada = document.getElementById('open-entrada-modal-btn');
+            const modalEntrada = document.getElementById('modal-entrada-manual');
+            const formEntrada = document.getElementById('form-entrada-manual');
+
+            if (btnEntrada && modalEntrada && formEntrada) {
+                btnEntrada.addEventListener('click', () => {
+                    modalEntrada.style.display = 'flex';
+                    modalEntrada.classList.remove('hidden');
+                    document.getElementById('entrada-data').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('entrada-descricao').value = '';
+                    document.getElementById('entrada-valor').value = '';
+                });
+
+                formEntrada.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const data = document.getElementById('entrada-data').value;
+                    const descricao = document.getElementById('entrada-descricao').value.trim();
+                    const valor = parseFloat(document.getElementById('entrada-valor').value);
+
+                    if (!data || !descricao || isNaN(valor) || valor <= 0) {
+                        showToastModal('Por favor, preencha todos os campos corretamente.', true);
+                        return;
+                    }
+
+                    const novaReceita = {
+                        date: data,
+                        description: descricao,
+                        amount: valor,
+                        type: 'REVENUE',
+                        category: 'Receita Avulsa',
+                        paymentMethod: 'Entrada Manual'
+                    };
+
+                    const sucesso = await window.api.salvarTransacao(novaReceita);
+                    if (sucesso) {
+                        modalEntrada.style.display = 'none';
+                        modalEntrada.classList.add('hidden');
+                        await window.loadDataFromCloud();
+                        showToastModal(`✅ Entrada registrada: ${descricao}`);
+                    } else {
+                        showToastModal('Erro ao salvar entrada.', true);
+                    }
+                });
+            }
+
             // Elementos dos modais
             const modalContaFixa = document.getElementById('modal-conta-fixa');
             const modalCategoriasCF = document.getElementById('modal-categorias-cf');
@@ -2874,33 +2717,38 @@
             });
 
             // Validação ao submeter Conta Fixa
-            formContaFixa?.addEventListener('submit', (e) => {
+            formContaFixa?.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 if (!validateForm(formContaFixa)) {
-                    e.preventDefault();
                     showToastModal('Por favor, preencha todos os campos obrigatórios', true);
-                    return false;
+                    return;
                 }
-                // O submit normal acontecerá se validar
-                // Quando salvar com sucesso, mostrar toast
-                setTimeout(() => {
-                    showToastModal('Conta Fixa cadastrada com sucesso!');
-                }, 100);
-            });
 
-            // Validação ao submeter Categoria
-            formCategoria?.addEventListener('submit', (e) => {
-                const nomeCategoria = document.getElementById('cf-categoria-nome');
-                if (!nomeCategoria.value.trim()) {
-                    e.preventDefault();
-                    nomeCategoria.classList.add('error');
-                    showToastModal('Digite o nome da categoria', true);
-                    return false;
+                const dados = {
+                    description: document.getElementById('conta-fixa-descricao').value,
+                    value: parseFloat(document.getElementById('conta-fixa-valor').value),
+                    dueDay: parseInt(document.getElementById('conta-fixa-dia-vencimento').value),
+                    category: document.getElementById('conta-fixa-categoria').value,
+                    recurrenceType: document.getElementById('conta-fixa-tipo-recorrencia').value
+                };
+
+                if (dados.recurrenceType === 'parcelada') {
+                    dados.startDate = document.getElementById('conta-fixa-data-inicio').value;
+                    dados.numInstallments = parseInt(document.getElementById('conta-fixa-num-parcelas').value);
+                    dados.periodicity = document.getElementById('conta-fixa-periodicidade-parcelada').value;
+                } else {
+                    dados.periodicity = document.getElementById('conta-fixa-periodicidade-permanente').value;
                 }
-                // Quando salvar com sucesso
-                setTimeout(() => {
-                    showToastModal('Categoria criada com sucesso!');
-                    nomeCategoria.value = '';
-                }, 100);
+
+                const sucesso = await window.api.salvarContaFixa(dados);
+                if (sucesso) {
+                    showToastModal('Conta Fixa cadastrada com sucesso!');
+                    formContaFixa.reset();
+                    modalContaFixa.classList.add('hidden');
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar Conta Fixa', true);
+                }
             });
 
             // Setup listeners para remover erros
@@ -2971,31 +2819,72 @@
                 }
             });
 
-            // Validação Conta Bancária
-            formContaBancaria?.addEventListener('submit', (e) => {
-                if (!validateForm(formContaBancaria)) {
-                    e.preventDefault();
-                    showToastModal('Por favor, preencha todos os campos obrigatórios', true);
-                    return false;
+
+            // Validação ao submeter Categoria
+            formCategoria?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nomeCategoria = document.getElementById('cf-categoria-nome');
+                if (!nomeCategoria.value.trim()) {
+                    nomeCategoria.classList.add('error');
+                    showToastModal('Digite o nome da categoria', true);
+                    return;
                 }
-                setTimeout(() => {
+
+                const sucesso = await window.api.salvarCategoriaFixa(nomeCategoria.value.trim());
+                if (sucesso) {
+                    showToastModal('Categoria criada com sucesso!');
+                    nomeCategoria.value = '';
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao criar categoria', true);
+                }
+            });
+
+            // Validação Conta Bancária
+            formContaBancaria?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!validateForm(formContaBancaria)) {
+                    showToastModal('Por favor, preencha todos os campos obrigatórios', true);
+                    return;
+                }
+
+                const dados = {
+                    nome: document.getElementById('cadastro-conta-nome').value,
+                    banco: document.getElementById('cadastro-conta-banco').value,
+                    tipo: document.getElementById('cadastro-conta-tipo').value,
+                    agencia: document.getElementById('cadastro-conta-agencia').value,
+                    numero: document.getElementById('cadastro-conta-numero').value
+                };
+
+                const sucesso = await window.api.salvarConta(dados);
+                if (sucesso) {
                     showToastModal('Conta bancária cadastrada com sucesso!');
-                }, 100);
+                    formContaBancaria.reset();
+                    modalContasBancarias.classList.add('hidden');
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar conta bancária', true);
+                }
             });
 
             // Validação Categoria de Gasto
-            formCategoriaGasto?.addEventListener('submit', (e) => {
+            formCategoriaGasto?.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 const nomeCategoria = document.getElementById('gasto-categoria-nome');
                 if (!nomeCategoria.value.trim()) {
-                    e.preventDefault();
                     nomeCategoria.classList.add('error');
                     showToastModal('Digite o nome da categoria', true);
-                    return false;
+                    return;
                 }
-                setTimeout(() => {
+
+                const sucesso = await window.api.salvarCategoriaGasto(nomeCategoria.value.trim());
+                if (sucesso) {
                     showToastModal('Categoria de gasto criada com sucesso!');
                     nomeCategoria.value = '';
-                }, 100);
+                    if (window.loadDataFromCloud) await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao criar categoria', true);
+                }
             });
 
             // Setup listeners
