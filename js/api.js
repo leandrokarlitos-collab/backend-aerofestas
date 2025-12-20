@@ -162,6 +162,18 @@ export const api = {
             return res.ok;
         } catch (e) { return false; }
     },
+    // Atualizar Conta Bancária
+    atualizarConta: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/accounts/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
 
     // Salvar Conta Fixa
     salvarContaFixa: async (dados) => {
@@ -169,6 +181,18 @@ export const api = {
             const token = getToken();
             const res = await fetch(`${BASE_URL}/finance/fixed-expenses`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
+    // Atualizar Conta Fixa
+    atualizarContaFixa: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/fixed-expenses/${id}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(dados)
             });

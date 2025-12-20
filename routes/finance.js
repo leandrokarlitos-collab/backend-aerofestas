@@ -89,6 +89,25 @@ router.post('/accounts', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao salvar conta" }); }
 });
 
+// PUT /api/finance/accounts/:id (Atualizar Conta Bancária)
+router.put('/accounts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const c = req.body;
+        const updatedAccount = await prisma.bankAccount.update({
+            where: { id },
+            data: {
+                name: c.name,
+                bank: c.bank,
+                type: c.type,
+                agency: c.agency,
+                number: c.number
+            }
+        });
+        res.json(updatedAccount);
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar conta" }); }
+});
+
 // POST /api/finance/fixed-expenses (Salvar Conta Fixa)
 router.post('/fixed-expenses', async (req, res) => {
     try {
@@ -107,6 +126,27 @@ router.post('/fixed-expenses', async (req, res) => {
         });
         res.json(newFixed);
     } catch (e) { res.status(500).json({ error: "Erro ao salvar conta fixa" }); }
+});
+
+// PUT /api/finance/fixed-expenses/:id (Atualizar Conta Fixa)
+router.put('/fixed-expenses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const f = req.body;
+        const updatedFixed = await prisma.fixedExpense.update({
+            where: { id },
+            data: {
+                description: f.description,
+                amount: parseFloat(f.amount),
+                dueDay: parseInt(f.dueDay),
+                category: f.category,
+                recurrenceType: f.recurrenceType,
+                startDate: f.startDate,
+                installments: f.installments ? parseInt(f.installments) : null
+            }
+        });
+        res.json(updatedFixed);
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar conta fixa" }); }
 });
 
 // --- CATEGORIAS FINANCEIRAS ---

@@ -416,7 +416,12 @@
                                 <td>${cf.categoria}</td>
                                 <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
                                 <td class="text-center">${cf.anexos?.length || 0}</td>
-                                <td><span class="text-gray-400 text-xs">Salvo</span></td>
+                                <td>
+                                    <div class="flex space-x-2">
+                                        <button onclick="editarContaFixa('${cf.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
+                                        <button onclick="deletarContaFixa('${cf.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
                             </tr>
                         `).join('');
                     }
@@ -434,7 +439,12 @@
                                 <td>${c.banco}</td>
                                 <td>${c.tipo}</td>
                                 <td>${c.agencia || ''} / ${c.numero || ''}</td>
-                                <td><span class="text-gray-400 text-xs">Salva</span></td>
+                                <td>
+                                    <div class="flex space-x-2">
+                                        <button onclick="editarContaBancaria('${c.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
+                                        <button onclick="deletarContaBancaria('${c.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </td>
                             </tr>
                         `).join('');
                     }
@@ -621,47 +631,112 @@
 
             // ========== FUNÇÕES GLOBAIS DE DELETE ==========
 
-            window.deletarContaFixa = async (id) => {
-                const sucesso = await window.api.deletarItem('contas-fixas', id);
+            window.deletarContaBancaria = async (id) => {
+                if (!confirm('Deseja realmente excluir esta conta bancária?')) return;
+                const sucesso = await window.api.deletarItem(id, 'accounts');
                 if (sucesso) {
                     await window.loadDataFromCloud();
-                    alert('Conta fixa excluída com sucesso!');
+                    showToastModal('✅ Conta bancária excluída!');
                 } else {
-                    alert('Erro ao excluir conta fixa.');
+                    showToastModal('❌ Erro ao excluir conta.', true);
+                }
+            };
+
+            window.deletarContaFixa = async (id) => {
+                if (!confirm('Deseja realmente excluir esta conta fixa?')) return;
+                const sucesso = await window.api.deletarItem(id, 'fixed-expenses');
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    showToastModal('✅ Conta fixa excluída!');
+                } else {
+                    showToastModal('❌ Erro ao excluir conta fixa.', true);
                 }
             };
 
             window.deletarCategoriaGasto = async (id) => {
-                const sucesso = await window.api.deletarItem('categorias-gastos', id);
+                if (!confirm('Deseja realmente excluir esta categoria?')) return;
+                const sucesso = await window.api.deletarItem(id, 'categories-expenses');
                 if (sucesso) {
                     await window.loadDataFromCloud();
-                    alert('Categoria excluída com sucesso!');
+                    showToastModal('✅ Categoria excluída!');
                 } else {
-                    alert('Erro ao excluir categoria.');
+                    showToastModal('❌ Erro ao excluir categoria.', true);
                 }
             };
 
             window.deletarCategoriaContaFixa = async (id) => {
-                const sucesso = await window.api.deletarItem('categorias-fixas', id);
+                if (!confirm('Deseja realmente excluir esta categoria?')) return;
+                const sucesso = await window.api.deletarItem(id, 'categories-fixed');
                 if (sucesso) {
                     await window.loadDataFromCloud();
-                    alert('Categoria excluída com sucesso!');
+                    showToastModal('✅ Categoria excluída!');
                 } else {
-                    alert('Erro ao excluir categoria.');
+                    showToastModal('❌ Erro ao excluir categoria.', true);
                 }
             };
 
             // Deletar Entrada Manual (Receita)
             window.deletarEntradaManual = async (id) => {
                 if (!confirm('Deseja realmente excluir esta entrada manual?')) return;
-
                 const sucesso = await window.api.deletarItem(id, 'transactions');
                 if (sucesso) {
                     await window.loadDataFromCloud();
-                    alert('✅ Entrada manual excluída com sucesso!');
+                    showToastModal('✅ Entrada manual excluída!');
                 } else {
-                    alert('❌ Erro ao excluir entrada manual.');
+                    showToastModal('❌ Erro ao excluir entrada manual.', true);
                 }
+            };
+
+            // ========== FUNÇÕES GLOBAIS DE EDIÇÃO ==========
+
+            window.editarContaBancaria = (id) => {
+                const conta = state.contas.find(c => c.id === id);
+                if (!conta) return;
+
+                const form = document.getElementById('form-cadastro-conta');
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-id', id);
+
+                document.getElementById('cadastro-conta-nome').value = conta.nome;
+                document.getElementById('cadastro-conta-banco').value = conta.banco;
+                document.getElementById('cadastro-conta-tipo').value = conta.tipo;
+                document.getElementById('cadastro-conta-agencia').value = conta.agencia || '';
+                document.getElementById('cadastro-conta-numero').value = conta.numero || '';
+
+                const btnSalvar = form.querySelector('button[type="submit"]');
+                btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar Conta';
+
+                document.getElementById('modal-contas-bancarias').classList.remove('hidden');
+            };
+
+            window.editarContaFixa = (id) => {
+                const cf = state.contasFixas.find(c => c.id === id);
+                if (!cf) return;
+
+                const form = document.getElementById('form-conta-fixa');
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-id', id);
+
+                document.getElementById('conta-fixa-descricao').value = cf.descricao;
+                document.getElementById('conta-fixa-valor').value = cf.valor;
+                document.getElementById('conta-fixa-dia-vencimento').value = cf.diaVencimento;
+                document.getElementById('conta-fixa-categoria').value = cf.categoria;
+                document.getElementById('conta-fixa-tipo-recorrencia').value = cf.tipoRecorrencia;
+
+                // Força atualização dos containers de parcelamento/permanente
+                // (Assumindo que o listener de change tratará os campos hidden)
+                const event = new Event('change');
+                document.getElementById('conta-fixa-tipo-recorrencia').dispatchEvent(event);
+
+                if (cf.tipoRecorrencia === 'parcelada') {
+                    document.getElementById('conta-fixa-data-inicio').value = cf.dataInicio;
+                    document.getElementById('conta-fixa-num-parcelas').value = cf.numParcelas;
+                }
+
+                const btnSalvar = form.querySelector('button[type="submit"]');
+                btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar Conta Fixa';
+
+                document.getElementById('modal-conta-fixa').classList.remove('hidden');
             };
 
             // ========== FUNÇÃO DE LANÇAR GASTO DE CONTA FIXA ==========
@@ -2686,6 +2761,11 @@
 
             // Abrir modal de Cadastrar Conta Fixa
             btnAbrirContaFixa?.addEventListener('click', () => {
+                formContaFixa.reset();
+                formContaFixa.removeAttribute('data-mode');
+                formContaFixa.removeAttribute('data-id');
+                const btnSalvar = formContaFixa.querySelector('button[type="submit"]');
+                if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Salvar Conta Fixa';
                 modalContaFixa.classList.remove('hidden');
             });
 
@@ -2724,6 +2804,9 @@
                     return;
                 }
 
+                const mode = formContaFixa.getAttribute('data-mode');
+                const id = formContaFixa.getAttribute('data-id');
+
                 const dados = {
                     description: document.getElementById('conta-fixa-descricao').value,
                     amount: parseFloat(document.getElementById('conta-fixa-valor').value),
@@ -2737,9 +2820,15 @@
                     dados.installments = parseInt(document.getElementById('conta-fixa-num-parcelas').value);
                 }
 
-                const sucesso = await window.api.salvarContaFixa(dados);
+                let sucesso;
+                if (mode === 'edit' && id) {
+                    sucesso = await window.api.atualizarContaFixa(id, dados);
+                } else {
+                    sucesso = await window.api.salvarContaFixa(dados);
+                }
+
                 if (sucesso) {
-                    showToastModal('Conta Fixa cadastrada com sucesso!');
+                    showToastModal(mode === 'edit' ? 'Conta Fixa atualizada!' : 'Conta Fixa cadastrada com sucesso!');
                     formContaFixa.reset();
                     modalContaFixa.classList.add('hidden');
                     if (window.loadDataFromCloud) await window.loadDataFromCloud();
@@ -2827,6 +2916,11 @@
 
             // Abrir/Fechar Contas Bancárias
             btnAbrirContasBancarias?.addEventListener('click', () => {
+                formContaBancaria.reset();
+                formContaBancaria.removeAttribute('data-mode');
+                formContaBancaria.removeAttribute('data-id');
+                const btnSalvar = formContaBancaria.querySelector('button[type="submit"]');
+                if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Salvar Conta';
                 modalContasBancarias.classList.remove('hidden');
             });
 
@@ -2883,6 +2977,9 @@
                     return;
                 }
 
+                const mode = formContaBancaria.getAttribute('data-mode');
+                const id = formContaBancaria.getAttribute('data-id');
+
                 const dados = {
                     name: document.getElementById('cadastro-conta-nome').value,
                     bank: document.getElementById('cadastro-conta-banco').value,
@@ -2891,14 +2988,20 @@
                     number: document.getElementById('cadastro-conta-numero').value
                 };
 
-                const sucesso = await window.api.salvarConta(dados);
+                let sucesso;
+                if (mode === 'edit' && id) {
+                    sucesso = await window.api.atualizarConta(id, dados);
+                } else {
+                    sucesso = await window.api.salvarConta(dados);
+                }
+
                 if (sucesso) {
-                    showToastModal('Conta bancária cadastrada com sucesso!');
+                    showToastModal(mode === 'edit' ? 'Conta bancária atualizada!' : 'Conta bancária cadastrada com sucesso!');
                     formContaBancaria.reset();
                     modalContasBancarias.classList.add('hidden');
                     if (window.loadDataFromCloud) await window.loadDataFromCloud();
                 } else {
-                    showToastModal('Erro ao salvar conta bancária', true);
+                    showToastModal('Erro ao salvar conta bancaria', true);
                 }
             });
 
