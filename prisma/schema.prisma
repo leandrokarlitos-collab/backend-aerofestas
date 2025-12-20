@@ -206,9 +206,10 @@ model Transaction {
   category      String?  // Ex: "Combustível", "Alimentação"
   paymentMethod String?  // PIX, Boleto, etc.
   eventId       Float?   // Vincula receita a evento (NULL para entradas avulsas)
+  accountId     String?  // Vincula a transação a uma conta bancária
   
-  // Relacionamentos opcionais se quiser ligar a contas fixas depois
-  // fixedAccountId String? 
+  // Relacionamento opcional
+  account       BankAccount? @relation(fields: [accountId], references: [id])
 }
 
 // --- CADASTROS FINANCEIROS ---
@@ -220,6 +221,8 @@ model BankAccount {
   type    String
   agency  String?
   number  String?
+  
+  transactions Transaction[]
 }
 
 model FixedExpense {

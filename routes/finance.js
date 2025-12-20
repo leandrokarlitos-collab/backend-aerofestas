@@ -60,8 +60,7 @@ router.post('/transactions', async (req, res) => {
                 date: t.date,
                 category: t.category,
                 paymentMethod: t.paymentMethod,
-                // Opcionais
-                // contaId: t.contaId ... (se você criar relacionamento no prisma depois)
+                accountId: t.accountId
             }
         });
         res.json(newTransaction);
@@ -84,7 +83,8 @@ router.put('/transactions/:id', async (req, res) => {
                 type: t.type,
                 date: t.date,
                 category: t.category,
-                paymentMethod: t.paymentMethod
+                paymentMethod: t.paymentMethod,
+                accountId: t.accountId
             }
         });
         res.json(updated);
