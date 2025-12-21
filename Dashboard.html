@@ -141,15 +141,14 @@
             background-position: right center;
         }
 
-        /* Animação de Digitação para Placeholder */
         .form-input::placeholder {
             color: #d1d5db !important;
-            /* Cinza claro */
-            transition: color 0.3s ease;
+            opacity: 1;
+            transition: opacity 0.3s ease;
         }
 
         .form-input:focus::placeholder {
-            color: transparent !important;
+            opacity: 0;
         }
 
         .loader {
@@ -1323,10 +1322,11 @@
                 const toast = document.getElementById('toast');
                 const toastMessage = document.getElementById('toast-message');
                 const toastIcon = document.getElementById('toast-icon');
+                if (!toast || !toastMessage) return;
                 toastMessage.textContent = message;
                 toast.classList.toggle('bg-red-600', isError);
                 toast.classList.toggle('bg-green-600', !isError);
-                toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+                if (toastIcon) toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
                 toast.classList.remove('hidden');
                 toast.classList.add('toast-enter');
                 setTimeout(() => {
@@ -1334,6 +1334,27 @@
                     toast.classList.remove('toast-enter');
                 }, 5000);
             };
+
+            // Placeholder Animation for API Key
+            const animatePlaceholder = () => {
+                const input = document.getElementById('api-key-input');
+                if (!input) return;
+                const text = "Cole sua chave aqui...";
+                let i = 0;
+                input.placeholder = "";
+                const interval = setInterval(() => {
+                    input.placeholder += text[i];
+                    i++;
+                    if (i >= text.length) {
+                        setTimeout(() => {
+                            input.placeholder = "";
+                            i = 0;
+                        }, 2000);
+                    }
+                }, 150);
+                return interval;
+            };
+            let placeholderInterval = animatePlaceholder();
 
             const getApiKey = () => {
                 const key = ""; // A chave da API será injetada aqui em produção

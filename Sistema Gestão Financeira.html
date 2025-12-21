@@ -1847,12 +1847,12 @@
 
         .form-input::placeholder {
             color: #d1d5db !important;
-            /* Cinza claro */
-            transition: color 0.3s ease;
+            opacity: 1;
+            transition: opacity 0.3s ease;
         }
 
         .form-input:focus::placeholder {
-            color: transparent !important;
+            opacity: 0;
         }
 
         .modal-backdrop {
@@ -2892,54 +2892,6 @@
 
         </div>
     </div>
-    <div id="chat-fab"
-        class="fixed bottom-6 right-6 shiny-btn rounded-full w-16 h-16 flex items-center justify-center cursor-pointer shadow-2xl transition-transform duration-300 hover:scale-110 z-40"
-        title="Assistente IA">
-        <i id="chat-fab-icon" class="fa-solid fa-chart-pie text-2xl"></i>
-    </div>
-    <div id="chat-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-        <div class="modal-box glassmorphism w-full max-w-lg h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 border-b border-gray-200/50 pb-2">
-                <h2 id="chat-title" class="text-xl font-bold text-gray-900">Assistente IA</h2>
-                <button id="chat-close-btn"
-                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-            </div>
-            <div id="chat-messages" class="flex-grow overflow-y-auto p-2 space-y-4">
-            </div>
-            <div class="mt-4 flex space-x-2">
-                <input type="text" id="chat-input" class="form-input w-full" placeholder="Faça uma pergunta...">
-                <button id="send-chat-btn" class="shiny-btn px-4 rounded-md"><i
-                        class="fa-solid fa-paper-plane"></i></button>
-            </div>
-        </div>
-    </div>
-
-    <div id="api-key-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md m-4">
-            <h2 class="text-2xl font-bold mb-4 text-gray-900">Configurar API do Gemini</h2>
-            <p class="text-sm text-gray-600 mb-6">Para usar os recursos de IA, você precisa de uma chave de API do
-                Google AI Studio. A chave será salva apenas no seu navegador.</p>
-            <div class="space-y-4">
-                <div>
-                    <label for="api-key-input" class="block text-sm font-medium text-gray-700 mb-1">Sua Chave da
-                        API</label>
-                    <input type="password" id="api-key-input" placeholder="Cole sua chave aqui"
-                        class="form-input w-full px-3 py-2 rounded-md">
-                </div>
-            </div>
-            <div class="flex justify-end space-x-4 mt-8">
-                <button type="button" id="cancel-api-key-btn"
-                    class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors">Cancelar</button>
-                <button type="button" id="save-api-key-btn" class="shiny-btn px-6 py-2 rounded-md">Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="toast"
-        class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-50">
-        <i id="toast-icon" class="text-lg"></i>
-        <p id="toast-message" class="ml-3"></p>
-    </div>
 
 
     <!-- Event Listeners de Navegação e Modais -->
@@ -3322,10 +3274,10 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast"
+    <div id="gemini-toast"
         class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-[200]">
-        <i id="toast-icon" class="text-lg"></i>
-        <p id="toast-message" class="ml-3 font-medium"></p>
+        <i id="gemini-toast-icon" class="text-lg"></i>
+        <p id="gemini-toast-message" class="ml-3 font-medium"></p>
     </div>
 
     <!-- Sistema de Autenticação -->
@@ -3353,9 +3305,9 @@
         const hideIAModal = (modalEl) => modalEl.classList.add('hidden');
 
         const showIAToast = (message, isError = true) => {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            const toastIcon = document.getElementById('toast-icon');
+            const toast = document.getElementById('gemini-toast');
+            const toastMessage = document.getElementById('gemini-toast-message');
+            const toastIcon = document.getElementById('gemini-toast-icon');
             if (!toast || !toastMessage) return;
             toastMessage.textContent = message;
             toast.classList.toggle('bg-red-600', isError);
@@ -3364,6 +3316,27 @@
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 5000);
         };
+
+        // Placeholder Animation for API Key
+        const animatePlaceholder = () => {
+            const input = document.getElementById('api-key-input');
+            if (!input) return;
+            const text = "Cole sua chave aqui...";
+            let i = 0;
+            input.placeholder = "";
+            const interval = setInterval(() => {
+                input.placeholder += text[i];
+                i++;
+                if (i >= text.length) {
+                    setTimeout(() => {
+                        input.placeholder = "";
+                        i = 0;
+                    }, 2000);
+                }
+            }, 150);
+            return interval;
+        };
+        let placeholderInterval = animatePlaceholder();
 
         const getApiKey = () => localStorage.getItem('gemini_api_key_v1');
         const saveApiKey = (key) => localStorage.setItem('gemini_api_key_v1', key);
