@@ -52,7 +52,7 @@ function renderAllCharts(state) {
     renderContasFixasChart(state);
     renderPagamentosMonitoresChart(state);
     renderDailyChart(state, month);
-    renderMonitorPerformanceChart(state);
+    // renderMonitorPerformanceChart(state); // Desativado a pedido
 }
 
 /**
@@ -62,7 +62,7 @@ function renderEmpresasChart(state) {
     const ctx = document.getElementById('empresas-chart')?.getContext('2d');
     if (!ctx) return;
 
-    const eventosDoMes = (state.eventos || []).filter(e => e.date && e.date.startsWith(state.selectedMonth));
+    const eventosDoMes = (state.eventos || []).filter(e => e.data && e.data.startsWith(state.selectedMonth));
 
     // Agrupa por empresa
     const empresas = {};
@@ -337,9 +337,23 @@ function renderDailyChart(state, month) {
 
     // Processa gastos (despesas)
     (state.gastos || []).forEach(gasto => {
-        if (gasto.date && gasto.date.startsWith(month)) {
-            const day = parseInt(gasto.date.split('-')[2]) - 1;
-            despesasPorDia[day] += parseFloat(gasto.valor) || 0;
+        if (gasto.data && gasto.data.startsWith(month)) {
+            const dayStr = gasto.data.split('-')[2];
+            const day = parseInt(dayStr) - 1;
+            if (day >= 0 && day < daysInMonth) {
+                despesasPorDia[day] += parseFloat(gasto.valor) || 0;
+            }
+        }
+    });
+
+    // Processa receitas manuais
+    (state.receitas || []).forEach(rec => {
+        if (rec.data && rec.data.startsWith(month)) {
+            const dayStr = rec.data.split('-')[2];
+            const day = parseInt(dayStr) - 1;
+            if (day >= 0 && day < daysInMonth) {
+                receitasPorDia[day] += parseFloat(rec.valor) || 0;
+            }
         }
     });
 
