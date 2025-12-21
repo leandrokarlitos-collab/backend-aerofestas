@@ -124,7 +124,7 @@ function renderDespesasGeraisChart(state) {
     const ctx = document.getElementById('despesas-gerais-chart')?.getContext('2d');
     if (!ctx) return;
 
-    const gastosDoMes = (state.gastos || []).filter(g => g.date && g.date.startsWith(state.selectedMonth));
+    const gastosDoMes = (state.gastos || []).filter(g => g.data && g.data.startsWith(state.selectedMonth));
 
     // Agrupa por categoria
     const categorias = {};
@@ -176,7 +176,7 @@ function renderGastosComprasChart(state) {
     const ctx = document.getElementById('gastos-compras-chart')?.getContext('2d');
     if (!ctx) return;
 
-    const gastosDoMes = (state.gastos || []).filter(g => g.date && g.date.startsWith(state.selectedMonth));
+    const gastosDoMes = (state.gastos || []).filter(g => g.data && g.data.startsWith(state.selectedMonth));
 
     // Separa por tipo de pagamento
     const tipos = {};
@@ -326,8 +326,8 @@ function renderDailyChart(state, month) {
 
     // Processa eventos (receitas)
     (state.eventos || []).forEach(evt => {
-        if (evt.date && evt.date.startsWith(month)) {
-            const dayStr = evt.date.split('-')[2];
+        if (evt.data && evt.data.startsWith(month)) {
+            const dayStr = evt.data.split('-')[2];
             const day = parseInt(dayStr) - 1;
             if (day >= 0 && day < daysInMonth) {
                 receitasPorDia[day] += parseFloat(evt.valor) || 0;

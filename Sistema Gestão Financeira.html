@@ -1522,6 +1522,7 @@
 
         .header-title {
             background: linear-gradient(to right, #4f46e5, #a855f7);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
@@ -1754,7 +1755,8 @@
         }
 
         .form-input.error:focus {
-            ring-color: #ef4444;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
         }
 
         .error-message {
@@ -2018,13 +2020,6 @@
                         <h3 class="text-center font-bold text-gray-700 mb-4">Fluxo de Caixa Diário (Mês)</h3>
                         <div style="position: relative; height: 400px;">
                             <canvas id="daily-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="glassmorphism p-6 rounded-lg lg:col-span-2">
-                        <h3 class="text-center font-bold text-gray-700 mb-4">Média Geral de Desempenho dos Monitores
-                        </h3>
-                        <div style="position: relative; height: 350px;">
-                            <canvas id="monitor-geral-performance-chart"></canvas>
                         </div>
                     </div>
                 </section>
