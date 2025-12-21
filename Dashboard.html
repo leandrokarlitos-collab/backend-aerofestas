@@ -32,6 +32,7 @@
             --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
+            --particle-color-rgb: 100, 116, 139;
         }
 
         body {
@@ -891,21 +892,17 @@
                 if (hour >= 5 && hour < 12) { // Manhã
                     root.style.setProperty('--bg-color', '#e0f2fe');
                     root.style.setProperty('--text-color', '#0c4a6e');
-                    root.style.setProperty('--text-muted-color', '#38bdf8');
                     root.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.7)');
                     root.style.setProperty('--header-grad-from', '#38bdf8');
                     root.style.setProperty('--header-grad-to', '#fb923c');
-                    root.style.setProperty('--particle-color-rgb', '56, 189, 248');
                 } else if (hour >= 12 && hour < 18) { // Tarde
                     // Tema padrão (já definido no :root)
                 } else { // Noite
                     root.style.setProperty('--bg-color', '#1e293b');
                     root.style.setProperty('--text-color', '#e2e8f0');
-                    root.style.setProperty('--text-muted-color', '#94a3b8');
                     root.style.setProperty('--glass-bg', 'rgba(30, 41, 59, 0.7)');
                     root.style.setProperty('--header-grad-from', '#818cf8');
                     root.style.setProperty('--header-grad-to', '#c084fc');
-                    root.style.setProperty('--particle-color-rgb', '129, 140, 248');
                     root.style.setProperty('--card-bg', 'rgba(51, 65, 85, 0.6)');
                     root.style.setProperty('--border-color', 'rgba(71, 85, 105, 0.3)');
                     root.style.setProperty('--input-bg', '#334155');
