@@ -48,7 +48,6 @@ function renderAllCharts(state) {
     const month = state.selectedMonth;
     renderEmpresasChart(state);
     renderDespesasGeraisChart(state);
-    renderGastosComprasChart(state);
     renderContasFixasChart(state);
     renderPagamentosMonitoresChart(state);
     renderDailyChart(state, month);
@@ -163,52 +162,6 @@ function renderDespesasGeraisChart(state) {
                     callbacks: {
                         label: (context) => `${context.label}: R$ ${context.parsed.toFixed(2)}`
                     }
-                }
-            }
-        }
-    });
-}
-
-/**
- * 3. Gráfico: Gastos & Compras (Pizza com Animação)
- */
-function renderGastosComprasChart(state) {
-    const ctx = document.getElementById('gastos-compras-chart')?.getContext('2d');
-    if (!ctx) return;
-
-    const gastosDoMes = (state.gastos || []).filter(g => g.data && g.data.startsWith(state.selectedMonth));
-
-    // Separa por tipo de pagamento
-    const tipos = {};
-    gastosDoMes.forEach(gasto => {
-        const tipo = gasto.pagamento || 'Não especificado';
-        tipos[tipo] = (tipos[tipo] || 0) + (parseFloat(gasto.valor) || 0);
-    });
-
-    const labels = Object.keys(tipos);
-    const data = Object.values(tipos);
-    const colors = [COLORS.blue, COLORS.purple, COLORS.orange, COLORS.teal];
-
-    if (chartGastosCompras) chartGastosCompras.destroy();
-
-    chartGastosCompras = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels,
-            datasets: [{
-                data,
-                backgroundColor: colors,
-                borderWidth: 3,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { padding: 15 }
                 }
             }
         }

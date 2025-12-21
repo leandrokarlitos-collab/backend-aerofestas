@@ -292,7 +292,10 @@ app.get('/api/admin/companies', async (req, res) => {
 });
 app.get('/api/admin/events-full', async (req, res) => {
     const events = await prisma.event.findMany({
-        include: { items: { include: { toy: true } } },
+        include: {
+            items: { include: { toy: true } },
+            company: true
+        },
         orderBy: { date: 'desc' }
     });
     res.json(events);
