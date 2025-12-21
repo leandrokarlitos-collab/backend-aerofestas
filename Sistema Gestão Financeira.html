@@ -1784,27 +1784,75 @@
             transform: scale(1.1) rotate(0deg);
         }
 
-        /* Animações dos Modais */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
+        /* Animação de Digitação para Placeholder */
+        @keyframes typing-placeholder {
+
+            0%,
+            100% {
+                placeholder: "Cole sua chave aqui";
             }
 
-            to {
-                opacity: 1;
+            20% {
+                placeholder: "C";
+            }
+
+            25% {
+                placeholder: "Co";
+            }
+
+            30% {
+                placeholder: "Col";
+            }
+
+            35% {
+                placeholder: "Cole";
+            }
+
+            40% {
+                placeholder: "Cole ";
+            }
+
+            45% {
+                placeholder: "Cole s";
+            }
+
+            50% {
+                placeholder: "Cole su";
+            }
+
+            55% {
+                placeholder: "Cole sua";
+            }
+
+            60% {
+                placeholder: "Cole sua ";
+            }
+
+            70% {
+                placeholder: "Cole sua ch";
+            }
+
+            80% {
+                placeholder: "Cole sua cha";
+            }
+
+            90% {
+                placeholder: "Cole sua chav";
+            }
+
+            95% {
+                placeholder: "Cole sua chave";
             }
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
+        .form-input::placeholder {
+            color: #d1d5db !important;
+            /* Cinza claro */
+            transition: color 0.3s ease;
+        }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .form-input:focus::placeholder {
+            color: transparent !important;
         }
 
         .modal-backdrop {
@@ -3197,8 +3245,7 @@
     <div id="api-key-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[100]">
         <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4">Configurar API do Gemini</h2>
-            <p class="text-sm text-gray-600 mb-4">Para usar os recursos de IA, você precisa de uma chave de API
-                Gratuita.</p>
+            <p class="text-sm text-gray-600 mb-4">Para usar os recursos de IA, você precisa de uma chave de API.</p>
 
             <div class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
                 <h3 class="text-indigo-800 font-bold text-sm mb-2 flex items-center">
@@ -3212,7 +3259,7 @@
                 </ol>
                 <a href="https://aistudio.google.com/app/apikey" target="_blank"
                     class="block mt-3 text-center bg-white text-indigo-600 border border-indigo-200 py-1.5 rounded-md font-bold text-xs hover:bg-indigo-50 transition-colors">
-                    <i class="fa-solid fa-external-link mr-1"></i> Ir para Google AI Studio (Grátis)
+                    <i class="fa-solid fa-external-link mr-1"></i> Ir para Google AI Studio
                 </a>
             </div>
 
@@ -3407,6 +3454,15 @@
         }
 
         async function openChat(contextType) {
+            // First, check for API key to avoid modal overlap
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showIAToast("Por favor, configure sua chave de API do Gemini.");
+                document.getElementById('api-key-input').value = '';
+                openIAModal(apiKeyModal);
+                return; // Stop here
+            }
+
             let titleText = '✨ Inteligência Aero';
             let initialPrompt = '';
 
