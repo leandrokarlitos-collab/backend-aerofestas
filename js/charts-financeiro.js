@@ -64,26 +64,41 @@ function renderEmpresasChart(state) {
     const eventosDoMes = (state.eventos || []).filter(e => e.data && e.data.startsWith(state.selectedMonth));
 
     // Agrupa por empresa
-    const empresas = {};
+    const empresasMap = {};
     eventosDoMes.forEach(evt => {
         const emp = evt.empresa || 'Sem Empresa';
-        empresas[emp] = (empresas[emp] || 0) + (parseFloat(evt.valor) || 0);
+        empresasMap[emp] = (empresasMap[emp] || 0) + (parseFloat(evt.valor) || 0);
     });
 
-    const labels = Object.keys(empresas);
-    const data = Object.values(empresas);
+    // Ordenação personalizada: Aero Festas, ABC Festas, Outros
+    const sortedLabels = Object.keys(empresasMap).sort((a, b) => {
+        if (a === 'Aero Festas') return -1;
+        if (b === 'Aero Festas') return 1;
+        if (a === 'ABC Festas') return -1;
+        if (b === 'ABC Festas') return 1;
+        return a.localeCompare(b);
+    });
+
+    const data = sortedLabels.map(label => empresasMap[label]);
+
+    // Cores específicas: Aero (Blue), ABC (Red), Outros (Teal/Padrão)
+    const backgroundColors = sortedLabels.map(label => {
+        if (label === 'Aero Festas') return COLORS.blue;
+        if (label === 'ABC Festas') return COLORS.loss; // Vermelho
+        return COLORS.teal;
+    });
 
     if (chartEmpresas) chartEmpresas.destroy();
 
     chartEmpresas = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels,
+            labels: sortedLabels,
             datasets: [{
                 label: 'Receita (R$)',
                 data,
-                backgroundColor: COLORS.profit,
-                borderColor: COLORS.profit,
+                backgroundColor: backgroundColors,
+                borderColor: backgroundColors,
                 borderWidth: 2,
                 borderRadius: 6
             }]
