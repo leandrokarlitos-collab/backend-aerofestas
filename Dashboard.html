@@ -1341,20 +1341,31 @@
                 if (!input) return;
                 const text = "Cole sua chave aqui...";
                 let i = 0;
-                input.placeholder = "";
-                const interval = setInterval(() => {
-                    input.placeholder += text[i];
-                    i++;
-                    if (i >= text.length) {
-                        setTimeout(() => {
-                            input.placeholder = "";
-                            i = 0;
-                        }, 2000);
+
+                function type() {
+                    if (i < text.length) {
+                        i++;
+                        input.placeholder = text.substring(0, i) + "|";
+                        setTimeout(type, 100);
+                    } else {
+                        // Final blink effect
+                        let flashes = 0;
+                        const interval = setInterval(() => {
+                            input.placeholder = text + (flashes % 2 === 0 ? "" : "|");
+                            flashes++;
+                            if (flashes > 5) {
+                                clearInterval(interval);
+                                setTimeout(() => {
+                                    i = 0;
+                                    type();
+                                }, 2000);
+                            }
+                        }, 500);
                     }
-                }, 150);
-                return interval;
+                }
+                type();
             };
-            let placeholderInterval = animatePlaceholder();
+            animatePlaceholder();
 
             const getApiKey = () => {
                 const key = ""; // A chave da API será injetada aqui em produção
