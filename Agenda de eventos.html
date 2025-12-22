@@ -453,8 +453,11 @@
             transform: scale(0.9) translateY(0);
         }
 
-        .nav-item:active {
-            transform: scale(0.9);
+        /* [NEW] Ajuste para Toast no Mobile não sobrepor a Nav */
+        @media (max-width: 1023px) {
+            #toast {
+                bottom: 100px !important;
+            }
         }
 
         /* Otimização Mobile para o Calendário */

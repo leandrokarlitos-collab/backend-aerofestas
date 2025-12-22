@@ -148,13 +148,20 @@ function injectPremiumUserMenu(userData) {
             width: 300px;
             height: 300px;
         }
+
+        /* [NEW] Adjust for Mobile Bottom Nav */
+        @media (max-width: 1023px) {
+            #user-menu-container {
+                bottom: 100px !important; /* Fica acima da bottom nav (76px + margins) */
+            }
+        }
     `;
     document.head.appendChild(style);
 
     // Container principal
     const container = document.createElement('div');
     container.id = 'user-menu-container';
-    container.className = 'fixed bottom-4 left-4 z-50 flex items-center gap-3 rounded-2xl shadow-2xl border border-white/20 transition-all duration-300';
+    container.className = 'fixed bottom-4 left-4 z-[1100] flex items-center gap-3 rounded-2xl shadow-2xl border border-white/20 transition-all duration-300';
 
     // Verifica estado salvo no localStorage
     const isCollapsed = localStorage.getItem('userMenuCollapsed') === 'true';
