@@ -22,7 +22,12 @@ router.get('/dashboard', async (req, res) => {
         const receitaTotal = events.reduce((acc, evt) => acc + (evt.price || 0), 0);
 
         const transactions = await prisma.transaction.findMany({ where: { type: 'EXPENSE', date: { gte: startStr, lte: endStr } } });
-        const despesaTotal = transactions.reduce((acc, tra) => acc + (tra.amount || 0), 0);
+        const expensesFromTransactions = transactions.reduce((acc, tra) => acc + (tra.amount || 0), 0);
+
+        const monitorPayments = await prisma.pagamentoMonitor.findMany({ where: { data: { gte: startStr, lte: endStr } } });
+        const expensesFromMonitors = monitorPayments.reduce((acc, p) => acc + (p.pagamento || 0), 0);
+
+        const despesaTotal = expensesFromTransactions + expensesFromMonitors;
 
         res.json({
             period: `${currentMonth + 1}/${currentYear}`,

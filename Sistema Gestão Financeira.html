@@ -375,18 +375,24 @@
                 const evPrev = state.eventos.filter(e => e.data.startsWith(prevMonthStr));
                 const recPrev = state.receitas?.filter(r => r.data.startsWith(prevMonthStr)) || [];
 
+                const monitorPagamentosMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
+                const despMonitores = monitorPagamentosMes.reduce((acc, p) => acc + (parseFloat(p.pagamento) || 0), 0);
+
                 // Valores Atuais
                 const recEvAtual = eventosMes.reduce((acc, e) => acc + (e.valor || 0), 0);
                 const recManAtual = receitasMes.reduce((acc, r) => acc + (r.valor || 0), 0);
                 const recAtual = recEvAtual + recManAtual;
-                const despAtual = gastosMes.reduce((acc, g) => acc + (g.valor || 0), 0);
+                const despAtual = gastosMes.reduce((acc, g) => acc + (g.valor || 0), 0) + despMonitores;
                 const saldoAtual = recAtual - despAtual;
 
                 // Valores Anteriores
+                const monitorPagamentosPrev = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(prevMonthStr));
+                const despMonitoresPrev = monitorPagamentosPrev.reduce((acc, p) => acc + (parseFloat(p.pagamento) || 0), 0);
+
                 const recEvPrev = evPrev.reduce((acc, e) => acc + (e.valor || 0), 0);
                 const recManPrev = recPrev.reduce((acc, r) => acc + (r.valor || 0), 0);
                 const recAnterior = recEvPrev + recManPrev;
-                const despAnterior = gastPrev.reduce((acc, g) => acc + (g.valor || 0), 0);
+                const despAnterior = gastPrev.reduce((acc, g) => acc + (g.valor || 0), 0) + despMonitoresPrev;
                 const saldoAnterior = recAnterior - despAnterior;
 
                 const getChangeHTML = (atual, anterior, invert = false) => {
@@ -780,38 +786,65 @@
 
             const renderPagamentosMonitores = () => {
                 const tbody = getById('tabela-pagamentos-monitores')?.querySelector('tbody');
+                const tfoot = getById('tabela-pagamentos-monitores')?.querySelector('tfoot');
                 if (!tbody) return;
 
                 const pagamentos = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
 
                 if (pagamentos.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>';
+                    if (tfoot) tfoot.classList.add('hidden');
                     return;
                 }
 
+                if (tfoot) tfoot.classList.remove('hidden');
+
+                let subtotalMes = 0;
+
                 tbody.innerHTML = pagamentos.sort((a, b) => b.data.localeCompare(a.data)).map(p => {
                     const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
-                    const statusClass = p.statusPagamento === 'Executado' ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50';
-                    const nota = p.numEventos || '-'; // Reutilizando campo numEventos para nota se necessário
+                    subtotalMes += total;
+
+                    const isPago = p.statusPagamento === 'Executado';
+                    const statusClass = isPago ? 'text-emerald-700 bg-emerald-100 border-emerald-200' : 'text-amber-700 bg-amber-100 border-amber-200';
+                    const statusText = isPago ? 'Pago' : 'Pendente';
+                    const nota = p.numEventos || '-';
 
                     return `
-                        <tr>
-                            <td class="text-sm border-b border-gray-100">${p.data.split('-').reverse().slice(0, 2).join('/')}</td>
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="text-sm py-4 border-b border-gray-100">${p.data.split('-').reverse().slice(0, 2).join('/')}</td>
                             <td class="font-bold text-gray-800 border-b border-gray-100">${p.nome}</td>
-                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${p.valorBase}</td>
-                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${p.horasExtras}</td>
+                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.valorBase) || 0).toFixed(2)}</td>
+                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.horasExtras) || 0).toFixed(2)}</td>
                             <td class="font-bold text-indigo-600 border-b border-gray-100">R$ ${total.toFixed(2)}</td>
                             <td class="text-xs border-b border-gray-100">
-                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold">${nota}</span>
+                                <span class="px-2 py-1 rounded-full border ${statusClass} font-bold text-[10px] uppercase tracking-wider">${statusText}</span>
                             </td>
                             <td class="border-b border-gray-100">
-                                <button onclick="deletarPagamentoMonitor('${p.id}')" class="text-red-400 hover:text-red-600 transition-colors">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="toggleStatusPagamentoMonitor('${p.id}', '${p.statusPagamento}')" 
+                                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isPago ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}" 
+                                            title="${isPago ? 'Marcar como Pendente' : 'Marcar como Pago'}">
+                                        <i class="fa-solid ${isPago ? 'fa-clock-rotate-left' : 'fa-check-double'}"></i>
+                                    </button>
+                                    <button onclick="deletarPagamentoMonitor('${p.id}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-all">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
                 }).join('');
+
+                if (tfoot) {
+                    tfoot.innerHTML = `
+                        <tr class="bg-gray-50/50">
+                            <td colspan="4" class="py-4 px-4 text-right font-semibold text-gray-600">Subtotal do Mês:</td>
+                            <td class="py-4 px-2 font-bold text-indigo-700 text-lg">R$ ${subtotalMes.toFixed(2)}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    `;
+                }
             };
 
             window.visualizarMonitor = (id) => {
@@ -906,6 +939,25 @@
                     renderMonitorCards();
                 } else {
                     showToastModal('❌ Erro ao excluir monitor.', true);
+                }
+            };
+
+            window.toggleStatusPagamentoMonitor = async (id, currentStatus) => {
+                const newStatus = currentStatus === 'Executado' ? 'Pendente' : 'Executado';
+                try {
+                    const response = await fetch(`${API_BASE}/finance/pagamentos-monitores/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ statusPagamento: newStatus })
+                    });
+
+                    if (!response.ok) throw new Error('Falha ao atualizar status');
+
+                    showToastModal(`✅ Pagamento marcado como ${newStatus === 'Executado' ? 'Pago' : 'Pendente'}`);
+                    await window.loadDataFromCloud();
+                } catch (error) {
+                    console.error('Erro ao alternar status:', error);
+                    showToastModal('❌ Erro ao atualizar status do pagamento.', true);
                 }
             };
 
@@ -2895,13 +2947,16 @@
                                         <th class="hidden sm:table-cell">Base</th>
                                         <th class="hidden sm:table-cell">HE</th>
                                         <th>Total</th>
-                                        <th>Nota</th>
+                                        <th>Status</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <!-- Preenchido via JS -->
                                 </tbody>
+                                <tfoot class="hidden border-t-2 border-indigo-100">
+                                    <!-- Preenchido via JS -->
+                                </tfoot>
                             </table>
                         </div>
                     </section>

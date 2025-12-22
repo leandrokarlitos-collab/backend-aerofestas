@@ -139,6 +139,7 @@ function renderDespesasGeraisChart(state) {
     if (!ctx) return;
 
     const gastosDoMes = (state.gastos || []).filter(g => g.data && g.data.startsWith(state.selectedMonth));
+    const pagamentosMonitoresDoMes = (state.pagamentosMonitores || []).filter(p => p.data && p.data.startsWith(state.selectedMonth));
 
     // Agrupa por categoria
     const categorias = {};
@@ -146,6 +147,12 @@ function renderDespesasGeraisChart(state) {
         const cat = gasto.categoria || 'Sem Categoria';
         categorias[cat] = (categorias[cat] || 0) + (parseFloat(gasto.valor) || 0);
     });
+
+    // Adiciona pagamentos de monitores como categoria separada
+    const totalMonitores = pagamentosMonitoresDoMes.reduce((acc, p) => acc + (parseFloat(p.pagamento) || 0), 0);
+    if (totalMonitores > 0) {
+        categorias['Monitores'] = totalMonitores;
+    }
 
     const labels = Object.keys(categorias);
     const data = Object.values(categorias);
@@ -310,6 +317,17 @@ function renderDailyChart(state, month) {
             const day = parseInt(dayStr) - 1;
             if (day >= 0 && day < daysInMonth) {
                 despesasPorDia[day] += parseFloat(gasto.valor) || 0;
+            }
+        }
+    });
+
+    // Processa pagamentos de monitores (despesas)
+    (state.pagamentosMonitores || []).forEach(pag => {
+        if (pag.data && pag.data.startsWith(month)) {
+            const dayStr = pag.data.split('-')[2];
+            const day = parseInt(dayStr) - 1;
+            if (day >= 0 && day < daysInMonth) {
+                despesasPorDia[day] += parseFloat(pag.pagamento) || 0;
             }
         }
     });
