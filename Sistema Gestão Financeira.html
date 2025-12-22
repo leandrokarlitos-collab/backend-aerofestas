@@ -724,8 +724,252 @@
                     window.renderAllCharts(state);
                 }
 
+                // Renderiza Histórico de Pagamentos de Monitores (NOVO)
+                renderPagamentosMonitores();
+
                 console.log("✅ Renderização completa!");
             };
+
+            // ========== LOGICA DA ABA MONITORES (REWORK MOBILE) ==========
+
+            const renderMonitorCards = () => {
+                const container = getById('monitor-cards-container');
+                const countText = getById('monitor-count-text');
+                if (!container) return;
+
+                const monitores = state.monitores || [];
+                countText.textContent = `${monitores.length} monitores ativos`;
+
+                if (monitores.length === 0) {
+                    container.innerHTML = '<div class="col-span-full py-10 text-center text-gray-500">Nenhum monitor cadastrado ainda.</div>';
+                    return;
+                }
+
+                container.innerHTML = monitores.map(m => {
+                    const iniciais = m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                    const cnhInfo = m.cnh !== 'Não possui' ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnh}</span>` : '';
+
+                    return `
+                        <div class="monitor-card p-4 rounded-2xl flex flex-col gap-4 border border-white/50 relative group">
+                            <div class="flex items-center gap-4">
+                                <div class="monitor-avatar">${iniciais}</div>
+                                <div class="flex-grow min-w-0">
+                                    <h4 class="font-bold text-gray-800 truncate">${m.nome}</h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        ${cnhInfo}
+                                        <span class="text-xs text-gray-500">${m.telefone || 'Sem tel'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center pt-2 border-t border-gray-100/50">
+                                <span class="text-xs font-medium text-gray-400">ID: #${m.id.slice(-4)}</span>
+                                <div class="flex gap-2">
+                                    <button onclick="editarMonitor('${m.id}')" class="btn-action-small bg-amber-50 text-amber-600 hover:bg-amber-100" title="Editar">
+                                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                                    </button>
+                                    <button onclick="deletarMonitor('${m.id}')" class="btn-action-small bg-red-50 text-red-600 hover:bg-red-100" title="Excluir">
+                                        <i class="fa-solid fa-trash-can text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            const renderPagamentosMonitores = () => {
+                const tbody = getById('tabela-pagamentos-monitores')?.querySelector('tbody');
+                if (!tbody) return;
+
+                const pagamentos = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
+
+                if (pagamentos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = pagamentos.sort((a, b) => b.data.localeCompare(a.data)).map(p => {
+                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    const statusClass = p.statusPagamento === 'Executado' ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50';
+                    const nota = p.numEventos || '-'; // Reutilizando campo numEventos para nota se necessário
+
+                    return `
+                        <tr>
+                            <td class="text-sm border-b border-gray-100">${p.data.split('-').reverse().slice(0, 2).join('/')}</td>
+                            <td class="font-bold text-gray-800 border-b border-gray-100">${p.nome}</td>
+                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${p.valorBase}</td>
+                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${p.horasExtras}</td>
+                            <td class="font-bold text-indigo-600 border-b border-gray-100">R$ ${total.toFixed(2)}</td>
+                            <td class="text-xs border-b border-gray-100">
+                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold">${nota}</span>
+                            </td>
+                            <td class="border-b border-gray-100">
+                                <button onclick="deletarPagamentoMonitor('${p.id}')" class="text-red-400 hover:text-red-600 transition-colors">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            };
+
+            window.editarMonitor = (id) => {
+                const m = state.monitores.find(mon => mon.id === id);
+                if (!m) return;
+
+                getById('monitor-id-edit').value = m.id;
+                getById('monitor-nome').value = m.nome;
+                getById('monitor-telefone').value = m.telefone || '';
+                getById('monitor-cnh').value = m.cnh || 'Não possui';
+
+                getById('modal-monitor-title').textContent = 'Editar Monitor';
+                getById('add-monitor-modal').classList.remove('hidden');
+            };
+
+            window.deletarMonitor = async (id) => {
+                if (!confirm('Deseja realmente excluir este monitor? Isso não afetará o histórico de pagamentos.')) return;
+                const sucesso = await window.api.deletarMonitor(id);
+                if (sucesso) {
+                    showToastModal('✅ Monitor excluído!');
+                    await window.loadDataFromCloud();
+                    renderMonitorCards();
+                } else {
+                    showToastModal('❌ Erro ao excluir monitor.', true);
+                }
+            };
+
+            window.deletarPagamentoMonitor = async (id) => {
+                if (!confirm('Deseja excluir este registro de pagamento?')) return;
+                const sucesso = await window.api.deletarPagamentoMonitor(id);
+                if (sucesso) {
+                    showToastModal('✅ Pagamento excluído!');
+                    await window.loadDataFromCloud();
+                } else {
+                    showToastModal('❌ Erro ao excluir pagamento.', true);
+                }
+            };
+
+            // Event Listeners dos Novos Botões
+            getById('open-monitores-modal-btn')?.addEventListener('click', () => {
+                renderMonitorCards();
+                getById('modal-lista-monitores').classList.remove('hidden');
+            });
+
+            getById('open-pagamento-modal-btn')?.addEventListener('click', () => {
+                const select = getById('pag-monitor-select');
+                if (select) {
+                    select.innerHTML = '<option value="">Selecione um monitor...</option>' +
+                        state.monitores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+                }
+                getById('modal-pagamento-monitor').classList.remove('hidden');
+            });
+
+            getById('add-new-monitor-btn')?.addEventListener('click', () => {
+                getById('form-cadastro-monitor').reset();
+                getById('monitor-id-edit').value = '';
+                getById('modal-monitor-title').textContent = 'Novo Monitor';
+                getById('add-monitor-modal').classList.remove('hidden');
+            });
+
+            getById('export-monitores-pdf-btn')?.addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                const pagamentos = (state.pagamentosMonitores || [])
+                    .filter(p => p.data.startsWith(state.selectedMonth))
+                    .sort((a, b) => a.data.localeCompare(b.data));
+
+                if (pagamentos.length === 0) {
+                    showToastModal('Não há pagamentos neste mês para exportar.', true);
+                    return;
+                }
+
+                doc.setFontSize(18);
+                doc.text('Relatório de Pagamentos - Monitores', 14, 20);
+                doc.setFontSize(10);
+                doc.text(`Período: ${state.selectedMonth}`, 14, 28);
+
+                const data = pagamentos.map(p => {
+                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    return [p.data, p.nome, `R$ ${p.valorBase}`, `R$ ${p.horasExtras}`, `R$ ${total.toFixed(2)}`, p.numEventos || '-'];
+                });
+
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Data', 'Monitor', 'Base', 'H.E.', 'Total', 'Nota']],
+                    body: data,
+                    theme: 'grid',
+                    headStyles: { fillColor: [79, 70, 229] }
+                });
+
+                doc.save(`Pagamentos_Monitores_${state.selectedMonth}.pdf`);
+                showToastModal('✅ PDF gerado com sucesso!');
+            });
+
+            // Handlers de Form
+            getById('form-cadastro-monitor')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = getById('monitor-id-edit').value;
+                const dados = {
+                    nome: getById('monitor-nome').value,
+                    telefone: getById('monitor-telefone').value,
+                    cnh: getById('monitor-cnh').value,
+                    habilidades: { forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 }
+                };
+
+                let sucesso;
+                if (id) {
+                    sucesso = await window.api.atualizarMonitor(id, dados);
+                } else {
+                    sucesso = await window.api.salvarMonitor(dados);
+                }
+
+                if (sucesso) {
+                    showToastModal(`✅ Monitor ${id ? 'atualizado' : 'cadastrado'}!`);
+                    getById('add-monitor-modal').classList.add('hidden');
+                    await window.loadDataFromCloud();
+                    renderMonitorCards();
+                } else {
+                    showToastModal('❌ Erro ao salvar monitor.', true);
+                }
+            });
+
+            getById('form-pagamento-monitor')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const monitorId = getById('pag-monitor-select').value;
+                const monitor = state.monitores.find(m => m.id === monitorId);
+
+                // Calcula nota média das estrelas/ranges
+                const notas = [
+                    parseInt(getById('nota-proatividade').value),
+                    parseInt(getById('nota-cordialidade').value),
+                    parseInt(getById('nota-pontualidade').value),
+                    parseInt(getById('nota-uniforme').value)
+                ];
+                const mediaNota = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
+
+                const dados = {
+                    data: getById('pag-monitor-data').value,
+                    monitorId: monitorId,
+                    nome: monitor ? monitor.nome : 'Monitor Desconhecido',
+                    valorBase: parseFloat(getById('pag-monitor-valor').value),
+                    horasExtras: parseFloat(getById('pag-monitor-he').value),
+                    statusPagamento: getById('pag-monitor-status').value,
+                    numEventos: parseFloat(mediaNota), // Reutilizando campo para nota
+                    observacoes: getById('pag-monitor-obs').value
+                };
+
+                const sucesso = await window.api.salvarPagamentoMonitor(dados);
+                if (sucesso) {
+                    showToastModal('✅ Pagamento registrado com sucesso!');
+                    getById('modal-pagamento-monitor').classList.add('hidden');
+                    getById('form-pagamento-monitor').reset();
+                    await window.loadDataFromCloud();
+                } else {
+                    showToastModal('❌ Erro ao salvar pagamento.', true);
+                }
+            });
 
             // ========== FUNÇÕES GLOBAIS DE DELETE ==========
 
@@ -1352,41 +1596,7 @@
                 }
             });
 
-            // ========== HANDLER PARA CADASTRAR MONITOR (MODAL) ==========
-            const formMonitor = getById('form-cadastro-monitor');
-            formMonitor?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!validateForm(formMonitor)) return;
 
-                const dados = {
-                    nome: getById('cadastro-monitor-nome').value,
-                    nascimento: getById('cadastro-monitor-nascimento').value,
-                    telefone: getById('cadastro-monitor-telefone').value,
-                    email: getById('cadastro-monitor-email').value,
-                    endereco: getById('cadastro-monitor-endereco').value,
-                    observacoes: getById('cadastro-monitor-observacoes').value,
-                    cnh: getById('cadastro-monitor-cnh').value === 'sim',
-                    cnhCategoria: getById('cadastro-monitor-cnh-categoria').value,
-                    habilidades: {
-                        forca: parseInt(getById('habilidade-forca').value),
-                        agilidade: parseInt(getById('habilidade-agilidade').value),
-                        proatividade: parseInt(getById('habilidade-proatividade').value),
-                        comunicacao: parseInt(getById('habilidade-comunicacao').value),
-                        disponibilidade: parseInt(getById('habilidade-disponibilidade').value),
-                        respeito: parseInt(getById('habilidade-respeito').value)
-                    }
-                };
-
-                const sucesso = await window.api.salvarMonitor(dados);
-                if (sucesso) {
-                    showToastModal('✅ Monitor cadastrado com sucesso!');
-                    formMonitor.reset();
-                    hideModal('add-monitor-modal');
-                    await window.loadDataFromCloud();
-                } else {
-                    showToastModal('Erro ao salvar monitor.', true);
-                }
-            });
 
             // Handlers para categorias
             getById('form-conta-fixa-categoria')?.addEventListener('submit', async (e) => {
@@ -2143,9 +2353,58 @@
             }
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding-bottom: 80px;
+        /* Monitor Cards Style */
+        .monitor-card {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        .monitor-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.7);
+            border-color: var(--primary);
+        }
+
+        .monitor-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 1.25rem;
+            border: 2px solid white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-action-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-action-small:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 640px) {
+            .modal-content {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .grid-cols-1 {
+                gap: 1rem;
             }
         }
     </style>
@@ -2427,162 +2686,61 @@
             </div>
 
             <div id="page-monitores" class="page">
-                <div class="flex gap-6 relative">
-                    <button id="sidebar-toggle-btn"
-                        class="absolute top-4 -left-3 z-20 bg-white/80 w-8 h-8 rounded-full shadow-md flex items-center justify-center text-indigo-600 transition-transform duration-300 hover:scale-110">
-                        <i class="fas fa-chevron-left transition-transform duration-300"></i>
-                    </button>
+                <div class="space-y-6">
+                    <!-- Cabeçalho Simplificado -->
+                    <div class="glassmorphism p-6 rounded-lg text-center">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Gestão de Monitores</h2>
+                        <p class="text-gray-500 mb-6 font-medium">Gerencie sua equipe e realize pagamentos de forma
+                            rápida e mobile-first.</p>
 
-                    <aside id="monitors-sidebar"
-                        class="glassmorphism p-4 rounded-lg h-fit transition-all duration-300 ease-in-out w-72 flex-shrink-0">
-                        <div
-                            class="flex justify-between items-center mb-4 transition-opacity duration-300 sidebar-content">
-                            <h3 class="text-xl font-bold text-gray-800">Monitores</h3>
-                            <button id="add-monitor-btn"
-                                class="shiny-btn rounded-full w-10 h-10 flex items-center justify-center"
-                                title="Adicionar Novo Monitor">
-                                <i class="fa-solid fa-plus"></i>
-                        </div>
-                        <div id="monitors-sidebar-list"
-                            class="space-y-1 transition-opacity duration-300 sidebar-content">
-                        </div>
-                    </aside>
-
-                    <main id="monitors-main-content" class="flex-grow space-y-8 transition-all duration-300">
-                        <section class="glassmorphism p-6 rounded-lg">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Monitores Cadastrados</h3>
-                            <p class="text-sm text-gray-500 mb-4">Veja detalhes, edite ou exclua um monitor clicando em
-                                sua foto/nome no menu à esquerda ou usando os botões de ação abaixo.</p>
-                            <div class="table-wrapper">
-                                <table id="tabela-monitores-db">
-                                    <thead>
-                                        <tr>
-                                            <th>Nome</th>
-                                            <th>Possui CNH?</th>
-                                            <th>Média Desempenho</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </section>
-                        <section class="glassmorphism p-6 rounded-lg">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Desempenho dos Monitores (Mês Selecionado)
-                            </h3>
-                            <div class="w-full h-80"><canvas id="monitor-event-performance-chart"></canvas></div>
-                        </section>
-                        <section class="glassmorphism p-6 rounded-lg">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4">Lançar Pagamento & Avaliação</h2>
-                            <form id="form-pagamento-monitor" class="space-y-4">
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                                    <div><label for="pagamento-monitor-data"
-                                            class="block text-sm font-medium text-gray-700">Data do Evento</label><input
-                                            type="date" id="pagamento-monitor-data" required
-                                            class="form-input w-full mt-1">
-                                    </div>
-                                    <div class="lg:col-span-2"><label for="monitor-select"
-                                            class="block text-sm font-medium text-gray-700">Selecione o
-                                            Monitor</label><select id="monitor-select" required
-                                            class="form-input w-full mt-1"></select></div>
-                                    <div>
-                                        <label for="pagamento-monitor-diaria"
-                                            class="block text-sm font-medium text-gray-700">Valor da Diária</label>
-                                        <select id="pagamento-monitor-diaria" required class="form-input w-full mt-1">
-                                            <option value="80">R$ 80,00</option>
-                                            <option value="90">R$ 90,00</option>
-                                            <option value="100" selected>R$ 100,00</option>
-                                            <option value="120">R$ 120,00</option>
-                                            <option value="outro">Outro Valor</option>
-                                        </select>
-                                        <div id="pagamento-monitor-diaria-outro-wrapper" class="hidden mt-2">
-                                            <input type="number" id="pagamento-monitor-diaria-outro"
-                                                placeholder="Digite o valor" step="0.01" class="form-input w-full">
-                                        </div>
-                                    </div>
-                                    <div><label for="pagamento-monitor-entrada"
-                                            class="block text-sm font-medium text-gray-700">Hora Entrada</label><input
-                                            type="time" id="pagamento-monitor-entrada" required
-                                            class="form-input w-full mt-1"></div>
-                                    <div><label for="pagamento-monitor-saida"
-                                            class="block text-sm font-medium text-gray-700">Hora Saída</label><input
-                                            type="time" id="pagamento-monitor-saida" required
-                                            class="form-input w-full mt-1"></div>
-                                    <div class="lg:col-span-2"><label for="pagamento-monitor-status"
-                                            class="block text-sm font-medium text-gray-700">Status do
-                                            Pagamento</label><select id="pagamento-monitor-status" required
-                                            class="form-input w-full mt-1">
-                                            <option value="Executado" selected>Executado</option>
-                                            <option value="Pendente">Pendente</option>
-                                        </select></div>
-
-                                    <div class="lg:col-span-2 flex items-center pt-4">
-                                        <input type="checkbox" id="pagamento-monitor-motorista"
-                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                        <label for="pagamento-monitor-motorista"
-                                            class="ml-2 block text-sm text-gray-900">Adicional de Motorista?</label>
-                                    </div>
-                                    <div id="motorista-adicional-fields"
-                                        class="hidden lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                        <div><label for="pagamento-monitor-eventos"
-                                                class="block text-sm font-medium text-gray-700">Nº Eventos
-                                                Entregues</label><input type="number" id="pagamento-monitor-eventos"
-                                                min="0" step="0.1" class="form-input w-full mt-1" value="0"></div>
-                                        <p class="text-sm text-gray-600 pt-5 font-medium">Adicional: <span
-                                                id="valor-adicional-motorista">R$ 0,00</span></p>
-                                    </div>
-                                </div>
-
-                                <div id="pagamento-avaliacao-container" class="hidden border-t pt-4 mt-4">
-                                    <h4 class="font-semibold text-gray-800 mb-2">Avaliação de Desempenho do Evento</h4>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                                        <div><label for="pagamento-nota-descricao"
-                                                class="text-xs">Evento/Descrição</label><input type="text"
-                                                id="pagamento-nota-descricao" class="form-input w-full text-sm p-1.5"
-                                                placeholder="Ex: Festa da Maria"></div>
-                                        <div id="pagamento-checklist-container"
-                                            class="sm:col-span-2 border p-3 rounded-md bg-gray-50/50"></div>
-                                        <div class="sm:col-span-2 text-right font-bold text-gray-700">Nota Calculada:
-                                            <span id="pagamento-nota-calculada"
-                                                class="text-indigo-600 text-lg">0.0</span> /
-                                            10
-                                        </div>
-                                        <div class="sm:col-span-2"><label for="pagamento-nota-obs"
-                                                class="text-xs">Observações</label><textarea id="pagamento-nota-obs"
-                                                class="form-input w-full text-sm p-1.5" rows="2"></textarea></div>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="shiny-btn py-2.5 rounded-md w-full mt-4"><i
-                                        class="fa-solid fa-calculator mr-2"></i> Lançar Pagamento e Salvar
-                                    Avaliação</button>
-                            </form>
-                            <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Histórico de Pagamentos (Mês
-                                Selecionado)</h3>
-                            <div class="table-wrapper">
-                                <table id="tabela-pagamentos-monitores">
-                                    <thead>
-                                        <tr>
-                                            <th>Data</th>
-                                            <th>Nome</th>
-                                            <th>Valor Base</th>
-                                            <th>Adicional Motorista</th>
-                                            <th>Adicional HE</th>
-                                            <th>Valor Total</th>
-                                            <th>Status</th>
-                                            <th>Nota Evento</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                            <button id="export-monitores-pdf-btn" class="shiny-btn-red px-4 py-2 rounded-md mr-2">
-                                <i class="fa-solid fa-file-pdf mr-2"></i> Exportar PDF
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                            <!-- Botão 1: Ver Monitores -->
+                            <button id="open-monitores-modal-btn"
+                                class="shiny-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
+                                <i class="fa-solid fa-users-viewfinder text-3xl"></i>
+                                <span class="text-lg font-bold">Monitores Cadastrados</span>
                             </button>
 
-                        </section>
-                    </main>
+                            <!-- Botão 2: Lançar Pagamento -->
+                            <button id="open-pagamento-modal-btn"
+                                class="gemini-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
+                                <i class="fa-solid fa-hand-holding-dollar text-3xl"></i>
+                                <span class="text-lg font-bold">Lançar Pagamento & Avaliação</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Histórico (Visível por padrão, mas compacta para mobile) -->
+                    <section class="glassmorphism p-6 rounded-lg">
+                        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                            <h3 class="text-xl font-bold text-gray-800">
+                                <i class="fa-solid fa-history mr-2 text-indigo-500"></i>Histórico de Pagamentos
+                            </h3>
+                            <button id="export-monitores-pdf-btn"
+                                class="shiny-btn-red px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf"></i> Exportar Relatório
+                            </button>
+                        </div>
+
+                        <div class="table-wrapper">
+                            <table id="tabela-pagamentos-monitores" class="w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Monitor</th>
+                                        <th class="hidden sm:table-cell">Base</th>
+                                        <th class="hidden sm:table-cell">HE</th>
+                                        <th>Total</th>
+                                        <th>Nota</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Preenchido via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
             </div>
             <div id="page-salarios" class="page space-y-8">
@@ -3427,6 +3585,186 @@
         class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-[200]">
         <i id="gemini-toast-icon" class="text-lg"></i>
         <p id="gemini-toast-message" class="ml-3 font-medium"></p>
+    </div>
+
+    <!-- Modal: Lista de Monitores (Mobile-First Cards) -->
+    <div id="modal-lista-monitores"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content glassmorphism p-6 rounded-2xl shadow-2xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-users text-indigo-600"></i> Monitores Cadastrados
+                </h2>
+                <button onclick="document.getElementById('modal-lista-monitores').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+            </div>
+
+            <div class="flex justify-between items-center mb-4 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
+                <span class="text-sm font-medium text-indigo-700" id="monitor-count-text">0 monitores ativos</span>
+                <button id="add-new-monitor-btn"
+                    class="shiny-btn px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Novo Monitor
+                </button>
+            </div>
+
+            <div id="monitor-cards-container"
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2 flex-grow">
+                <!-- Cards renderizados via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Formulário de Pagamento & Avaliação -->
+    <div id="modal-pagamento-monitor"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content glassmorphism p-8 rounded-2xl shadow-2xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-hand-holding-dollar text-emerald-600"></i> Lançar Pagamento
+                </h2>
+                <button onclick="document.getElementById('modal-pagamento-monitor').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+            </div>
+
+            <form id="form-pagamento-monitor" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="space-y-1">
+                        <label for="pag-monitor-data" class="block text-sm font-bold text-gray-700">Data do
+                            Evento</label>
+                        <input type="date" id="pag-monitor-data" required class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 lg:col-span-2">
+                        <label for="pag-monitor-select" class="block text-sm font-bold text-gray-700">Monitor</label>
+                        <select id="pag-monitor-select" required class="form-input w-full">
+                            <option value="">Selecione um monitor...</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-valor" class="block text-sm font-bold text-gray-700">Valor da Diária
+                            (R$)</label>
+                        <input type="number" id="pag-monitor-valor" step="0.01" value="100.00" class="form-input w-full"
+                            required>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-saida" class="block text-sm font-bold text-gray-700">Horas Extras
+                            (R$)</label>
+                        <input type="number" id="pag-monitor-he" step="0.01" value="0.00" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-status" class="block text-sm font-bold text-gray-700">Status</label>
+                        <select id="pag-monitor-status" class="form-input w-full">
+                            <option value="Executado">Pago / Executado</option>
+                            <option value="Pendente" selected>Pendente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-xl border border-gray-100 space-y-4">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-star text-yellow-500"></i> Avaliação do Monitor
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Proatividade</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-proatividade">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Cordialidade</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-cordialidade">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Pontualidade</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-pontualidade">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Uniforme</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-uniforme">
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <label for="pag-monitor-obs" class="block text-sm font-bold text-gray-700 mb-1">Observações do
+                            Evento</label>
+                        <textarea id="pag-monitor-obs" rows="2" class="form-input w-full"
+                            placeholder="Ex: Monitor chegou cedo e foi muito atencioso com as crianças."></textarea>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="button"
+                        onclick="document.getElementById('modal-pagamento-monitor').classList.add('hidden')"
+                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-[2] shiny-btn font-bold py-3 rounded-xl transition-all">
+                        <i class="fa-solid fa-check mr-2"></i> Confirmar Lançamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Adicionar/Editar Monitor -->
+    <!-- (Reaproveitando o ID, mas com layout mobile-first) -->
+    <div id="add-monitor-modal"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-[60]">
+        <div
+            class="modal-content glassmorphism p-8 rounded-2xl shadow-2xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-monitor-title" class="text-2xl font-bold text-gray-800">Novo Monitor</h2>
+                <button onclick="document.getElementById('add-monitor-modal').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-cadastro-monitor" class="space-y-4">
+                <input type="hidden" id="monitor-id-edit">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="monitor-nome" class="block text-sm font-bold text-gray-700">Nome Completo</label>
+                        <input type="text" id="monitor-nome" required class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-telefone" class="block text-sm font-bold text-gray-700">Telefone /
+                            WhatsApp</label>
+                        <input type="text" id="monitor-telefone" placeholder="(00) 00000-0000"
+                            class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-cnh" class="block text-sm font-bold text-gray-700">CNH</label>
+                        <select id="monitor-cnh" class="form-input w-full">
+                            <option value="Não possui">Não possui</option>
+                            <option value="A">Categoria A</option>
+                            <option value="B">Categoria B</option>
+                            <option value="AB">Categoria AB</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="shiny-btn w-full py-3 rounded-xl font-bold">
+                        <i class="fa-solid fa-save mr-2"></i> Salvar Monitor
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Sistema de Autenticação -->
