@@ -430,11 +430,27 @@ router.post('/pagamentos-monitores', async (req, res) => {
 router.put('/pagamentos-monitores/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const updateData = req.body;
+        const p = req.body;
 
         const pagamentoAtualizado = await prisma.pagamentoMonitor.update({
             where: { id },
-            data: updateData
+            data: {
+                data: p.data,
+                dataPagamento: p.dataPagamento,
+                eventoId: p.eventoId || null,
+                monitorId: p.monitorId,
+                nome: p.nome,
+                valorBase: parseFloat(p.valorBase),
+                adicional: parseFloat(p.adicional) || 0,
+                horasExtras: parseFloat(p.horasExtras) || 0,
+                pagamento: parseFloat(p.pagamento),
+                statusPagamento: p.statusPagamento || 'Pendente',
+                horaEntrada: p.horaEntrada,
+                horaSaida: p.horaSaida,
+                foiMotorista: p.foiMotorista || false,
+                numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
+                observacoes: p.observacoes
+            }
         });
 
         res.json(pagamentoAtualizado);

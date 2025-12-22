@@ -369,6 +369,24 @@ export const api = {
         }
     },
 
+    atualizarPagamentoMonitor: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/pagamentos-monitores/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao atualizar pagamento:", e);
+            return false;
+        }
+    },
+
     deletarPagamentoMonitor: async (id) => {
         try {
             const token = getToken();

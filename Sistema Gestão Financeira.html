@@ -462,20 +462,28 @@
                     const entradasEventos = eventosMes.map(e => ({
                         data: e.data,
                         tipo: '📅 Evento',
+                        empresa: e.empresa || '-',
                         descricao: e.contratante,
+                        local: e.local || '-',
                         detalhes: 'Itens do Evento',
                         valor: e.valor,
                         deletavel: false,
+                        editavel: true,
+                        eventoId: e.id,
                         id: null
                     }));
 
                     const entradasManuais = receitasMes.map(r => ({
                         data: r.data,
                         tipo: '💰 Entrada Avulsa',
+                        empresa: '-',
                         descricao: r.descricao,
+                        local: '-',
                         detalhes: r.categoria,
                         valor: r.valor,
                         deletavel: true,
+                        editavel: false,
+                        eventoId: null,
                         id: r.id
                     }));
 
@@ -488,20 +496,30 @@
                         tbodyEventos.innerHTML = todasEntradas.map(entry => `
                                 <tr>
                                     <td>${formatarData(entry.data)}</td>
-                                    <td>${entry.tipo}</td>
+                                    <td>${entry.empresa}</td>
                                     <td>${entry.descricao}</td>
-                                    <td>-</td>
+                                    <td>${entry.local}</td>
                                     <td>${entry.detalhes}</td>
                                     <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
                                     <td>
-                                        ${entry.deletavel
-                                ? `<button onclick="deletarEntradaManual('${entry.id}')" 
-                                                       class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm transition-colors"
-                                                       title="Deletar">
-                                                   <i class="fa-solid fa-trash-can"></i>
-                                               </button>`
-                                : '<span class="text-gray-400 text-xs">-</span>'
+                                        <div class="flex space-x-2">
+                                            ${entry.editavel
+                                ? `<button onclick="editarEvento('${entry.eventoId}')" 
+                                                        class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                                        title="Editar Evento">
+                                                    <i class="fa-solid fa-edit"></i>
+                                                </button>`
+                                : ''
                             }
+                                            ${entry.deletavel
+                                ? `<button onclick="deletarEntradaManual('${entry.id}')" 
+                                                        class="text-red-600 hover:text-red-900 transition-colors"
+                                                        title="Deletar">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>`
+                                : entry.editavel ? '' : '<span class="text-gray-400 text-xs">-</span>'
+                            }
+                                        </div>
                                     </td>
                                 </tr>
                             `).join('');
@@ -823,6 +841,12 @@
 
                     return `
                         <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="py-4 border-b border-gray-100">
+                                <input type="checkbox" 
+                                       class="pagamento-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 cursor-pointer" 
+                                       data-id="${p.id}" 
+                                       data-valor="${total.toFixed(2)}">
+                            </td>
                             <td class="text-sm py-4 border-b border-gray-100">${p.data.split('-').reverse().slice(0, 2).join('/')}</td>
                             <td class="font-bold text-gray-800 border-b border-gray-100">${p.nome}</td>
                             <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.valorBase) || 0).toFixed(2)}</td>
@@ -833,6 +857,11 @@
                             </td>
                             <td class="border-b border-gray-100">
                                 <div class="flex items-center gap-2">
+                                    <button onclick="editarPagamentoMonitor('${p.id}')" 
+                                            class="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700 transition-all" 
+                                            title="Editar Pagamento">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
                                     <button onclick="toggleStatusPagamentoMonitor('${p.id}', '${p.statusPagamento}')" 
                                             class="w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isPago ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}" 
                                             title="${isPago ? 'Marcar como Pendente' : 'Marcar como Pago'}">
@@ -857,6 +886,119 @@
                     `;
                 }
             };
+
+            // ========== SELEÇÃO MÚLTIPLA DE PAGAMENTOS ==========
+
+            // Função para atualizar a barra de ações
+            function atualizarBarraAcoes() {
+                const checkboxes = document.querySelectorAll('.pagamento-checkbox:checked');
+                const bulkBar = getById('bulk-actions-bar');
+                const countEl = getById('selected-count');
+                const subtotalEl = getById('selected-subtotal');
+
+                const count = checkboxes.length;
+
+                if (count > 0) {
+                    // Calcula subtotal
+                    let subtotal = 0;
+                    checkboxes.forEach(cb => {
+                        subtotal += parseFloat(cb.dataset.valor);
+                    });
+
+                    // Atualiza UI
+                    countEl.textContent = `${count} selecionado${count > 1 ? 's' : ''}`;
+                    subtotalEl.textContent = `R$ ${subtotal.toFixed(2)}`;
+                    bulkBar.classList.remove('hidden');
+                    bulkBar.classList.add('flex');
+                } else {
+                    bulkBar.classList.add('hidden');
+                    bulkBar.classList.remove('flex');
+                }
+            }
+
+            // Select All & Individual Checkboxes
+            document.addEventListener('change', function (e) {
+                if (e.target.id === 'select-all-pagamentos') {
+                    const checkboxes = document.querySelectorAll('.pagamento-checkbox');
+                    checkboxes.forEach(cb => {
+                        cb.checked = e.target.checked;
+                    });
+                    atualizarBarraAcoes();
+                }
+
+                if (e.target.classList.contains('pagamento-checkbox')) {
+                    atualizarBarraAcoes();
+
+                    // Atualiza o checkbox "select all"
+                    const allCheckboxes = document.querySelectorAll('.pagamento-checkbox');
+                    const checkedCheckboxes = document.querySelectorAll('.pagamento-checkbox:checked');
+                    const selectAll = getById('select-all-pagamentos');
+
+                    if (selectAll) {
+                        selectAll.checked = allCheckboxes.length === checkedCheckboxes.length && allCheckboxes.length > 0;
+                        selectAll.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+                    }
+                }
+            });
+
+            // Cancelar seleção
+            getById('bulk-cancel-btn')?.addEventListener('click', function () {
+                document.querySelectorAll('.pagamento-checkbox').forEach(cb => cb.checked = false);
+                const selectAll = getById('select-all-pagamentos');
+                if (selectAll) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+                atualizarBarraAcoes();
+            });
+
+            // Deletar selecionados
+            getById('bulk-delete-btn')?.addEventListener('click', async function () {
+                const checkboxes = document.querySelectorAll('.pagamento-checkbox:checked');
+                const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+                if (ids.length === 0) return;
+
+                const confirmMsg = `Tem certeza que deseja deletar ${ids.length} pagamento${ids.length > 1 ? 's' : ''}?\n\nEsta ação não pode ser desfeita.`;
+
+                if (!confirm(confirmMsg)) return;
+
+                // Desabilita botão
+                this.disabled = true;
+                this.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Deletando...';
+
+                try {
+                    // Deleta um por um
+                    let deletados = 0;
+                    for (const id of ids) {
+                        const sucesso = await window.api.deletarPagamentoMonitor(id);
+                        if (sucesso) deletados++;
+                    }
+
+                    if (deletados > 0) {
+                        showToastModal(`✅ ${deletados} pagamento${deletados > 1 ? 's deletados' : ' deletado'}!`);
+                        await window.loadDataFromCloud();
+                        renderPagamentosMonitores();
+
+                        // Limpa seleção
+                        const selectAll = getById('select-all-pagamentos');
+                        if (selectAll) {
+                            selectAll.checked = false;
+                            selectAll.indeterminate = false;
+                        }
+                        atualizarBarraAcoes();
+                    } else {
+                        showToastModal('❌ Erro ao deletar pagamentos.', true);
+                    }
+                } catch (error) {
+                    console.error('Erro ao deletar pagamentos:', error);
+                    showToastModal('❌ Erro ao deletar pagamentos.', true);
+                }
+
+                // Restaura botão
+                this.disabled = false;
+                this.innerHTML = '<i class="fa-solid fa-trash-can mr-2"></i> Deletar Selecionados';
+            });
 
             window.visualizarMonitor = (id) => {
                 const m = state.monitores.find(mon => mon.id === id);
@@ -1401,6 +1543,7 @@
 
             getById('form-pagamento-monitor')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const editId = getById('pag-monitor-edit-id')?.value; // ID do pagamento sendo editado
                 const monitorId = getById('pag-monitor-select').value;
                 const monitor = state.monitores.find(m => m.id === monitorId);
 
@@ -1440,11 +1583,23 @@
                     observacoes: getById('pag-monitor-obs').value
                 };
 
-                const sucesso = await window.api.salvarPagamentoMonitor(dados);
+                let sucesso;
+                if (editId) {
+                    // Modo edição
+                    sucesso = await window.api.atualizarPagamentoMonitor(editId, dados);
+                } else {
+                    // Modo criação
+                    sucesso = await window.api.salvarPagamentoMonitor(dados);
+                }
+
                 if (sucesso) {
-                    showToastModal('✅ Pagamento registrado com sucesso!');
+                    showToastModal(`✅ Pagamento ${editId ? 'atualizado' : 'registrado'} com sucesso!`);
                     getById('modal-pagamento-monitor').classList.add('hidden');
                     getById('form-pagamento-monitor').reset();
+                    // Limpa o ID de edição
+                    if (getById('pag-monitor-edit-id')) {
+                        getById('pag-monitor-edit-id').value = '';
+                    }
                     await window.loadDataFromCloud();
                 } else {
                     showToastModal('❌ Erro ao salvar pagamento.', true);
@@ -2749,6 +2904,22 @@
             }
         }
 
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translate(-50%, 20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+        }
+
         @media (min-width: 1024px) {
             .bottom-nav {
                 display: none;
@@ -3206,6 +3377,10 @@
                             <table id="tabela-pagamentos-monitores" class="w-full">
                                 <thead>
                                     <tr>
+                                        <th class="w-10">
+                                            <input type="checkbox" id="select-all-pagamentos"
+                                                class="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                        </th>
                                         <th>Data</th>
                                         <th>Monitor</th>
                                         <th class="hidden sm:table-cell">Base</th>
@@ -3320,6 +3495,36 @@
                     </div>
 
                 </section>
+            </div>
+
+            <!-- Barra de Ações para Seleção Múltipla -->
+            <div id="bulk-actions-bar"
+                class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-2xl shadow-2xl hidden z-50 items-center gap-6 animate-slide-up">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-check-circle text-xl"></i>
+                    <span id="selected-count" class="font-bold text-lg">0 selecionados</span>
+                </div>
+
+                <div class="h-8 w-px bg-white/30"></div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-sm">Subtotal:</span>
+                    <span id="selected-subtotal" class="font-bold text-xl">R$ 0,00</span>
+                </div>
+
+                <div class="h-8 w-px bg-white/30"></div>
+
+                <div class="flex gap-3">
+                    <button id="bulk-delete-btn"
+                        class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-trash-can"></i>
+                        Deletar Selecionados
+                    </button>
+                    <button id="bulk-cancel-btn"
+                        class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-bold transition-colors">
+                        Cancelar
+                    </button>
+                </div>
             </div>
         </main>
     </div>
@@ -4495,6 +4700,77 @@
 
         // Expose openChat to global scope for onclick events
         window.openChat = openChat;
+
+        // Function to edit an event - redirects to Agenda de eventos
+        window.editarEvento = function (eventoId) {
+            if (!eventoId) {
+                showToast('ID do evento inválido', true);
+                return;
+            }
+            // Redirect to Agenda de eventos with the event ID as a URL parameter
+            window.location.href = `./Agenda de eventos.html?edit=${eventoId}`;
+        };
+
+        // Function to edit a monitor payment
+        window.editarPagamentoMonitor = async function (pagamentoId) {
+            if (!pagamentoId) {
+                showToast('ID do pagamento inválido', true);
+                return;
+            }
+
+            // Find the payment in the state
+            const pagamento = state.pagamentosMonitores.find(p => p.id === pagamentoId);
+            if (!pagamento) {
+                showToast('Pagamento não encontrado', true);
+                return;
+            }
+
+            // Populate the form fields
+            getById('pag-monitor-data').value = pagamento.data;
+            getById('pag-monitor-data-pagamento').value = pagamento.dataPagamento || '';
+            getById('pag-monitor-select').value = pagamento.monitorId;
+            getById('pag-monitor-valor').value = pagamento.valorBase || 0;
+            getById('pag-monitor-he').value = pagamento.horasExtras || 0;
+            getById('pag-monitor-entrada').value = pagamento.horaEntrada || '';
+            getById('pag-monitor-saida').value = pagamento.horaSaida || '';
+            getById('pag-monitor-status').value = pagamento.statusPagamento || 'Pendente';
+            getById('pag-monitor-obs').value = pagamento.observacoes || '';
+
+            // Motorista fields
+            const isMotorista = pagamento.foiMotorista || false;
+            getById('pag-monitor-motorista').checked = isMotorista;
+            if (isMotorista) {
+                getById('pag-monitor-eventos-container')?.classList.remove('hidden');
+                getById('pag-monitor-eventos').value = pagamento.numEventos || 0;
+            } else {
+                getById('pag-monitor-eventos-container')?.classList.add('hidden');
+            }
+
+            // Evento vinculado (if exists)
+            if (pagamento.eventoId) {
+                getById('pag-monitor-evento').value = pagamento.eventoId;
+            }
+
+            // Set the edit ID so the form knows it's in edit mode
+            let editIdField = getById('pag-monitor-edit-id');
+            if (!editIdField) {
+                // Create the hidden field if it doesn't exist
+                const form = getById('form-pagamento-monitor');
+                if (form) {
+                    editIdField = document.createElement('input');
+                    editIdField.type = 'hidden';
+                    editIdField.id = 'pag-monitor-edit-id';
+                    form.appendChild(editIdField);
+                }
+            }
+            if (editIdField) {
+                editIdField.value = pagamentoId;
+            }
+
+            // Show the modal
+            getById('modal-pagamento-monitor')?.classList.remove('hidden');
+            showToast('✏️ Editando pagamento', false);
+        };
     </script>
 
     <!-- Script de inicialização dos gráficos (previne loop infinito) -->
