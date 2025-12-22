@@ -149,7 +149,10 @@ function renderDespesasGeraisChart(state) {
     });
 
     // Adiciona pagamentos de monitores como categoria separada
-    const totalMonitores = pagamentosMonitoresDoMes.reduce((acc, p) => acc + (parseFloat(p.pagamento) || 0), 0);
+    const totalMonitores = pagamentosMonitoresDoMes.reduce((acc, p) => {
+        const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+        return acc + total;
+    }, 0);
     if (totalMonitores > 0) {
         categorias['Monitores'] = totalMonitores;
     }
@@ -246,7 +249,8 @@ function renderPagamentosMonitoresChart(state) {
 
     const pagamentosPorMonitor = {};
     pagamentosDoMes.forEach(p => {
-        pagamentosPorMonitor[p.nome] = (pagamentosPorMonitor[p.nome] || 0) + (parseFloat(p.valor) || 0);
+        const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+        pagamentosPorMonitor[p.nome] = (pagamentosPorMonitor[p.nome] || 0) + total;
     });
 
     const labels = Object.keys(pagamentosPorMonitor);
@@ -327,7 +331,8 @@ function renderDailyChart(state, month) {
             const dayStr = pag.data.split('-')[2];
             const day = parseInt(dayStr) - 1;
             if (day >= 0 && day < daysInMonth) {
-                despesasPorDia[day] += parseFloat(pag.pagamento) || 0;
+                const total = (parseFloat(pag.valorBase) || 0) + (parseFloat(pag.horasExtras) || 0) + (parseFloat(pag.adicional) || 0);
+                despesasPorDia[day] += total;
             }
         }
     });

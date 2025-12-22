@@ -376,7 +376,10 @@
                 const recPrev = state.receitas?.filter(r => r.data.startsWith(prevMonthStr)) || [];
 
                 const monitorPagamentosMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
-                const despMonitores = monitorPagamentosMes.reduce((acc, p) => acc + (parseFloat(p.pagamento) || 0), 0);
+                const despMonitores = monitorPagamentosMes.reduce((acc, p) => {
+                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+                    return acc + total;
+                }, 0);
 
                 // Valores Atuais
                 const recEvAtual = eventosMes.reduce((acc, e) => acc + (e.valor || 0), 0);
@@ -387,7 +390,10 @@
 
                 // Valores Anteriores
                 const monitorPagamentosPrev = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(prevMonthStr));
-                const despMonitoresPrev = monitorPagamentosPrev.reduce((acc, p) => acc + (parseFloat(p.pagamento) || 0), 0);
+                const despMonitoresPrev = monitorPagamentosPrev.reduce((acc, p) => {
+                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+                    return acc + total;
+                }, 0);
 
                 const recEvPrev = evPrev.reduce((acc, e) => acc + (e.valor || 0), 0);
                 const recManPrev = recPrev.reduce((acc, r) => acc + (r.valor || 0), 0);
@@ -990,6 +996,11 @@
                 if (statusLabel) {
                     statusLabel.textContent = '';
                 }
+                // Reset motorista fields
+                getById('pag-monitor-motorista').checked = false;
+                getById('pag-monitor-eventos').value = '0';
+                getById('pag-monitor-eventos-container').classList.add('hidden');
+                getById('pag-monitor-adicional-status').textContent = '';
                 getById('modal-pagamento-monitor').classList.remove('hidden');
             });
 
@@ -1059,6 +1070,37 @@
             getById('pag-monitor-entrada')?.addEventListener('change', calcularHE);
             getById('pag-monitor-saida')?.addEventListener('change', calcularHE);
             getById('pag-monitor-valor')?.addEventListener('input', calcularHE);
+
+            // Lógica de Adicional de Motorista
+            const motoristaCheckbox = getById('pag-monitor-motorista');
+            const eventosContainer = getById('pag-monitor-eventos-container');
+            const eventosInput = getById('pag-monitor-eventos');
+            const adicionalStatus = getById('pag-monitor-adicional-status');
+
+            motoristaCheckbox?.addEventListener('change', function () {
+                if (this.checked) {
+                    eventosContainer.classList.remove('hidden');
+                    calcularAdicionalMotorista();
+                } else {
+                    eventosContainer.classList.add('hidden');
+                    eventosInput.value = '0';
+                    adicionalStatus.textContent = '';
+                }
+            });
+
+            const calcularAdicionalMotorista = () => {
+                const numEventos = parseFloat(eventosInput.value) || 0;
+                const valorPorEvento = 20.00;
+                const adicional = numEventos * valorPorEvento;
+
+                if (adicionalStatus) {
+                    adicionalStatus.textContent = numEventos > 0
+                        ? `= R$ ${adicional.toFixed(2)} adicional`
+                        : '';
+                }
+            };
+
+            eventosInput?.addEventListener('input', calcularAdicionalMotorista);
 
             // Listeners para fechar modais de monitores
             document.querySelector('.monitor-details-close-btn')?.addEventListener('click', () => {
@@ -1157,8 +1199,14 @@
                 ];
                 const mediaNota = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
 
+
                 const valorBase = parseFloat(getById('pag-monitor-valor').value) || 0;
                 const horasExtras = parseFloat(getById('pag-monitor-he').value) || 0;
+
+                // Calcula adicional de motorista
+                const foiMotorista = getById('pag-monitor-motorista').checked;
+                const eventosEntregues = foiMotorista ? (parseFloat(getById('pag-monitor-eventos').value) || 0) : 0;
+                const adicionalMotorista = eventosEntregues * 20.00;
 
                 const dados = {
                     data: getById('pag-monitor-data').value,
@@ -1166,13 +1214,14 @@
                     monitorId: monitorId,
                     nome: monitor ? monitor.nome : 'Monitor Desconhecido',
                     valorBase: valorBase,
-                    adicional: 0,
+                    adicional: adicionalMotorista,
                     horasExtras: horasExtras,
-                    pagamento: valorBase + horasExtras,
+                    pagamento: valorBase + adicionalMotorista + horasExtras,
                     horaEntrada: getById('pag-monitor-entrada').value,
                     horaSaida: getById('pag-monitor-saida').value,
                     statusPagamento: getById('pag-monitor-status').value,
-                    numEventos: parseFloat(mediaNota), // Reutilizando campo para nota
+                    foiMotorista: foiMotorista,
+                    numEventos: eventosEntregues,
                     observacoes: getById('pag-monitor-obs').value
                 };
 
@@ -3792,6 +3841,27 @@
                             <option value="Executado">Pago / Executado</option>
                             <option value="Pendente" selected>Pendente</option>
                         </select>
+                    </div>
+
+                    <!-- Adicional de Motorista -->
+                    <div class="space-y-2 lg:col-span-2 bg-blue-50/50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="pag-monitor-motorista"
+                                class="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+                            <label for="pag-monitor-motorista" class="text-sm font-bold text-gray-700 cursor-pointer">
+                                <i class="fa-solid fa-truck-fast text-indigo-600 mr-1"></i>
+                                Este monitor foi motorista no dia trabalhado?
+                            </label>
+                        </div>
+                        <div id="pag-monitor-eventos-container" class="hidden ml-8 space-y-1">
+                            <label for="pag-monitor-eventos" class="block text-xs font-medium text-gray-600">
+                                Quantos eventos foram entregues? <span class="text-indigo-600 font-bold">(R$ 20,00 por
+                                    evento)</span>
+                            </label>
+                            <input type="number" id="pag-monitor-eventos" step="0.5" min="0" value="0"
+                                class="form-input w-full text-sm" placeholder="Ex: 2.5">
+                            <span id="pag-monitor-adicional-status" class="text-xs font-bold text-indigo-600"></span>
+                        </div>
                     </div>
                 </div>
 

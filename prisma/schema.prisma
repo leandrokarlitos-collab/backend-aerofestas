@@ -154,13 +154,14 @@ model PagamentoMonitor {
   monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   nome            String   // Nome do monitor (denormalizado para performance)
   valorBase       Float    // Valor da diária base
-  adicional       Float    // Adicional de motorista
+  adicional       Float    // Adicional de motorista (R$ 20,00 por evento entregue)
   horasExtras     Float    // Valor de horas extras
   pagamento       Float    // Total = valorBase + adicional + horasExtras
   statusPagamento String   @default("Executado") // "Executado" ou "Pendente"
   horaEntrada     String?  // HH:MM
   horaSaida       String?  // HH:MM
-  numEventos      Float?   // Número de eventos entregues (para cálculo de adicional)
+  foiMotorista    Boolean  @default(false) // Se trabalhou como motorista
+  numEventos      Float?   // Número de eventos entregues (para cálculo de adicional de motorista)
 }
 
 model Funcionario {

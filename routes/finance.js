@@ -25,7 +25,10 @@ router.get('/dashboard', async (req, res) => {
         const expensesFromTransactions = transactions.reduce((acc, tra) => acc + (tra.amount || 0), 0);
 
         const monitorPayments = await prisma.pagamentoMonitor.findMany({ where: { data: { gte: startStr, lte: endStr } } });
-        const expensesFromMonitors = monitorPayments.reduce((acc, p) => acc + (p.pagamento || 0), 0);
+        const expensesFromMonitors = monitorPayments.reduce((acc, p) => {
+            const total = (p.valorBase || 0) + (p.horasExtras || 0) + (p.adicional || 0);
+            return acc + total;
+        }, 0);
 
         const despesaTotal = expensesFromTransactions + expensesFromMonitors;
 
@@ -411,6 +414,7 @@ router.post('/pagamentos-monitores', async (req, res) => {
                 statusPagamento: p.statusPagamento || 'Executado',
                 horaEntrada: p.horaEntrada,
                 horaSaida: p.horaSaida,
+                foiMotorista: p.foiMotorista || false,
                 numEventos: p.numEventos ? parseFloat(p.numEventos) : null
             }
         });
