@@ -973,6 +973,8 @@
             const calcularHE = () => {
                 const entrada = getById('pag-monitor-entrada').value;
                 const saida = getById('pag-monitor-saida').value;
+                const valorDiaria = parseFloat(getById('pag-monitor-valor').value) || 0;
+
                 if (!entrada || !saida) return;
 
                 const [hE, mE] = entrada.split(':').map(Number);
@@ -987,22 +989,24 @@
                 const totalMin = minSaida - minEntrada;
                 const totalHoras = totalMin / 60;
 
-                // Diária base cobre 5 horas. Cada hora extra = R$ 20,00 (Exemplo padrão)
-                const horasExtras = Math.max(0, totalHoras - 5);
-                const valorHE = (horasExtras * 20).toFixed(2);
+                // Diária base cobre 11 horas. Valor da hora = Diária / 11
+                const valorHora = valorDiaria / 11;
+                const horasExtras = Math.max(0, totalHoras - 11);
+                const valorHE = (horasExtras * valorHora).toFixed(2);
 
                 getById('pag-monitor-he').value = valorHE;
 
                 // Feedback visual se houver HE
                 const statusLabel = getById('pag-monitor-he-status');
                 if (statusLabel) {
-                    statusLabel.textContent = horasExtras > 0 ? `+${horasExtras.toFixed(1)}h extra (R$ ${valorHE})` : 'Sem extras';
+                    statusLabel.textContent = horasExtras > 0 ? `+${horasExtras.toFixed(2)}h extra (R$ ${valorHE})` : 'Sem extras';
                     statusLabel.className = horasExtras > 0 ? 'text-[10px] font-bold text-amber-600' : 'text-[10px] text-gray-400';
                 }
             };
 
             getById('pag-monitor-entrada')?.addEventListener('change', calcularHE);
             getById('pag-monitor-saida')?.addEventListener('change', calcularHE);
+            getById('pag-monitor-valor')?.addEventListener('input', calcularHE);
 
             // Listeners para fechar modais de monitores
             document.querySelector('.monitor-details-close-btn')?.addEventListener('click', () => {
@@ -1097,7 +1101,7 @@
                     parseInt(getById('nota-proatividade').value),
                     parseInt(getById('nota-cordialidade').value),
                     parseInt(getById('nota-pontualidade').value),
-                    parseInt(getById('nota-uniforme').value)
+                    parseInt(getById('nota-lideranca').value)
                 ];
                 const mediaNota = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
 
@@ -3756,10 +3760,10 @@
                                 id="nota-pontualidade">
                         </div>
                         <div class="space-y-1">
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Uniforme</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Liderança</label>
                             <input type="range" min="0" max="10" value="10"
                                 class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                id="nota-uniforme">
+                                id="nota-lideranca">
                         </div>
                     </div>
 
