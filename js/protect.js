@@ -149,12 +149,6 @@ function injectPremiumUserMenu(userData) {
             height: 300px;
         }
 
-        /* [NEW] Adjust for Mobile Bottom Nav */
-        @media (max-width: 1023px) {
-            #user-menu-container {
-                bottom: 100px !important; /* Fica acima da bottom nav (76px + margins) */
-            }
-        }
     `;
     document.head.appendChild(style);
 
@@ -300,26 +294,29 @@ function injectPremiumUserMenu(userData) {
 
     // Carrega posição salva ou usa posição padrão
     const savedPosition = localStorage.getItem('userMenuPosition');
+
+    // Posicionamento Robusto: Usamos top/left 0 e transform para evitar conflitos de stretching
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.bottom = 'auto';
+
     if (savedPosition) {
         try {
             const { x, y } = JSON.parse(savedPosition);
-            // Valida se a posição está dentro da tela (permite 50px fora)
-            if (x > -200 && x < window.innerWidth - 50 && y > -100 && y < window.innerHeight - 50) {
-                xOffset = x;
-                yOffset = y;
-                container.style.transform = `translate(${x}px, ${y}px)`;
-                container.style.bottom = 'auto';
-                container.style.left = 'auto';
-                container.style.top = '1rem';
-            } else {
-                // Posição inválida, remove do localStorage
-                localStorage.removeItem('userMenuPosition');
-            }
+            xOffset = x;
+            yOffset = y;
         } catch (e) {
-            // Se houver erro no JSON, remove
             localStorage.removeItem('userMenuPosition');
         }
+    } else {
+        // Posição Inicial Padrão sem stretching
+        xOffset = 16;
+        // Se mobile, sobe um pouco mais para não bater na nav
+        const isMobile = window.innerWidth < 1024;
+        yOffset = window.innerHeight - (isMobile ? 160 : 80);
     }
+
+    container.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
 
     // Adiciona cursor grab
     container.style.cursor = 'grab';
@@ -327,8 +324,8 @@ function injectPremiumUserMenu(userData) {
 
     // Mouse down - inicia drag
     container.addEventListener('mousedown', (e) => {
-        // Ignora se clicou em um botão
-        if (e.target.closest('a, button')) return;
+        // Permite arrastar pelo avatar, mas não pelos botões de ação/links
+        if (e.target.closest('a') || (e.target.closest('button') && e.target !== avatarBtn)) return;
 
         isDragging = true;
         container.style.cursor = 'grabbing';
@@ -361,9 +358,6 @@ function injectPremiumUserMenu(userData) {
         yOffset = currentY;
 
         container.style.transform = `translate(${currentX}px, ${currentY}px)`;
-        container.style.bottom = 'auto';
-        container.style.left = 'auto';
-        container.style.top = '1rem';
     });
 
     // Mouse up - finaliza drag
@@ -387,8 +381,8 @@ function injectPremiumUserMenu(userData) {
 
     // Touch start - inicia drag no mobile
     container.addEventListener('touchstart', (e) => {
-        // Ignora se tocou em um botão/link
-        if (e.target.closest('a, button')) return;
+        // Permite arrastar pelo avatar
+        if (e.target.closest('a') || (e.target.closest('button') && e.target !== avatarBtn)) return;
 
         const touch = e.touches[0];
         isDragging = true;
@@ -396,11 +390,14 @@ function injectPremiumUserMenu(userData) {
 
         initialX = touch.clientX - xOffset;
         initialY = touch.clientY - yOffset;
-    }, { passive: true });
+    }, { passive: false });
 
     // Touch move - arrasta no mobile
     document.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
+
+        // Impede scroll enquanto arrasta o menu
+        if (e.cancelable) e.preventDefault();
 
         const touch = e.touches[0];
         currentX = touch.clientX - initialX;
@@ -418,10 +415,7 @@ function injectPremiumUserMenu(userData) {
         yOffset = currentY;
 
         container.style.transform = `translate(${currentX}px, ${currentY}px)`;
-        container.style.bottom = 'auto';
-        container.style.left = 'auto';
-        container.style.top = '1rem';
-    }, { passive: true });
+    }, { passive: false });
 
     // Touch end - finaliza drag no mobile
     document.addEventListener('touchend', () => {
@@ -462,15 +456,13 @@ function injectPremiumUserMenu(userData) {
         // Ignora se clicar nos botões
         if (e.target.closest('button, a')) return;
 
-        e.preventDefault();
-        e.stopPropagation();
+        // Reseta para o padrão inicial seguro
+        const isMobile = window.innerWidth < 1024;
+        xOffset = 16;
+        yOffset = window.innerHeight - (isMobile ? 160 : 80);
 
-        xOffset = 0;
-        yOffset = 0;
-        container.style.transform = 'translate(0, 0)';
-        container.style.bottom = '1rem';
-        container.style.left = '1rem';
-        container.style.top = 'auto'; // IMPORTANTE: Remove top fixo
+        container.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+
         localStorage.removeItem('userMenuPosition');
 
         // Feedback visual
