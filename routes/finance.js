@@ -425,6 +425,24 @@ router.post('/pagamentos-monitores', async (req, res) => {
     }
 });
 
+// PUT /api/finance/pagamentos-monitores/:id
+router.put('/pagamentos-monitores/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const pagamentoAtualizado = await prisma.pagamentoMonitor.update({
+            where: { id },
+            data: updateData
+        });
+
+        res.json(pagamentoAtualizado);
+    } catch (e) {
+        console.error("Erro ao atualizar pagamento:", e);
+        res.status(500).json({ error: "Erro ao atualizar pagamento" });
+    }
+});
+
 // DELETE /api/finance/pagamentos-monitores/:id
 router.delete('/pagamentos-monitores/:id', async (req, res) => {
     try {
