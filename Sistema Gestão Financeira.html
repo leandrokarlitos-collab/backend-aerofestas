@@ -1214,16 +1214,31 @@
 
             window.toggleStatusPagamentoMonitor = async (id, currentStatus) => {
                 const newStatus = currentStatus === 'Executado' ? 'Pendente' : 'Executado';
-                try {
-                    const sucesso = await window.api.atualizarPagamentoMonitor(id, { statusPagamento: newStatus });
+                
+                // Busca o pagamento completo no estado para evitar erro de "partial update" no backend
+                const pagamentoExistente = state.pagamentosMonitores.find(p => String(p.id) === String(id));
+                
+                if (!pagamentoExistente) {
+                    showToastModal('❌ Registro de pagamento não encontrado.', true);
+                    return;
+                }
 
-                    if (!sucesso) throw new Error('Falha ao atualizar status');
+                // Cria o objeto completo com o status atualizado
+                const dadosParaAtualizar = {
+                    ...pagamentoExistente,
+                    statusPagamento: newStatus
+                };
+
+                try {
+                    const sucesso = await window.api.atualizarPagamentoMonitor(id, dadosParaAtualizar);
+
+                    if (!sucesso) throw new Error('Falha ao atualizar status no servidor');
 
                     showToastModal(`✅ Pagamento marcado como ${newStatus === 'Executado' ? 'Pago' : 'Pendente'}`);
                     await window.loadDataFromCloud();
                 } catch (error) {
                     console.error('Erro ao alternar status:', error);
-                    showToastModal('❌ Erro ao atualizar status do pagamento.', true);
+                    showToastModal('❌ Erro ao atualizar status. O servidor retornou um erro interno.', true);
                 }
             };
 
