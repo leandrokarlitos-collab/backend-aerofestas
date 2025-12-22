@@ -1215,13 +1215,9 @@
             window.toggleStatusPagamentoMonitor = async (id, currentStatus) => {
                 const newStatus = currentStatus === 'Executado' ? 'Pendente' : 'Executado';
                 try {
-                    const response = await fetch(`https://backend-aerofestas-production.up.railway.app/api/finance/pagamentos-monitores/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ statusPagamento: newStatus })
-                    });
+                    const sucesso = await window.api.atualizarPagamentoMonitor(id, { statusPagamento: newStatus });
 
-                    if (!response.ok) throw new Error('Falha ao atualizar status');
+                    if (!sucesso) throw new Error('Falha ao atualizar status');
 
                     showToastModal(`✅ Pagamento marcado como ${newStatus === 'Executado' ? 'Pago' : 'Pendente'}`);
                     await window.loadDataFromCloud();
