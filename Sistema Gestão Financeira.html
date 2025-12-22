@@ -761,10 +761,15 @@
                     const iniciais = m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
                     const cnhInfo = m.cnh !== 'Não possui' ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnh}</span>` : '';
 
+                    // Avatar: foto ou iniciais
+                    const avatarHTML = m.fotoPerfil
+                        ? `<div class="monitor-avatar overflow-hidden"><img src="${m.fotoPerfil}" class="w-full h-full object-cover" alt="${m.nome}"></div>`
+                        : `<div class="monitor-avatar">${iniciais}</div>`;
+
                     return `
                         <div class="monitor-card p-4 rounded-2xl flex flex-col gap-4 border border-white/50 relative group cursor-pointer hover:bg-white/40 transition-all" onclick="visualizarMonitor('${m.id}')">
                             <div class="flex items-center gap-4">
-                                <div class="monitor-avatar">${iniciais}</div>
+                                ${avatarHTML}
                                 <div class="flex-grow min-w-0">
                                     <h4 class="font-bold text-gray-800 truncate">${m.nome}</h4>
                                     <div class="flex items-center gap-2 mt-1">
@@ -863,9 +868,20 @@
                 // Busca pagamentos do monitor
                 const pagamentosMonitor = (state.pagamentosMonitores || []).filter(p => p.monitorId === id || p.nome === m.nome);
 
-                // Relaciona com eventos pela data
+                // Relaciona com eventos - prioriza eventoId, depois busca pela data
                 const eventosRelacionados = pagamentosMonitor.map(pag => {
-                    const evento = (state.eventos || []).find(e => e.data === pag.data);
+                    let evento = null;
+
+                    // Primeiro tenta encontrar pelo eventoId (vínculo direto)
+                    if (pag.eventoId) {
+                        evento = (state.eventos || []).find(e => e.id === pag.eventoId);
+                    }
+
+                    // Se não encontrou pelo ID, tenta pela data (fallback para pagamentos antigos)
+                    if (!evento) {
+                        evento = (state.eventos || []).find(e => e.data === pag.data);
+                    }
+
                     return {
                         pagamento: pag,
                         evento: evento || null
@@ -1220,6 +1236,29 @@
             getById('pag-monitor-saida')?.addEventListener('change', calcularHE);
             getById('pag-monitor-valor')?.addEventListener('input', calcularHE);
 
+            // Popular select de eventos quando data é selecionada
+            getById('pag-monitor-data')?.addEventListener('change', function () {
+                const dataSelecionada = this.value;
+                const eventoSelect = getById('pag-monitor-evento');
+
+                if (!dataSelecionada || !eventoSelect) return;
+
+                // Filtra eventos da data selecionada
+                const eventosNaData = (state.eventos || []).filter(e => e.data === dataSelecionada);
+
+                // Popula o select
+                eventoSelect.innerHTML = '<option value="">Sem vínculo - Trabalho avulso</option>';
+
+                if (eventosNaData.length > 0) {
+                    eventosNaData.forEach(evento => {
+                        const option = document.createElement('option');
+                        option.value = evento.id;
+                        option.textContent = `${evento.local} - ${evento.contratante} (${evento.empresa})`;
+                        eventoSelect.appendChild(option);
+                    });
+                }
+            });
+
             // Lógica de Adicional de Motorista
             const motoristaCheckbox = getById('pag-monitor-motorista');
             const eventosContainer = getById('pag-monitor-eventos-container');
@@ -1309,6 +1348,12 @@
                 e.preventDefault();
                 console.log('✅ preventDefault executado');
 
+                // Desabilita botão e mostra loading
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const btnOriginalHTML = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Salvando...';
+
                 const id = getById('monitor-id-edit').value;
                 console.log('📋 ID do monitor:', id || 'NOVO');
 
@@ -1339,6 +1384,10 @@
                 }
 
                 console.log('✔️ Resultado:', sucesso);
+
+                // Restaura botão
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = btnOriginalHTML;
 
                 if (sucesso) {
                     showToastModal(`✅ Monitor ${id ? 'atualizado' : 'cadastrado'}!`);
@@ -1376,6 +1425,7 @@
                 const dados = {
                     data: getById('pag-monitor-data').value,
                     dataPagamento: getById('pag-monitor-data-pagamento').value,
+                    eventoId: getById('pag-monitor-evento').value || null,
                     monitorId: monitorId,
                     nome: monitor ? monitor.nome : 'Monitor Desconhecido',
                     valorBase: valorBase,
@@ -3965,6 +4015,20 @@
                         <label for="pag-monitor-data" class="block text-sm font-bold text-gray-700">Data do
                             Evento</label>
                         <input type="date" id="pag-monitor-data" required class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 lg:col-span-2">
+                        <label for="pag-monitor-evento" class="block text-sm font-bold text-gray-700">
+                            <i class="fa-solid fa-link text-indigo-600 mr-1"></i>
+                            Vincular a Evento da Agenda (opcional)
+                        </label>
+                        <select id="pag-monitor-evento" class="form-input w-full">
+                            <option value="">Sem vínculo - Trabalho avulso</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fa-solid fa-info-circle"></i>
+                            Selecione a data acima para ver os eventos disponíveis
+                        </p>
                     </div>
 
                     <div class="space-y-1">

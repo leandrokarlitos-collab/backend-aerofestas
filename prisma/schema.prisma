@@ -150,6 +150,7 @@ model PagamentoMonitor {
   id              String   @id
   data            String   // YYYY-MM-DD (Data do Evento)
   dataPagamento   String?  // YYYY-MM-DD
+  eventoId        String?  // ID do evento vinculado (opcional)
   monitorId       String
   monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   nome            String   // Nome do monitor (denormalizado para performance)
