@@ -396,6 +396,7 @@ router.post('/pagamentos-monitores', async (req, res) => {
             data: {
                 id: p.id || Date.now().toString(),
                 data: p.data,
+                dataPagamento: p.dataPagamento,
                 monitorId: p.monitorId,
                 nome: p.nome,
                 valorBase: parseFloat(p.valorBase),

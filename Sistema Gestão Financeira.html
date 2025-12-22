@@ -836,6 +836,12 @@
                             </div>
                         </div>
 
+                        ${m.fotoPerfil ? `
+                        <div class="w-full flex justify-center">
+                            <img src="${m.fotoPerfil}" class="max-w-[200px] h-auto rounded-2xl shadow-lg border-2 border-white">
+                        </div>
+                        ` : ''}
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Informações Pessoais</p>
@@ -873,6 +879,20 @@
                 getById('monitor-cnh-categoria').value = m.cnhCategoria || '';
                 getById('monitor-observacoes').value = m.observacoes || '';
 
+                // Foto Preview
+                const photoImg = getById('monitor-photo-img');
+                const photoIcon = getById('monitor-photo-preview').querySelector('i');
+                if (m.fotoPerfil) {
+                    photoImg.src = m.fotoPerfil;
+                    photoImg.classList.remove('hidden');
+                    photoIcon.classList.add('hidden');
+                    getById('monitor-foto-base64').value = m.fotoPerfil;
+                } else {
+                    photoImg.classList.add('hidden');
+                    photoIcon.classList.remove('hidden');
+                    getById('monitor-foto-base64').value = '';
+                }
+
                 getById('modal-monitor-title').textContent = 'Editar Monitor';
                 getById('add-monitor-modal').classList.remove('hidden');
             };
@@ -905,12 +925,18 @@
                 renderMonitorCards();
                 getById('modal-lista-monitores').classList.remove('hidden');
             });
-
             getById('open-pagamento-modal-btn')?.addEventListener('click', () => {
                 const select = getById('pag-monitor-select');
                 if (select) {
                     select.innerHTML = '<option value="">Selecione um monitor...</option>' +
                         state.monitores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+                }
+                getById('pag-monitor-entrada').value = '';
+                getById('pag-monitor-saida').value = '';
+                getById('pag-monitor-he').value = '0.00';
+                const statusLabel = getById('pag-monitor-he-status');
+                if (statusLabel) {
+                    statusLabel.textContent = '';
                 }
                 getById('modal-pagamento-monitor').classList.remove('hidden');
             });
@@ -918,9 +944,65 @@
             getById('add-new-monitor-btn')?.addEventListener('click', () => {
                 getById('form-cadastro-monitor').reset();
                 getById('monitor-id-edit').value = '';
+                getById('monitor-foto-base64').value = '';
+                getById('monitor-photo-img').classList.add('hidden');
+                getById('monitor-photo-preview').querySelector('i').classList.remove('hidden');
                 getById('modal-monitor-title').textContent = 'Novo Monitor';
                 getById('add-monitor-modal').classList.remove('hidden');
             });
+
+            // Lógica de Foto do Monitor
+            getById('monitor-photo-preview')?.addEventListener('click', () => getById('monitor-foto-input').click());
+            getById('monitor-foto-input')?.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const base64 = event.target.result;
+                    getById('monitor-foto-base64').value = base64;
+                    const photoImg = getById('monitor-photo-img');
+                    photoImg.src = base64;
+                    photoImg.classList.remove('hidden');
+                    getById('monitor-photo-preview').querySelector('i').classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Lógica de Cálculo de Horas Extras
+            const calcularHE = () => {
+                const entrada = getById('pag-monitor-entrada').value;
+                const saida = getById('pag-monitor-saida').value;
+                if (!entrada || !saida) return;
+
+                const [hE, mE] = entrada.split(':').map(Number);
+                const [hS, mS] = saida.split(':').map(Number);
+
+                let minEntrada = hE * 60 + mE;
+                let minSaida = hS * 60 + mS;
+
+                // Se saiu no dia seguinte
+                if (minSaida < minEntrada) minSaida += 24 * 60;
+
+                const totalMin = minSaida - minEntrada;
+                const totalHoras = totalMin / 60;
+
+                // Diária base cobre 5 horas. Cada hora extra = R$ 20,00 (Exemplo padrão)
+                const horasExtras = Math.max(0, totalHoras - 5);
+                const valorHE = (horasExtras * 20).toFixed(2);
+
+                getById('pag-monitor-he').value = valorHE;
+
+                // Feedback visual se houver HE
+                const statusLabel = getById('pag-monitor-he-status');
+                if (statusLabel) {
+                    statusLabel.textContent = horasExtras > 0 ? `+${horasExtras.toFixed(1)}h extra (R$ ${valorHE})` : 'Sem extras';
+                    statusLabel.className = horasExtras > 0 ? 'text-[10px] font-bold text-amber-600' : 'text-[10px] text-gray-400';
+                }
+            };
+
+            getById('pag-monitor-entrada')?.addEventListener('change', calcularHE);
+            getById('pag-monitor-saida')?.addEventListener('change', calcularHE);
 
             // Listeners para fechar modais de monitores
             document.querySelector('.monitor-details-close-btn')?.addEventListener('click', () => {
@@ -984,6 +1066,7 @@
                     cnh: getById('monitor-cnh').value === 'Sim',
                     cnhCategoria: getById('monitor-cnh-categoria').value,
                     observacoes: getById('monitor-observacoes').value,
+                    fotoPerfil: getById('monitor-foto-base64').value,
                     habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
 
@@ -1020,10 +1103,13 @@
 
                 const dados = {
                     data: getById('pag-monitor-data').value,
+                    dataPagamento: getById('pag-monitor-data-pagamento').value,
                     monitorId: monitorId,
                     nome: monitor ? monitor.nome : 'Monitor Desconhecido',
                     valorBase: parseFloat(getById('pag-monitor-valor').value),
                     horasExtras: parseFloat(getById('pag-monitor-he').value),
+                    horaEntrada: getById('pag-monitor-entrada').value,
+                    horaSaida: getById('pag-monitor-saida').value,
                     statusPagamento: getById('pag-monitor-status').value,
                     numEventos: parseFloat(mediaNota), // Reutilizando campo para nota
                     observacoes: getById('pag-monitor-obs').value
@@ -3603,6 +3689,12 @@
                         <input type="date" id="pag-monitor-data" required class="form-input w-full">
                     </div>
 
+                    <div class="space-y-1">
+                        <label for="pag-monitor-data-pagamento" class="block text-sm font-bold text-gray-700">Data do
+                            Pagamento</label>
+                        <input type="date" id="pag-monitor-data-pagamento" class="form-input w-full">
+                    </div>
+
                     <div class="space-y-1 lg:col-span-2">
                         <label for="pag-monitor-select" class="block text-sm font-bold text-gray-700">Monitor</label>
                         <select id="pag-monitor-select" required class="form-input w-full">
@@ -3618,10 +3710,17 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label for="pag-monitor-saida" class="block text-sm font-bold text-gray-700">Horas Extras
-                            (R$)</label>
-                        <input type="number" id="pag-monitor-he" step="0.01" value="0.00" class="form-input w-full">
+                        <label for="pag-monitor-entrada" class="block text-sm font-bold text-gray-700">Entrada</label>
+                        <input type="time" id="pag-monitor-entrada" class="form-input w-full">
                     </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-saida" class="block text-sm font-bold text-gray-700">Saída</label>
+                        <input type="time" id="pag-monitor-saida" class="form-input w-full">
+                        <span id="pag-monitor-he-status" class="text-[10px] text-gray-400"></span>
+                    </div>
+
+                    <input type="hidden" id="pag-monitor-he" value="0.00">
 
                     <div class="space-y-1">
                         <label for="pag-monitor-status" class="block text-sm font-bold text-gray-700">Status</label>
@@ -3700,6 +3799,22 @@
 
             <form id="form-cadastro-monitor" class="space-y-4">
                 <input type="hidden" id="monitor-id-edit">
+
+                <!-- Foto de Perfil Preview -->
+                <div class="flex flex-col items-center justify-center mb-6">
+                    <div id="monitor-photo-preview"
+                        class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden group relative cursor-pointer hover:border-indigo-500 transition-all">
+                        <i
+                            class="fa-solid fa-camera text-gray-400 group-hover:text-indigo-500 text-2xl transition-all"></i>
+                        <img id="monitor-photo-img" class="hidden w-full h-full object-cover">
+                        <div
+                            class="absolute inset-0 bg-black/40 text-white text-[10px] items-center justify-center font-bold hidden group-hover:flex">
+                            ALTERAR</div>
+                    </div>
+                    <input type="file" id="monitor-foto-input" accept="image/*" class="hidden">
+                    <input type="hidden" id="monitor-foto-base64">
+                    <p class="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-wider">Foto do Monitor</p>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-1 md:col-span-2">

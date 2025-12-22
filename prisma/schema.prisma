@@ -148,7 +148,8 @@ model Desempenho {
 
 model PagamentoMonitor {
   id              String   @id
-  data            String   // YYYY-MM-DD
+  data            String   // YYYY-MM-DD (Data do Evento)
+  dataPagamento   String?  // YYYY-MM-DD
   monitorId       String
   monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   nome            String   // Nome do monitor (denormalizado para performance)
