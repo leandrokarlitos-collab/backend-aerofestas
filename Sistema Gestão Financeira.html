@@ -750,7 +750,7 @@
                     const cnhInfo = m.cnh !== 'Não possui' ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnh}</span>` : '';
 
                     return `
-                        <div class="monitor-card p-4 rounded-2xl flex flex-col gap-4 border border-white/50 relative group">
+                        <div class="monitor-card p-4 rounded-2xl flex flex-col gap-4 border border-white/50 relative group cursor-pointer hover:bg-white/40 transition-all" onclick="visualizarMonitor('${m.id}')">
                             <div class="flex items-center gap-4">
                                 <div class="monitor-avatar">${iniciais}</div>
                                 <div class="flex-grow min-w-0">
@@ -764,7 +764,7 @@
                             
                             <div class="flex justify-between items-center pt-2 border-t border-gray-100/50">
                                 <span class="text-xs font-medium text-gray-400">ID: #${m.id.slice(-4)}</span>
-                                <div class="flex gap-2">
+                                <div class="flex gap-2" onclick="event.stopPropagation()">
                                     <button onclick="editarMonitor('${m.id}')" class="btn-action-small bg-amber-50 text-amber-600 hover:bg-amber-100" title="Editar">
                                         <i class="fa-solid fa-pen-to-square text-sm"></i>
                                     </button>
@@ -814,14 +814,64 @@
                 }).join('');
             };
 
+            window.visualizarMonitor = (id) => {
+                const m = state.monitores.find(mon => mon.id === id);
+                if (!m) return;
+
+                const body = getById('monitor-details-body');
+                if (!body) return;
+
+                body.innerHTML = `
+                    <div class="flex flex-col gap-6">
+                        <div class="flex items-center gap-6">
+                            <div class="w-24 h-24 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-3xl font-bold shadow-inner">
+                                ${m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-800">${m.nome}</h3>
+                                <p class="text-gray-500 font-medium">${m.telefone || 'Sem telefone'}</p>
+                                <span class="inline-block mt-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold border border-indigo-100">
+                                    ID: #${m.id}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Informações Pessoais</p>
+                                <p><strong>Nascimento:</strong> ${m.nascimento ? m.nascimento.split('-').reverse().join('/') : 'Não informada'}</p>
+                                <p><strong>Email:</strong> ${m.email || 'Não informado'}</p>
+                                <p><strong>Endereço:</strong> ${m.endereco || 'Não informado'}</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Habilitação (CNH)</p>
+                                <p><strong>Possui CNH?</strong> ${m.cnh}</p>
+                                ${m.cnhCategoria ? `<p><strong>Categoria:</strong> ${m.cnhCategoria}</p>` : ''}
+                            </div>
+                            <div class="md:col-span-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Observações</p>
+                                <p class="italic text-gray-600">${m.observacoes || 'Nenhuma observação registrada.'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                getById('monitor-details-modal').classList.remove('hidden');
+            };
+
             window.editarMonitor = (id) => {
                 const m = state.monitores.find(mon => mon.id === id);
                 if (!m) return;
 
                 getById('monitor-id-edit').value = m.id;
                 getById('monitor-nome').value = m.nome;
+                getById('monitor-nascimento').value = m.nascimento || '';
                 getById('monitor-telefone').value = m.telefone || '';
+                getById('monitor-email').value = m.email || '';
+                getById('monitor-endereco').value = m.endereco || '';
                 getById('monitor-cnh').value = m.cnh || 'Não possui';
+                getById('monitor-cnh-categoria').value = m.cnhCategoria || '';
+                getById('monitor-observacoes').value = m.observacoes || '';
 
                 getById('modal-monitor-title').textContent = 'Editar Monitor';
                 getById('add-monitor-modal').classList.remove('hidden');
@@ -870,6 +920,20 @@
                 getById('monitor-id-edit').value = '';
                 getById('modal-monitor-title').textContent = 'Novo Monitor';
                 getById('add-monitor-modal').classList.remove('hidden');
+            });
+
+            // Listeners para fechar modais de monitores
+            document.querySelector('.monitor-details-close-btn')?.addEventListener('click', () => {
+                getById('monitor-details-modal').classList.add('hidden');
+            });
+            document.querySelector('#modal-lista-monitores .text-3xl')?.addEventListener('click', () => {
+                getById('modal-lista-monitores').classList.add('hidden');
+            });
+            document.querySelector('#modal-pagamento-monitor .text-3xl')?.addEventListener('click', () => {
+                getById('modal-pagamento-monitor').classList.add('hidden');
+            });
+            document.querySelector('#add-monitor-modal .text-3xl')?.addEventListener('click', () => {
+                getById('add-monitor-modal').classList.add('hidden');
             });
 
             getById('export-monitores-pdf-btn')?.addEventListener('click', () => {
@@ -2691,7 +2755,7 @@
                     <div class="glassmorphism p-6 rounded-lg text-center">
                         <h2 class="text-3xl font-bold text-gray-800 mb-2">Gestão de Monitores</h2>
                         <p class="text-gray-500 mb-6 font-medium">Gerencie sua equipe e realize pagamentos de forma
-                            rápida e mobile-first.</p>
+                            rápida.</p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                             <!-- Botão 1: Ver Monitores -->
@@ -2962,110 +3026,7 @@
         </div>
     </div>
 
-    <div id="add-monitor-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-900">Cadastrar Novo Monitor</h2>
-                <button
-                    class="add-monitor-close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-            </div>
-            <form id="form-cadastro-monitor" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 items-start pt-4">
-                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <div><label for="cadastro-monitor-nome" class="block text-sm font-medium text-gray-700">Nome
-                            Completo</label><input type="text" id="cadastro-monitor-nome" required
-                            class="form-input w-full mt-1"></div>
-                    <div><label for="cadastro-monitor-nascimento" class="block text-sm font-medium text-gray-700">Data
-                            de Nascimento (Opcional)</label><input type="date" id="cadastro-monitor-nascimento"
-                            class="form-input w-full mt-1"></div>
-                    <div><label for="cadastro-monitor-telefone" class="block text-sm font-medium text-gray-700">Telefone
-                            (WhatsApp)</label><input type="tel" id="cadastro-monitor-telefone"
-                            placeholder="(62) 99999-9999" class="form-input w-full mt-1"></div>
-                    <div><label for="cadastro-monitor-email"
-                            class="block text-sm font-medium text-gray-700">Email</label><input type="email"
-                            id="cadastro-monitor-email" placeholder="email@exemplo.com" class="form-input w-full mt-1">
-                    </div>
-                    <div class="md:col-span-2"><label for="cadastro-monitor-endereco"
-                            class="block text-sm font-medium text-gray-700">Endereço</label><input type="text"
-                            id="cadastro-monitor-endereco" class="form-input w-full mt-1"></div>
-                    <div>
-                        <label for="cadastro-monitor-cnh" class="block text-sm font-medium text-gray-700">Possui
-                            CNH?</label>
-                        <select id="cadastro-monitor-cnh" class="form-input w-full mt-1">
-                            <option value="nao" selected>Não</option>
-                            <option value="sim">Sim</option>
-                        </select>
-                    </div>
-                    <div id="cadastro-monitor-cnh-categoria-wrapper" class="hidden">
-                        <label for="cadastro-monitor-cnh-categoria"
-                            class="block text-sm font-medium text-gray-700">Categoria CNH</label>
-                        <input type="text" id="cadastro-monitor-cnh-categoria" class="form-input w-full mt-1"
-                            placeholder="Ex: AB">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label for="cadastro-monitor-observacoes"
-                            class="block text-sm font-medium text-gray-700">Observações</label>
-                        <textarea id="cadastro-monitor-observacoes" class="form-input w-full mt-1" rows="3"
-                            placeholder="Anotações sobre o monitor..."></textarea>
-                    </div>
-                </div>
-                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <div><label for="cadastro-monitor-perfil-foto" class="block text-sm font-medium text-gray-700">Foto
-                            de Perfil</label><input type="file" id="cadastro-monitor-perfil-foto" accept="image/*"
-                            class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                    </div>
-                    <div><label for="cadastro-monitor-doc-foto" class="block text-sm font-medium text-gray-700">Foto do
-                            Documento (CNH/RG)</label><input type="file" id="cadastro-monitor-doc-foto" accept="image/*"
-                            class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                    </div>
-                    <div class="flex items-start space-x-4">
-                        <div>
-                            <p class="text-xs text-center text-gray-600 mb-1">Preview Perfil</p>
-                            <img id="perfil-foto-preview" src="https://placehold.co/128x128/e0e0e0/757575?text=Perfil"
-                                class="w-32 h-32 object-cover rounded-full border p-1 bg-gray-50"
-                                alt="Pré-visualização do perfil">
-                        </div>
-                        <div>
-                            <p class="text-xs text-center text-gray-600 mb-1">Preview Doc</p>
-                            <img id="doc-foto-preview" src="https://placehold.co/128x128/e0e0e0/757575?text=Doc"
-                                class="w-32 h-32 object-cover rounded-md border p-1 bg-gray-50"
-                                alt="Pré-visualização do documento">
-                        </div>
-                    </div>
-                </div>
-                <div class="md:col-span-2 border-t pt-4 mt-2">
-                    <h4 class="font-semibold text-gray-800 mb-2">Habilidades Iniciais (0-10)</h4>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <div><label for="habilidade-forca"
-                                class="block text-sm font-medium text-gray-700">Força</label><input type="number"
-                                id="habilidade-forca" min="0" max="10" step="1" value="5"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="habilidade-agilidade"
-                                class="block text-sm font-medium text-gray-700">Agilidade</label><input type="number"
-                                id="habilidade-agilidade" min="0" max="10" step="1" value="5"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="habilidade-proatividade"
-                                class="block text-sm font-medium text-gray-700">Proatividade</label><input type="number"
-                                id="habilidade-proatividade" min="0" max="10" step="1" value="5"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="habilidade-comunicacao"
-                                class="block text-sm font-medium text-gray-700">Comunicação</label><input type="number"
-                                id="habilidade-comunicacao" min="0" max="10" step="1" value="5"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="habilidade-disponibilidade"
-                                class="block text-sm font-medium text-gray-700">Disponibilidade</label><input
-                                type="number" id="habilidade-disponibilidade" min="0" max="10" step="1" value="5"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="habilidade-respeito"
-                                class="block text-sm font-medium text-gray-700">Respeito</label><input type="number"
-                                id="habilidade-respeito" min="0" max="10" step="1" value="5"
-                                class="form-input w-full mt-1"></div>
-                    </div>
-                </div>
-                <button type="submit" class="md:col-span-2 shiny-btn py-2.5 rounded-md mt-2"><i
-                        class="fa-solid fa-user-plus mr-2"></i> Salvar Monitor</button>
-            </form>
-        </div>
-    </div>
+
 
     <div id="edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
         <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
