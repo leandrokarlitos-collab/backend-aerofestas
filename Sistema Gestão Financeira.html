@@ -951,7 +951,7 @@
             window.toggleStatusPagamentoMonitor = async (id, currentStatus) => {
                 const newStatus = currentStatus === 'Executado' ? 'Pendente' : 'Executado';
                 try {
-                    const response = await fetch(`${API_BASE}/finance/pagamentos-monitores/${id}`, {
+                    const response = await fetch(`https://backend-aerofestas-production.up.railway.app/api/finance/pagamentos-monitores/${id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ statusPagamento: newStatus })
