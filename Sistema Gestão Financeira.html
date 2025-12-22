@@ -1301,9 +1301,17 @@
             });
 
             // Handlers de Form
-            getById('form-cadastro-monitor')?.addEventListener('submit', async (e) => {
+            const formCadastroMonitor = getById('form-cadastro-monitor');
+            console.log('📝 Form cadastro monitor encontrado:', formCadastroMonitor);
+
+            formCadastroMonitor?.addEventListener('submit', async (e) => {
+                console.log('🚀 Submit disparado!');
                 e.preventDefault();
+                console.log('✅ preventDefault executado');
+
                 const id = getById('monitor-id-edit').value;
+                console.log('📋 ID do monitor:', id || 'NOVO');
+
                 const dados = {
                     nome: getById('monitor-nome').value,
                     nascimento: getById('monitor-nascimento').value,
@@ -1318,12 +1326,19 @@
                     habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
 
+                console.log('📦 Dados coletados:', dados);
+                console.log('🔌 window.api disponível?', !!window.api);
+
                 let sucesso;
                 if (id) {
+                    console.log('🔄 Atualizando monitor...');
                     sucesso = await window.api.atualizarMonitor(id, dados);
                 } else {
+                    console.log('➕ Salvando novo monitor...');
                     sucesso = await window.api.salvarMonitor(dados);
                 }
+
+                console.log('✔️ Resultado:', sucesso);
 
                 if (sucesso) {
                     showToastModal(`✅ Monitor ${id ? 'atualizado' : 'cadastrado'}!`);
