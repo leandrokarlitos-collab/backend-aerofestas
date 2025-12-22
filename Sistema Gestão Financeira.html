@@ -985,7 +985,7 @@
                             </div>
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Habilitação (CNH)</p>
-                                <p><strong>Possui CNH?</strong> ${m.cnh}</p>
+                                <p><strong>Possui CNH?</strong> ${m.cnh ? 'Sim' : 'Não'}</p>
                                 ${m.cnhCategoria ? `<p><strong>Categoria:</strong> ${m.cnhCategoria}</p>` : ''}
                             </div>
                             <div class="md:col-span-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
