@@ -1105,13 +1105,18 @@
                 ];
                 const mediaNota = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
 
+                const valorBase = parseFloat(getById('pag-monitor-valor').value) || 0;
+                const horasExtras = parseFloat(getById('pag-monitor-he').value) || 0;
+
                 const dados = {
                     data: getById('pag-monitor-data').value,
                     dataPagamento: getById('pag-monitor-data-pagamento').value,
                     monitorId: monitorId,
                     nome: monitor ? monitor.nome : 'Monitor Desconhecido',
-                    valorBase: parseFloat(getById('pag-monitor-valor').value),
-                    horasExtras: parseFloat(getById('pag-monitor-he').value),
+                    valorBase: valorBase,
+                    adicional: 0,
+                    horasExtras: horasExtras,
+                    pagamento: valorBase + horasExtras,
                     horaEntrada: getById('pag-monitor-entrada').value,
                     horaSaida: getById('pag-monitor-saida').value,
                     statusPagamento: getById('pag-monitor-status').value,
