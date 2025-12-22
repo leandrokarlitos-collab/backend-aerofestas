@@ -869,7 +869,7 @@
                 getById('monitor-telefone').value = m.telefone || '';
                 getById('monitor-email').value = m.email || '';
                 getById('monitor-endereco').value = m.endereco || '';
-                getById('monitor-cnh').value = m.cnh || 'Não possui';
+                getById('monitor-cnh').value = m.cnh ? 'Sim' : 'Não possui';
                 getById('monitor-cnh-categoria').value = m.cnhCategoria || '';
                 getById('monitor-observacoes').value = m.observacoes || '';
 
@@ -977,9 +977,14 @@
                 const id = getById('monitor-id-edit').value;
                 const dados = {
                     nome: getById('monitor-nome').value,
+                    nascimento: getById('monitor-nascimento').value,
                     telefone: getById('monitor-telefone').value,
-                    cnh: getById('monitor-cnh').value,
-                    habilidades: { forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 }
+                    email: getById('monitor-email').value,
+                    endereco: getById('monitor-endereco').value,
+                    cnh: getById('monitor-cnh').value === 'Sim',
+                    cnhCategoria: getById('monitor-cnh-categoria').value,
+                    observacoes: getById('monitor-observacoes').value,
+                    habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
 
                 let sucesso;
@@ -3042,7 +3047,8 @@
         </div>
     </div>
 
-    <div id="monitor-details-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+    <div id="monitor-details-modal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[70] p-4">
         <div
             class="modal-box glassmorphism p-6 md:p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center mb-4">
@@ -3702,6 +3708,12 @@
                     </div>
 
                     <div class="space-y-1">
+                        <label for="monitor-nascimento" class="block text-sm font-bold text-gray-700">Data de
+                            Nascimento</label>
+                        <input type="date" id="monitor-nascimento" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
                         <label for="monitor-telefone" class="block text-sm font-bold text-gray-700">Telefone /
                             WhatsApp</label>
                         <input type="text" id="monitor-telefone" placeholder="(00) 00000-0000"
@@ -3709,13 +3721,38 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label for="monitor-cnh" class="block text-sm font-bold text-gray-700">CNH</label>
+                        <label for="monitor-email" class="block text-sm font-bold text-gray-700">Email</label>
+                        <input type="email" id="monitor-email" placeholder="email@exemplo.com"
+                            class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-cnh" class="block text-sm font-bold text-gray-700">Possui CNH?</label>
                         <select id="monitor-cnh" class="form-input w-full">
                             <option value="Não possui">Não possui</option>
-                            <option value="A">Categoria A</option>
-                            <option value="B">Categoria B</option>
-                            <option value="AB">Categoria AB</option>
+                            <option value="Sim">Sim</option>
                         </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-cnh-categoria" class="block text-sm font-bold text-gray-700">Categoria
+                            CNH</label>
+                        <input type="text" id="monitor-cnh-categoria" placeholder="Ex: AB" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="monitor-endereco" class="block text-sm font-bold text-gray-700">Endereço
+                            Residencial</label>
+                        <input type="text" id="monitor-endereco" placeholder="Rua, Número, Bairro, Cidade"
+                            class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="monitor-observacoes" class="block text-sm font-bold text-gray-700">Observações
+                            Internas</label>
+                        <textarea id="monitor-observacoes" rows="2"
+                            placeholder="Informações relevantes sobre o monitor..."
+                            class="form-input w-full"></textarea>
                     </div>
                 </div>
 

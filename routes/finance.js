@@ -210,21 +210,6 @@ router.post('/categories/fixed', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao salvar categoria" }); }
 });
 
-// DELETE Genérico (Para todos os tipos incluindo categorias)
-router.delete('/:type/:id', async (req, res) => {
-    try {
-        const { type, id } = req.params;
-
-        if (type === 'transactions') await prisma.transaction.delete({ where: { id } });
-        else if (type === 'accounts') await prisma.bankAccount.delete({ where: { id } });
-        else if (type === 'fixed-expenses') await prisma.fixedExpense.delete({ where: { id } });
-        else if (type === 'categories-expenses') await prisma.expenseCategory.delete({ where: { id } });
-        else if (type === 'categories-fixed') await prisma.fixedExpenseCategory.delete({ where: { id } });
-        else return res.status(400).json({ error: "Tipo inválido" });
-
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: "Erro ao deletar" }); }
-});
 
 // POST Seed - Popular categorias padrão (executar uma vez)
 router.post('/seed-categories', async (req, res) => {
@@ -574,6 +559,22 @@ router.post('/seed-salarios', async (req, res) => {
         console.error("Erro ao criar seeds de salário:", e);
         res.status(500).json({ error: "Erro ao inicializar salários" });
     }
+});
+
+// DELETE Genérico (Para todos os tipos incluindo categorias)
+router.delete('/:type/:id', async (req, res) => {
+    try {
+        const { type, id } = req.params;
+
+        if (type === 'transactions') await prisma.transaction.delete({ where: { id } });
+        else if (type === 'accounts') await prisma.bankAccount.delete({ where: { id } });
+        else if (type === 'fixed-expenses') await prisma.fixedExpense.delete({ where: { id } });
+        else if (type === 'categories-expenses') await prisma.expenseCategory.delete({ where: { id } });
+        else if (type === 'categories-fixed') await prisma.fixedExpenseCategory.delete({ where: { id } });
+        else return res.status(400).json({ error: "Tipo inválido" });
+
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: "Erro ao deletar" }); }
 });
 
 module.exports = router;
