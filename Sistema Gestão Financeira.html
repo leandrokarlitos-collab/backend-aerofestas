@@ -86,7 +86,6 @@
             // Alias global para showToast para evitar ReferenceError
             window.showToast = window.showToastModal || window.showIAToast || console.log;
 
-            setupClientSync();
             console.log("✅ DOMContentLoaded iniciado");
 
             // Estado Inicial
@@ -4910,7 +4909,7 @@
     </div>
 
     <!-- Script de inicialização dos gráficos (previne loop infinito) -->
-
+    <script src="js/charts-financeiro.js"></script>
     <script src="js/charts-init.js"></script>
 
     <!-- Bottom Navigation Bar (Mobile Only) -->
