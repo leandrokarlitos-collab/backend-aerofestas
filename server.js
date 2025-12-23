@@ -152,13 +152,16 @@ app.post('/api/migrar-completo', async (req, res) => {
                 const listaItens = evt.toys || evt.itens || [];
                 const itensParaSalvar = listaItens.map(item => ({
                     quantity: parseInt(item.quantity) || 1,
-                    price: item.price ? parseFloat(item.price) : null, // Preço da locação
+                    price: (item.price !== undefined && item.price !== null) ? parseFloat(item.price) : (item.valor !== undefined && item.valor !== null ? parseFloat(item.valor) : 0),
                     toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
                 })).filter(i => i.toyId !== null);
 
                 let precoFinal = parseFloat(evt.price || evt.total || evt.valor || 0);
                 if (precoFinal === 0 && listaItens.length > 0) {
-                    precoFinal = listaItens.reduce((acc, item) => acc + (parseFloat(item.price || 0) * (item.quantity || 1)), 0);
+                    precoFinal = listaItens.reduce((acc, item) => {
+                        const unitPrice = (item.price !== undefined && item.price !== null) ? parseFloat(item.price) : (item.valor !== undefined && item.valor !== null ? parseFloat(item.valor) : 0);
+                        return acc + (unitPrice * (parseInt(item.quantity) || 1));
+                    }, 0);
                 }
 
                 try { await prisma.eventItem.deleteMany({ where: { eventId: parseFloat(evt.id) } }); } catch (e) { }
@@ -320,7 +323,7 @@ app.post('/api/admin/events', async (req, res) => {
     try {
         const itens = (evt.items || evt.toys || []).map(item => ({
             quantity: parseInt(item.quantity) || 1,
-            price: item.price ? parseFloat(item.price) : null, // Preço específico desta locação
+            price: (item.price !== undefined && item.price !== null) ? parseFloat(item.price) : (item.valor !== undefined && item.valor !== null ? parseFloat(item.valor) : 0),
             toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
         })).filter(i => i.toyId !== null);
 
