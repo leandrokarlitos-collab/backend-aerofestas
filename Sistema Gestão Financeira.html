@@ -682,7 +682,7 @@
                             }
 
                             return `
-                                <div class="glassmorphism ${statusClass} p-4 rounded-lg mb-3 hover:shadow-lg transition-all duration-300">
+                                <div id="fixed-card-${cf.id}" class="glassmorphism ${statusClass} p-4 rounded-lg mb-3 hover:shadow-lg transition-all duration-300">
                                     <!-- Cabeçalho do Card -->
                                     <div class="flex justify-between items-start mb-3">
                                         <div class="flex-1">
@@ -870,7 +870,7 @@
                     const nota = p.numEventos || '-';
 
                     return `
-                        <tr class="hover:bg-gray-50/50 transition-colors">
+                        <tr id="pagamento-row-${p.id}" class="hover:bg-gray-50/50 transition-colors">
                             <td class="py-4 border-b border-gray-100">
                                 <input type="checkbox" 
                                        class="pagamento-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 cursor-pointer" 
@@ -4862,25 +4862,28 @@
 
         window.navigateToPendingItem = function (id, type) {
             window.closePendingDetailsModal();
-            setTimeout(() => {
-                let targetId = '';
-                if (type === 'monitor') {
-                    // Tenta rolar para a tabela de monitores
-                    targetId = 'containerPagamentosMonitores';
-                } else {
-                    // Tenta rolar para a seção de contas fixas
-                    targetId = 'containerContasFixasMes';
-                }
 
-                const targetEl = getById(targetId);
-                if (targetEl) {
-                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // Adiciona um destaque temporário
-                    targetEl.classList.add('ring-4', 'ring-amber-400/50', 'transition-all', 'duration-1000');
-                    setTimeout(() => targetEl.classList.remove('ring-4', 'ring-amber-400/50'), 3000);
-                } else {
-                    showToast('Localizando item...', false);
-                }
+            setTimeout(() => {
+                const targetTab = type === 'monitor' ? 'monitores' : 'contas-fixas';
+                const rowId = type === 'monitor' ? `pagamento-row-${id}` : `fixed-card-${id}`;
+                const containerId = type === 'monitor' ? 'tabela-pagamentos-monitores' : 'contas-fixas-cards-container';
+
+                // 1. Ativa a aba correta
+                const tabBtn = document.querySelector(`.nav-link[data-target="${targetTab}"]`);
+                if (tabBtn) tabBtn.click();
+
+                // 2. Rola para o elemento após um pequeno delay para a troca de aba e renderização
+                setTimeout(() => {
+                    const targetEl = getById(rowId) || getById(containerId);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Adiciona um destaque temporário
+                        targetEl.classList.add('ring-4', 'ring-amber-400', 'transition-all', 'duration-500');
+                        setTimeout(() => targetEl.classList.remove('ring-4', 'ring-amber-400'), 3000);
+                    } else {
+                        showToast('Localizando item...', false);
+                    }
+                }, 500); // Delay maior para garantir que a aba carregou e renderizou
             }, 350);
         };
     </script>
