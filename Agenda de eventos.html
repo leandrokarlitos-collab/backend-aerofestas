@@ -3026,33 +3026,39 @@
                     discountValueEl.value = eventToEdit.discountValue || 0;
 
 
+                    // DEBUG AGRESSIVO: Vamos ver exatamente o que vem da API
+                    if (eventToEdit.items && eventToEdit.items.length > 0) {
+                        console.log('📦 ITEM BRUTO DA API (Primeiro):', eventToEdit.items[0]);
+                    }
+
                     // CORRIGIDO: Mapeia items da API para o formato esperado pelo frontend
                     let eventToys = [];
                     if (eventToEdit.items && Array.isArray(eventToEdit.items)) {
-                        // Evento vindo da API: items = [{ toyId, quantity, price, toy: { id, name } }]
-                        eventToys = eventToEdit.items.map(item => ({
-                            id: item.toyId || item.toy?.id,
-                            name: item.toy?.name || (item.name || 'Brinquedo'),
-                            quantity: item.quantity || 1,
-                            price: item.price || item.valor || 0
-                        }));
+                        eventToys = eventToEdit.items.map(item => {
+                            // Tenta pegar o preço de várias formas comuns
+                            const rawPrice = item.price !== undefined && item.price !== null ? item.price :
+                                (item.valor !== undefined && item.valor !== null ? item.valor :
+                                    (item.preco !== undefined && item.preco !== null ? item.preco : 0));
+
+                            return {
+                                id: item.toyId || item.toy?.id || item.id,
+                                name: item.toy?.name || item.name || 'Brinquedo',
+                                quantity: item.quantity || 1,
+                                price: parseFloat(rawPrice) || 0
+                            };
+                        });
                     } else if (eventToEdit.toys && Array.isArray(eventToEdit.toys)) {
-                        // Evento do localStorage ou formato legado
                         eventToys = eventToEdit.toys.map(t => ({
                             id: t.id || t.toyId,
                             name: t.name,
                             quantity: t.quantity || 1,
-                            price: t.price || t.valor || 0
+                            price: parseFloat(t.price || t.valor || t.preco || 0)
                         }));
                     }
                     toysForCurrentEvent = JSON.parse(JSON.stringify(eventToys));
 
-                    // DEBUG: Verificar se o mapeamento funcionou
-                    console.log('🔍 DEBUG EDIÇÃO:', {
-                        'eventToEdit.items': eventToEdit.items,
-                        'eventToEdit.toys': eventToEdit.toys,
-                        'toysForCurrentEvent': toysForCurrentEvent
-                    });
+                    // DEBUG FINAL DO MAPEAMENTO
+                    console.log('✨ Brinquedos Mapeados para Edição:', toysForCurrentEvent);
 
                     // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
                     deliveryFeeEl.value = eventToEdit.deliveryFee || 0;
