@@ -23,7 +23,15 @@ router.get('/dashboard', async (req, res) => {
         const events = await prisma.event.findMany({
             where: { date: { gte: startStr, lte: endStr } }
         });
-        const receitaTotal = events.reduce((acc, evt) => acc + (evt.price || 0), 0);
+        const receitaEventos = events.reduce((acc, evt) => acc + (evt.price || 0), 0);
+
+        // 1.1 Receitas Manuais (Transações)
+        const revenueTransactions = await prisma.transaction.findMany({
+            where: { type: 'REVENUE', date: { gte: startStr, lte: endStr } }
+        });
+        const receitaManual = revenueTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
+
+        const receitaTotal = receitaEventos + receitaManual;
 
         // 2. Despesas Diversas (Transações)
         const transactions = await prisma.transaction.findMany({
@@ -86,9 +94,40 @@ router.get('/dashboard', async (req, res) => {
         }
         const fixedPending = fixedPendingDetails.reduce((acc, p) => acc + p.amount, 0);
 
+        // 5. Salários Pendentes (Simulado por Funcionários Cadastrados)
+        const employees = await prisma.funcionario.findMany();
+        const commissionScales = await prisma.faixaComissao.findMany({ orderBy: { ateValor: 'asc' } });
+        const salaryPendingDetails = [];
+
+        // Calcula percentual de comissão para este faturamento
+        let percentualComissao = 0;
+        if (commissionScales.length > 0) {
+            const faixa = commissionScales.find(f => receitaTotal <= f.ateValor) || commissionScales[commissionScales.length - 1];
+            percentualComissao = faixa ? faixa.percentual : 0;
+        }
+
+        for (const emp of employees) {
+            const alreadyPaid = transactions.some(t =>
+                t.description.includes(`Salário: ${emp.nome}`)
+            );
+
+            if (!alreadyPaid) {
+                const comissao = receitaTotal * percentualComissao;
+                const totalSalary = (emp.salarioFixo || 0) + (emp.va || 0) + (emp.vt || 0) + comissao;
+
+                salaryPendingDetails.push({
+                    id: emp.id,
+                    description: `Salário: ${emp.nome}`,
+                    amount: totalSalary,
+                    type: 'salary'
+                });
+            }
+        }
+        const salaryPending = salaryPendingDetails.reduce((acc, p) => acc + p.amount, 0);
+
         const despesaTotal = expensesFromTransactions + monitorPaid;
-        const pendingTotal = monitorPending + fixedPending;
-        const allPendingDetails = [...monitorPendingDetails, ...fixedPendingDetails];
+        const pendingTotal = monitorPending + fixedPending + salaryPending;
+        const allPendingDetails = [...monitorPendingDetails, ...fixedPendingDetails, ...salaryPendingDetails];
 
         res.json({
             period: `${currentMonth + 1}/${currentYear}`,
