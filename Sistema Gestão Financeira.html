@@ -628,7 +628,7 @@
                 }
 
                 // Renderiza Cards de Lançamento de Contas Fixas do Mês (VISUAL UPGRADE)
-                const containerContasFixasMes = getById('tabela-contas-fixas-mes')?.closest('.table-wrapper');
+                const containerContasFixasMes = getById('contas-fixas-cards-container');
                 if (containerContasFixasMes) {
                     const contasDoMes = getContasFixasDoMes(state.selectedMonth);
 
@@ -4921,8 +4921,6 @@
         </div>
     </div>
 
-    <!-- Script de inicialização dos gráficos (previne loop infinito) -->
-    <script src="js/charts-financeiro.js"></script>
     <script src="js/charts-init.js"></script>
 
     <!-- Bottom Navigation Bar (Mobile Only) -->

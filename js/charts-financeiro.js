@@ -2,7 +2,7 @@
 // Deve ser carregado após Chart.js
 
 // Paleta de cores profissional estilo mercado financeiro
-const FINANCE_MARKET_COLORS = {
+window.FINANCE_MARKET_COLORS = {
     profit: '#10b981',      // Verde (lucro)
     loss: '#ef4444',        // Vermelho (prejuízo)
     blue: '#3b82f6',        // Azul
