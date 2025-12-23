@@ -2103,6 +2103,11 @@
                 modalContaFixa.classList.remove('hidden');
             });
 
+            // Abrir modal de Categorias de Contas Fixas
+            btnAbrirCategorias?.addEventListener('click', () => {
+                modalCategoriasCF.classList.remove('hidden');
+            });
+
             // Botão Limpar formulário de Conta Fixa
             btnLimparContaFixa?.addEventListener('click', () => {
                 if (confirm('Deseja limpar todos os campos do formulário?')) {
@@ -3894,7 +3899,7 @@
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">Cadastrar Conta Fixa</h2>
                 <button id="close-conta-fixa-modal"
-                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
 
             <form id="form-conta-fixa" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
@@ -3988,7 +3993,7 @@
                 <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-gear mr-2"></i> Categorias de Contas
                     Fixas</h2>
                 <button id="close-categorias-cf-modal"
-                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
 
             <form id="form-conta-fixa-categoria" class="space-y-4 mb-6">
@@ -4028,7 +4033,7 @@
                 <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-building-columns mr-2"></i> Contas
                     Bancárias</h2>
                 <button id="close-contas-bancarias-modal"
-                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
 
             <form id="form-cadastro-conta" class="space-y-4 mb-6">
@@ -4094,7 +4099,7 @@
                 <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-tags mr-2"></i> Categorias de Gastos
                 </h2>
                 <button id="close-categorias-gastos-modal"
-                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
 
             <form id="form-gasto-categoria" class="space-y-4 mb-6">
