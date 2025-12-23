@@ -86,6 +86,12 @@
             // Alias global para showToast para evitar ReferenceError
             window.showToast = window.showToastModal || window.showIAToast || console.log;
 
+            // Funções Auxiliares (Definidas no topo para evitar TDZ)
+            const formatarMoeda = val => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+            window.formatarMoeda = formatarMoeda;
+            const formatarData = str => { if (!str) return '-'; const p = str.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+            window.formatarData = formatarData;
+
             console.log("✅ DOMContentLoaded iniciado");
 
             // Estado Inicial
@@ -105,9 +111,17 @@
             loadDataFromCloud = async function () {
                 try {
                     console.log("☁️ Sincronizando com o servidor...");
-                    console.log("📍 URL da API:", api ? "API carregada" : "API não carregada");
 
-                    // Busca TUDO em paralelo para ser rápido
+                    // 1. Busca primeiro o resumo do Dashboard para renderização imediata (Velocidade)
+                    const [ano, mes] = state.selectedMonth.split('-');
+                    const dashboardData = await window.api.getFinanceiro(mes, ano);
+                    if (dashboardData) {
+                        state.dashboardSummary = dashboardData.summary;
+                        console.log("📊 Resumo do Dashboard recebido");
+                        renderAll(); // Chamada rápida para mostrar os cards
+                    }
+
+                    // 2. Busca o restante dos dados em paralelo
                     const [
                         eventosCloud,
                         transacoesCloud,
@@ -384,14 +398,12 @@
                     return acc + total;
                 }, 0);
 
-                // Valores Atuais
-                const recEvAtual = eventosMes.reduce((acc, e) => acc + (e.valor || 0), 0);
-                const recManAtual = receitasMes.reduce((acc, r) => acc + (r.valor || 0), 0);
-                const recAtual = recEvAtual + recManAtual;
-                const despAtual = gastosMes.reduce((acc, g) => acc + (g.valor || 0), 0) + despMonitores;
-                const saldoAtual = recAtual - despAtual;
+                // Valores Atuais (Prioriza o resumo do backend para velocidade)
+                const recAtual = state.dashboardSummary ? state.dashboardSummary.revenue : (eventosMes.reduce((acc, e) => acc + (e.valor || 0), 0) + receitasMes.reduce((acc, r) => acc + (r.valor || 0), 0));
+                const despAtual = state.dashboardSummary ? state.dashboardSummary.expenses : (gastosMes.reduce((acc, g) => acc + (g.valor || 0), 0) + despMonitores);
+                const saldoAtual = state.dashboardSummary ? state.dashboardSummary.balance : (recAtual - despAtual);
 
-                // Valores Anteriores
+                // Valores Anteriores (Cálculo local para comparação histórica rápida)
                 const monitorPagamentosPrev = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(prevMonthStr));
                 const despMonitoresPrev = monitorPagamentosPrev.reduce((acc, p) => {
                     const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
@@ -1975,9 +1987,7 @@
                 });
             });
 
-            // Funções Auxiliares
-            const formatarMoeda = val => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-            const formatarData = str => { if (!str) return '-'; const p = str.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+            // Funções Auxiliares já definidas no topo do script
             const showToast = (msg, isError) => {
                 const toast = getById('toast');
                 if (toast) {

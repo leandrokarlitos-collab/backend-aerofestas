@@ -2,7 +2,7 @@
 // Deve ser carregado após Chart.js
 
 // Paleta de cores profissional estilo mercado financeiro
-const COLORS = {
+const FINANCE_MARKET_COLORS = {
     profit: '#10b981',      // Verde (lucro)
     loss: '#ef4444',        // Vermelho (prejuízo)
     blue: '#3b82f6',        // Azul
@@ -83,9 +83,9 @@ function renderEmpresasChart(state) {
 
     // Cores específicas: Aero (Blue), ABC (Red), Outros (Teal/Padrão)
     const backgroundColors = sortedLabels.map(label => {
-        if (label === 'Aero Festas') return COLORS.blue;
-        if (label === 'ABC Festas') return COLORS.loss; // Vermelho
-        return COLORS.teal;
+        if (label === 'Aero Festas') return FINANCE_MARKET_COLORS.blue;
+        if (label === 'ABC Festas') return FINANCE_MARKET_COLORS.loss; // Vermelho
+        return FINANCE_MARKET_COLORS.teal;
     });
 
     if (chartEmpresas) chartEmpresas.destroy();
@@ -159,7 +159,7 @@ function renderDespesasGeraisChart(state) {
 
     const labels = Object.keys(categorias);
     const data = Object.values(categorias);
-    const colors = [COLORS.orange, COLORS.purple, COLORS.blue, COLORS.pink, COLORS.teal, COLORS.indigo];
+    const colors = [FINANCE_MARKET_COLORS.orange, FINANCE_MARKET_COLORS.purple, FINANCE_MARKET_COLORS.blue, FINANCE_MARKET_COLORS.pink, FINANCE_MARKET_COLORS.teal, FINANCE_MARKET_COLORS.indigo];
 
     if (chartDespGerais) chartDespGerais.destroy();
 
@@ -213,8 +213,8 @@ function renderContasFixasChart(state) {
             datasets: [{
                 label: 'Valor (R$)',
                 data: values,
-                backgroundColor: COLORS.blue,
-                borderColor: COLORS.blue,
+                backgroundColor: FINANCE_MARKET_COLORS.blue,
+                borderColor: FINANCE_MARKET_COLORS.blue,
                 borderWidth: 2,
                 borderRadius: 6
             }]
@@ -265,7 +265,7 @@ function renderPagamentosMonitoresChart(state) {
             datasets: [{
                 label: 'Pagamentos (R$)',
                 data: data.length > 0 ? data : [0],
-                backgroundColor: COLORS.purple,
+                backgroundColor: FINANCE_MARKET_COLORS.purple,
                 borderRadius: 6
             }]
         },
@@ -359,8 +359,8 @@ function renderDailyChart(state, month) {
     if (chartDaily) chartDaily.destroy();
 
     // Cria gradiente para área
-    const gradientGreen = createGradient(ctx, ...COLORS.gradient.green);
-    const gradientRed = createGradient(ctx, ...COLORS.gradient.red);
+    const gradientGreen = createGradient(ctx, ...FINANCE_MARKET_COLORS.gradient.green);
+    const gradientRed = createGradient(ctx, ...FINANCE_MARKET_COLORS.gradient.red);
 
     chartDaily = new Chart(ctx, {
         type: 'line',
@@ -370,13 +370,13 @@ function renderDailyChart(state, month) {
                 {
                     label: 'Receitas Diárias',
                     data: receitasPorDia,
-                    borderColor: COLORS.profit,
+                    borderColor: FINANCE_MARKET_COLORS.profit,
                     backgroundColor: gradientGreen,
                     fill: true,
                     tension: 0.4,
                     borderWidth: 3,
                     pointRadius: 4,
-                    pointBackgroundColor: COLORS.profit,
+                    pointBackgroundColor: FINANCE_MARKET_COLORS.profit,
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointHoverRadius: 6
@@ -384,13 +384,13 @@ function renderDailyChart(state, month) {
                 {
                     label: 'Despesas Diárias',
                     data: despesasPorDia,
-                    borderColor: COLORS.loss,
+                    borderColor: FINANCE_MARKET_COLORS.loss,
                     backgroundColor: gradientRed,
                     fill: true,
                     tension: 0.4,
                     borderWidth: 3,
                     pointRadius: 4,
-                    pointBackgroundColor: COLORS.loss,
+                    pointBackgroundColor: FINANCE_MARKET_COLORS.loss,
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointHoverRadius: 6
@@ -398,13 +398,13 @@ function renderDailyChart(state, month) {
                 {
                     label: 'Saldo Acumulado',
                     data: saldoAcumulado,
-                    borderColor: COLORS.blue,
+                    borderColor: FINANCE_MARKET_COLORS.blue,
                     backgroundColor: 'transparent',
                     borderWidth: 3,
                     borderDash: [5, 5],
                     tension: 0.4,
                     pointRadius: 3,
-                    pointBackgroundColor: COLORS.blue
+                    pointBackgroundColor: FINANCE_MARKET_COLORS.blue
                 }
             ]
         },
