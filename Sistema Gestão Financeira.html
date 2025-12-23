@@ -797,8 +797,196 @@
                 // Renderiza Histórico de Pagamentos de Monitores (NOVO)
                 renderPagamentosMonitores();
 
+                // Renderiza a aba de Salários
+                renderSalariosTab();
+
                 console.log("✅ Renderização completa!");
             };
+
+            // ========== LOGICA DA ABA SALÁRIOS ==========
+
+            const renderSalariosTab = () => {
+                const select = getById('salario-funcionario-select');
+                if (!select) return;
+
+                // Popula o select se estiver vazio (exceto placeholder)
+                if (select.options.length <= 1) {
+                    select.innerHTML = '<option value="">-- Selecione um funcionário --</option>' +
+                        (state.funcionarios || []).map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+                }
+
+                const funcionarioId = select.value;
+                const container = getById('salario-calculo-container');
+                const msgSelecione = getById('salario-selecione-msg');
+
+                if (!funcionarioId) {
+                    container.classList.add('hidden');
+                    msgSelecione.classList.remove('hidden');
+                    return;
+                }
+
+                container.classList.remove('hidden');
+                msgSelecione.classList.add('hidden');
+
+                const funcionario = state.funcionarios.find(f => f.id == funcionarioId);
+                if (!funcionario) return;
+
+                // 1. Calcula Entradas Totais do Mês
+                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
+                const totalEntradas = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0) +
+                    receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
+
+                // 2. Calcula Comissão
+                const faixa = [...(state.faixasComissao || [])]
+                    .sort((a, b) => a.ateValor - b.ateValor)
+                    .find(f => totalEntradas <= f.ateValor) ||
+                    (state.faixasComissao?.length > 0 ? state.faixasComissao.sort((a, b) => b.ateValor - a.ateValor)[0] : { percentual: 0 });
+
+                const percentualComissao = faixa ? faixa.percentual : 0;
+                const valorComissao = totalEntradas * percentualComissao;
+
+                // 3. Totais
+                const salarioFixo = parseFloat(funcionario.salarioFixo) || 0;
+                const va = parseFloat(funcionario.va) || 0;
+                const vt = parseFloat(funcionario.vt) || 0;
+                const totalPagar = salarioFixo + va + vt + valorComissao;
+
+                // 4. Atualiza UI
+                getById('salario-nome-funcionario').textContent = funcionario.nome;
+                getById('salario-total-entradas').textContent = formatarMoeda(totalEntradas);
+                getById('salario-comissao').textContent = formatarMoeda(valorComissao);
+                getById('salario-comissao-percentual').textContent = `Faixa de ${(percentualComissao * 100).toFixed(1)}% (Até ${formatarMoeda(faixa?.ateValor || 0)})`;
+                getById('salario-total-pagar').textContent = formatarMoeda(totalPagar);
+
+                getById('salario-fixo').textContent = formatarMoeda(salarioFixo);
+                getById('salario-va').textContent = formatarMoeda(va);
+                getById('salario-vt').textContent = formatarMoeda(vt);
+                getById('salario-comissao-detalhe').textContent = formatarMoeda(valorComissao);
+                getById('salario-total-detalhe').textContent = formatarMoeda(totalPagar);
+
+                // Verifica se já foi lançado como despesa
+                const jaLancado = state.gastos.some(g =>
+                    g.data.startsWith(state.selectedMonth) &&
+                    g.descricao.includes(`Salário: ${funcionario.nome}`)
+                );
+
+                const btnLancar = getById('btn-lancar-salario');
+                const msgLancado = getById('salario-lancado-msg');
+
+                if (jaLancado) {
+                    btnLancar.classList.add('hidden');
+                    msgLancado.classList.remove('hidden');
+                } else {
+                    btnLancar.classList.remove('hidden');
+                    msgLancado.classList.add('hidden');
+                }
+            };
+
+            // Event listener para mudança de funcionário no select
+            getById('salario-funcionario-select')?.addEventListener('change', renderSalariosTab);
+
+            // Handler para Lançar Salário
+            getById('btn-lancar-salario')?.addEventListener('click', async () => {
+                const select = getById('salario-funcionario-select');
+                const funcionarioId = select.value;
+                const funcionario = state.funcionarios.find(f => f.id == funcionarioId);
+
+                if (!funcionario) return;
+
+                const totalPagar = parseFloat(getById('salario-total-detalhe').textContent.replace(/[^\d,-]/g, '').replace(',', '.'));
+
+                if (!confirm(`Deseja lançar o salário de ${funcionario.nome} no valor de ${formatarMoeda(totalPagar)} como despesa para este mês?`)) return;
+
+                const dadosGasto = {
+                    date: new Date().toISOString().split('T')[0], // Ou usar o último dia do mês selecionado
+                    description: `Salário: ${funcionario.nome} [Mês ${state.selectedMonth}]`,
+                    amount: totalPagar,
+                    type: 'EXPENSE',
+                    category: 'Salários',
+                    paymentMethod: 'Transferência/Débito'
+                    // accountId pode ser opcional ou padrão
+                };
+
+                const sucesso = await window.api.salvarTransacao(dadosGasto);
+                if (sucesso) {
+                    showToastModal(`✅ Salário de ${funcionario.nome} lançado como despesa!`);
+                    await window.loadDataFromCloud();
+                } else {
+                    showToastModal('❌ Erro ao lançar salário.', true);
+                }
+            });
+
+            // ========== LOGICA DO MODAL DE CONFIGURAÇÕES DE SALÁRIOS ==========
+
+            const renderSalariosConfig = () => {
+                const tbodyFunc = getById('tabela-funcionarios-config')?.querySelector('tbody');
+                const tbodyComis = getById('tabela-comissao-config')?.querySelector('tbody');
+
+                if (tbodyFunc) {
+                    tbodyFunc.innerHTML = (state.funcionarios || []).map(f => `
+                        <tr>
+                            <td>${f.nome}</td>
+                            <td>${formatarMoeda(f.salarioFixo)}</td>
+                            <td>${formatarMoeda(f.va)}</td>
+                            <td>${formatarMoeda(f.vt)}</td>
+                            <td>
+                                <button onclick="deletarFuncionario('${f.id}')" class="text-red-600 hover:text-red-900"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhum funcionário cadastrado.</td></tr>';
+                }
+
+                if (tbodyComis) {
+                    tbodyComis.innerHTML = (state.faixasComissao || []).sort((a, b) => a.ateValor - b.ateValor).map(fx => `
+                        <tr>
+                            <td>Até ${formatarMoeda(fx.ateValor)}</td>
+                            <td>${(fx.percentual * 100).toFixed(1)}%</td>
+                            <td>
+                                <button onclick="deletarFaixaComissao('${fx.id}')" class="text-red-600 hover:text-red-900"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="3" class="text-center py-4 text-gray-500">Nenhuma faixa cadastrada.</td></tr>';
+                }
+            };
+
+            window.deletarFuncionario = async (id) => {
+                if (!confirm('Excluir este funcionário?')) return;
+                const sucesso = await window.api.deletarItem(id, 'employees');
+                if (sucesso) {
+                    showToastModal('✅ Funcionário excluído!');
+                    await window.loadDataFromCloud();
+                    renderSalariosConfig();
+                }
+            };
+
+            window.deletarFaixaComissao = async (id) => {
+                if (!confirm('Excluir esta faixa de comissão?')) return;
+                const sucesso = await window.api.deletarItem(id, 'commission-scales');
+                if (sucesso) {
+                    showToastModal('✅ Faixa excluída!');
+                    await window.loadDataFromCloud();
+                    renderSalariosConfig();
+                }
+            };
+
+            // Listener para abrir modal de config
+            getById('open-salarios-config-modal-btn')?.addEventListener('click', () => {
+                renderSalariosConfig();
+                showModal('salarios-config-modal');
+            });
+
+            // Tabs do modal de config
+            document.querySelectorAll('#salarios-config-modal .config-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#salarios-config-modal .config-tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#salarios-config-modal .config-tab-content').forEach(c => c.classList.remove('active'));
+
+                    btn.classList.add('active');
+                    const target = btn.getAttribute('data-target');
+                    getById(target)?.classList.add('active');
+                });
+            });
 
             // ========== LOGICA DA ABA MONITORES (REWORK MOBILE) ==========
 
@@ -2389,11 +2577,15 @@
 
                 const sucesso = await window.api.salvarFuncionario(dados);
                 if (sucesso) {
-                    showToastModal('Funcionário cadastrado!');
+                    showToastModal('✅ Funcionário cadastrado!');
                     formAddFuncionario.reset();
                     await window.loadDataFromCloud();
+                    renderSalariosConfig();
+                    // Atualiza o select da aba salários
+                    getById('salario-funcionario-select').innerHTML = '<option value="">-- Selecione um funcionário --</option>' +
+                        (state.funcionarios || []).map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
                 } else {
-                    showToastModal('Erro ao salvar funcionário', true);
+                    showToastModal('❌ Erro ao salvar funcionário', true);
                 }
             });
 
@@ -2409,11 +2601,12 @@
 
                 const sucesso = await window.api.salvarFaixaComissao(dados);
                 if (sucesso) {
-                    showToastModal('Faixa de comissão cadastrada!');
+                    showToastModal('✅ Faixa de comissão cadastrada!');
                     formAddComissao.reset();
                     await window.loadDataFromCloud();
+                    renderSalariosConfig();
                 } else {
-                    showToastModal('Erro ao salvar faixa', true);
+                    showToastModal('❌ Erro ao salvar faixa', true);
                 }
             });
 
