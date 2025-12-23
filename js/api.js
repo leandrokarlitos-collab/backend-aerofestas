@@ -224,6 +224,18 @@ export const api = {
             return res.ok;
         } catch (e) { return false; }
     },
+    // Atualizar Categoria de Gasto
+    atualizarCategoriaGasto: async (id, nome) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/categories/expenses/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name: nome })
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
 
     // Salvar Categoria de Conta Fixa
     salvarCategoriaFixa: async (nome) => {
@@ -231,6 +243,18 @@ export const api = {
             const token = getToken();
             const res = await fetch(`${BASE_URL}/finance/categories/fixed`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name: nome })
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
+    // Atualizar Categoria de Conta Fixa
+    atualizarCategoriaFixa: async (id, nome) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/categories/fixed/${id}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ name: nome })
             });

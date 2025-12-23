@@ -750,9 +750,14 @@
                             <tr>
                                 <td>${cat.nome}</td>
                                 <td>
-                                    <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaGasto('${cat.id}'); }" title="Excluir">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
+                                    <div class="flex space-x-2">
+                                        <button class="action-btn edit-btn" onclick="editarCategoriaGasto('${cat.id}')" title="Editar">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaGasto('${cat.id}'); }" title="Excluir">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         `).join('');
@@ -769,9 +774,14 @@
                             <tr>
                                 <td>${cat.nome}</td>
                                 <td>
-                                    <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaContaFixa('${cat.id}'); }" title="Excluir">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
+                                    <div class="flex space-x-2">
+                                        <button class="action-btn edit-btn" onclick="editarCategoriaContaFixa('${cat.id}')" title="Editar">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaContaFixa('${cat.id}'); }" title="Excluir">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         `).join('');
@@ -1791,6 +1801,32 @@
                 document.getElementById('modal-conta-fixa').classList.remove('hidden');
             };
 
+            window.editarCategoriaGasto = (id) => {
+                const cat = state.gastoCategorias.find(c => c.id === id);
+                if (!cat) return;
+
+                const form = getById('form-gasto-categoria');
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-id', id);
+
+                getById('gasto-categoria-nome').value = cat.nome;
+                const btnSalvar = form.querySelector('button[type="submit"]');
+                if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar';
+            };
+
+            window.editarCategoriaContaFixa = (id) => {
+                const cat = state.contaFixaCategorias.find(c => c.id === id);
+                if (!cat) return;
+
+                const form = getById('form-conta-fixa-categoria');
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-id', id);
+
+                getById('cf-categoria-nome').value = cat.nome;
+                const btnSalvar = form.querySelector('button[type="submit"]');
+                if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar';
+            };
+
             // ========== FUNÇÃO DE LANÇAR GASTO DE CONTA FIXA ==========
 
             // ========== FUNÇÃO DE LANÇAR GASTO DE CONTA FIXA ==========
@@ -2280,25 +2316,61 @@
             // Handlers para categorias
             getById('form-conta-fixa-categoria')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const form = e.target;
+                const mode = form.getAttribute('data-mode');
+                const id = form.getAttribute('data-id');
                 const input = getById('cf-categoria-nome');
-                if (!input.value.trim()) return;
-                const sucesso = await window.api.salvarCategoriaFixa(input.value.trim());
+                const nome = input.value.trim();
+
+                if (!nome) return;
+
+                let sucesso;
+                if (mode === 'edit' && id) {
+                    sucesso = await window.api.atualizarCategoriaFixa(id, nome);
+                } else {
+                    sucesso = await window.api.salvarCategoriaFixa(nome);
+                }
+
                 if (sucesso) {
-                    showToastModal('Categoria criada!');
+                    showToastModal(mode === 'edit' ? 'Categoria atualizada!' : 'Categoria criada!');
                     input.value = '';
+                    form.removeAttribute('data-mode');
+                    form.removeAttribute('data-id');
+                    const btnSalvar = form.querySelector('button[type="submit"]');
+                    if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Salvar';
                     await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar categoria.', true);
                 }
             });
 
             getById('form-gasto-categoria')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const form = e.target;
+                const mode = form.getAttribute('data-mode');
+                const id = form.getAttribute('data-id');
                 const input = getById('gasto-categoria-nome');
-                if (!input.value.trim()) return;
-                const sucesso = await window.api.salvarCategoriaGasto(input.value.trim());
+                const nome = input.value.trim();
+
+                if (!nome) return;
+
+                let sucesso;
+                if (mode === 'edit' && id) {
+                    sucesso = await window.api.atualizarCategoriaGasto(id, nome);
+                } else {
+                    sucesso = await window.api.salvarCategoriaGasto(nome);
+                }
+
                 if (sucesso) {
-                    showToastModal('Categoria criada!');
+                    showToastModal(mode === 'edit' ? 'Categoria atualizada!' : 'Categoria criada!');
                     input.value = '';
+                    form.removeAttribute('data-mode');
+                    form.removeAttribute('data-id');
+                    const btnSalvar = form.querySelector('button[type="submit"]');
+                    if (btnSalvar) btnSalvar.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Salvar';
                     await window.loadDataFromCloud();
+                } else {
+                    showToastModal('Erro ao salvar categoria.', true);
                 }
             });
 
