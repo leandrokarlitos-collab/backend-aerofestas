@@ -2432,16 +2432,16 @@
                     listEl.innerHTML = '<p class="text-sm text-center text-gray-500 pt-2">Nenhum brinquedo adicionado.</p>';
                 } else {
                     toysForCurrentEvent.forEach(eventToy => {
-                        const toy = toys.find(t => t.id === eventToy.id);
-                        if (toy) {
-                            const itemEl = document.createElement('div');
-                            itemEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-md text-sm';
-                            itemEl.innerHTML = `
-                        <span>${toy.name} (x${eventToy.quantity}) - ${formatCurrency(eventToy.price)}</span>
-                        <button type="button" data-id="${toy.id}" data-price="${eventToy.price}" class="remove-toy-from-event-btn text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
-                    `;
-                            listEl.appendChild(itemEl);
-                        }
+                        const toyCatalogue = toys.find(t => t.id === eventToy.id);
+                        const toyName = toyCatalogue ? toyCatalogue.name : (eventToy.name || 'Brinquedo');
+
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-md text-sm';
+                        itemEl.innerHTML = `
+                            <span>${toyName} (x${eventToy.quantity}) - ${formatCurrency(eventToy.price)}</span>
+                            <button type="button" data-id="${eventToy.id}" data-price="${eventToy.price}" class="remove-toy-from-event-btn text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                        `;
+                        listEl.appendChild(itemEl);
                     });
                 }
                 document.querySelectorAll('.remove-toy-from-event-btn').forEach(btn => {

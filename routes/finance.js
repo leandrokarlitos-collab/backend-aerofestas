@@ -17,26 +17,93 @@ router.get('/dashboard', async (req, res) => {
         const endDate = new Date(currentYear, currentMonth + 1, 0);
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
+        const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
-        const events = await prisma.event.findMany({ where: { date: { gte: startStr, lte: endStr } } });
+        // 1. Receitas de Eventos
+        const events = await prisma.event.findMany({
+            where: { date: { gte: startStr, lte: endStr } }
+        });
         const receitaTotal = events.reduce((acc, evt) => acc + (evt.price || 0), 0);
 
-        const transactions = await prisma.transaction.findMany({ where: { type: 'EXPENSE', date: { gte: startStr, lte: endStr } } });
+        // 2. Despesas Diversas (Transações)
+        const transactions = await prisma.transaction.findMany({
+            where: { type: 'EXPENSE', date: { gte: startStr, lte: endStr } }
+        });
         const expensesFromTransactions = transactions.reduce((acc, tra) => acc + (tra.amount || 0), 0);
 
-        const monitorPayments = await prisma.pagamentoMonitor.findMany({ where: { data: { gte: startStr, lte: endStr } } });
-        const expensesFromMonitors = monitorPayments.reduce((acc, p) => {
-            const total = (p.valorBase || 0) + (p.horasExtras || 0) + (p.adicional || 0);
-            return acc + total;
-        }, 0);
+        // 3. Monitores (Pagos vs Pendentes)
+        const monitorPayments = await prisma.pagamentoMonitor.findMany({
+            where: { data: { gte: startStr, lte: endStr } }
+        });
 
-        const despesaTotal = expensesFromTransactions + expensesFromMonitors;
+        const monitorPaid = monitorPayments
+            .filter(p => p.statusPagamento === 'Executado')
+            .reduce((acc, p) => acc + (p.pagamento || 0), 0);
+
+        const monitorPendingDetails = monitorPayments
+            .filter(p => p.statusPagamento !== 'Executado')
+            .map(p => ({
+                id: p.id,
+                description: `Monitor: ${p.nome}`,
+                amount: p.pagamento || 0,
+                type: 'monitor'
+            }));
+        const monitorPending = monitorPendingDetails.reduce((acc, p) => acc + p.amount, 0);
+
+        // 4. Contas Fixas Pendentes
+        const fixedExpenses = await prisma.fixedExpense.findMany();
+        const fixedPendingDetails = [];
+
+        for (const fe of fixedExpenses) {
+            let isMonthActive = true;
+            if (fe.recurrenceType === 'parcelada' && fe.startDate) {
+                const [startYear, startMonth] = fe.startDate.split('-').map(Number);
+                const monthsDiff = (currentYear - startYear) * 12 + ((currentMonth + 1) - startMonth);
+                if (monthsDiff < 0 || monthsDiff >= (fe.installments || 0)) {
+                    isMonthActive = false;
+                }
+            } else if (fe.startDate) {
+                const [startYear, startMonth] = fe.startDate.split('-').map(Number);
+                const monthsDiff = (currentYear - startYear) * 12 + ((currentMonth + 1) - startMonth);
+                if (monthsDiff < 0) isMonthActive = false;
+            }
+
+            if (isMonthActive) {
+                const alreadyPaid = transactions.some(t =>
+                    t.description.includes(fe.description) &&
+                    t.description.includes('[Conta Fixa]')
+                );
+
+                if (!alreadyPaid) {
+                    fixedPendingDetails.push({
+                        id: fe.id,
+                        description: fe.description,
+                        amount: fe.amount || 0,
+                        type: 'fixed'
+                    });
+                }
+            }
+        }
+        const fixedPending = fixedPendingDetails.reduce((acc, p) => acc + p.amount, 0);
+
+        const despesaTotal = expensesFromTransactions + monitorPaid;
+        const pendingTotal = monitorPending + fixedPending;
+        const allPendingDetails = [...monitorPendingDetails, ...fixedPendingDetails];
 
         res.json({
             period: `${currentMonth + 1}/${currentYear}`,
-            summary: { revenue: receitaTotal, expenses: despesaTotal, balance: receitaTotal - despesaTotal }
+            summary: {
+                revenue: receitaTotal,
+                expenses: despesaTotal,
+                balance: receitaTotal - despesaTotal,
+                pendingExpenses: pendingTotal,
+                pendingDetails: allPendingDetails
+            }
         });
-    } catch (error) { res.status(500).json({ error: "Erro financeiro" }); }
+    } catch (error) {
+        console.error("Erro no dashboard:", error);
+        res.status(500).json({ error: "Erro financeiro" });
+    }
 });
 
 // GET Listas
