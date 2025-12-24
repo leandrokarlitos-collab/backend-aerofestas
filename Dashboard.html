@@ -618,7 +618,7 @@
                         </div>
 
                         <div id="finance-summary-content" class="hidden space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div class="p-5 glassmorphism rounded-2xl border-l-4 border-emerald-500">
                                     <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">
                                         Receitas</p>
@@ -628,6 +628,11 @@
                                     <p class="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">
                                         Despesas</p>
                                     <p id="finance-summary-despesas" class="text-2xl font-bold">R$ 0,00</p>
+                                </div>
+                                <div class="p-5 glassmorphism rounded-2xl border-l-4 border-amber-500">
+                                    <p class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">
+                                        Pendentes</p>
+                                    <p id="finance-summary-pendentes" class="text-2xl font-bold">R$ 0,00</p>
                                 </div>
                                 <div class="p-5 glassmorphism rounded-2xl border-l-4 border-indigo-500">
                                     <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">
@@ -655,7 +660,7 @@
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                                <i class="fas fa-calendar-star"></i>
+                                <i class="fas fa-calendar-check"></i>
                             </div>
                             <h2 class="text-xl font-bold">Agenda Próxima</h2>
                         </div>
@@ -892,14 +897,18 @@
                 <div id="finance-content-1" class="finance-modal-content">
                     <h3 class="text-xl font-semibold mb-4">Balanço do Mês (<span id="finance-modal-month-1">--</span>)
                     </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
-                            <h4 class="text-lg font-semibold text-green-600">Receitas Totais</h4>
+                            <h4 class="text-lg font-semibold text-emerald-600">Receitas Totais</h4>
                             <p id="finance-modal-receitas" class="text-3xl font-bold">R$ 0,00</p>
                         </div>
                         <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
                             <h4 class="text-lg font-semibold text-red-600">Despesas Totais</h4>
                             <p id="finance-modal-despesas" class="text-3xl font-bold">R$ 0,00</p>
+                        </div>
+                        <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                            <h4 class="text-lg font-semibold text-amber-600">Gastos Pendentes</h4>
+                            <p id="finance-modal-pendentes" class="text-3xl font-bold">R$ 0,00</p>
                         </div>
                         <div class="bg-white/50 p-4 rounded-lg border border-gray-200/50">
                             <h4 class="text-lg font-semibold text-blue-600">Saldo Final</h4>
@@ -970,6 +979,7 @@
             const financeWidgetContent = document.getElementById('finance-summary-content');
             const financeWidgetReceitas = document.getElementById('finance-summary-receitas');
             const financeWidgetDespesas = document.getElementById('finance-summary-despesas');
+            const financeWidgetPendentes = document.getElementById('finance-summary-pendentes');
             const financeWidgetSaldo = document.getElementById('finance-summary-saldo');
             const financeWidgetMonth = document.getElementById('finance-summary-month');
 
@@ -985,6 +995,7 @@
 
             const financeModalReceitas = document.getElementById('finance-modal-receitas');
             const financeModalDespesas = document.getElementById('finance-modal-despesas');
+            const financeModalPendentes = document.getElementById('finance-modal-pendentes');
             const financeModalSaldo = document.getElementById('finance-modal-saldo');
             const financeModalContasTbody = document.getElementById('finance-modal-contas-fixas-tbody');
 
@@ -1501,17 +1512,41 @@
                     const gastosFixosIds = new Set(filteredGastos.filter(g => g.contaFixaId).map(g => g.contaFixaId));
                     const descricoesGastos = filteredGastos.map(g => (g.description || "").toLowerCase());
 
+                    // Filtra contas fixas que pertencem ao mês atual
+                    const contasFixasDoMes = (contasFixas || []).filter(cf => {
+                        const recType = cf.recurrenceType || cf.tipoRecorrencia || 'permanente';
+                        if (recType === 'permanente') return true;
+
+                        const startDate = cf.startDate || cf.dataInicio;
+                        const numParc = cf.installments || cf.numParcelas;
+
+                        if (recType === 'parcelada' && startDate && numParc) {
+                            const [anoInicio, mesInicio] = startDate.split('-').map(Number);
+                            const dInicio = new Date(anoInicio, mesInicio - 1);
+                            const dFim = new Date(anoInicio, mesInicio - 1 + numParc);
+                            const dAtual = new Date(year, monthNum - 1);
+                            return dAtual >= dInicio && dAtual < dFim;
+                        }
+                        return false;
+                    });
+
+                    let totalPendentes = 0;
+
                     // Mapeia o status de cada conta fixa para o mês atual
-                    const contasFixasStatus = (contasFixas || []).map(cf => {
+                    const contasFixasStatus = contasFixasDoMes.map(cf => {
                         const diaVenc = cf.dueDay || cf.diaVencimento || 0;
                         const vencimento = `${String(diaVenc).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
 
                         const descCF = (cf.description || cf.descricao || "").toLowerCase();
-                        const isPaid = gastosFixosIds.has(cf.id) || (descCF && descricoesGastos.some(d => d.includes(descCF)));
+                        const idCF = cf.id;
+                        const isPaid = gastosFixosIds.has(idCF) || (descCF && descricoesGastos.some(d => d.includes(descCF)));
+
+                        const valor = parseFloat(cf.amount || cf.valor) || 0;
+                        if (!isPaid) totalPendentes += valor;
 
                         return {
                             descricao: cf.description || cf.descricao,
-                            valor: cf.amount || cf.valor,
+                            valor: valor,
                             vencimento: vencimento,
                             isPaid: isPaid,
                             status: isPaid ? "Lançado" : "Pendente"
@@ -1525,6 +1560,7 @@
                         totalGastosGerais: totalDespesas, // Para compatibilidade com gráficos
                         totalPagamentosMonitores: 0, // Não usado no novo sistema
                         totalDespesas,
+                        totalPendentes,
                         saldo,
                         contasFixasStatus
                     };
@@ -1552,6 +1588,7 @@
                 // Atualiza o widget no dashboard
                 financeWidgetReceitas.textContent = formatarMoeda(data.totalReceitas);
                 financeWidgetDespesas.textContent = formatarMoeda(data.totalDespesas);
+                if (financeWidgetPendentes) financeWidgetPendentes.textContent = formatarMoeda(data.totalPendentes);
                 financeWidgetSaldo.textContent = formatarMoeda(data.saldo);
                 financeWidgetMonth.textContent = data.formattedMonth;
 
@@ -1566,6 +1603,7 @@
                 // Aba 1: Resumo
                 financeModalReceitas.textContent = formatarMoeda(data.totalReceitas);
                 financeModalDespesas.textContent = formatarMoeda(data.totalDespesas);
+                if (financeModalPendentes) financeModalPendentes.textContent = formatarMoeda(data.totalPendentes);
                 financeModalSaldo.textContent = formatarMoeda(data.saldo);
 
                 // Aba 3: Contas Fixas
