@@ -1465,9 +1465,9 @@
                     const formattedMonth = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
                     // Busca dados da API
-                    const [eventos, gastos, contasFixas] = await Promise.all([
+                    const [eventos, transacoes, contasFixas] = await Promise.all([
                         api.getEventos().catch(() => []),
-                        api.getGastos().catch(() => []),
+                        api.getTransacoes().catch(() => []),
                         api.getContasFixas().catch(() => [])
                     ]);
 
@@ -1481,27 +1481,37 @@
                     };
 
                     const filteredEventos = filterByMonth(eventos);
-                    const filteredGastos = filterByMonth(gastos);
+                    // Filtra apenas gastos (despesas)
+                    const transacoesMes = filterByMonth(transacoes);
+                    const filteredGastos = transacoesMes.filter(t => t.type === 'EXPENSE');
 
-                    // Calcula receitas (soma dos eventos)
-                    const totalReceitas = filteredEventos.reduce((acc, ev) => acc + (parseFloat(ev.totalPrice) || 0), 0);
+                    // Calcula receitas (soma dos eventos + entradas manuais de receita se houver)
+                    const totalEventos = filteredEventos.reduce((acc, ev) => acc + (parseFloat(ev.totalPrice || ev.price) || 0), 0);
+                    const totalReceitasManuais = transacoesMes.filter(t => t.type === 'REVENUE').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+                    const totalReceitas = totalEventos + totalReceitasManuais;
 
                     // Calcula despesas
-                    const totalDespesas = filteredGastos.reduce((acc, g) => acc + (parseFloat(g.valor) || 0), 0);
+                    const totalDespesas = filteredGastos.reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
 
                     // Calcula saldo
                     const saldo = totalReceitas - totalDespesas;
 
-                    // Encontra IDs de gastos que são de contas fixas
+                    // Encontra gastos vinculados a contas fixas
+                    // Tenta por contaFixaId primeiro, depois por descrição
                     const gastosFixosIds = new Set(filteredGastos.filter(g => g.contaFixaId).map(g => g.contaFixaId));
+                    const descricoesGastos = filteredGastos.map(g => (g.description || "").toLowerCase());
 
                     // Mapeia o status de cada conta fixa para o mês atual
                     const contasFixasStatus = (contasFixas || []).map(cf => {
-                        const vencimento = `${String(cf.diaVencimento).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
-                        const isPaid = gastosFixosIds.has(cf.id);
+                        const diaVenc = cf.dueDay || cf.diaVencimento || 0;
+                        const vencimento = `${String(diaVenc).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
+
+                        const descCF = (cf.description || cf.descricao || "").toLowerCase();
+                        const isPaid = gastosFixosIds.has(cf.id) || (descCF && descricoesGastos.some(d => d.includes(descCF)));
+
                         return {
-                            descricao: cf.descricao,
-                            valor: cf.valor,
+                            descricao: cf.description || cf.descricao,
+                            valor: cf.amount || cf.valor,
                             vencimento: vencimento,
                             isPaid: isPaid,
                             status: isPaid ? "Lançado" : "Pendente"
