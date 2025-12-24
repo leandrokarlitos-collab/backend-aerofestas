@@ -618,29 +618,48 @@
                         </div>
 
                         <div id="finance-summary-content" class="hidden space-y-6">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
-                                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">
-                                        Receitas Totais</p>
-                                    <p id="finance-summary-receitas" class="text-2xl font-bold text-gray-800">R$ 0,00
-                                    </p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Card: Receitas -->
+                                <div
+                                    class="bg-white/50 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex flex-col justify-between">
+                                    <div>
+                                        <p
+                                            class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">
+                                            Receitas Totais</p>
+                                        <p id="finance-summary-receitas"
+                                            class="text-3xl font-extrabold text-gray-800 tracking-tight">R$ 0,00</p>
+                                    </div>
+                                    <div id="receitas-comparison" class="mt-4 text-[11px] text-gray-500">
+                                        <!-- Preenchido via JS -->
+                                    </div>
                                 </div>
-                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
-                                    <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1">
-                                        Despesas Totais</p>
-                                    <p id="finance-summary-despesas" class="text-2xl font-bold text-gray-800">R$ 0,00
-                                    </p>
+
+                                <!-- Card: Despesas -->
+                                <div
+                                    class="bg-white/50 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex flex-col justify-between">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-2">
+                                            Despesas Totais</p>
+                                        <p id="finance-summary-despesas"
+                                            class="text-3xl font-extrabold text-gray-800 tracking-tight">R$ 0,00</p>
+                                    </div>
+                                    <div id="despesas-comparison" class="mt-4 text-[11px] text-gray-500">
+                                        <!-- Preenchido via JS (incluindo Gastos Pendentes) -->
+                                    </div>
                                 </div>
-                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
-                                    <p class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">
-                                        Gastos Pendentes</p>
-                                    <p id="finance-summary-pendentes" class="text-2xl font-bold text-gray-800">R$ 0,00
-                                    </p>
-                                </div>
-                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
-                                    <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">
-                                        Saldo Final</p>
-                                    <p id="finance-summary-saldo" class="text-2xl font-bold text-blue-600">R$ 0,00</p>
+
+                                <!-- Card: Saldo -->
+                                <div
+                                    class="bg-white/50 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex flex-col justify-between">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">
+                                            Saldo Final</p>
+                                        <p id="finance-summary-saldo"
+                                            class="text-3xl font-extrabold text-blue-600 tracking-tight">R$ 0,00</p>
+                                    </div>
+                                    <div id="saldo-comparison" class="mt-4 text-[11px] text-gray-500">
+                                        <!-- Preenchido via JS -->
+                                    </div>
                                 </div>
                             </div>
 
@@ -1464,6 +1483,7 @@
             // --- [NOVO] LÓGICA DO WIDGET FINANCEIRO ---
 
             const formatarMoeda = (valor) => (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const formatarData = str => { if (!str) return '-'; const p = str.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
 
             /**
              * Busca e calcula os dados financeiros da API.
@@ -1478,16 +1498,19 @@
                     const formattedMonth = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
                     // Busca dados da API
-                    const [eventos, transacoes, contasFixas] = await Promise.all([
+                    const [eventos, transacoes, contasFixas, pagamentosMonitores, funcionarios, faixasComissao] = await Promise.all([
                         api.getEventos().catch(() => []),
                         api.getTransacoes().catch(() => []),
-                        api.getContasFixas().catch(() => [])
+                        api.getContasFixas().catch(() => []),
+                        api.getPagamentosMonitores().catch(() => []),
+                        api.getFuncionarios().catch(() => []),
+                        api.getFaixasComissao().catch(() => [])
                     ]);
 
                     // Filtra por mês
                     const filterByMonth = (items, dateField = 'date') => {
                         return (items || []).filter(item => {
-                            const itemDate = item[dateField];
+                            const itemDate = item[dateField] || item.data;
                             if (!itemDate) return false;
                             return itemDate.startsWith(currentMonth);
                         });
@@ -1509,19 +1532,19 @@
                     // Calcula saldo
                     const saldo = totalReceitas - totalDespesas;
 
-                    // Encontra gastos vinculados a contas fixas
-                    // Tenta por contaFixaId primeiro, depois por descrição
+                    // Lista para detalhes do modal de pendentes
+                    let pendingDetails = [];
+                    let totalPendentes = 0;
+
+                    // 1. Contas Fixas Pendentes
                     const gastosFixosIds = new Set(filteredGastos.filter(g => g.contaFixaId).map(g => g.contaFixaId));
                     const descricoesGastos = filteredGastos.map(g => (g.description || "").toLowerCase());
 
-                    // Filtra contas fixas que pertencem ao mês atual
                     const contasFixasDoMes = (contasFixas || []).filter(cf => {
                         const recType = cf.recurrenceType || cf.tipoRecorrencia || 'permanente';
                         if (recType === 'permanente') return true;
-
                         const startDate = cf.startDate || cf.dataInicio;
                         const numParc = cf.installments || cf.numParcelas;
-
                         if (recType === 'parcelada' && startDate && numParc) {
                             const [anoInicio, mesInicio] = startDate.split('-').map(Number);
                             const dInicio = new Date(anoInicio, mesInicio - 1);
@@ -1532,19 +1555,18 @@
                         return false;
                     });
 
-                    let totalPendentes = 0;
-
-                    // Mapeia o status de cada conta fixa para o mês atual
                     const contasFixasStatus = contasFixasDoMes.map(cf => {
                         const diaVenc = cf.dueDay || cf.diaVencimento || 0;
                         const vencimento = `${String(diaVenc).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
-
                         const descCF = (cf.description || cf.descricao || "").toLowerCase();
                         const idCF = cf.id;
                         const isPaid = gastosFixosIds.has(idCF) || (descCF && descricoesGastos.some(d => d.includes(descCF)));
-
                         const valor = parseFloat(cf.amount || cf.valor) || 0;
-                        if (!isPaid) totalPendentes += valor;
+
+                        if (!isPaid) {
+                            totalPendentes += valor;
+                            pendingDetails.push({ id: cf.id, description: cf.description || cf.descricao, amount: valor, type: 'fixed' });
+                        }
 
                         return {
                             descricao: cf.description || cf.descricao,
@@ -1555,16 +1577,46 @@
                         };
                     });
 
+                    // 2. Salários de Monitores Pendentes
+                    const pagamentosMes = filterByMonth(pagamentosMonitores, 'data');
+                    pagamentosMes.forEach(p => {
+                        if (p.statusPagamento !== 'Executado') {
+                            const totalPag = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                            totalPendentes += totalPag;
+                            pendingDetails.push({ id: p.id, description: `Monitor: ${p.nome}`, amount: totalPag, type: 'monitor' });
+                        }
+                    });
+
+                    // 3. Salários de Funcionários Pendentes
+                    if (funcionarios.length > 0) {
+                        const faixa = [...(faixasComissao || [])]
+                            .sort((a, b) => a.ateValor - b.ateValor)
+                            .find(f => totalReceitas <= f.ateValor) ||
+                            (faixasComissao.length > 0 ? faixasComissao.sort((a, b) => b.ateValor - a.ateValor)[0] : { percentual: 0 });
+
+                        const percentualComissao = faixa ? faixa.percentual : 0;
+                        const valorComissao = totalReceitas * percentualComissao;
+
+                        funcionarios.forEach(f => {
+                            const jaLancado = filteredGastos.some(g => (g.description || "").includes(`Salário: ${f.nome}`));
+                            if (!jaLancado) {
+                                const totalSalario = (parseFloat(f.salarioFixo) || 0) + (parseFloat(f.va) || 0) + (parseFloat(f.vt) || 0) + valorComissao;
+                                totalPendentes += totalSalario;
+                                pendingDetails.push({ id: f.id, description: `Salário: ${f.nome}`, amount: totalSalario, type: 'salary' });
+                            }
+                        });
+                    }
+
                     return {
                         currentMonth,
                         formattedMonth,
                         totalReceitas,
-                        totalGastosGerais: totalDespesas, // Para compatibilidade com gráficos
-                        totalPagamentosMonitores: 0, // Não usado no novo sistema
+                        totalGastosGerais: totalDespesas,
                         totalDespesas,
                         totalPendentes,
                         saldo,
-                        contasFixasStatus
+                        contasFixasStatus,
+                        pendingDetails
                     };
 
                 } catch (err) {
@@ -1575,6 +1627,10 @@
 
             /**
              * Atualiza o widget do dashboard e pré-carrega o modal com dados.
+             */
+            /**
+             * Atualiza o widget do dashboard e pré-carrega o modal com dados.
+             * Sincronizado com o estilo do Sistema Financeiro.
              */
             async function loadFinancialSummary() {
                 const data = await getFinancialData();
@@ -1587,49 +1643,121 @@
                     return;
                 }
 
+                // Elementos de comparação/detalhes
+                const recComp = document.getElementById('receitas-comparison');
+                const despComp = document.getElementById('despesas-comparison');
+                const saldoComp = document.getElementById('saldo-comparison');
+
                 // Atualiza o widget no dashboard
                 financeWidgetReceitas.textContent = formatarMoeda(data.totalReceitas);
                 financeWidgetDespesas.textContent = formatarMoeda(data.totalDespesas);
-                if (financeWidgetPendentes) financeWidgetPendentes.textContent = formatarMoeda(data.totalPendentes);
 
                 const saldoEl = financeWidgetSaldo;
                 saldoEl.textContent = formatarMoeda(data.saldo);
-                saldoEl.className = `text-2xl font-bold ${data.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+                saldoEl.className = `text-3xl font-extrabold ${data.saldo >= 0 ? 'text-blue-600' : 'text-red-600'} tracking-tight`;
 
                 financeWidgetMonth.textContent = data.formattedMonth;
+
+                // Pendentes (replicando estilo do Sistema Financeiro)
+                if (despComp && data.totalPendentes > 0) {
+                    despComp.innerHTML = `<div class="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200 flex flex-col gap-2 text-amber-800 animate-bounce-subtle">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Gastos Pendentes:</span>
+                            <span class="font-bold text-sm">${formatarMoeda(data.totalPendentes)}</span>
+                        </div>
+                        <button onclick="window.showPendingDetailsModal()" class="text-[10px] text-amber-600 hover:text-amber-700 font-bold underline text-right transition-colors">
+                            <i class="fa-solid fa-list-check mr-1"></i> Ver detalhes
+                        </button>
+                    </div>`;
+                } else if (despComp) {
+                    despComp.innerHTML = '<span class="text-emerald-600 font-medium text-[11px]"><i class="fa-solid fa-check-circle mr-1"></i> Tudo em dia</span>';
+                }
+
+                if (recComp) recComp.innerHTML = '<span class="text-gray-400 text-[11px]">Total acumulado no mês</span>';
+                if (saldoComp) {
+                    saldoComp.innerHTML = data.saldo >= 0 ?
+                        '<span class="text-emerald-600 font-medium text-[11px]"><i class="fa-solid fa-arrow-up mr-1"></i> Balanço Positivo</span>' :
+                        '<span class="text-red-600 font-medium text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Atenção ao Saldo</span>';
+                }
 
                 financeWidgetLoading.classList.add('hidden');
                 financeWidgetContent.classList.remove('hidden');
 
-                // Pré-preenche os dados do modal (opcional, caso o modal seja aberto por outro meio)
+                // Pré-preenche os dados do modal legado (opcional)
                 if (financeModalMonth1) financeModalMonth1.textContent = data.formattedMonth;
                 if (financeModalMonth2) financeModalMonth2.textContent = data.formattedMonth;
                 if (financeModalMonth3) financeModalMonth3.textContent = data.formattedMonth;
 
-                // Aba 1: Resumo
                 if (financeModalReceitas) financeModalReceitas.textContent = formatarMoeda(data.totalReceitas);
                 if (financeModalDespesas) financeModalDespesas.textContent = formatarMoeda(data.totalDespesas);
                 if (financeModalPendentes) financeModalPendentes.textContent = formatarMoeda(data.totalPendentes);
                 if (financeModalSaldo) financeModalSaldo.textContent = formatarMoeda(data.saldo);
 
-                // Aba 3: Contas Fixas
                 if (financeModalContasTbody) {
                     financeModalContasTbody.innerHTML = data.contasFixasStatus.map(cf => {
                         const statusClass = cf.isPaid ? 'text-green-600 font-semibold' : 'text-yellow-600';
-                        return `
-                    <tr>
-                        <td class="px-4 py-3">${cf.descricao}</td>
-                        <td class="px-4 py-3">${formatarMoeda(cf.valor)}</td>
-                        <td class="px-4 py-3">${cf.vencimento}</td>
-                        <td class="px-4 py-3 ${statusClass}">${cf.status}</td>
-                    </tr>
-                `;
+                        return `<tr>
+                                    <td class="px-4 py-3">${cf.descricao}</td>
+                                    <td class="px-4 py-3">${formatarMoeda(cf.valor)}</td>
+                                    <td class="px-4 py-3">${cf.vencimento}</td>
+                                    <td class="px-4 py-3 ${statusClass}">${cf.status}</td>
+                                </tr>`;
                     }).join('');
                     if (data.contasFixasStatus.length === 0) {
                         financeModalContasTbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
                     }
                 }
             }
+
+            /**
+             * Abre o modal de detalhes de gastos pendentes.
+             * Sync com a lógica do Sistema Financeiro.
+             */
+            window.showPendingDetailsModal = function () {
+                const data = loadedFinancialData;
+                if (!data || !data.pendingDetails) return;
+
+                const list = document.getElementById('pending-details-list');
+                const totalEl = document.getElementById('pending-details-total');
+                const modal = document.getElementById('modal-detalhes-pendentes');
+
+                if (!list || !modal) return;
+
+                list.innerHTML = data.pendingDetails.map(item => {
+                    let icon = 'fa-file-invoice-dollar';
+                    let bgColor = 'bg-gray-100';
+                    let textColor = 'text-gray-600';
+
+                    if (item.type === 'fixed') { icon = 'fa-calendar-day'; bgColor = 'bg-blue-50'; textColor = 'text-blue-600'; }
+                    else if (item.type === 'monitor') { icon = 'fa-person-running'; bgColor = 'bg-emerald-50'; textColor = 'text-emerald-600'; }
+                    else if (item.type === 'salary') { icon = 'fa-user-tie'; bgColor = 'bg-indigo-50'; textColor = 'text-indigo-600'; }
+
+                    return `<div class="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-amber-200 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 ${bgColor} ${textColor} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i class="fa-solid ${icon}"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-800 text-sm">${item.description}</p>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">${item.type === 'fixed' ? 'Conta Fixa' : item.type === 'monitor' ? 'Monitor' : 'Funcionário'}</p>
+                            </div>
+                        </div>
+                        <p class="font-extrabold text-gray-900">${formatarMoeda(item.amount)}</p>
+                    </div>`;
+                }).join('');
+
+                totalEl.textContent = formatarMoeda(data.totalPendentes);
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+
+            window.closePendingDetailsModal = function () {
+                const modal = document.getElementById('modal-detalhes-pendentes');
+                if (modal) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+            };
 
             /**
              * Renderiza os gráficos dentro do modal financeiro.
@@ -2927,6 +3055,46 @@
             }, 100);
         });
     </script>
+
+    <!-- MODAL: DETALHES PENDENTES (Sync com Sistema Financeiro) -->
+    <div id="modal-detalhes-pendentes"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div
+            class="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-amber-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+                        <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-amber-900">Gastos Pendentes</h3>
+                        <p class="text-xs text-amber-700/70">Itens aguardando pagamento ou lançamento</p>
+                    </div>
+                </div>
+                <button onclick="window.closePendingDetailsModal()"
+                    class="w-10 h-10 rounded-xl hover:bg-amber-200/50 flex items-center justify-center text-amber-900 transition-colors">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 max-h-[60vh] overflow-y-auto">
+                <div id="pending-details-list" class="space-y-3">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+            <div class="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Pendente</p>
+                    <p id="pending-details-total" class="text-xl font-extrabold text-amber-600">R$ 0,00</p>
+                </div>
+                <button onclick="window.location.href='Sistema Gestão Financeira.html'"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-indigo-200 transition-all active:scale-95">
+                    Ir para Financeiro <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Sistema de Autenticação -->
     <script src="js/protect.js"></script>
