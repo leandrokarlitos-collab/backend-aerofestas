@@ -107,18 +107,21 @@ router.get('/dashboard', async (req, res) => {
         }
 
         for (const emp of employees) {
-            const alreadyPaid = transactions.some(t =>
-                t.description.includes(`Salário: ${emp.nome}`)
-            );
+            // Soma todos os pagamentos já realizados para este funcionário no mês
+            const totalAlreadyPaid = transactions
+                .filter(t => t.description.includes(`Salário: ${emp.nome}`))
+                .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-            if (!alreadyPaid) {
-                const comissao = receitaTotal * percentualComissao;
-                const totalSalary = (emp.salarioFixo || 0) + (emp.va || 0) + (emp.vt || 0) + comissao;
+            const comissao = receitaTotal * percentualComissao;
+            const totalExpected = (emp.salarioFixo || 0) + (emp.va || 0) + (emp.vt || 0) + comissao;
 
+            if (totalAlreadyPaid < totalExpected - 0.01) { // Margem pequena para arredondamento
                 salaryPendingDetails.push({
                     id: emp.id,
-                    description: `Salário: ${emp.nome}`,
-                    amount: totalSalary,
+                    description: `Salário: ${emp.nome} (Restante)`,
+                    amount: totalExpected - totalAlreadyPaid,
+                    totalExpected: totalExpected,
+                    alreadyPaid: totalAlreadyPaid,
                     type: 'salary'
                 });
             }
@@ -610,6 +613,27 @@ router.post('/funcionarios', async (req, res) => {
     } catch (e) {
         console.error("Erro ao criar funcionário:", e);
         res.status(500).json({ error: "Erro ao criar funcionário" });
+    }
+});
+
+// PUT /api/finance/funcionarios/:id
+router.put('/funcionarios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const f = req.body;
+        const updated = await prisma.funcionario.update({
+            where: { id },
+            data: {
+                nome: f.nome,
+                salarioFixo: parseFloat(f.salarioFixo),
+                va: parseFloat(f.va),
+                vt: parseFloat(f.vt)
+            }
+        });
+        res.json(updated);
+    } catch (e) {
+        console.error("Erro ao atualizar funcionário:", e);
+        res.status(500).json({ error: "Erro ao atualizar funcionário" });
     }
 });
 

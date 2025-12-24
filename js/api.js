@@ -458,6 +458,24 @@ export const api = {
         }
     },
 
+    atualizarFuncionario: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/funcionarios/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao atualizar funcionário:", e);
+            return false;
+        }
+    },
+
     deletarFuncionario: async (id) => {
         try {
             const token = getToken();

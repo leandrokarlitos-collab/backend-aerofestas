@@ -850,35 +850,45 @@
                 const salarioFixo = parseFloat(funcionario.salarioFixo) || 0;
                 const va = parseFloat(funcionario.va) || 0;
                 const vt = parseFloat(funcionario.vt) || 0;
-                const totalPagar = salarioFixo + va + vt + valorComissao;
+                const totalBruto = salarioFixo + va + vt + valorComissao;
 
-                // 4. Atualiza UI
+                // 4. Calcula o que ja foi pago no mês
+                const pagamentosEfetuados = state.gastos.filter(g =>
+                    g.data.startsWith(state.selectedMonth) &&
+                    g.description.includes(`Salário: ${funcionario.nome}`)
+                );
+                const totalPago = pagamentosEfetuados.reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
+                const saldoRestante = totalBruto - totalPago;
+
+                // 5. Atualiza UI
                 getById('salario-nome-funcionario').textContent = funcionario.nome;
                 getById('salario-total-entradas').textContent = formatarMoeda(totalEntradas);
                 getById('salario-comissao').textContent = formatarMoeda(valorComissao);
                 getById('salario-comissao-percentual').textContent = `Faixa de ${(percentualComissao * 100).toFixed(1)}% (Até ${formatarMoeda(faixa?.ateValor || 0)})`;
-                getById('salario-total-pagar').textContent = formatarMoeda(totalPagar);
+                getById('salario-total-pagar').textContent = formatarMoeda(totalBruto);
 
                 getById('salario-fixo').textContent = formatarMoeda(salarioFixo);
                 getById('salario-va').textContent = formatarMoeda(va);
                 getById('salario-vt').textContent = formatarMoeda(vt);
                 getById('salario-comissao-detalhe').textContent = formatarMoeda(valorComissao);
-                getById('salario-total-detalhe').textContent = formatarMoeda(totalPagar);
+                getById('salario-total-detalhe').textContent = formatarMoeda(totalBruto);
 
-                // Verifica se já foi lançado como despesa
-                const jaLancado = state.gastos.some(g =>
-                    g.data.startsWith(state.selectedMonth) &&
-                    g.descricao.includes(`Salário: ${funcionario.nome}`)
-                );
+                getById('salario-ja-pago').textContent = formatarMoeda(totalPago);
+                getById('salario-saldo-restante').textContent = formatarMoeda(saldoRestante);
 
                 const btnLancar = getById('btn-lancar-salario');
                 const msgLancado = getById('salario-lancado-msg');
 
-                if (jaLancado) {
-                    btnLancar.classList.add('hidden');
+                if (saldoRestante <= 0.01) {
+                    btnLancar.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Salário Totalmente Pago';
+                    btnLancar.classList.add('bg-green-600');
+                    btnLancar.classList.remove('shiny-btn');
                     msgLancado.classList.remove('hidden');
+                    msgLancado.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i> Salário de ${funcionario.nome} quitado para este mês.`;
                 } else {
-                    btnLancar.classList.remove('hidden');
+                    btnLancar.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Lançar Pagamento / Adiantamento';
+                    btnLancar.classList.add('shiny-btn');
+                    btnLancar.classList.remove('bg-green-600');
                     msgLancado.classList.add('hidden');
                 }
             };
@@ -886,7 +896,7 @@
             // Event listener para mudança de funcionário no select
             getById('salario-funcionario-select')?.addEventListener('change', renderSalariosTab);
 
-            // Handler para Lançar Salário
+            // Handler para Lançar Pagamento
             getById('btn-lancar-salario')?.addEventListener('click', async () => {
                 const select = getById('salario-funcionario-select');
                 const funcionarioId = select.value;
@@ -894,27 +904,72 @@
 
                 if (!funcionario) return;
 
-                const totalPagar = parseFloat(getById('salario-total-detalhe').textContent.replace(/[^\d,-]/g, '').replace(',', '.'));
+                const saldoRestante = parseFloat(getById('salario-saldo-restante').textContent.replace(/[^\d,-]/g, '').replace(',', '.'));
 
-                if (!confirm(`Deseja lançar o salário de ${funcionario.nome} no valor de ${formatarMoeda(totalPagar)} como despesa para este mês?`)) return;
+                // Preenche o modal de pagamento
+                getById('pag-salario-funcionario-id').value = funcionario.id;
+                getById('pag-salario-descricao').value = `Salário: ${funcionario.nome} [${state.selectedMonth}]`;
+                getById('pag-salario-valor').value = Math.max(0, saldoRestante).toFixed(2);
+                getById('pag-salario-data').value = new Date().toISOString().split('T')[0];
 
-                const dadosGasto = {
-                    date: new Date().toISOString().split('T')[0], // Ou usar o último dia do mês selecionado
-                    description: `Salário: ${funcionario.nome} [Mês ${state.selectedMonth}]`,
-                    amount: totalPagar,
+                // Popula as contas no modal de pagamento
+                const contaSelect = getById('pag-salario-conta');
+                contaSelect.innerHTML = '<option value="">-- Selecione --</option>' +
+                    (state.contas || []).map(c => `<option value="${c.id}">${c.name} (${c.bank})</option>`).join('');
+
+                showModal('modal-pagamento-salario');
+            });
+
+            // Handler para Lançar Bônus / Extra
+            getById('btn-lancar-bonus')?.addEventListener('click', async () => {
+                const select = getById('salario-funcionario-select');
+                const funcionarioId = select.value;
+                const funcionario = state.funcionarios.find(f => f.id == funcionarioId);
+
+                if (!funcionario) return;
+
+                // Preenche o modal de pagamento
+                getById('pag-salario-funcionario-id').value = funcionario.id;
+                getById('pag-salario-descricao').value = `Bônus/Adicional: ${funcionario.nome} [${state.selectedMonth}]`;
+                getById('pag-salario-valor').value = "0.00";
+                getById('pag-salario-data').value = new Date().toISOString().split('T')[0];
+
+                // Popula as contas no modal de pagamento
+                const contaSelect = getById('pag-salario-conta');
+                contaSelect.innerHTML = '<option value="">-- Selecione --</option>' +
+                    (state.contas || []).map(c => `<option value="${c.id}">${c.name} (${c.bank})</option>`).join('');
+
+                showModal('modal-pagamento-salario');
+            });
+
+            // Form de Pagamento de Salário
+            getById('form-pagamento-salario')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.textContent = 'Lançando...';
+
+                const dados = {
+                    date: getById('pag-salario-data').value,
+                    description: getById('pag-salario-descricao').value,
+                    amount: parseFloat(getById('pag-salario-valor').value),
                     type: 'EXPENSE',
                     category: 'Salários',
-                    paymentMethod: 'Transferência/Débito'
-                    // accountId pode ser opcional ou padrão
+                    accountId: getById('pag-salario-conta').value,
+                    paymentMethod: getById('pag-salario-metodo').value
                 };
 
-                const sucesso = await window.api.salvarTransacao(dadosGasto);
+                const sucesso = await window.api.salvarTransacao(dados);
                 if (sucesso) {
-                    showToastModal(`✅ Salário de ${funcionario.nome} lançado como despesa!`);
+                    showToastModal('✅ Pagamento lançado com sucesso!');
+                    hideModal('modal-pagamento-salario');
                     await window.loadDataFromCloud();
+                    renderSalariosTab();
                 } else {
-                    showToastModal('❌ Erro ao lançar salário.', true);
+                    showToastModal('❌ Erro ao salvar pagamento.', true);
                 }
+                btn.disabled = false;
+                btn.textContent = 'Confirmar Pagamento';
             });
 
             // ========== LOGICA DO MODAL DE CONFIGURAÇÕES DE SALÁRIOS ==========
@@ -930,8 +985,9 @@
                             <td>${formatarMoeda(f.salarioFixo)}</td>
                             <td>${formatarMoeda(f.va)}</td>
                             <td>${formatarMoeda(f.vt)}</td>
-                            <td>
-                                <button onclick="deletarFuncionario('${f.id}')" class="text-red-600 hover:text-red-900"><i class="fa-solid fa-trash"></i></button>
+                            <td class="text-center">
+                                <button onclick="editarFuncionario('${f.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deletarFuncionario('${f.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                     `).join('') || '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhum funcionário cadastrado.</td></tr>';
@@ -949,6 +1005,33 @@
                     `).join('') || '<tr><td colspan="3" class="text-center py-4 text-gray-500">Nenhuma faixa cadastrada.</td></tr>';
                 }
             };
+
+            window.editarFuncionario = (id) => {
+                const f = state.funcionarios.find(item => item.id == id);
+                if (!f) return;
+
+                getById('edit-funcionario-id').value = f.id;
+                getById('funcionario-nome').value = f.nome;
+                getById('funcionario-salario').value = f.salarioFixo;
+                getById('funcionario-va').value = f.va;
+                getById('funcionario-vt').value = f.vt;
+
+                getById('form-funcionario-title').textContent = 'Editar Funcionário';
+                getById('btn-salvar-funcionario').innerHTML = '<i class="fa-solid fa-save mr-2"></i> Salvar Alterações';
+                getById('btn-cancelar-edit-funcionario').classList.remove('hidden');
+
+                getById('funcionario-nome').focus();
+            };
+
+            window.cancelarEditFuncionario = () => {
+                getById('edit-funcionario-id').value = '';
+                getById('form-add-funcionario').reset();
+                getById('form-funcionario-title').textContent = 'Cadastrar Novo Funcionário';
+                getById('btn-salvar-funcionario').innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Adicionar Funcionário';
+                getById('btn-cancelar-edit-funcionario').classList.add('hidden');
+            };
+
+            getById('btn-cancelar-edit-funcionario')?.addEventListener('click', window.cancelarEditFuncionario);
 
             window.deletarFuncionario = async (id) => {
                 if (!confirm('Excluir este funcionário?')) return;
@@ -2568,6 +2651,8 @@
                 e.preventDefault();
                 if (!validateForm(formAddFuncionario)) return;
 
+                const editId = getById('edit-funcionario-id').value;
+
                 const dados = {
                     nome: getById('funcionario-nome').value,
                     salarioFixo: parseFloat(getById('funcionario-salario').value),
@@ -2575,10 +2660,18 @@
                     vt: parseFloat(getById('funcionario-vt').value)
                 };
 
-                const sucesso = await window.api.salvarFuncionario(dados);
+                let sucesso = false;
+                if (editId) {
+                    sucesso = await window.api.atualizarFuncionario(editId, dados);
+                } else {
+                    sucesso = await window.api.salvarFuncionario(dados);
+                }
+
                 if (sucesso) {
-                    showToastModal('✅ Funcionário cadastrado!');
-                    formAddFuncionario.reset();
+                    showToastModal(editId ? '✅ Funcionário atualizado!' : '✅ Funcionário cadastrado!');
+                    if (window.cancelarEditFuncionario) window.cancelarEditFuncionario();
+                    else formAddFuncionario.reset();
+
                     await window.loadDataFromCloud();
                     renderSalariosConfig();
                     // Atualiza o select da aba salários
@@ -3780,18 +3873,31 @@
                                     <span id="salario-total-detalhe" class="text-xl font-extrabold text-green-800">R$
                                         0,00</span>
                                 </div>
+                                <div
+                                    class="flex justify-between items-center p-3 bg-amber-50 border-l-4 border-amber-400 rounded-md">
+                                    <span class="text-amber-800">Já Pago no Mês</span>
+                                    <span id="salario-ja-pago" class="font-bold text-amber-800">R$ 0,00</span>
+                                </div>
+                                <div
+                                    class="flex justify-between items-center p-4 bg-blue-600 text-white rounded-md mt-2 shadow-md">
+                                    <span class="text-lg font-bold">Saldo Restante</span>
+                                    <span id="salario-saldo-restante" class="text-xl font-extrabold">R$ 0,00</span>
+                                </div>
                             </div>
 
-                            <div class="mt-8 text-center">
+                            <div class="mt-8 flex flex-col md:flex-row gap-4 justify-center">
                                 <button id="btn-lancar-salario"
-                                    class="shiny-btn px-8 py-3 rounded-md text-lg font-semibold w-full md:w-auto">
-                                    <i class="fa-solid fa-arrow-down-to-bracket mr-2"></i> Lançar Salário como Despesa
+                                    class="shiny-btn px-8 py-3 rounded-md text-lg font-semibold flex-1">
+                                    <i class="fa-solid fa-arrow-down-to-bracket mr-2"></i> Lançar Pagamento
                                 </button>
-                                <p id="salario-lancado-msg" class="text-green-600 font-semibold mt-4 hidden">
-                                    <i class="fa-solid fa-check-circle mr-2"></i> Salário já lançado como despesa para
-                                    este mês.
-                                </p>
+                                <button id="btn-lancar-bonus"
+                                    class="shiny-btn-outline px-8 py-3 rounded-md text-lg font-semibold flex-1">
+                                    <i class="fa-solid fa-gift mr-2"></i> Adicionar Bônus / Extra
+                                </button>
                             </div>
+                            <p id="salario-lancado-msg" class="text-green-600 font-semibold mt-4 hidden">
+                                <i class="fa-solid fa-check-circle mr-2"></i> Salário totalmente pago para este mês.
+                            </p>
                         </div>
                     </div>
 
@@ -3961,6 +4067,67 @@
 
 
 
+    <!-- Modal: Lançar Pagamento de Salário (Parcial/Total) -->
+    <div id="modal-pagamento-salario"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-lg m-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-money-bill-wave mr-2"></i> Lançar
+                    Pagamento</h2>
+                <button type="button" onclick="hideModal('modal-pagamento-salario')"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-pagamento-salario" class="space-y-4">
+                <input type="hidden" id="pag-salario-funcionario-id">
+
+                <div>
+                    <label for="pag-salario-descricao" class="block text-sm font-medium text-gray-700">Descrição</label>
+                    <input type="text" id="pag-salario-descricao" required class="form-input w-full mt-1"
+                        placeholder="Ex: Salário: João [Dez/2025]">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="pag-salario-valor" class="block text-sm font-medium text-gray-700">Valor
+                            (R$)</label>
+                        <input type="number" id="pag-salario-valor" step="0.01" required class="form-input w-full mt-1">
+                    </div>
+                    <div>
+                        <label for="pag-salario-data" class="block text-sm font-medium text-gray-700">Data</label>
+                        <input type="date" id="pag-salario-data" required class="form-input w-full mt-1">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="pag-salario-conta" class="block text-sm font-medium text-gray-700">Conta
+                        Bancária</label>
+                    <select id="pag-salario-conta" required class="form-input w-full mt-1">
+                        <option value="">-- Selecione --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="pag-salario-metodo" class="block text-sm font-medium text-gray-700">Forma de
+                        Pagamento</label>
+                    <select id="pag-salario-metodo" required class="form-input w-full mt-1">
+                        <option value="PIX" selected>PIX</option>
+                        <option value="Transferência">Transferência</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Débito">Débito</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="hideModal('modal-pagamento-salario')"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-md transition-colors font-semibold">Cancelar</button>
+                    <button type="submit" class="flex-1 shiny-btn py-2 rounded-md font-bold">Confirmar
+                        Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
         <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
@@ -4016,13 +4183,18 @@
                 <button class="config-tab-btn" data-target="config-tab-comissao">
                     <i class="fa-solid fa-percentage mr-2"></i> Faixas de Comissão
                 </button>
+                <button class="config-tab-btn" data-target="config-tab-pagamentos">
+                    <i class="fa-solid fa-money-bill-transfer mr-2"></i> Pagamentos
+                </button>
             </div>
 
             <div id="config-tab-funcionarios" class="config-tab-content active space-y-6">
                 <section>
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Cadastrar Novo Funcionário</h3>
+                    <h3 id="form-funcionario-title" class="text-xl font-bold text-gray-800 mb-4">Cadastrar Novo
+                        Funcionário</h3>
                     <form id="form-add-funcionario"
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <input type="hidden" id="edit-funcionario-id">
                         <div><label for="funcionario-nome"
                                 class="block text-sm font-medium text-gray-700">Nome</label><input type="text"
                                 id="funcionario-nome" required class="form-input w-full mt-1"
@@ -4036,8 +4208,12 @@
                         <div><label for="funcionario-vt" class="block text-sm font-medium text-gray-700">Vale Transporte
                                 (R$)</label><input type="number" id="funcionario-vt" step="0.01" required
                                 class="form-input w-full mt-1" placeholder="223.60"></div>
-                        <button type="submit" class="shiny-btn py-2 rounded-md lg:col-span-4"><i
-                                class="fa-solid fa-plus mr-2"></i> Adicionar Funcionário</button>
+                        <button type="submit" id="btn-salvar-funcionario"
+                            class="shiny-btn py-2 rounded-md lg:col-span-4"><i class="fa-solid fa-plus mr-2"></i>
+                            Adicionar Funcionário</button>
+                        <button type="button" id="btn-cancelar-edit-funcionario"
+                            class="hidden bg-gray-400 text-white py-2 rounded-md lg:col-span-4 hover:bg-gray-500">Cancelar
+                            Edição</button>
                     </form>
                 </section>
                 <section>
@@ -4050,7 +4226,7 @@
                                     <th>Salário Fixo</th>
                                     <th>VA</th>
                                     <th>VT</th>
-                                    <th>Ações</th>
+                                    <th class="text-center">Ações</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
