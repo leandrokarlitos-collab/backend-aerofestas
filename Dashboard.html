@@ -619,34 +619,37 @@
 
                         <div id="finance-summary-content" class="hidden space-y-6">
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div class="p-5 glassmorphism rounded-2xl border-l-4 border-emerald-500">
+                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
                                     <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">
-                                        Receitas</p>
-                                    <p id="finance-summary-receitas" class="text-2xl font-bold">R$ 0,00</p>
+                                        Receitas Totais</p>
+                                    <p id="finance-summary-receitas" class="text-2xl font-bold text-gray-800">R$ 0,00
+                                    </p>
                                 </div>
-                                <div class="p-5 glassmorphism rounded-2xl border-l-4 border-rose-500">
-                                    <p class="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">
-                                        Despesas</p>
-                                    <p id="finance-summary-despesas" class="text-2xl font-bold">R$ 0,00</p>
+                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
+                                    <p class="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1">
+                                        Despesas Totais</p>
+                                    <p id="finance-summary-despesas" class="text-2xl font-bold text-gray-800">R$ 0,00
+                                    </p>
                                 </div>
-                                <div class="p-5 glassmorphism rounded-2xl border-l-4 border-amber-500">
+                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
                                     <p class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">
-                                        Pendentes</p>
-                                    <p id="finance-summary-pendentes" class="text-2xl font-bold">R$ 0,00</p>
+                                        Gastos Pendentes</p>
+                                    <p id="finance-summary-pendentes" class="text-2xl font-bold text-gray-800">R$ 0,00
+                                    </p>
                                 </div>
-                                <div class="p-5 glassmorphism rounded-2xl border-l-4 border-indigo-500">
-                                    <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">
-                                        Saldo</p>
-                                    <p id="finance-summary-saldo" class="text-2xl font-bold">R$ 0,00</p>
+                                <div class="bg-white/50 p-5 rounded-2xl border border-gray-200/50 shadow-sm">
+                                    <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">
+                                        Saldo Final</p>
+                                    <p id="finance-summary-saldo" class="text-2xl font-bold text-blue-600">R$ 0,00</p>
                                 </div>
                             </div>
 
                             <div class="flex items-center justify-between pt-2">
                                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Referência:
                                     <span id="finance-summary-month" class="text-slate-600">--</span></span>
-                                <button id="open-finance-modal-btn"
-                                    class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
-                                    Ver Painel Completo <i class="fas fa-external-link-alt ml-1"></i>
+                                <button onclick="window.location.href='./Sistema Gestão Financeira.html'"
+                                    class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                                    Ver Painel Completo <i class="fas fa-arrow-right ml-1"></i>
                                 </button>
                             </div>
                         </div>
@@ -1589,7 +1592,11 @@
                 financeWidgetReceitas.textContent = formatarMoeda(data.totalReceitas);
                 financeWidgetDespesas.textContent = formatarMoeda(data.totalDespesas);
                 if (financeWidgetPendentes) financeWidgetPendentes.textContent = formatarMoeda(data.totalPendentes);
-                financeWidgetSaldo.textContent = formatarMoeda(data.saldo);
+
+                const saldoEl = financeWidgetSaldo;
+                saldoEl.textContent = formatarMoeda(data.saldo);
+                saldoEl.className = `text-2xl font-bold ${data.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+
                 financeWidgetMonth.textContent = data.formattedMonth;
 
                 financeWidgetLoading.classList.add('hidden');
