@@ -986,7 +986,6 @@
             const financeWidgetSaldo = document.getElementById('finance-summary-saldo');
             const financeWidgetMonth = document.getElementById('finance-summary-month');
 
-            const openFinanceModalBtn = document.getElementById('open-finance-modal-btn');
             const financeModal = document.getElementById('finance-modal');
             const financeCloseBtn = document.getElementById('finance-close-btn');
             const financeTabBtns = document.querySelectorAll('.finance-tab-btn');
@@ -1602,31 +1601,33 @@
                 financeWidgetLoading.classList.add('hidden');
                 financeWidgetContent.classList.remove('hidden');
 
-                // Pré-preenche os dados do modal
-                financeModalMonth1.textContent = data.formattedMonth;
-                financeModalMonth2.textContent = data.formattedMonth;
-                financeModalMonth3.textContent = data.formattedMonth;
+                // Pré-preenche os dados do modal (opcional, caso o modal seja aberto por outro meio)
+                if (financeModalMonth1) financeModalMonth1.textContent = data.formattedMonth;
+                if (financeModalMonth2) financeModalMonth2.textContent = data.formattedMonth;
+                if (financeModalMonth3) financeModalMonth3.textContent = data.formattedMonth;
 
                 // Aba 1: Resumo
-                financeModalReceitas.textContent = formatarMoeda(data.totalReceitas);
-                financeModalDespesas.textContent = formatarMoeda(data.totalDespesas);
+                if (financeModalReceitas) financeModalReceitas.textContent = formatarMoeda(data.totalReceitas);
+                if (financeModalDespesas) financeModalDespesas.textContent = formatarMoeda(data.totalDespesas);
                 if (financeModalPendentes) financeModalPendentes.textContent = formatarMoeda(data.totalPendentes);
-                financeModalSaldo.textContent = formatarMoeda(data.saldo);
+                if (financeModalSaldo) financeModalSaldo.textContent = formatarMoeda(data.saldo);
 
                 // Aba 3: Contas Fixas
-                financeModalContasTbody.innerHTML = data.contasFixasStatus.map(cf => {
-                    const statusClass = cf.isPaid ? 'text-green-600 font-semibold' : 'text-yellow-600';
-                    return `
-                <tr>
-                    <td class="px-4 py-3">${cf.descricao}</td>
-                    <td class="px-4 py-3">${formatarMoeda(cf.valor)}</td>
-                    <td class="px-4 py-3">${cf.vencimento}</td>
-                    <td class="px-4 py-3 ${statusClass}">${cf.status}</td>
-                </tr>
-            `;
-                }).join('');
-                if (data.contasFixasStatus.length === 0) {
-                    financeModalContasTbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
+                if (financeModalContasTbody) {
+                    financeModalContasTbody.innerHTML = data.contasFixasStatus.map(cf => {
+                        const statusClass = cf.isPaid ? 'text-green-600 font-semibold' : 'text-yellow-600';
+                        return `
+                    <tr>
+                        <td class="px-4 py-3">${cf.descricao}</td>
+                        <td class="px-4 py-3">${formatarMoeda(cf.valor)}</td>
+                        <td class="px-4 py-3">${cf.vencimento}</td>
+                        <td class="px-4 py-3 ${statusClass}">${cf.status}</td>
+                    </tr>
+                `;
+                    }).join('');
+                    if (data.contasFixasStatus.length === 0) {
+                        financeModalContasTbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
+                    }
                 }
             }
 
@@ -1685,19 +1686,20 @@
                 }
             }
 
-            // --- [NOVO] Listeners do Modal Financeiro ---
-            openFinanceModalBtn.addEventListener('click', () => {
-                switchFinanceTab('1'); // Sempre abre na primeira aba
-                financeModal.classList.remove('hidden');
-            });
-            financeCloseBtn.addEventListener('click', () => {
-                financeModal.classList.add('hidden');
-            });
-            financeTabBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    switchFinanceTab(e.currentTarget.dataset.tab);
+            // O widget financeiro agora encaminha diretamente para o Sistema Gestão Financeira.html
+            // a lógica de modal interno foi desativada conforme solicitação.
+            if (financeCloseBtn) {
+                financeCloseBtn.addEventListener('click', () => {
+                    financeModal.classList.add('hidden');
                 });
-            });
+            }
+            if (financeTabBtns) {
+                financeTabBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        switchFinanceTab(e.currentTarget.dataset.tab);
+                    });
+                });
+            }
 
             // --- FIM DA LÓGICA FINANCEIRA ---
 
