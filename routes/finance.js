@@ -78,7 +78,7 @@ router.get('/dashboard', async (req, res) => {
 
             if (isMonthActive) {
                 const alreadyPaid = transactions.some(t =>
-                    t.description.includes(fe.description) &&
+                    t.description && t.description.includes(fe.description) &&
                     t.description.includes('[Conta Fixa]')
                 );
 
@@ -109,7 +109,7 @@ router.get('/dashboard', async (req, res) => {
         for (const emp of employees) {
             // Soma todos os pagamentos já realizados para este funcionário no mês
             const totalAlreadyPaid = transactions
-                .filter(t => t.description.includes(`Salário: ${emp.nome}`))
+                .filter(t => t.description && t.description.includes(`Salário: ${emp.nome}`))
                 .reduce((acc, t) => acc + (t.amount || 0), 0);
 
             const comissao = receitaTotal * percentualComissao;

@@ -854,8 +854,8 @@
 
                 // 4. Calcula o que ja foi pago no mês
                 const pagamentosEfetuados = state.gastos.filter(g =>
-                    g.data.startsWith(state.selectedMonth) &&
-                    g.description.includes(`Salário: ${funcionario.nome}`)
+                    g.data && g.data.startsWith(state.selectedMonth) &&
+                    g.description && g.description.includes(`Salário: ${funcionario.nome}`)
                 );
                 const totalPago = pagamentosEfetuados.reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
                 const saldoRestante = totalBruto - totalPago;
