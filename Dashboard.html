@@ -368,57 +368,92 @@
             border-bottom-color: var(--primary);
         }
 
-        /* [ULTRA-PREMIUM] Estilos para Bottom Navigation Mobile */
+        /* [SUPER-PREMIUM] Unified Fluid Capsule Bottom Nav */
         .bottom-nav {
             position: fixed;
-            bottom: 16px;
-            left: 16px;
-            right: 16px;
-            height: 76px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 420px;
+            height: 75px;
+            background: rgba(255, 255, 255, 0.6);
+            /* Translucidez premium */
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 0 12px;
-            z-index: 1000;
-            border-radius: 28px;
+            padding: 12px 15px 0 15px;
+            z-index: 10000;
+            border-radius: 40px;
             box-shadow:
-                0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                0 10px 15px -3px rgba(0, 0, 0, 0.1),
-                0 20px 25px -5px rgba(0, 0, 0, 0.05),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+                0 20px 40px -10px rgba(0, 0, 0, 0.12),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+            transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+            user-select: none;
             overflow: hidden;
         }
 
-        /* Efeito Holográfico Shimmer */
-        .bottom-nav::before {
-            content: '';
+        /* O Handle Tátil Integrado */
+        .bottom-nav-handle {
             position: absolute;
             top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transform: skewX(-25deg);
-            animation: shimmer 6s infinite;
+            left: 0;
+            right: 0;
+            height: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .bottom-nav-handle::after {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: rgba(79, 70, 229, 0.2);
+            border-radius: 10px;
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        /* Ícone interno (escondido por padrão) */
+        .bottom-nav-handle i {
+            position: absolute;
+            font-size: 1.2rem;
+            color: #4f46e5;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        /* Morphing: Barra Inteira -> Pílula Compacta */
+        .bottom-nav.collapsed {
+            transform: translateX(-50%) translateY(15px);
+            width: 80px;
+            height: 48px;
+            padding: 0;
+            border-radius: 100px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .bottom-nav.collapsed .nav-item {
+            opacity: 0;
+            transform: translateY(20px);
             pointer-events: none;
         }
 
-        @keyframes shimmer {
-            0% {
-                left: -100%;
-            }
+        .bottom-nav.collapsed .bottom-nav-handle::after {
+            opacity: 0;
+            transform: scaleX(0);
+        }
 
-            30% {
-                left: 200%;
-            }
-
-            100% {
-                left: 200%;
-            }
+        .bottom-nav.collapsed .bottom-nav-handle i {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         @media (min-width: 1024px) {
@@ -434,11 +469,11 @@
             align-items: center;
             justify-content: center;
             color: #64748b;
-            width: 70px;
+            width: 65px;
             height: 100%;
             text-decoration: none;
             z-index: 1;
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
         /* The Pill - Fundo do Item Ativo */
@@ -486,12 +521,13 @@
         .nav-item.active span {
             opacity: 1;
             transform: translateY(2px);
-            color: var(--primary);
-            /* Texto abaixo da pílula */
-            background: white;
-            padding: 2px 6px;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            color: #4f46e5;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.55rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         .nav-item:active {
@@ -777,7 +813,12 @@
     </div>
 
     <!-- Bottom Navigation Bar (Mobile Only) -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <!-- Handle Tátil (Puxador Integrado) -->
+        <div class="bottom-nav-handle" id="bottom-nav-handle">
+            <i class="fas fa-chevron-up"></i>
+        </div>
+
         <a href="#" class="nav-item active">
             <i class="fas fa-home"></i>
             <span>Início</span>
@@ -795,6 +836,28 @@
             <span>Clientes</span>
         </a>
     </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomNav = document.getElementById('main-bottom-nav');
+            const handle = document.getElementById('bottom-nav-handle');
+
+            if (bottomNav) {
+                const toggleNav = (e) => {
+                    e.stopPropagation();
+                    bottomNav.classList.toggle('collapsed');
+                };
+
+                handle?.addEventListener('click', toggleNav);
+
+                bottomNav.addEventListener('click', (e) => {
+                    if (bottomNav.classList.contains('collapsed')) {
+                        toggleNav(e);
+                    }
+                });
+            }
+        });
+    </script>
 
     <!-- Modal API Key -->
     <!-- [MODIFICADO] z-index de z-50 para z-30 -->
