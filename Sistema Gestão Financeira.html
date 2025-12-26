@@ -2619,6 +2619,23 @@
             const formContaBancaria = getById('form-cadastro-conta');
             const formCategoriaGasto = getById('form-gasto-categoria');
 
+            // Handler para abrir modal de novo gasto
+            getById('open-gasto-modal-btn')?.addEventListener('click', () => {
+                const form = getById('form-gasto');
+                if (form) {
+                    form.reset();
+                    form.removeAttribute('data-mode');
+                    form.removeAttribute('data-id');
+                    const btnSubmit = form.querySelector('button[type="submit"]');
+                    if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Adicionar Gasto';
+                }
+                // Define data padrão como hoje
+                const dataInput = getById('gasto-data');
+                if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+
+                showModal('add-gasto-modal');
+            });
+
             btnAbrirContasBancarias?.addEventListener('click', () => {
                 formContaBancaria.reset();
                 formContaBancaria.removeAttribute('data-mode');
