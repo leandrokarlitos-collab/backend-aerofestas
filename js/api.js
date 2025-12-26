@@ -535,5 +535,84 @@ export const api = {
             console.error("Erro ao deletar faixa:", e);
             return false;
         }
+    },
+
+    // --- TAREFAS (CLOUD) ---
+    getTasks: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/tasks`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    salvarTarefa: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    atualizarTarefa: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/tasks/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    deletarTarefa: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/tasks/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
+
+    // --- PLANO DIÁRIO (CLOUD) ---
+    getDailyPlanHistory: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/daily-plans/history/all`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : {};
+        } catch (e) { return {}; }
+    },
+
+    getDailyPlan: async (date) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/daily-plans/${date}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    salvarPlanoDiario: async (date, content) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/daily-plans`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ date, content })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
     }
 };

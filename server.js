@@ -11,6 +11,8 @@ const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
 const historyRoutes = require('./routes/history');
 const financeRoutes = require('./routes/finance');
+const taskRoutes = require('./routes/tasks');
+const dailyPlanRoutes = require('./routes/dailyPlans');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -428,6 +430,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin/history', historyRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/daily-plans', dailyPlanRoutes);
 
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.redirect('/login.html'));

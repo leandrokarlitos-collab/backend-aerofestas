@@ -33,6 +33,13 @@
 
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
             --particle-color-rgb: 100, 116, 139;
+
+            /* [NOVO] Variáveis para Inputs e Formulários */
+            --input-bg: #ffffff;
+            --input-border: #e2e8f0;
+            --input-focus: #4f46e5;
+            --input-text: #1e293b;
+            --input-placeholder: #94a3b8;
         }
 
         body {
@@ -77,21 +84,25 @@
 
         .form-input {
             background-color: var(--input-bg);
-            border: 1px solid #d1d5db;
-            color: var(--text-color);
-            border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            transition: all 0.2s ease-in-out;
+            border: 1.5px solid var(--input-border);
+            color: var(--input-text);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            font-size: 0.875rem;
         }
 
         .form-input::placeholder {
-            color: var(--text-muted-color);
+            color: var(--input-placeholder);
+            opacity: 1;
         }
 
         .form-input:focus {
             outline: none;
-            box-shadow: 0 0 0 2px #4f46e5;
-            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            border-color: var(--input-focus);
+            background-color: #ffffff;
         }
 
         .task-item label:has(input:checked) {
@@ -1321,6 +1332,9 @@
                     root.style.setProperty('--card-bg', 'rgba(51, 65, 85, 0.6)');
                     root.style.setProperty('--border-color', 'rgba(71, 85, 105, 0.3)');
                     root.style.setProperty('--input-bg', '#334155');
+                    root.style.setProperty('--input-border', 'rgba(255, 255, 255, 0.1)');
+                    root.style.setProperty('--input-text', '#f1f5f9');
+                    root.style.setProperty('--input-placeholder', '#64748b');
                 }
             }
 
@@ -1552,13 +1566,15 @@
             }
             // --- FIM DA MODIFICAÇÃO: FUNÇÃO loadRelevantDates ---
 
+            // --- GESTÃO DE TAREFAS (CLOUD) ---
             const taskState = {
-                tasks: JSON.parse(localStorage.getItem('dashboardTasks_v1')) || [],
+                tasks: [],
                 activeTab: 'today'
             };
 
-            function saveTasks() {
-                localStorage.setItem('dashboardTasks_v1', JSON.stringify(taskState.tasks));
+            async function syncTasks() {
+                taskState.tasks = await api.getTasks();
+                renderTasks();
             }
 
             function renderTasks() {
@@ -1590,15 +1606,15 @@
                             const dateText = task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : '';
 
                             return `
-                        <div class="task-item flex items-center gap-3 p-2 rounded-md" style="background-color: var(--card-bg)">
-                            <label class="flex-grow flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" data-id="${task.id}" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                <span class="${isPastDue ? 'text-red-700 font-medium' : ''}">${task.text}</span>
-                            </label>
-                            ${dateText ? `<span class="text-xs ${dateClass} px-2 py-1 rounded-full">${dateText}</span>` : ''}
-                            <button data-id="${task.id}" class="delete-task-btn text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    `;
+                                <div class="task-item flex items-center gap-3 p-2 rounded-md" style="background-color: var(--card-bg)">
+                                    <label class="flex-grow flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" data-id="${task.id}" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="${isPastDue ? 'text-red-700 font-medium' : ''}">${task.text}</span>
+                                    </label>
+                                    ${dateText ? `<span class="text-xs ${dateClass} px-2 py-1 rounded-full">${dateText}</span>` : ''}
+                                    <button data-id="${task.id}" class="delete-task-btn text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            `;
                         }).join('');
                     }
                 };
@@ -1610,48 +1626,55 @@
                 addTaskListEventListeners();
             }
 
-            function addTask(text, dueDate = null) {
-                taskState.tasks.push({
-                    id: Date.now(),
-                    text: text,
-                    completed: false,
-                    dueDate: dueDate
-                });
-                saveTasks();
-                // Renderiza apenas a lista da aba ativa para evitar renderização dupla desnecessária
-                if (taskState.activeTab === 'today') {
-                    switchTab('today'); // Isso chama renderTasks e ajusta a data
+            async function addTask(text, dueDate = null) {
+                const newTask = await api.salvarTarefa({ text, dueDate });
+                if (newTask) {
+                    taskState.tasks.push(newTask);
+                    if (taskState.activeTab === 'today') {
+                        switchTab('today');
+                    } else {
+                        switchTab('general');
+                    }
+                    showToast("Tarefa salva na nuvem!", false);
                 } else {
-                    switchTab('general'); // Isso chama renderTasks e ajusta a data
+                    showToast("Erro ao salvar tarefa na nuvem.");
                 }
             }
 
             function addTaskListEventListeners() {
                 document.querySelectorAll('.task-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', (e) => {
-                        const taskId = Number(e.target.dataset.id);
-                        const task = taskState.tasks.find(t => t.id === taskId);
-                        if (task) {
-                            task.completed = e.target.checked;
-                            saveTasks();
-                            // Adiciona um pequeno delay para a UI atualizar e remove a tarefa concluída visualmente
+                    checkbox.addEventListener('change', async (e) => {
+                        const taskId = e.target.dataset.id;
+                        const completed = e.target.checked;
+
+                        const updated = await api.atualizarTarefa(taskId, { completed });
+                        if (updated) {
+                            const task = taskState.tasks.find(t => t.id === taskId);
+                            if (task) task.completed = completed;
+
                             setTimeout(() => {
-                                // Re-renderiza ambas as listas para garantir consistência
                                 renderTasks();
-                                // Atualiza a visualização da aba atual
                                 switchTab(taskState.activeTab);
                             }, 300);
+                        } else {
+                            showToast("Erro ao atualizar tarefa.");
+                            e.target.checked = !completed;
                         }
                     });
                 });
 
                 document.querySelectorAll('.delete-task-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const taskId = Number(e.currentTarget.dataset.id);
-                        taskState.tasks = taskState.tasks.filter(t => t.id !== taskId);
-                        saveTasks();
-                        renderTasks(); // Re-renderiza para remover o item deletado
-                        switchTab(taskState.activeTab); // Garante que a aba correta esteja visível
+                    button.addEventListener('click', async (e) => {
+                        const taskId = e.currentTarget.dataset.id;
+                        const ok = await api.deletarTarefa(taskId);
+                        if (ok) {
+                            taskState.tasks = taskState.tasks.filter(t => t.id !== taskId);
+                            renderTasks();
+                            switchTab(taskState.activeTab);
+                            showToast("Tarefa removida!", false);
+                        } else {
+                            showToast("Erro ao remover tarefa.");
+                        }
                     });
                 });
             }
@@ -2371,16 +2394,6 @@
 
             // --- [NOVO] Função para limpar o plano e restaurar o botão ---
             function clearDailyPlan() {
-                // [MODIFICADO] Remove do Histórico
-                const todayISO = new Date().toISOString().split('T')[0];
-                const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
-                delete history[todayISO];
-                localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
-
-                // [NOVO] Limpa chaves antigas (migração)
-                localStorage.removeItem('dailyPlan_v1');
-                localStorage.removeItem('dailyPlanDate_v1');
-
                 // [MODIFICADO] Apenas limpa a área do plano e mostra o botão "Planejar"
                 const planContainer = document.getElementById('plan-display-area');
                 if (planContainer) {
@@ -2490,12 +2503,11 @@
                     try {
                         const plan = JSON.parse(response);
 
-                        // [MODIFICADO] Salva no Histórico
-                        const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
-                        history[todayISO] = plan; // Adiciona/sobrescreve o plano de hoje
-                        localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+                        // [MODIFICADO] Salva na Nuvem
+                        await api.salvarPlanoDiario(todayISO, plan);
 
-                        // [NOVO] Limpa chaves antigas (migração)
+                        // [NOVO] Limpa chaves locais antigas
+                        localStorage.removeItem('dailyPlanHistory_v1');
                         localStorage.removeItem('dailyPlan_v1');
                         localStorage.removeItem('dailyPlanDate_v1');
 
@@ -3165,82 +3177,55 @@
             }
 
             // --- [NOVO] Função para carregar o plano salvo ---
-            function loadDailyPlan() {
+            async function loadDailyPlan() {
                 const todayISO = new Date().toISOString().split('T')[0];
-                // [MODIFICADO] Pega do Histórico
-                const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
-                const plan = history[todayISO]; // Pega o plano de hoje
 
-                // Log de debug para verificação de carregamento
-                console.log('📦 Dados carregados do localStorage (Dashboard):', {
-                    dailyPlanHistory: Object.keys(history).length,
-                    todayPlan: plan ? 'existe' : 'não existe'
-                });
-
-                // [NOVO] Bloco de migração de dados de chaves antigas
-                const oldPlanRaw = localStorage.getItem('dailyPlan_v1');
-                if (oldPlanRaw) {
-                    try {
-                        const oldDate = localStorage.getItem('dailyPlanDate_v1');
-                        if (oldDate && !history[oldDate]) { // Se a data antiga existe E não está no histórico
-                            history[oldDate] = JSON.parse(oldPlanRaw); // Migra o plano antigo
-                            localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
-                        }
-                    } catch (e) {
-                        console.error("Erro ao migrar plano antigo:", e);
+                // [MIGRAÇÃO] Verifica se há histórico local para subir para a nuvem (apenas uma vez)
+                const localHistory = JSON.parse(localStorage.getItem('dailyPlanHistory_v1'));
+                if (localHistory && Object.keys(localHistory).length > 0) {
+                    console.log('🚀 Migrando histórico de planos para a nuvem...');
+                    for (const [date, plan] of Object.entries(localHistory)) {
+                        await api.salvarPlanoDiario(date, plan);
                     }
-                    // Limpa as chaves antigas independentemente de sucesso na migração
-                    localStorage.removeItem('dailyPlan_v1');
-                    localStorage.removeItem('dailyPlanDate_v1');
+                    localStorage.removeItem('dailyPlanHistory_v1');
+                    console.log('✅ Migração concluída.');
                 }
 
-                // Se temos um plano salvo E ele é de hoje
-                if (plan) { // [MODIFICADO]
-                    try {
-                        // const plan = JSON.parse(savedPlanRaw); // Não é mais necessário
-                        // [MODIFICADO] Esconde o botão de planejar
-                        const planButton = document.getElementById('plan-day-btn');
-                        if (planButton) {
-                            planButton.style.display = 'none';
-                        }
+                // [MODIFICADO] Pega da Nuvem
+                const plan = await api.getDailyPlan(todayISO);
 
-                        // [MODIFICADO] Define o container de exibição do plano
+                // Se temos um plano salvo E ele é de hoje
+                if (plan) {
+                    try {
+                        const planButton = document.getElementById('plan-day-btn');
+                        if (planButton) planButton.style.display = 'none';
+
                         const planContainer = document.getElementById('plan-display-area');
 
-                        // Define o contexto atual para o botão "Estou esquecendo" funcionar
                         const today = new Date();
                         const formattedDate = today.toLocaleDateString('pt-BR', { dateStyle: 'full' });
                         const eventsTodayRaw = JSON.parse(localStorage.getItem('events')) || [];
                         const eventsToday = eventsTodayRaw.filter(event => event.date === todayISO).map(event => event.clientName);
-                        // taskState.tasks é preenchido por switchTab() -> renderTasks()
                         const tasksToday = taskState.tasks.filter(task => (task.dueDate === todayISO || !task.dueDate) && !task.completed).map(task => task.text);
 
                         currentContext = { events: eventsToday, tasks: tasksToday, date: formattedDate };
 
-                        // Renderiza o plano salvo no container correto
                         if (planContainer) {
                             renderDailyPlan(plan, planContainer);
                         } else {
-                            console.error("Container #plan-display-area não encontrado.");
                             clearDailyPlan();
                         }
                     } catch (err) {
                         console.error("Erro ao carregar plano salvo:", err);
-                        clearDailyPlan(); // Limpa o plano corrompido
+                        clearDailyPlan();
                     }
                 } else {
-                    // [NOVO] Se não há plano para hoje, garante que os botões de ação corretos estejam visíveis
-                    // [MODIFICADO] Apenas garante que o botão de planejar esteja visível
                     const planButton = document.getElementById('plan-day-btn');
-                    if (planButton) {
-                        planButton.style.display = 'block';
-                    }
-                    // E que a área do plano esteja limpa
+                    if (planButton) planButton.style.display = 'block';
+
                     const planContainer = document.getElementById('plan-display-area');
-                    if (planContainer) {
-                        planContainer.innerHTML = '';
-                    }
-                    // [MODIFICADO] Mostra o texto de prompt inicial
+                    if (planContainer) planContainer.innerHTML = '';
+
                     document.getElementById('assistant-prompt-text')?.classList.remove('hidden');
                 }
             }
@@ -3257,10 +3242,11 @@
                 // [NOVO] Carrega o resumo financeiro
                 loadFinancialSummary();
 
-                switchTab('today'); // Inicia na aba "Hoje" (isso também chama renderTasks)
+                await syncTasks(); // Sincroniza tarefas da nuvem
+                switchTab('today');
 
                 // [MODIFICADO] Carrega o plano salvo DEPOIS que as tarefas foram carregadas (por switchTab)
-                loadDailyPlan();
+                await loadDailyPlan();
 
                 // Inicializar novas funcionalidades
                 setupCollapsibleWidgets();
