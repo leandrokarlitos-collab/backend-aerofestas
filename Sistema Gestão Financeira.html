@@ -3254,98 +3254,115 @@
         }
 
         /* [ULTRA-PREMIUM] Estilos para Bottom Navigation Mobile */
+        /* [ULTRA-PREMIUM] Integrated Glossy Bottom Nav */
         .bottom-nav {
             position: fixed;
-            bottom: 16px;
-            left: 16px;
-            right: 16px;
-            height: 76px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 450px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(25px) saturate(200%);
+            -webkit-backdrop-filter: blur(25px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            padding: 0 12px;
+            padding: 0 15px;
             z-index: 10000;
-            border-radius: 28px;
+            border-radius: 24px;
             box-shadow:
-                0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                0 10px 15px -3px rgba(0, 0, 0, 0.1),
-                0 20px 25px -5px rgba(0, 0, 0, 0.05),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                0 10px 40px -10px rgba(0, 0, 0, 0.15),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* O "Corte" Integrado (Notch do Puxador) */
+        .bottom-nav::after {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 12px;
+            background: inherit;
+            backdrop-filter: inherit;
+            -webkit-backdrop-filter: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            z-index: -1;
         }
 
         .bottom-nav.collapsed {
-            transform: translateY(92px);
+            transform: translateX(-50%) translateY(85px);
+            opacity: 0.9;
         }
 
+        /* Puxador Integrado e Elegante */
         .bottom-nav-toggle {
             position: absolute;
-            top: -24px;
+            top: -28px;
             left: 50%;
             transform: translateX(-50%);
-            width: 48px;
-            height: 48px;
-            background: white;
-            border-radius: 50%;
+            width: 56px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 100px 100px 0 0;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05), 0 4px 15px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            z-index: 10001;
-            transition: all 0.3s ease;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-bottom: none;
+            transition: all 0.4s ease;
             color: #4f46e5;
         }
 
-        .bottom-nav-toggle:hover {
-            transform: translateX(-50%) scale(1.1);
-            background: #f8fafc;
+        /* O "Handle" Visual (Traço de puxar) */
+        .bottom-nav-toggle::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            width: 24px;
+            height: 4px;
+            background: rgba(79, 70, 229, 0.2);
+            border-radius: 2px;
+            transition: all 0.3s ease;
         }
 
         .bottom-nav-toggle i {
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 1.2rem;
+            margin-top: 6px;
+            font-size: 0.9rem;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            opacity: 0.6;
+        }
+
+        .bottom-nav.collapsed .bottom-nav-toggle {
+            height: 40px;
+            top: -40px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: white;
+            box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.05);
         }
 
         .bottom-nav.collapsed .bottom-nav-toggle i {
             transform: rotate(0deg);
+            opacity: 1;
         }
 
         .bottom-nav:not(.collapsed) .bottom-nav-toggle i {
             transform: rotate(180deg);
         }
 
-        /* Efeito Holográfico Shimmer */
-        .bottom-nav::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transform: skewX(-25deg);
-            animation: shimmer 6s infinite;
-            pointer-events: none;
-        }
-
-        @keyframes shimmer {
-            0% {
-                left: -100%;
-            }
-
-            30% {
-                left: 200%;
-            }
-
-            100% {
-                left: 200%;
-            }
+        .bottom-nav-toggle:hover::before {
+            background: rgba(79, 70, 229, 0.5);
+            width: 30px;
         }
 
         @keyframes slide-up {
@@ -3429,12 +3446,13 @@
         .nav-item.active span {
             opacity: 1;
             transform: translateY(2px);
-            color: var(--primary);
-            /* Texto abaixo da pílula */
-            background: white;
-            padding: 2px 6px;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            color: #4f46e5;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.55rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         .nav-item:active {
