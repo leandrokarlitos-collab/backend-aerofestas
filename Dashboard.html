@@ -257,6 +257,126 @@
             border-left-color: var(--secondary);
         }
 
+        /* [PREMIUM] Futuristic Loader Styles */
+        #page-loader {
+            position: fixed;
+            inset: 0;
+            background: #f8fafc;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+        }
+
+        .loader-content {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader-ring {
+            position: absolute;
+            inset: 0;
+            border: 4px solid transparent;
+            border-top-color: var(--primary);
+            border-bottom-color: var(--secondary);
+            border-radius: 50%;
+            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+        }
+
+        .loader-ring::after {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border: 4px solid transparent;
+            border-left-color: #f093fb;
+            border-right-color: #4f46e5;
+            border-radius: 50%;
+            animation: loader-spin 2s linear infinite reverse;
+        }
+
+        .loader-logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+            animation: loader-pulse 2s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        @keyframes loader-spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes loader-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+                filter: brightness(1.2);
+            }
+        }
+
+        .loader-text {
+            margin-top: 2rem;
+            font-weight: 800;
+            letter-spacing: 0.2rem;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: text-shimmer 2s linear infinite;
+        }
+
+        @keyframes text-shimmer {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+
+        #main-container {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #main-container.content-ready {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .featured-card {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(238, 242, 255, 0.75) 100%) !important;
             border: 2px solid transparent !important;
@@ -706,6 +826,17 @@
 </head>
 
 <body class="min-h-screen">
+    <!-- [PREMIUM] Futuristic Page Loader -->
+    <div id="page-loader">
+        <div class="loader-content">
+            <div class="loader-ring"></div>
+            <div class="loader-logo">
+                <i class="fa-solid fa-rocket"></i>
+            </div>
+        </div>
+        <div class="loader-text">Carregando Aero Festas</div>
+    </div>
+
     <canvas id="particles-js"></canvas>
 
     <div id="screensaver"
@@ -3299,8 +3430,20 @@
                 await loadDailyPlan();
 
                 // Inicializar novas funcionalidades
+                // Inicializar novas funcionalidades
                 setupCollapsibleWidgets();
                 setupScreensaver();
+
+                // [PREMIUM] Finaliza o loader e mostra o conteúdo com animação
+                const loader = document.getElementById('page-loader');
+                const mainContainer = document.getElementById('main-container');
+                if (loader && mainContainer) {
+                    setTimeout(() => {
+                        loader.style.opacity = '0';
+                        loader.style.visibility = 'hidden';
+                        mainContainer.classList.add('content-ready');
+                    }, 500); // Pequeno atraso para garantir o "feeling" lúdico
+                }
             }
 
             init();

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -27,6 +29,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="w-full max-w-md mx-4">
         <div class="glassmorphism rounded-2xl shadow-2xl p-8">
@@ -38,22 +41,19 @@
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label class="block text-white mb-2 font-medium">Email</label>
-                    <input type="email"
-                           id="email"
-                           required
-                           class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                           placeholder="seu@email.com">
+                    <input type="email" id="email" required
+                        class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                        placeholder="seu@email.com">
                 </div>
 
                 <div>
                     <label class="block text-white mb-2 font-medium">Senha</label>
-                    <input type="password"
-                           id="password"
-                           required
-                           class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                           placeholder="••••••••">
+                    <input type="password" id="password" required
+                        class="w-full px-4 py-3 rounded-lg bg-white/90 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                        placeholder="••••••••">
                     <div class="flex justify-end mt-2">
-                        <a href="forgot-password.html" class="text-sm text-white/80 hover:text-white hover:underline transition-colors">
+                        <a href="forgot-password.html"
+                            class="text-sm text-white/80 hover:text-white hover:underline transition-colors">
                             Esqueci a senha
                         </a>
                     </div>
@@ -63,14 +63,13 @@
                 <div id="successMessage" class="hidden bg-green-500/80 text-white p-3 rounded-lg text-sm"></div>
 
                 <button type="submit"
-                        class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-white/90 transition-colors shadow-lg">
+                    class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-white/90 transition-colors shadow-lg">
                     <i class="fas fa-sign-in-alt mr-2"></i>Entrar
                 </button>
             </form>
 
             <div class="mt-6 text-center">
-                <a href="register.html"
-                   class="text-white/90 hover:text-white underline text-sm">
+                <a href="register.html" class="text-white/90 hover:text-white underline text-sm">
                     <i class="fas fa-user-plus mr-1"></i>Primeiro acesso? Cadastre-se aqui
                 </a>
             </div>
@@ -121,7 +120,7 @@
 
                 // Redireciona
                 setTimeout(() => {
-                    const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || 'Agenda de eventos.html'; // Mudado para Agenda como padrão
+                    const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || 'Dashboard.html'; // Mudado para Dashboard como padrão
                     sessionStorage.removeItem('redirectAfterLogin');
                     window.location.href = redirectUrl;
                 }, 1000);
@@ -134,4 +133,5 @@
         });
     </script>
 </body>
+
 </html>
