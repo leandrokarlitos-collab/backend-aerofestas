@@ -4098,34 +4098,26 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
 
                     if (notif.dias === 0) {
                         iconHtml = '<i class="fas fa-birthday-cake text-pink-500 text-2xl"></i>';
-                        // MODIFICADO
-                        textHtml = `É o aniversário de < strong > ${notif.nome}</strong > (${notif.tipo}) hoje! < span
-        class="text-xs block text-gray-600" > Ref: ${notif.clientName}${eventDateStr}</span > `;
-                        bgColor = 'bg-pink-100/80 border-pink-300'; // Destaque especial
+                        textHtml = `É o aniversário de <strong>${notif.nome}</strong> (${notif.tipo}) hoje! <span class="text-xs block text-gray-600">Ref: ${notif.clientName}${eventDateStr}</span>`;
+                        bgColor = 'bg-pink-100/80 border-pink-300';
                     } else {
                         iconHtml = '<i class="fas fa-gift text-blue-500 text-xl"></i>';
-                        // MODIFICADO
-                        textHtml = `Aniversário de < strong > ${notif.nome}</strong > (${notif.tipo}) em
-            < strong > ${notif.dias} dias</strong >. < span class="text-xs block text-gray-600" > Ref:
-                            ${notif.clientName}${eventDateStr}</span > `;
+                        textHtml = `Aniversário de <strong>${notif.nome}</strong> (${notif.tipo}) em <strong>${notif.dias} dias</strong>. <span class="text-xs block text-gray-600">Ref: ${notif.clientName}${eventDateStr}</span>`;
                         bgColor = 'bg-blue-50/80';
                     }
 
-                    notifEl.className = `p - 3 rounded - md border flex items - center space - x - 3 ${bgColor} `;
-                    // --- INÍCIO DA MODIFICAÇÃO: Adicionar botão de mensagem ---
+                    notifEl.className = `p-3 rounded-md border flex items-center space-x-3 ${bgColor}`;
                     notifEl.innerHTML = `
-            < div > ${iconHtml}</div >
-                        <div class="flex-1"> <!-- ADICIONADO WRAPPER -->
+                        <div>${iconHtml}</div>
+                        <div class="flex-1">
                             <p class="text-sm text-gray-800">${textHtml}</p>
                         </div>
-                        <!--Botão de Relacionamento-- >
-            <button class="birthday-message-btn text-green-500 hover:text-green-600 text-lg shrink-0"
-                title="✨ Criar Mensagem de Relacionamento" data-nome="${notif.nome}"
-                data-tipo="${notif.tipo}" data-dias="${notif.dias}">
-                <i class="fas fa-comment-dots"></i>
-            </button>
-        `;
-                    // --- FIM DA MODIFICAÇÃO ---
+                        <button class="birthday-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" 
+                            title="✨ Criar Mensagem de Relacionamento" data-nome="${notif.nome}" 
+                            data-tipo="${notif.tipo}" data-dias="${notif.dias}">
+                            <i class="fas fa-comment-dots"></i>
+                        </button>
+                    `;
                     notificationsListEl.appendChild(notifEl);
                 });
 

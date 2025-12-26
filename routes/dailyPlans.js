@@ -20,7 +20,7 @@ router.get('/:date', authenticate, async (req, res) => {
             }
         });
 
-        if (!plan) return res.status(404).json({ error: 'Nenhum plano para esta data.' });
+        if (!plan) return res.json(null);
 
         res.json(JSON.parse(plan.content));
     } catch (error) {

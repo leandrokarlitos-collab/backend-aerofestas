@@ -133,6 +133,24 @@
             transition: border-color 0.5s ease;
         }
 
+        .scrollable-widget {
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #6366f1 transparent;
+        }
+
+        .scrollable-widget::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .scrollable-widget::-webkit-scrollbar-thumb {
+            background-color: #6366f1;
+            border-radius: 20px;
+        }
+
         .gemini-btn {
             background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             color: white;
@@ -2274,7 +2292,7 @@
                 const mdToHtml = (str) => str ? str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : '';
 
                 const html = `
-            <div class="animate-fadeIn space-y-8">
+            <div class="animate-fadeIn space-y-8 scrollable-widget">
                 <div class="text-center mb-6">
                     <h3 class="text-2xl font-black text-slate-800 tracking-tight mb-2">${plan.titulo}</h3>
                     <p class="text-slate-500 text-sm leading-relaxed max-w-lg mx-auto">${plan.introducao}</p>
@@ -2344,15 +2362,21 @@
                         >${plan.review || ''}</textarea>
                     </div>
                     
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button id="analyze-review-btn" class="gemini-btn py-4 px-6 rounded-2xl text-xs font-bold uppercase tracking-widest shadow-lg">
-                            Analisar Resultados
+                            <i class="fas fa-brain mr-2"></i> Analisar Resultados
                         </button>
                         <button id="check-forgotten-btn" class="bg-slate-800 text-white font-bold py-4 px-6 rounded-2xl text-xs uppercase tracking-widest hover:bg-slate-900 transition-all">
-                            Insights Ocultos?
+                            <i class="fas fa-question mr-2"></i> Insights Ocultos?
                         </button>
                         <button id="plan-copy-btn" class="bg-white text-slate-700 border border-slate-200 font-bold py-4 px-6 rounded-2xl text-xs uppercase tracking-widest hover:bg-slate-50 transition-all">
-                            Copiar Plano
+                            <i class="fas fa-copy mr-2"></i> Copiar Plano
+                        </button>
+                        <button id="plan-reload-btn" class="bg-indigo-600 text-white font-bold py-4 px-6 rounded-2xl text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                            <i class="fas fa-sync-alt mr-2"></i> Atualizar Plano
+                        </button>
+                        <button id="plan-history-btn-inner" class="bg-slate-100 text-slate-600 font-bold py-4 px-6 rounded-2xl text-xs uppercase tracking-widest hover:bg-slate-200 transition-all sm:col-span-2">
+                            <i class="fas fa-history mr-2"></i> Ver Histórico Completo
                         </button>
                     </div>
                 </div>
@@ -2764,6 +2788,32 @@
                     } else {
                         loadingEl.innerHTML = "Não consegui verificar. Tente novamente.";
                         chatHistory.pop(); // Remove o prompt com falha
+                    }
+                }
+
+                // [NOVO] Listener para o botão "Atualizar Plano"
+                if (e.target.id === 'plan-reload-btn' || e.target.closest('#plan-reload-btn')) {
+                    if (confirm("Deseja gerar um NOVO plano diário com base nas tarefas atuais? O plano de hoje será substituído.")) {
+                        handlePlanDayClick({ currentTarget: document.getElementById('plan-day-btn') });
+                    }
+                }
+
+                // [NOVO] Listener para o botão "Ver Histórico" (dentro do plano)
+                if (e.target.id === 'plan-history-btn-inner' || e.target.closest('#plan-history-btn-inner')) {
+                    const globalHistoryBtn = document.getElementById('view-plan-history-btn');
+                    if (globalHistoryBtn) {
+                        globalHistoryBtn.click();
+                    }
+                }
+
+                // [NOVO] Listener para o botão "Copiar Plano"
+                if (e.target.id === 'plan-copy-btn' || e.target.closest('#plan-copy-btn')) {
+                    const planArea = document.getElementById('plan-display-area');
+                    if (planArea) {
+                        const text = planArea.innerText;
+                        navigator.clipboard.writeText(text).then(() => {
+                            showToast('Plano copiado para a área de transferência!', false);
+                        });
                     }
                 }
 
