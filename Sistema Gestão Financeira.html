@@ -3263,10 +3263,11 @@
             width: calc(100% - 40px);
             max-width: 420px;
             height: 75px;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.6);
+            /* Mais translúcido */
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             display: flex;
             justify-content: space-around;
             align-items: center;
@@ -3300,19 +3301,32 @@
             height: 4px;
             background: rgba(79, 70, 229, 0.2);
             border-radius: 10px;
-            transition: all 0.5s ease;
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        /* Ícone interno (escondido por padrão) */
+        .bottom-nav-handle i {
+            position: absolute;
+            font-size: 1.2rem;
+            color: #4f46e5;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
         /* Morphing: Barra Inteira -> Pílula Compacta e Visível */
         .bottom-nav.collapsed {
             transform: translateX(-50%) translateY(15px);
             /* Desce apenas opo suficiente para um visual 'docked' mas visível */
-            width: 120px;
+            width: 80px;
+            /* Mais compacta */
             height: 48px;
             padding: 0;
             border-radius: 100px;
-            background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.5);
+            /* Translúcida */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
         .bottom-nav:not(.collapsed).hover-active {
@@ -3326,11 +3340,13 @@
         }
 
         .bottom-nav.collapsed .bottom-nav-handle::after {
-            background: #4f46e5;
-            width: 40px;
-            height: 6px;
-            transform: translateY(22px);
-            /* Centraliza o handle na pílula menor */
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .bottom-nav.collapsed .bottom-nav-handle i {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         @media (min-width: 1024px) {
@@ -5386,7 +5402,9 @@
     <!-- Bottom Navigation Bar (Mobile Only) -->
     <nav class="bottom-nav active" id="main-bottom-nav">
         <!-- Handle Tátil (Puxador Integrado) -->
-        <div class="bottom-nav-handle" id="bottom-nav-handle"></div>
+        <div class="bottom-nav-handle" id="bottom-nav-handle">
+            <i class="fas fa-chevron-up"></i>
+        </div>
 
         <a href="./Dashboard.html" class="nav-item">
             <i class="fas fa-home"></i>
