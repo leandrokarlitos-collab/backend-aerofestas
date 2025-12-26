@@ -533,6 +533,146 @@
         .nav-item:active {
             transform: scale(0.9) translateY(0);
         }
+
+        /* [SUPER-PREMIUM] Right Task Sidebar */
+        #task-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100vh;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(50px) saturate(200%);
+            -webkit-backdrop-filter: blur(50px) saturate(200%);
+            border-left: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #task-sidebar.open {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 640px) {
+            #task-sidebar {
+                width: 100%;
+                z-index: 11000;
+            }
+        }
+
+        /* Sidebar Toggle Button (Floating) */
+        #sidebar-toggle {
+            position: fixed;
+            right: 20px;
+            bottom: 115px;
+            width: 64px;
+            height: 64px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 35px rgba(79, 70, 229, 0.45);
+            cursor: pointer;
+            z-index: 900;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #sidebar-toggle:hover {
+            transform: translateY(-5px) scale(1.08);
+            box-shadow: 0 18px 45px rgba(79, 70, 229, 0.6);
+        }
+
+        #sidebar-toggle i {
+            font-size: 1.5rem;
+            margin-bottom: 2px;
+        }
+
+        #sidebar-toggle span {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        #sidebar-toggle.active {
+            transform: rotate(180deg) scale(0.9);
+            background: white;
+            color: var(--primary);
+            border: 1px solid rgba(79, 70, 229, 0.2);
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 45px 35px 25px 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-title-group {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .sidebar-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.12);
+        }
+
+        .sidebar-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.03em;
+        }
+
+        /* Overlay */
+        #sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 950;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #sidebar-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(79, 70, 229, 0.1);
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 70, 229, 0.3);
+        }
     </style>
 </head>
 
@@ -586,7 +726,7 @@
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
             <div class="lg:col-span-2 flex flex-col gap-8">
                 <section id="widget-assistant"
@@ -753,63 +893,75 @@
                     <i class="fas fa-birthday-cake stat-icon-bg"></i>
                 </section>
             </div>
-
-            <div id="widget-tasks"
-                class="lg:col-span-1 glassmorphism rounded-2xl overflow-hidden dashboard-card saldo flex flex-col h-full max-h-[85vh]">
-                <div
-                    class="p-6 border-b border-white/20 flex justify-between items-center cursor-pointer collapsible-header">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                            <i class="fas fa-check-double"></i>
-                        </div>
-                        <h2 class="text-xl font-bold">Tarefas Diárias</h2>
-                    </div>
-                    <i class="fas fa-chevron-down text-slate-400"></i>
-                </div>
-
-                <div class="collapsible-content flex-grow flex flex-col px-4 md:px-6 pb-6 min-h-0 pt-4">
-                    <div class="flex p-1 bg-slate-100/50 rounded-xl mb-6">
-                        <button id="tab-today"
-                            class="tab-btn flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-indigo-600 shadow-sm">Hoje</button>
-                        <button id="tab-general"
-                            class="tab-btn flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Geral</button>
-                    </div>
-
-                    <div id="task-lists-container" class="flex-grow overflow-y-auto pr-1 space-y-3">
-                        <div id="tasks-today-list" class="task-list space-y-3"></div>
-                        <div id="tasks-general-list" class="task-list space-y-3 hidden"></div>
-                    </div>
-
-                    <div class="mt-6 pt-6 border-t border-slate-200/40 relative z-10">
-                        <form id="add-task-form" class="space-y-3">
-                            <div class="relative group">
-                                <input type="text" id="new-task-input" placeholder="Nova tarefa..."
-                                    class="w-full pl-4 pr-12 py-3.5 rounded-xl bg-white/50 border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all text-sm font-medium text-slate-700"
-                                    required>
-                                <button type="button" id="breakdown-task-btn"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-indigo-500 hover:text-indigo-700 hover:bg-slate-100 rounded-lg transition-all"
-                                    title="✨ IA">
-                                    <i class="fas fa-wand-magic-sparkles text-sm"></i>
-                                </button>
-                            </div>
-                            <div class="flex gap-2">
-                                <div class="relative flex-grow">
-                                    <i
-                                        class="fas fa-calendar-day absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                                    <input type="date" id="new-task-date"
-                                        class="w-full pl-9 pr-4 py-3 rounded-xl bg-white/50 border border-slate-200 text-xs font-bold text-slate-600 outline-none focus:border-indigo-400 transition-all">
-                                </div>
-                                <button type="submit"
-                                    class="bg-indigo-600 text-white w-12 h-12 rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center shadow-lg shadow-indigo-100 flex-shrink-0">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <i class="fas fa-tasks stat-icon-bg"></i>
-            </div>
         </main>
+    </div>
+
+    <!-- [NOVO] Sidebar de Tarefas - Lateral Direita (Design Ultra-Premium) -->
+    <div id="sidebar-overlay"></div>
+    <div id="task-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title-group">
+                <div class="sidebar-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div>
+                    <h2 class="sidebar-title">Minhas Tarefas</h2>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Organização Diária</p>
+                </div>
+            </div>
+            <button id="close-sidebar"
+                class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all sm:hidden">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="px-8 pb-8 flex-grow flex flex-col min-h-0">
+            <div class="flex p-1.5 bg-slate-100/80 rounded-2xl mb-8">
+                <button id="tab-today"
+                    class="tab-btn flex-1 py-3 text-xs font-bold rounded-xl transition-all bg-white text-indigo-600 shadow-sm border border-indigo-100/50">Hoje</button>
+                <button id="tab-general"
+                    class="tab-btn flex-1 py-3 text-xs font-bold rounded-xl transition-all text-slate-500 hover:text-slate-700">Geral</button>
+            </div>
+
+            <div id="task-lists-container" class="flex-grow overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+                <div id="tasks-today-list" class="task-list space-y-4"></div>
+                <div id="tasks-general-list" class="task-list space-y-4 hidden"></div>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-slate-100 relative z-10">
+                <form id="add-task-form" class="space-y-4">
+                    <div class="relative group">
+                        <input type="text" id="new-task-input" placeholder="O que precisa ser feito?"
+                            class="w-full pl-5 pr-12 py-4 rounded-2xl bg-slate-50 border border-transparent focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all text-sm font-medium text-slate-700 placeholder:text-slate-400"
+                            required>
+                        <button type="button" id="breakdown-task-btn"
+                            class="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all"
+                            title="✨ IA">
+                            <i class="fas fa-wand-magic-sparkles text-sm"></i>
+                        </button>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="relative flex-grow">
+                            <i
+                                class="fas fa-calendar-alt absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="date" id="new-task-date"
+                                class="w-full pl-10 pr-4 py-4 rounded-2xl bg-slate-50 border border-transparent text-xs font-bold text-slate-600 outline-none focus:bg-white focus:border-indigo-400 transition-all">
+                        </div>
+                        <button type="submit"
+                            class="bg-indigo-600 text-white w-14 h-14 rounded-2xl hover:bg-indigo-700 transition-all flex items-center justify-center shadow-lg shadow-indigo-200 active:scale-95 flex-shrink-0">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <i class="fas fa-tasks stat-icon-bg opacity-[0.03]"></i>
+    </div>
+
+    <!-- [NOVO] Botão Flutuante para Abrir Sidebar (Mobile First) -->
+    <div id="sidebar-toggle">
+        <i class="fas fa-list-check"></i>
+        <span>Tarefas</span>
     </div>
 
     <!-- Bottom Navigation Bar (Mobile Only) -->
@@ -856,6 +1008,23 @@
                     }
                 });
             }
+
+            // --- LÓGICA DA SIDEBAR DE TAREFAS ---
+            const taskSidebar = document.getElementById('task-sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const closeSidebar = document.getElementById('close-sidebar');
+
+            const toggleSidebar = () => {
+                const isOpen = taskSidebar.classList.toggle('open');
+                sidebarToggle.classList.toggle('active');
+                sidebarOverlay.classList.toggle('visible');
+                document.body.classList.toggle('overflow-hidden', isOpen);
+            };
+
+            sidebarToggle?.addEventListener('click', toggleSidebar);
+            sidebarOverlay?.addEventListener('click', toggleSidebar);
+            closeSidebar?.addEventListener('click', toggleSidebar);
         });
     </script>
 
