@@ -3275,7 +3275,49 @@
                 0 10px 15px -3px rgba(0, 0, 0, 0.1),
                 0 20px 25px -5px rgba(0, 0, 0, 0.05),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bottom-nav.collapsed {
+            transform: translateY(92px);
+        }
+
+        .bottom-nav-toggle {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05), 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            z-index: 10001;
+            transition: all 0.3s ease;
+            color: #4f46e5;
+        }
+
+        .bottom-nav-toggle:hover {
+            transform: translateX(-50%) scale(1.1);
+            background: #f8fafc;
+        }
+
+        .bottom-nav-toggle i {
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1.2rem;
+        }
+
+        .bottom-nav.collapsed .bottom-nav-toggle i {
+            transform: rotate(0deg);
+        }
+
+        .bottom-nav:not(.collapsed) .bottom-nav-toggle i {
+            transform: rotate(180deg);
         }
 
         /* Efeito Holográfico Shimmer */
@@ -5372,7 +5414,12 @@
     <script src="js/charts-init.js"></script>
 
     <!-- Bottom Navigation Bar (Mobile Only) -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <!-- Botão de recolher/expandir -->
+        <div id="bottom-nav-toggle" class="bottom-nav-toggle">
+            <i class="fas fa-chevron-up"></i>
+        </div>
+
         <a href="./Dashboard.html" class="nav-item">
             <i class="fas fa-home"></i>
             <span>Início</span>
@@ -5390,6 +5437,32 @@
             <span>Clientes</span>
         </a>
     </nav>
+
+    <script>
+        // Lógica do Bottom Nav Collapsible
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomNav = document.getElementById('main-bottom-nav');
+            const toggleBtn = document.getElementById('bottom-nav-toggle');
+
+            if (bottomNav && toggleBtn) {
+                toggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    bottomNav.classList.toggle('collapsed');
+                });
+
+                // Inicia expandido se for mobile (opcional, já é o padrão)
+                // Mas vamos garantir que cliques no corpo da página não fechem sem querer 
+                // ou se quiser que feche ao clicar fora:
+                /*
+                document.addEventListener('click', (e) => {
+                    if (!bottomNav.contains(e.target) && !bottomNav.classList.contains('collapsed')) {
+                        bottomNav.classList.add('collapsed');
+                    }
+                });
+                */
+            }
+        });
+    </script>
 
 </body>
 
