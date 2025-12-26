@@ -3303,15 +3303,16 @@
             transition: all 0.5s ease;
         }
 
-        /* Morphing: Barra Inteira -> Pílula Compacta */
+        /* Morphing: Barra Inteira -> Pílula Compacta e Visível */
         .bottom-nav.collapsed {
-            transform: translateX(-50%) translateY(75px);
-            /* Desce para mostrar só o topo */
-            width: 100px;
-            height: 36px;
+            transform: translateX(-50%) translateY(15px);
+            /* Desce apenas opo suficiente para um visual 'docked' mas visível */
+            width: 120px;
+            height: 48px;
             padding: 0;
             border-radius: 100px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
 
         .bottom-nav:not(.collapsed).hover-active {
@@ -3325,9 +3326,11 @@
         }
 
         .bottom-nav.collapsed .bottom-nav-handle::after {
-            background: var(--primary);
-            width: 50px;
-            transform: translateY(16px);
+            background: #4f46e5;
+            width: 40px;
+            height: 6px;
+            transform: translateY(22px);
+            /* Centraliza o handle na pílula menor */
         }
 
         @media (min-width: 1024px) {
