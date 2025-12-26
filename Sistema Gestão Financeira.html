@@ -2317,7 +2317,7 @@
             getById('month-filter-global').addEventListener('change', (e) => {
                 withPremiumLoading(async () => {
                     state.selectedMonth = e.target.value;
-                    renderAll();
+                    await window.loadDataFromCloud();
                 });
             });
 
@@ -2329,7 +2329,7 @@
                         const [y, m] = state.selectedMonth.split('-').map(Number);
                         const newDate = new Date(y, m - 1 + dir, 1);
                         state.selectedMonth = newDate.toISOString().slice(0, 7);
-                        renderAll();
+                        await window.loadDataFromCloud();
                     });
                 });
             });
