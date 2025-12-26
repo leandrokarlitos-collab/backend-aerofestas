@@ -317,6 +317,18 @@ router.post('/categories/expenses', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao salvar categoria" }); }
 });
 
+// PUT Categoria de Gasto
+router.put('/categories/expenses/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated = await prisma.expenseCategory.update({
+            where: { id },
+            data: { name: req.body.name }
+        });
+        res.json(updated);
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar categoria" }); }
+});
+
 // POST Categoria de Conta Fixa
 router.post('/categories/fixed', async (req, res) => {
     try {
@@ -325,6 +337,18 @@ router.post('/categories/fixed', async (req, res) => {
         });
         res.json(newCat);
     } catch (e) { res.status(500).json({ error: "Erro ao salvar categoria" }); }
+});
+
+// PUT Categoria de Conta Fixa
+router.put('/categories/fixed/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated = await prisma.fixedExpenseCategory.update({
+            where: { id },
+            data: { name: req.body.name }
+        });
+        res.json(updated);
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar categoria" }); }
 });
 
 
