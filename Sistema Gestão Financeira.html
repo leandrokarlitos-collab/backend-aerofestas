@@ -2345,6 +2345,45 @@
                 }
             };
 
+            // ========== LOCAL LOADING SYSTEM ==========
+            const showLocalLoader = (element, message = 'Carregando...') => {
+                if (!element) return;
+
+                // Ensure relative position for containment
+                if (getComputedStyle(element).position === 'static') {
+                    element.style.position = 'relative';
+                }
+
+                // Remove existing if any
+                const existing = element.querySelector('.local-loader-overlay');
+                if (existing) existing.remove();
+
+                const loader = document.createElement('div');
+                loader.className = 'local-loader-overlay';
+                loader.innerHTML = `
+                    <div class="local-spinner"></div>
+                    <div class="local-loading-text">${message}</div>
+                `;
+
+                element.appendChild(loader);
+
+                // Trigger reflow
+                loader.offsetHeight;
+
+                loader.classList.add('visible');
+            };
+
+            const hideLocalLoader = (element) => {
+                if (!element) return;
+                const loader = element.querySelector('.local-loader-overlay');
+                if (loader) {
+                    loader.classList.remove('visible');
+                    setTimeout(() => {
+                        if (loader.parentNode) loader.parentNode.removeChild(loader);
+                    }, 300);
+                }
+            };
+
             // ========== NAVEGAÇÃO ENTRE ABAS ==========
             const navLinks = document.querySelectorAll('.nav-link');
             const pages = document.querySelectorAll('.page');
@@ -2352,18 +2391,30 @@
             navLinks.forEach(link => {
                 link.addEventListener('click', () => {
                     const targetPage = link.getAttribute('data-target');
+                    const selectedPage = document.getElementById(`page-${targetPage}`);
 
-                    withPremiumLoading(async () => {
-                        navLinks.forEach(l => {
-                            l.classList.remove('active', 'shiny-btn');
-                            l.classList.add('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
-                        });
-                        link.classList.add('active', 'shiny-btn');
-                        link.classList.remove('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
-                        pages.forEach(page => page.classList.remove('active'));
-                        const selectedPage = document.getElementById(`page-${targetPage}`);
-                        if (selectedPage) selectedPage.classList.add('active');
+                    // 1. Atualiza Navegação Visual (Instantâneo)
+                    navLinks.forEach(l => {
+                        l.classList.remove('active', 'shiny-btn');
+                        l.classList.add('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
                     });
+                    link.classList.add('active', 'shiny-btn');
+                    link.classList.remove('bg-white/50', 'hover:bg-white/80', 'text-gray-700');
+
+                    // 2. Transição Granular com Loader Local
+                    if (selectedPage) {
+                        // Troca de página (display block)
+                        pages.forEach(page => page.classList.remove('active'));
+                        selectedPage.classList.add('active');
+
+                        // Exibe loader local na área de conteúdo
+                        showLocalLoader(selectedPage, 'Preparando visualização...');
+
+                        // Simula transição suave e "loading"
+                        setTimeout(() => {
+                            hideLocalLoader(selectedPage);
+                        }, 500);
+                    }
                 });
             });
 
@@ -3202,6 +3253,74 @@
             100% {
                 transform: rotate(360deg);
             }
+        }
+
+        /* Animations */
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Full Page Loader (Premium) */
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out, visibility 0.5s;
+        }
+
+        .loader-content {
+            text-align: center;
+            position: relative;
+        }
+
+        /* Local Granular Loader */
+        .local-loader-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .local-loader-overlay.visible {
+            opacity: 1;
+        }
+
+        .local-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(79, 70, 229, 0.2);
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        .local-loading-text {
+            font-size: 0.875rem;
+            color: #4f46e5;
+            font-weight: 600;
+            letter-spacing: 0.025em;
         }
 
         /* Toast Animation */
@@ -4159,1377 +4278,1352 @@
                     </div>
                 </div>
             </main>
-        </div>
+        </div> <!-- Fim de container -->
+    </div> <!-- Fim de page-content-wrapper -->
 
-        <div id="add-entrada-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-            <div
-                class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">Lançar Nova Entrada Manual</h2>
-                    <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <form id="form-evento" class="space-y-4 pt-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div><label for="evento-data" class="block text-sm font-medium text-gray-700">Data</label><input
-                                type="date" id="evento-data" required class="form-input w-full mt-1"></div>
-                        <div><label for="evento-empresa"
-                                class="block text-sm font-medium text-gray-700">Empresa</label><select
-                                id="evento-empresa" required class="form-input w-full mt-1">
-                                <option>Aero Festas</option>
-                                <option>ABC Festas</option>
-                            </select></div>
-                        <div><label for="evento-contratante"
-                                class="block text-sm font-medium text-gray-700">Contratante</label><input type="text"
-                                id="evento-contratante" required class="form-input w-full mt-1"></div>
-                        <div><label for="evento-local"
-                                class="block text-sm font-medium text-gray-700">Local</label><input type="text"
-                                id="evento-local" required class="form-input w-full mt-1"></div>
-                    </div>
-                    <div class="border-t border-gray-200 pt-4">
-                        <h4 class="font-semibold mb-2">Itens do Evento</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                            <div class="md:col-span-7"><label for="item-nome"
-                                    class="block text-sm font-medium text-gray-700">Nome do Item</label><input
-                                    type="text" id="item-nome" class="form-input w-full mt-1"></div>
-                            <div class="md:col-span-3"><label for="item-valor"
-                                    class="block text-sm font-medium text-gray-700">Valor (R$)</label><input
-                                    type="number" id="item-valor" step="0.01" class="form-input w-full mt-1"></div>
-                            <button type="button" id="btn-add-item" class="md:col-span-2 shiny-btn py-2 rounded-md"><i
-                                    class="fa-solid fa-plus mr-2"></i> Add</button>
-                        </div>
-                        <ul id="itens-temp-list" class="mt-4 space-y-2"></ul>
-                    </div>
-                    <button type="submit" class="w-full shiny-btn py-2.5 rounded-md font-bold"><i
-                            class="fa-solid fa-save mr-2"></i> Salvar Evento Completo</button>
-                </form>
+    <div id="add-entrada-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Lançar Nova Entrada Manual</h2>
+                <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
-        </div>
-
-        <div id="add-gasto-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-            <div
-                class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">Lançar Novo Gasto</h2>
-                    <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <form id="form-gasto" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                    <div><label for="gasto-data" class="block text-sm font-medium text-gray-700">Data</label><input
-                            type="date" id="gasto-data" required class="form-input w-full mt-1"></div>
-                    <div><label for="gasto-descricao"
-                            class="block text-sm font-medium text-gray-700">Descrição</label><input type="text"
-                            id="gasto-descricao" required class="form-input w-full mt-1"></div>
-                    <div>
-                        <label for="gasto-categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
-                        <select id="gasto-categoria" required class="form-input w-full mt-1">
-                            <option value="">-- Selecione --</option>
-                        </select>
-                    </div>
-                    <div><label for="gasto-conta" class="block text-sm font-medium text-gray-700">Conta de
-                            Saída</label><select id="gasto-conta" required class="form-input w-full mt-1"></select>
-                    </div>
-                    <div><label for="gasto-pagamento" class="block text-sm font-medium text-gray-700">Forma de
-                            Pagamento</label><select id="gasto-pagamento" required class="form-input w-full mt-1">
-                            <option>PIX</option>
-                            <option>Cartão de Crédito</option>
-                            <option>Dinheiro</option>
-                            <option>Boleto</option>
+            <form id="form-evento" class="space-y-4 pt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div><label for="evento-data" class="block text-sm font-medium text-gray-700">Data</label><input
+                            type="date" id="evento-data" required class="form-input w-full mt-1"></div>
+                    <div><label for="evento-empresa"
+                            class="block text-sm font-medium text-gray-700">Empresa</label><select id="evento-empresa"
+                            required class="form-input w-full mt-1">
+                            <option>Aero Festas</option>
+                            <option>ABC Festas</option>
                         </select></div>
-                    <div><label for="gasto-valor" class="block text-sm font-medium text-gray-700">Valor
-                            (R$)</label><input type="number" id="gasto-valor" step="0.01" required
-                            class="form-input w-full mt-1"></div>
-                    <button type="submit" class="shiny-btn py-2 rounded-md lg:col-span-3"><i
-                            class="fa-solid fa-plus mr-2"></i> Adicionar Gasto</button>
-                </form>
-            </div>
+                    <div><label for="evento-contratante"
+                            class="block text-sm font-medium text-gray-700">Contratante</label><input type="text"
+                            id="evento-contratante" required class="form-input w-full mt-1"></div>
+                    <div><label for="evento-local" class="block text-sm font-medium text-gray-700">Local</label><input
+                            type="text" id="evento-local" required class="form-input w-full mt-1"></div>
+                </div>
+                <div class="border-t border-gray-200 pt-4">
+                    <h4 class="font-semibold mb-2">Itens do Evento</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                        <div class="md:col-span-7"><label for="item-nome"
+                                class="block text-sm font-medium text-gray-700">Nome do Item</label><input type="text"
+                                id="item-nome" class="form-input w-full mt-1"></div>
+                        <div class="md:col-span-3"><label for="item-valor"
+                                class="block text-sm font-medium text-gray-700">Valor (R$)</label><input type="number"
+                                id="item-valor" step="0.01" class="form-input w-full mt-1"></div>
+                        <button type="button" id="btn-add-item" class="md:col-span-2 shiny-btn py-2 rounded-md"><i
+                                class="fa-solid fa-plus mr-2"></i> Add</button>
+                    </div>
+                    <ul id="itens-temp-list" class="mt-4 space-y-2"></ul>
+                </div>
+                <button type="submit" class="w-full shiny-btn py-2.5 rounded-md font-bold"><i
+                        class="fa-solid fa-save mr-2"></i> Salvar Evento Completo</button>
+            </form>
         </div>
+    </div>
 
-        <div id="lancamento-conta-fixa-modal"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-            <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-lg m-4">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">Lançar Pagamento de Conta Fixa</h2>
-                    <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <form id="form-lancamento-conta-fixa">
-                    <p class="text-gray-700 mb-4">Confirme ou altere os dados para o lançamento.</p>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Descrição</label>
-                            <input type="text" id="lancamento-cf-descricao" class="form-input w-full mt-1 bg-gray-200"
-                                readonly>
-                        </div>
-                        <div>
-                            <label for="lancamento-cf-data" class="block text-sm font-medium text-gray-700">Data do
-                                Pagamento</label>
-                            <input type="date" id="lancamento-cf-data" required class="form-input w-full mt-1">
-                        </div>
-                        <div>
-                            <label for="lancamento-cf-valor" class="block text-sm font-medium text-gray-700">Valor Pago
-                                (R$)</label>
-                            <input type="number" step="0.01" id="lancamento-cf-valor" required
-                                class="form-input w-full mt-1">
-                        </div>
-                        <div>
-                            <label for="lancamento-cf-conta" class="block text-sm font-medium text-gray-700">Conta de
-                                Saída</label>
-                            <select id="lancamento-cf-conta" required class="form-input w-full mt-1"></select>
-                        </div>
-                        <div>
-                            <label for="lancamento-cf-comprovante"
-                                class="block text-sm font-medium text-gray-700">Anexar
-                                Comprovantes (Opcional)</label>
-                            <input type="file" id="lancamento-cf-comprovante" multiple
-                                class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        </div>
-                    </div>
-                    <button type="submit" class="shiny-btn w-full px-6 py-2 rounded-md mt-8"><i
-                            class="fa-solid fa-check mr-2"></i>Confirmar Lançamento</button>
-                </form>
+    <div id="add-gasto-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Lançar Novo Gasto</h2>
+                <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
-        </div>
-
-
-
-        <!-- Modal: Lançar Pagamento de Salário (Parcial/Total) -->
-        <div id="modal-pagamento-salario"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-            <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-lg m-4">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-money-bill-wave mr-2"></i> Lançar
-                        Pagamento</h2>
-                    <button type="button" onclick="hideModal('modal-pagamento-salario')"
-                        class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            <form id="form-gasto" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div><label for="gasto-data" class="block text-sm font-medium text-gray-700">Data</label><input
+                        type="date" id="gasto-data" required class="form-input w-full mt-1"></div>
+                <div><label for="gasto-descricao"
+                        class="block text-sm font-medium text-gray-700">Descrição</label><input type="text"
+                        id="gasto-descricao" required class="form-input w-full mt-1"></div>
+                <div>
+                    <label for="gasto-categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
+                    <select id="gasto-categoria" required class="form-input w-full mt-1">
+                        <option value="">-- Selecione --</option>
+                    </select>
                 </div>
+                <div><label for="gasto-conta" class="block text-sm font-medium text-gray-700">Conta de
+                        Saída</label><select id="gasto-conta" required class="form-input w-full mt-1"></select>
+                </div>
+                <div><label for="gasto-pagamento" class="block text-sm font-medium text-gray-700">Forma de
+                        Pagamento</label><select id="gasto-pagamento" required class="form-input w-full mt-1">
+                        <option>PIX</option>
+                        <option>Cartão de Crédito</option>
+                        <option>Dinheiro</option>
+                        <option>Boleto</option>
+                    </select></div>
+                <div><label for="gasto-valor" class="block text-sm font-medium text-gray-700">Valor
+                        (R$)</label><input type="number" id="gasto-valor" step="0.01" required
+                        class="form-input w-full mt-1"></div>
+                <button type="submit" class="shiny-btn py-2 rounded-md lg:col-span-3"><i
+                        class="fa-solid fa-plus mr-2"></i> Adicionar Gasto</button>
+            </form>
+        </div>
+    </div>
 
-                <form id="form-pagamento-salario" class="space-y-4">
-                    <input type="hidden" id="pag-salario-funcionario-id">
-
-                    <div>
-                        <label for="pag-salario-descricao"
-                            class="block text-sm font-medium text-gray-700">Descrição</label>
-                        <input type="text" id="pag-salario-descricao" required class="form-input w-full mt-1"
-                            placeholder="Ex: Salário: João [Dez/2025]">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="pag-salario-valor" class="block text-sm font-medium text-gray-700">Valor
-                                (R$)</label>
-                            <input type="number" id="pag-salario-valor" step="0.01" required
-                                class="form-input w-full mt-1">
-                        </div>
-                        <div>
-                            <label for="pag-salario-data" class="block text-sm font-medium text-gray-700">Data</label>
-                            <input type="date" id="pag-salario-data" required class="form-input w-full mt-1">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="pag-salario-conta" class="block text-sm font-medium text-gray-700">Conta
-                            Bancária</label>
-                        <select id="pag-salario-conta" required class="form-input w-full mt-1">
-                            <option value="">-- Selecione --</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="pag-salario-metodo" class="block text-sm font-medium text-gray-700">Forma de
-                            Pagamento</label>
-                        <select id="pag-salario-metodo" required class="form-input w-full mt-1">
-                            <option value="PIX" selected>PIX</option>
-                            <option value="Transferência">Transferência</option>
-                            <option value="Dinheiro">Dinheiro</option>
-                            <option value="Débito">Débito</option>
-                        </select>
-                    </div>
-
-                    <div class="pt-4 flex gap-3">
-                        <button type="button" onclick="hideModal('modal-pagamento-salario')"
-                            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-md transition-colors font-semibold">Cancelar</button>
-                        <button type="submit" class="flex-1 shiny-btn py-2 rounded-md font-bold">Confirmar
-                            Pagamento</button>
-                    </div>
-                </form>
+    <div id="lancamento-conta-fixa-modal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-lg m-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Lançar Pagamento de Conta Fixa</h2>
+                <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
-        </div>
-
-        <div id="edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-            <div
-                class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 id="modal-title" class="text-2xl font-bold text-gray-900">Editar Item</h2>
-                    <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <form id="modal-form">
-                    <div id="modal-form-content" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
-                    <button type="submit" class="shiny-btn w-full px-6 py-2 rounded-md mt-8"><i
-                            class="fa-solid fa-save mr-2"></i>Salvar Alterações</button>
-                </form>
-            </div>
-        </div>
-
-        <div id="monitor-details-modal"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[70] p-4">
-            <div
-                class="modal-box glassmorphism p-6 md:p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 id="monitor-details-title" class="text-2xl font-bold text-gray-900">Detalhes do Monitor</h2>
-                    <button
-                        class="monitor-details-close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <div id="monitor-details-body" class="bg-white/60 p-4 rounded-md flex-grow overflow-y-auto">
-                </div>
-            </div>
-        </div>
-
-        <div id="attachment-viewer-modal"
-            class="fixed inset-0 bg-black/60 flex items-center justify-center hidden z-50 p-4">
-            <div
-                class="modal-box glassmorphism p-6 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 id="attachment-viewer-title" class="text-2xl font-bold text-gray-900">Visualizar Anexos</h2>
-                    <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <div id="attachment-viewer-content"
-                    class="flex-grow overflow-y-auto bg-white/50 rounded p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                </div>
-            </div>
-        </div>
-
-        <div id="salarios-config-modal"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
-            <div
-                class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">Configurações de Salários</h2>
-                    <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-
-                <div class="mb-4 border-b border-gray-300/50 flex space-x-2">
-                    <button class="config-tab-btn active" data-target="config-tab-funcionarios">
-                        <i class="fa-solid fa-user-tie mr-2"></i> Funcionários
-                    </button>
-                    <button class="config-tab-btn" data-target="config-tab-comissao">
-                        <i class="fa-solid fa-percentage mr-2"></i> Faixas de Comissão
-                    </button>
-                    <button class="config-tab-btn" data-target="config-tab-pagamentos">
-                        <i class="fa-solid fa-money-bill-transfer mr-2"></i> Pagamentos
-                    </button>
-                </div>
-
-                <div id="config-tab-funcionarios" class="config-tab-content active space-y-6">
-                    <section>
-                        <h3 id="form-funcionario-title" class="text-xl font-bold text-gray-800 mb-4">Cadastrar Novo
-                            Funcionário</h3>
-                        <form id="form-add-funcionario"
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                            <input type="hidden" id="edit-funcionario-id">
-                            <div><label for="funcionario-nome"
-                                    class="block text-sm font-medium text-gray-700">Nome</label><input type="text"
-                                    id="funcionario-nome" required class="form-input w-full mt-1"
-                                    placeholder="Nome do Funcionário"></div>
-                            <div><label for="funcionario-salario"
-                                    class="block text-sm font-medium text-gray-700">Salário
-                                    Fixo (R$)</label><input type="number" id="funcionario-salario" step="0.01" required
-                                    class="form-input w-full mt-1" placeholder="2200.00"></div>
-                            <div><label for="funcionario-va" class="block text-sm font-medium text-gray-700">Vale
-                                    Alimentação (R$)</label><input type="number" id="funcionario-va" step="0.01"
-                                    required class="form-input w-full mt-1" placeholder="390.00"></div>
-                            <div><label for="funcionario-vt" class="block text-sm font-medium text-gray-700">Vale
-                                    Transporte
-                                    (R$)</label><input type="number" id="funcionario-vt" step="0.01" required
-                                    class="form-input w-full mt-1" placeholder="223.60"></div>
-                            <button type="submit" id="btn-salvar-funcionario"
-                                class="shiny-btn py-2 rounded-md lg:col-span-4"><i class="fa-solid fa-plus mr-2"></i>
-                                Adicionar Funcionário</button>
-                            <button type="button" id="btn-cancelar-edit-funcionario"
-                                class="hidden bg-gray-400 text-white py-2 rounded-md lg:col-span-4 hover:bg-gray-500">Cancelar
-                                Edição</button>
-                        </form>
-                    </section>
-                    <section>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">Funcionários Cadastrados</h3>
-                        <div class="table-wrapper">
-                            <table id="tabela-funcionarios-config">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Salário Fixo</th>
-                                        <th>VA</th>
-                                        <th>VT</th>
-                                        <th class="text-center">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-                <div id="config-tab-comissao" class="config-tab-content space-y-6">
-                    <section>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">Adicionar Nova Faixa de Comissão</h3>
-                        <form id="form-add-comissao" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                            <div><label for="comissao-atevalor"
-                                    class="block text-sm font-medium text-gray-700">Faturamento
-                                    ATÉ (R$)</label><input type="number" id="comissao-atevalor" step="0.01" required
-                                    class="form-input w-full mt-1" placeholder="45000"></div>
-                            <div><label for="comissao-percentual"
-                                    class="block text-sm font-medium text-gray-700">Percentual
-                                    (%)</label><input type="number" id="comissao-percentual" step="0.1" required
-                                    class="form-input w-full mt-1" placeholder="2.5"></div>
-                            <button type="submit" class="shiny-btn py-2 rounded-md"><i
-                                    class="fa-solid fa-plus mr-2"></i>
-                                Adicionar Faixa</button>
-                        </form>
-                        <p class="text-xs text-gray-500 mt-2">Dica: Para "acima de R$ 95.000", cadastre uma faixa com
-                            valor
-                            "Até" muito alto (ex: 9999999).</p>
-                    </section>
-                    <section>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">Faixas de Comissão Atuais</h3>
-                        <div class="table-wrapper">
-                            <table id="tabela-comissao-config">
-                                <thead>
-                                    <tr>
-                                        <th>Faturamento Até (R$)</th>
-                                        <th>Percentual</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-            </div>
-        </div>
-
-
-        <!-- Event Listeners de Navegação e Modais -->
-        <script>
-            // Este script agora é vazio pois foi consolidado no script ao final do arquivo
-        </script>
-
-        <!-- Modal de Entrada Manual de Receita -->
-        <div id="modal-entrada-manual"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50"
-            style="display: none;">
-            <div class="glassmorphism p-8 rounded-lg max-w-md w-full mx-4 shadow-2xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold text-gray-800">💰 Nova Entrada de Receita</h3>
-                    <button onclick="document.getElementById('modal-entrada-manual').style.display='none'"
-                        class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
-                </div>
-
-                <form id="form-entrada-manual" class="space-y-4">
-                    <div>
-                        <label for="entrada-data" class="block text-sm font-medium text-gray-700 mb-1">
-                            Data da Entrada
-                        </label>
-                        <input type="date" id="entrada-data" required
-                            class="form-input w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div>
-                        <label for="entrada-descricao" class="block text-sm font-medium text-gray-700 mb-1">
-                            Descrição
-                        </label>
-                        <input type="text" id="entrada-descricao" required
-                            placeholder="Ex: Venda de Material, Serviço Extra..."
-                            class="form-input w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div>
-                        <label for="entrada-valor" class="block text-sm font-medium text-gray-700 mb-1">
-                            Valor (R$)
-                        </label>
-                        <input type="number" id="entrada-valor" step="0.01" min="0.01" required placeholder="0,00"
-                            class="form-input w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500">
-                    </div>
-
-                    <div class="bg-indigo-50 p-3 rounded-md text-sm text-gray-600">
-                        <i class="fa-solid fa-info-circle mr-2 text-indigo-600"></i>
-                        Esta entrada será registrada como receita avulsa, independente de eventos.
-                    </div>
-
-                    <div class="flex gap-3 pt-4">
-                        <button type="button"
-                            onclick="document.getElementById('modal-entrada-manual').style.display='none'"
-                            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md transition-colors">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="flex-1 shiny-btn px-4 py-2 rounded-md">
-                            <i class="fa-solid fa-check mr-2"></i> Salvar
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Modal: Cadastrar Conta Fixa -->
-        <div id="modal-conta-fixa"
-            class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-            <div
-                class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">Cadastrar Conta Fixa</h2>
-                    <button id="close-conta-fixa-modal"
-                        class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-
-                <form id="form-conta-fixa" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <div><label for="conta-fixa-descricao"
-                            class="block text-sm font-medium text-gray-700">Descrição</label><input type="text"
-                            id="conta-fixa-descricao" required class="form-input w-full mt-1"
-                            placeholder="Ex: Aluguel do galpão"></div>
-                    <div><label for="conta-fixa-valor" class="block text-sm font-medium text-gray-700">Valor
-                            (R$)</label><input type="number" id="conta-fixa-valor" step="0.01" required
-                            class="form-input w-full mt-1" placeholder="750.00"></div>
-                    <div><label for="conta-fixa-dia-vencimento" class="block text-sm font-medium text-gray-700">Dia do
-                            Vencimento</label><input type="number" id="conta-fixa-dia-vencimento" min="1" max="31"
-                            required class="form-input w-full mt-1" placeholder="10"></div>
-                    <div>
-                        <label for="conta-fixa-categoria"
-                            class="block text-sm font-medium text-gray-700">Categoria</label>
-                        <select id="conta-fixa-categoria" required class="form-input w-full mt-1">
-                            <option value="">-- Selecione --</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="conta-fixa-tipo-recorrencia" class="block text-sm font-medium text-gray-700">Tipo de
-                            Recorrência</label>
-                        <select id="conta-fixa-tipo-recorrencia" required class="form-input w-full mt-1">
-                            <option value="permanente" selected>Permanente (Contínua)</option>
-                            <option value="parcelada">Parcelada (Com Fim)</option>
-                        </select>
-                    </div>
-
-                    <div id="conta-fixa-parcelamento-container"
-                        class="hidden md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div><label for="conta-fixa-data-inicio" class="block text-sm font-medium text-gray-700">Mês de
-                                Início (YYYY-MM)</label><input type="month" id="conta-fixa-data-inicio"
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="conta-fixa-num-parcelas" class="block text-sm font-medium text-gray-700">Nº de
-                                Parcelas</label><input type="number" id="conta-fixa-num-parcelas" min="1" step="1"
-                                class="form-input w-full mt-1" placeholder="12"></div>
-                        <div>
-                            <label for="conta-fixa-periodicidade-parcelada"
-                                class="block text-sm font-medium text-gray-700">Periodicidade</label>
-                            <select id="conta-fixa-periodicidade-parcelada" class="form-input w-full mt-1">
-                                <option value="mensal">Mensal</option>
-                                <option value="quinzenal">Quinzenal</option>
-                                <option value="semestral">Semestral</option>
-                                <option value="anual">Anual</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div id="conta-fixa-permanente-container"
-                        class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                        <div>
-                            <label for="conta-fixa-periodicidade-permanente"
-                                class="block text-sm font-medium text-gray-700">Periodicidade</label>
-                            <select id="conta-fixa-periodicidade-permanente" class="form-input w-full mt-1">
-                                <option value="mensal">Mensal</option>
-                                <option value="quinzenal">Quinzenal</option>
-                                <option value="bimestral">Bimestral</option>
-                                <option value="trimestral">Trimestral</option>
-                                <option value="semestral">Semestral</option>
-                                <option value="anual">Anual</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="lg:col-span-4">
-                        <label for="conta-fixa-anexo" class="block text-sm font-medium text-gray-700">Anexar
-                            Boletos/Faturas
-                            (Opcional)</label>
-                        <input type="file" id="conta-fixa-anexo" multiple
-                            class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                    </div>
-
-                    <div class="lg:col-span-4 flex gap-3 pt-4">
-                        <button type="button" id="limpar-conta-fixa-btn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-md transition-colors">
-                            <i class="fa-solid fa-eraser mr-2"></i> Limpar
-                        </button>
-                        <button type="submit" class="flex-1 shiny-btn py-2 rounded-md"><i
-                                class="fa-solid fa-plus mr-2"></i>
-                            Adicionar Conta Fixa</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Modal: Gerenciar Categorias -->
-        <div id="modal-categorias-cf"
-            class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-            <div
-                class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-gear mr-2"></i> Categorias de
-                        Contas
-                        Fixas</h2>
-                    <button id="close-categorias-cf-modal"
-                        class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-
-                <form id="form-conta-fixa-categoria" class="space-y-4 mb-6">
-                    <div>
-                        <label for="cf-categoria-nome" class="block text-sm font-medium text-gray-700 mb-2">Nome da Nova
-                            Categoria</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="cf-categoria-nome" placeholder="Ex: Impostos MEI" required
-                                class="form-input flex-1">
-                            <button type="submit" class="shiny-btn px-4 py-2 rounded-md"><i
-                                    class="fa-solid fa-save mr-2"></i> Salvar</button>
-                        </div>
-                    </div>
-                </form>
-
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
-                <div class="table-wrapper">
-                    <table id="tabela-cf-categorias-db">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal: Contas Bancárias -->
-        <div id="modal-contas-bancarias"
-            class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-            <div
-                class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-3xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-building-columns mr-2"></i>
-                        Contas
-                        Bancárias</h2>
-                    <button id="close-contas-bancarias-modal"
-                        class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-
-                <form id="form-cadastro-conta" class="space-y-4 mb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label for="cadastro-conta-nome" class="block text-sm font-medium text-gray-700">Nome da
-                                Conta</label><input type="text" id="cadastro-conta-nome"
-                                placeholder="Ex: Conta Principal" required class="form-input w-full mt-1"></div>
-                        <div><label for="cadastro-conta-banco"
-                                class="block text-sm font-medium text-gray-700">Instituição/Banco</label><input
-                                type="text" id="cadastro-conta-banco" placeholder="Ex: Banco Inter" required
-                                class="form-input w-full mt-1"></div>
-                        <div><label for="cadastro-conta-tipo"
-                                class="block text-sm font-medium text-gray-700">Tipo</label><select
-                                id="cadastro-conta-tipo" required class="form-input w-full mt-1">
-                                <option>Conta Corrente</option>
-                                <option>Conta Poupança</option>
-                                <option>Conta de Pagamentos</option>
-                                <option>Outros</option>
-                            </select></div>
-                        <div><label for="cadastro-conta-agencia" class="block text-sm font-medium text-gray-700">Agência
-                                (Opcional)</label><input type="text" id="cadastro-conta-agencia" placeholder="0001"
-                                class="form-input w-full mt-1"></div>
-                        <div class="md:col-span-2"><label for="cadastro-conta-numero"
-                                class="block text-sm font-medium text-gray-700">Nº da Conta (Opcional)</label><input
-                                type="text" id="cadastro-conta-numero" placeholder="12345-6"
-                                class="form-input w-full mt-1">
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3 pt-4">
-                        <button type="button" id="limpar-conta-bancaria-btn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-md transition-colors">
-                            <i class="fa-solid fa-eraser mr-2"></i> Limpar
-                        </button>
-                        <button type="submit" class="flex-1 shiny-btn py-2 rounded-md"><i
-                                class="fa-solid fa-save mr-2"></i>
-                            Salvar Conta</button>
-                    </div>
-                </form>
-
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Contas Cadastradas</h3>
-                <div class="table-wrapper">
-                    <table id="tabela-contas-db">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Instituição</th>
-                                <th>Tipo</th>
-                                <th>Agência/Conta</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal: Categorias de Gastos -->
-        <div id="modal-categorias-gastos"
-            class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
-            <div
-                class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-tags mr-2"></i> Categorias de
-                        Gastos
-                    </h2>
-                    <button id="close-categorias-gastos-modal"
-                        class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-
-                <form id="form-gasto-categoria" class="space-y-4 mb-6">
-                    <div>
-                        <label for="gasto-categoria-nome" class="block text-sm font-medium text-gray-700 mb-2">Nome da
-                            Nova
-                            Categoria</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="gasto-categoria-nome" placeholder="Ex: Limpeza" required
-                                class="form-input flex-1">
-                            <button type="submit" class="shiny-btn px-4 py-2 rounded-md"><i
-                                    class="fa-solid fa-save mr-2"></i> Salvar</button>
-                        </div>
-                    </div>
-                </form>
-
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
-                <div class="table-wrapper">
-                    <table id="tabela-gasto-categorias-db">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal API Key -->
-        <div id="api-key-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[100]">
-            <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md m-4">
-                <h2 class="text-2xl font-bold mb-4">Configurar API do Gemini</h2>
-                <p class="text-sm text-gray-600 mb-4">Para usar os recursos de IA, você precisa de uma chave de API.</p>
-
-                <div class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
-                    <h3 class="text-indigo-800 font-bold text-sm mb-2 flex items-center">
-                        <i class="fa-solid fa-circle-info mr-2"></i> Como conseguir a chave?
-                    </h3>
-                    <ol class="text-xs text-indigo-700 space-y-2 list-decimal ml-4">
-                        <li>Clique no link azul abaixo (Google AI Studio).</li>
-                        <li>Faça login com sua conta Google.</li>
-                        <li>Clique no botão azul <strong>"Create API key"</strong>.</li>
-                        <li>Copie o código gerado e cole no campo abaixo.</li>
-                    </ol>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank"
-                        class="block mt-3 text-center bg-white text-indigo-600 border border-indigo-200 py-1.5 rounded-md font-bold text-xs hover:bg-indigo-50 transition-colors">
-                        <i class="fa-solid fa-external-link mr-1"></i> Ir para Google AI Studio
-                    </a>
-                </div>
-
+            <form id="form-lancamento-conta-fixa">
+                <p class="text-gray-700 mb-4">Confirme ou altere os dados para o lançamento.</p>
                 <div class="space-y-4">
                     <div>
-                        <label for="api-key-input" class="block text-sm font-medium mb-1">Sua Chave da API</label>
-                        <input type="password" id="api-key-input" placeholder="Cole sua chave aqui"
-                            class="form-input w-full px-3 py-2 rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">Descrição</label>
+                        <input type="text" id="lancamento-cf-descricao" class="form-input w-full mt-1 bg-gray-200"
+                            readonly>
+                    </div>
+                    <div>
+                        <label for="lancamento-cf-data" class="block text-sm font-medium text-gray-700">Data do
+                            Pagamento</label>
+                        <input type="date" id="lancamento-cf-data" required class="form-input w-full mt-1">
+                    </div>
+                    <div>
+                        <label for="lancamento-cf-valor" class="block text-sm font-medium text-gray-700">Valor Pago
+                            (R$)</label>
+                        <input type="number" step="0.01" id="lancamento-cf-valor" required
+                            class="form-input w-full mt-1">
+                    </div>
+                    <div>
+                        <label for="lancamento-cf-conta" class="block text-sm font-medium text-gray-700">Conta de
+                            Saída</label>
+                        <select id="lancamento-cf-conta" required class="form-input w-full mt-1"></select>
+                    </div>
+                    <div>
+                        <label for="lancamento-cf-comprovante" class="block text-sm font-medium text-gray-700">Anexar
+                            Comprovantes (Opcional)</label>
+                        <input type="file" id="lancamento-cf-comprovante" multiple
+                            class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     </div>
                 </div>
-                <div class="flex justify-end space-x-4 mt-8">
-                    <button type="button" id="cancel-api-key-btn"
-                        class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors">Cancelar</button>
-                    <button type="button" id="save-api-key-btn" class="shiny-btn px-6 py-2 rounded-md">Salvar</button>
+                <button type="submit" class="shiny-btn w-full px-6 py-2 rounded-md mt-8"><i
+                        class="fa-solid fa-check mr-2"></i>Confirmar Lançamento</button>
+            </form>
+        </div>
+    </div>
+
+
+
+    <!-- Modal: Lançar Pagamento de Salário (Parcial/Total) -->
+    <div id="modal-pagamento-salario"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-lg m-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-money-bill-wave mr-2"></i> Lançar
+                    Pagamento</h2>
+                <button type="button" onclick="hideModal('modal-pagamento-salario')"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-pagamento-salario" class="space-y-4">
+                <input type="hidden" id="pag-salario-funcionario-id">
+
+                <div>
+                    <label for="pag-salario-descricao" class="block text-sm font-medium text-gray-700">Descrição</label>
+                    <input type="text" id="pag-salario-descricao" required class="form-input w-full mt-1"
+                        placeholder="Ex: Salário: João [Dez/2025]">
                 </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="pag-salario-valor" class="block text-sm font-medium text-gray-700">Valor
+                            (R$)</label>
+                        <input type="number" id="pag-salario-valor" step="0.01" required class="form-input w-full mt-1">
+                    </div>
+                    <div>
+                        <label for="pag-salario-data" class="block text-sm font-medium text-gray-700">Data</label>
+                        <input type="date" id="pag-salario-data" required class="form-input w-full mt-1">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="pag-salario-conta" class="block text-sm font-medium text-gray-700">Conta
+                        Bancária</label>
+                    <select id="pag-salario-conta" required class="form-input w-full mt-1">
+                        <option value="">-- Selecione --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="pag-salario-metodo" class="block text-sm font-medium text-gray-700">Forma de
+                        Pagamento</label>
+                    <select id="pag-salario-metodo" required class="form-input w-full mt-1">
+                        <option value="PIX" selected>PIX</option>
+                        <option value="Transferência">Transferência</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Débito">Débito</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="hideModal('modal-pagamento-salario')"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-md transition-colors font-semibold">Cancelar</button>
+                    <button type="submit" class="flex-1 shiny-btn py-2 rounded-md font-bold">Confirmar
+                        Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-title" class="text-2xl font-bold text-gray-900">Editar Item</h2>
+                <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <form id="modal-form">
+                <div id="modal-form-content" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                <button type="submit" class="shiny-btn w-full px-6 py-2 rounded-md mt-8"><i
+                        class="fa-solid fa-save mr-2"></i>Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="monitor-details-modal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[70] p-4">
+        <div
+            class="modal-box glassmorphism p-6 md:p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="monitor-details-title" class="text-2xl font-bold text-gray-900">Detalhes do Monitor</h2>
+                <button
+                    class="monitor-details-close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="monitor-details-body" class="bg-white/60 p-4 rounded-md flex-grow overflow-y-auto">
             </div>
         </div>
+    </div>
 
-        <!-- Modal Gemini Principal -->
-        <div id="gemini-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 hidden z-[110]">
-            <div id="gemini-modal-box"
-                class="modal-box glassmorphism w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-lg">
-                <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
-                    <h2 id="gemini-modal-title" class="text-2xl font-semibold text-gray-800">✨ Assistente IA</h2>
-                    <button id="gemini-close-btn"
-                        class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <div id="gemini-modal-content" class="p-6 overflow-y-auto text-gray-700">
-                    <!-- Conteúdo -->
-                </div>
-                <div id="gemini-modal-footer"
-                    class="p-4 bg-gray-50/50 border-t border-gray-200/50 flex justify-end space-x-4">
-                    <button id="gemini-copy-btn" class="shiny-btn py-2 px-4 rounded-lg">Copiar Texto</button>
-                </div>
+    <div id="attachment-viewer-modal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-6 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="attachment-viewer-title" class="text-2xl font-bold text-gray-900">Visualizar Anexos</h2>
+                <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="attachment-viewer-content"
+                class="flex-grow overflow-y-auto bg-white/50 rounded p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             </div>
         </div>
+    </div>
 
-        <!-- Modal de Chat da IA -->
-        <div id="gemini-chat-modal"
-            class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 hidden z-[120]">
-            <div class="modal-box glassmorphism w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-lg">
-                <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
-                    <h2 id="gemini-chat-title" class="text-xl font-semibold text-gray-800"></h2>
-                    <button id="gemini-chat-close-btn"
-                        class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <div id="gemini-chat-messages" class="p-6 flex-grow overflow-y-auto space-y-4 flex flex-col">
-                    <!-- Mensagens -->
-                </div>
-                <div class="p-4 bg-gray-50/50 border-t border-gray-200/50">
-                    <form id="gemini-chat-form" class="flex gap-2 items-center">
-                        <input type="text" id="gemini-chat-input" placeholder="Digite sua pergunta..."
-                            class="form-input w-full" required>
-                        <button type="submit" id="gemini-chat-send-btn"
-                            class="bg-indigo-500 text-white w-10 h-10 rounded-md hover:bg-indigo-600 transition-colors flex-shrink-0">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+    <div id="salarios-config-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50 p-4">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Configurações de Salários</h2>
+                <button class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <div class="mb-4 border-b border-gray-300/50 flex space-x-2">
+                <button class="config-tab-btn active" data-target="config-tab-funcionarios">
+                    <i class="fa-solid fa-user-tie mr-2"></i> Funcionários
+                </button>
+                <button class="config-tab-btn" data-target="config-tab-comissao">
+                    <i class="fa-solid fa-percentage mr-2"></i> Faixas de Comissão
+                </button>
+                <button class="config-tab-btn" data-target="config-tab-pagamentos">
+                    <i class="fa-solid fa-money-bill-transfer mr-2"></i> Pagamentos
+                </button>
+            </div>
+
+            <div id="config-tab-funcionarios" class="config-tab-content active space-y-6">
+                <section>
+                    <h3 id="form-funcionario-title" class="text-xl font-bold text-gray-800 mb-4">Cadastrar Novo
+                        Funcionário</h3>
+                    <form id="form-add-funcionario"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <input type="hidden" id="edit-funcionario-id">
+                        <div><label for="funcionario-nome"
+                                class="block text-sm font-medium text-gray-700">Nome</label><input type="text"
+                                id="funcionario-nome" required class="form-input w-full mt-1"
+                                placeholder="Nome do Funcionário"></div>
+                        <div><label for="funcionario-salario" class="block text-sm font-medium text-gray-700">Salário
+                                Fixo (R$)</label><input type="number" id="funcionario-salario" step="0.01" required
+                                class="form-input w-full mt-1" placeholder="2200.00"></div>
+                        <div><label for="funcionario-va" class="block text-sm font-medium text-gray-700">Vale
+                                Alimentação (R$)</label><input type="number" id="funcionario-va" step="0.01" required
+                                class="form-input w-full mt-1" placeholder="390.00"></div>
+                        <div><label for="funcionario-vt" class="block text-sm font-medium text-gray-700">Vale
+                                Transporte
+                                (R$)</label><input type="number" id="funcionario-vt" step="0.01" required
+                                class="form-input w-full mt-1" placeholder="223.60"></div>
+                        <button type="submit" id="btn-salvar-funcionario"
+                            class="shiny-btn py-2 rounded-md lg:col-span-4"><i class="fa-solid fa-plus mr-2"></i>
+                            Adicionar Funcionário</button>
+                        <button type="button" id="btn-cancelar-edit-funcionario"
+                            class="hidden bg-gray-400 text-white py-2 rounded-md lg:col-span-4 hover:bg-gray-500">Cancelar
+                            Edição</button>
                     </form>
-                </div>
+                </section>
+                <section>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Funcionários Cadastrados</h3>
+                    <div class="table-wrapper">
+                        <table id="tabela-funcionarios-config">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Salário Fixo</th>
+                                    <th>VA</th>
+                                    <th>VT</th>
+                                    <th class="text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
-        </div>
 
-        <!-- Toast Notification -->
-        <div id="gemini-toast"
-            class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-[200]">
-            <i id="gemini-toast-icon" class="text-lg"></i>
-            <p id="gemini-toast-message" class="ml-3 font-medium"></p>
-        </div>
+            <div id="config-tab-comissao" class="config-tab-content space-y-6">
+                <section>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Adicionar Nova Faixa de Comissão</h3>
+                    <form id="form-add-comissao" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div><label for="comissao-atevalor" class="block text-sm font-medium text-gray-700">Faturamento
+                                ATÉ (R$)</label><input type="number" id="comissao-atevalor" step="0.01" required
+                                class="form-input w-full mt-1" placeholder="45000"></div>
+                        <div><label for="comissao-percentual" class="block text-sm font-medium text-gray-700">Percentual
+                                (%)</label><input type="number" id="comissao-percentual" step="0.1" required
+                                class="form-input w-full mt-1" placeholder="2.5"></div>
+                        <button type="submit" class="shiny-btn py-2 rounded-md"><i class="fa-solid fa-plus mr-2"></i>
+                            Adicionar Faixa</button>
+                    </form>
+                    <p class="text-xs text-gray-500 mt-2">Dica: Para "acima de R$ 95.000", cadastre uma faixa com
+                        valor
+                        "Até" muito alto (ex: 9999999).</p>
+                </section>
+                <section>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Faixas de Comissão Atuais</h3>
+                    <div class="table-wrapper">
+                        <table id="tabela-comissao-config">
+                            <thead>
+                                <tr>
+                                    <th>Faturamento Até (R$)</th>
+                                    <th>Percentual</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
 
-        <!-- Modal: Lista de Monitores (Mobile-First Cards) -->
-        <div id="modal-lista-monitores"
-            class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-50">
-            <div
-                class="modal-content glassmorphism p-6 rounded-2xl shadow-2xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fa-solid fa-users text-indigo-600"></i> Monitores Cadastrados
-                    </h2>
-                    <button onclick="document.getElementById('modal-lista-monitores').classList.add('hidden')"
-                        class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+        </div>
+    </div>
+
+
+    <!-- Event Listeners de Navegação e Modais -->
+    <script>
+        // Este script agora é vazio pois foi consolidado no script ao final do arquivo
+    </script>
+
+    <!-- Modal de Entrada Manual de Receita -->
+    <div id="modal-entrada-manual"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50"
+        style="display: none;">
+        <div class="glassmorphism p-8 rounded-lg max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">💰 Nova Entrada de Receita</h3>
+                <button onclick="document.getElementById('modal-entrada-manual').style.display='none'"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+
+            <form id="form-entrada-manual" class="space-y-4">
+                <div>
+                    <label for="entrada-data" class="block text-sm font-medium text-gray-700 mb-1">
+                        Data da Entrada
+                    </label>
+                    <input type="date" id="entrada-data" required
+                        class="form-input w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500">
                 </div>
 
-                <div
-                    class="flex justify-between items-center mb-4 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
-                    <span class="text-sm font-medium text-indigo-700" id="monitor-count-text">0 monitores ativos</span>
-                    <button id="add-new-monitor-btn"
-                        class="shiny-btn px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Novo Monitor
+                <div>
+                    <label for="entrada-descricao" class="block text-sm font-medium text-gray-700 mb-1">
+                        Descrição
+                    </label>
+                    <input type="text" id="entrada-descricao" required
+                        placeholder="Ex: Venda de Material, Serviço Extra..."
+                        class="form-input w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label for="entrada-valor" class="block text-sm font-medium text-gray-700 mb-1">
+                        Valor (R$)
+                    </label>
+                    <input type="number" id="entrada-valor" step="0.01" min="0.01" required placeholder="0,00"
+                        class="form-input w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="bg-indigo-50 p-3 rounded-md text-sm text-gray-600">
+                    <i class="fa-solid fa-info-circle mr-2 text-indigo-600"></i>
+                    Esta entrada será registrada como receita avulsa, independente de eventos.
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="document.getElementById('modal-entrada-manual').style.display='none'"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 shiny-btn px-4 py-2 rounded-md">
+                        <i class="fa-solid fa-check mr-2"></i> Salvar
                     </button>
                 </div>
+            </form>
+        </div>
+    </div>
 
-                <div id="monitor-cards-container"
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2 flex-grow">
-                    <!-- Cards renderizados via JS -->
+    <!-- Modal: Cadastrar Conta Fixa -->
+    <div id="modal-conta-fixa"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Cadastrar Conta Fixa</h2>
+                <button id="close-conta-fixa-modal"
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-conta-fixa" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div><label for="conta-fixa-descricao"
+                        class="block text-sm font-medium text-gray-700">Descrição</label><input type="text"
+                        id="conta-fixa-descricao" required class="form-input w-full mt-1"
+                        placeholder="Ex: Aluguel do galpão"></div>
+                <div><label for="conta-fixa-valor" class="block text-sm font-medium text-gray-700">Valor
+                        (R$)</label><input type="number" id="conta-fixa-valor" step="0.01" required
+                        class="form-input w-full mt-1" placeholder="750.00"></div>
+                <div><label for="conta-fixa-dia-vencimento" class="block text-sm font-medium text-gray-700">Dia do
+                        Vencimento</label><input type="number" id="conta-fixa-dia-vencimento" min="1" max="31" required
+                        class="form-input w-full mt-1" placeholder="10"></div>
+                <div>
+                    <label for="conta-fixa-categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
+                    <select id="conta-fixa-categoria" required class="form-input w-full mt-1">
+                        <option value="">-- Selecione --</option>
+                    </select>
                 </div>
+
+                <div>
+                    <label for="conta-fixa-tipo-recorrencia" class="block text-sm font-medium text-gray-700">Tipo de
+                        Recorrência</label>
+                    <select id="conta-fixa-tipo-recorrencia" required class="form-input w-full mt-1">
+                        <option value="permanente" selected>Permanente (Contínua)</option>
+                        <option value="parcelada">Parcelada (Com Fim)</option>
+                    </select>
+                </div>
+
+                <div id="conta-fixa-parcelamento-container"
+                    class="hidden md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div><label for="conta-fixa-data-inicio" class="block text-sm font-medium text-gray-700">Mês de
+                            Início (YYYY-MM)</label><input type="month" id="conta-fixa-data-inicio"
+                            class="form-input w-full mt-1"></div>
+                    <div><label for="conta-fixa-num-parcelas" class="block text-sm font-medium text-gray-700">Nº de
+                            Parcelas</label><input type="number" id="conta-fixa-num-parcelas" min="1" step="1"
+                            class="form-input w-full mt-1" placeholder="12"></div>
+                    <div>
+                        <label for="conta-fixa-periodicidade-parcelada"
+                            class="block text-sm font-medium text-gray-700">Periodicidade</label>
+                        <select id="conta-fixa-periodicidade-parcelada" class="form-input w-full mt-1">
+                            <option value="mensal">Mensal</option>
+                            <option value="quinzenal">Quinzenal</option>
+                            <option value="semestral">Semestral</option>
+                            <option value="anual">Anual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="conta-fixa-permanente-container"
+                    class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div>
+                        <label for="conta-fixa-periodicidade-permanente"
+                            class="block text-sm font-medium text-gray-700">Periodicidade</label>
+                        <select id="conta-fixa-periodicidade-permanente" class="form-input w-full mt-1">
+                            <option value="mensal">Mensal</option>
+                            <option value="quinzenal">Quinzenal</option>
+                            <option value="bimestral">Bimestral</option>
+                            <option value="trimestral">Trimestral</option>
+                            <option value="semestral">Semestral</option>
+                            <option value="anual">Anual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4">
+                    <label for="conta-fixa-anexo" class="block text-sm font-medium text-gray-700">Anexar
+                        Boletos/Faturas
+                        (Opcional)</label>
+                    <input type="file" id="conta-fixa-anexo" multiple
+                        class="form-input w-full mt-1 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                </div>
+
+                <div class="lg:col-span-4 flex gap-3 pt-4">
+                    <button type="button" id="limpar-conta-fixa-btn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-md transition-colors">
+                        <i class="fa-solid fa-eraser mr-2"></i> Limpar
+                    </button>
+                    <button type="submit" class="flex-1 shiny-btn py-2 rounded-md"><i class="fa-solid fa-plus mr-2"></i>
+                        Adicionar Conta Fixa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Gerenciar Categorias -->
+    <div id="modal-categorias-cf"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-gear mr-2"></i> Categorias de
+                    Contas
+                    Fixas</h2>
+                <button id="close-categorias-cf-modal"
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-conta-fixa-categoria" class="space-y-4 mb-6">
+                <div>
+                    <label for="cf-categoria-nome" class="block text-sm font-medium text-gray-700 mb-2">Nome da Nova
+                        Categoria</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="cf-categoria-nome" placeholder="Ex: Impostos MEI" required
+                            class="form-input flex-1">
+                        <button type="submit" class="shiny-btn px-4 py-2 rounded-md"><i
+                                class="fa-solid fa-save mr-2"></i> Salvar</button>
+                    </div>
+                </div>
+            </form>
+
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
+            <div class="table-wrapper">
+                <table id="tabela-cf-categorias-db">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
+    </div>
 
-        <!-- Modal: Formulário de Pagamento & Avaliação -->
-        <div id="modal-pagamento-monitor"
-            class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-50">
-            <div
-                class="modal-content glassmorphism p-8 rounded-2xl shadow-2xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fa-solid fa-hand-holding-dollar text-emerald-600"></i> Lançar Pagamento
-                    </h2>
-                    <button onclick="document.getElementById('modal-pagamento-monitor').classList.add('hidden')"
-                        class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+    <!-- Modal: Contas Bancárias -->
+    <div id="modal-contas-bancarias"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-3xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-building-columns mr-2"></i>
+                    Contas
+                    Bancárias</h2>
+                <button id="close-contas-bancarias-modal"
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-cadastro-conta" class="space-y-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="cadastro-conta-nome" class="block text-sm font-medium text-gray-700">Nome da
+                            Conta</label><input type="text" id="cadastro-conta-nome" placeholder="Ex: Conta Principal"
+                            required class="form-input w-full mt-1"></div>
+                    <div><label for="cadastro-conta-banco"
+                            class="block text-sm font-medium text-gray-700">Instituição/Banco</label><input type="text"
+                            id="cadastro-conta-banco" placeholder="Ex: Banco Inter" required
+                            class="form-input w-full mt-1"></div>
+                    <div><label for="cadastro-conta-tipo"
+                            class="block text-sm font-medium text-gray-700">Tipo</label><select id="cadastro-conta-tipo"
+                            required class="form-input w-full mt-1">
+                            <option>Conta Corrente</option>
+                            <option>Conta Poupança</option>
+                            <option>Conta de Pagamentos</option>
+                            <option>Outros</option>
+                        </select></div>
+                    <div><label for="cadastro-conta-agencia" class="block text-sm font-medium text-gray-700">Agência
+                            (Opcional)</label><input type="text" id="cadastro-conta-agencia" placeholder="0001"
+                            class="form-input w-full mt-1"></div>
+                    <div class="md:col-span-2"><label for="cadastro-conta-numero"
+                            class="block text-sm font-medium text-gray-700">Nº da Conta (Opcional)</label><input
+                            type="text" id="cadastro-conta-numero" placeholder="12345-6" class="form-input w-full mt-1">
+                    </div>
                 </div>
 
-                <form id="form-pagamento-monitor" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="space-y-1">
-                            <label for="pag-monitor-data" class="block text-sm font-bold text-gray-700">Data do
-                                Evento</label>
-                            <input type="date" id="pag-monitor-data" required class="form-input w-full">
-                        </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="limpar-conta-bancaria-btn"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-md transition-colors">
+                        <i class="fa-solid fa-eraser mr-2"></i> Limpar
+                    </button>
+                    <button type="submit" class="flex-1 shiny-btn py-2 rounded-md"><i class="fa-solid fa-save mr-2"></i>
+                        Salvar Conta</button>
+                </div>
+            </form>
 
-                        <div class="space-y-1 lg:col-span-2">
-                            <label for="pag-monitor-evento" class="block text-sm font-bold text-gray-700">
-                                <i class="fa-solid fa-link text-indigo-600 mr-1"></i>
-                                Vincular a Evento da Agenda (opcional)
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Contas Cadastradas</h3>
+            <div class="table-wrapper">
+                <table id="tabela-contas-db">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Instituição</th>
+                            <th>Tipo</th>
+                            <th>Agência/Conta</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Categorias de Gastos -->
+    <div id="modal-categorias-gastos"
+        class="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><i class="fa-solid fa-tags mr-2"></i> Categorias de
+                    Gastos
+                </h2>
+                <button id="close-categorias-gastos-modal"
+                    class="close-btn text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+
+            <form id="form-gasto-categoria" class="space-y-4 mb-6">
+                <div>
+                    <label for="gasto-categoria-nome" class="block text-sm font-medium text-gray-700 mb-2">Nome da
+                        Nova
+                        Categoria</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="gasto-categoria-nome" placeholder="Ex: Limpeza" required
+                            class="form-input flex-1">
+                        <button type="submit" class="shiny-btn px-4 py-2 rounded-md"><i
+                                class="fa-solid fa-save mr-2"></i> Salvar</button>
+                    </div>
+                </div>
+            </form>
+
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
+            <div class="table-wrapper">
+                <table id="tabela-gasto-categorias-db">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal API Key -->
+    <div id="api-key-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[100]">
+        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md m-4">
+            <h2 class="text-2xl font-bold mb-4">Configurar API do Gemini</h2>
+            <p class="text-sm text-gray-600 mb-4">Para usar os recursos de IA, você precisa de uma chave de API.</p>
+
+            <div class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
+                <h3 class="text-indigo-800 font-bold text-sm mb-2 flex items-center">
+                    <i class="fa-solid fa-circle-info mr-2"></i> Como conseguir a chave?
+                </h3>
+                <ol class="text-xs text-indigo-700 space-y-2 list-decimal ml-4">
+                    <li>Clique no link azul abaixo (Google AI Studio).</li>
+                    <li>Faça login com sua conta Google.</li>
+                    <li>Clique no botão azul <strong>"Create API key"</strong>.</li>
+                    <li>Copie o código gerado e cole no campo abaixo.</li>
+                </ol>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                    class="block mt-3 text-center bg-white text-indigo-600 border border-indigo-200 py-1.5 rounded-md font-bold text-xs hover:bg-indigo-50 transition-colors">
+                    <i class="fa-solid fa-external-link mr-1"></i> Ir para Google AI Studio
+                </a>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="api-key-input" class="block text-sm font-medium mb-1">Sua Chave da API</label>
+                    <input type="password" id="api-key-input" placeholder="Cole sua chave aqui"
+                        class="form-input w-full px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-8">
+                <button type="button" id="cancel-api-key-btn"
+                    class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button type="button" id="save-api-key-btn" class="shiny-btn px-6 py-2 rounded-md">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gemini Principal -->
+    <div id="gemini-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 hidden z-[110]">
+        <div id="gemini-modal-box"
+            class="modal-box glassmorphism w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-lg">
+            <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
+                <h2 id="gemini-modal-title" class="text-2xl font-semibold text-gray-800">✨ Assistente IA</h2>
+                <button id="gemini-close-btn"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="gemini-modal-content" class="p-6 overflow-y-auto text-gray-700">
+                <!-- Conteúdo -->
+            </div>
+            <div id="gemini-modal-footer"
+                class="p-4 bg-gray-50/50 border-t border-gray-200/50 flex justify-end space-x-4">
+                <button id="gemini-copy-btn" class="shiny-btn py-2 px-4 rounded-lg">Copiar Texto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Chat da IA -->
+    <div id="gemini-chat-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 hidden z-[120]">
+        <div class="modal-box glassmorphism w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-lg">
+            <div class="p-6 border-b border-gray-200/50 flex justify-between items-center">
+                <h2 id="gemini-chat-title" class="text-xl font-semibold text-gray-800"></h2>
+                <button id="gemini-chat-close-btn"
+                    class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="gemini-chat-messages" class="p-6 flex-grow overflow-y-auto space-y-4 flex flex-col">
+                <!-- Mensagens -->
+            </div>
+            <div class="p-4 bg-gray-50/50 border-t border-gray-200/50">
+                <form id="gemini-chat-form" class="flex gap-2 items-center">
+                    <input type="text" id="gemini-chat-input" placeholder="Digite sua pergunta..."
+                        class="form-input w-full" required>
+                    <button type="submit" id="gemini-chat-send-btn"
+                        class="bg-indigo-500 text-white w-10 h-10 rounded-md hover:bg-indigo-600 transition-colors flex-shrink-0">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="gemini-toast"
+        class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-[200]">
+        <i id="gemini-toast-icon" class="text-lg"></i>
+        <p id="gemini-toast-message" class="ml-3 font-medium"></p>
+    </div>
+
+    <!-- Modal: Lista de Monitores (Mobile-First Cards) -->
+    <div id="modal-lista-monitores"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content glassmorphism p-6 rounded-2xl shadow-2xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-users text-indigo-600"></i> Monitores Cadastrados
+                </h2>
+                <button onclick="document.getElementById('modal-lista-monitores').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+            </div>
+
+            <div class="flex justify-between items-center mb-4 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
+                <span class="text-sm font-medium text-indigo-700" id="monitor-count-text">0 monitores ativos</span>
+                <button id="add-new-monitor-btn"
+                    class="shiny-btn px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Novo Monitor
+                </button>
+            </div>
+
+            <div id="monitor-cards-container"
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2 flex-grow">
+                <!-- Cards renderizados via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Formulário de Pagamento & Avaliação -->
+    <div id="modal-pagamento-monitor"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-50">
+        <div
+            class="modal-content glassmorphism p-8 rounded-2xl shadow-2xl w-full max-w-4xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-hand-holding-dollar text-emerald-600"></i> Lançar Pagamento
+                </h2>
+                <button onclick="document.getElementById('modal-pagamento-monitor').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+            </div>
+
+            <form id="form-pagamento-monitor" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="space-y-1">
+                        <label for="pag-monitor-data" class="block text-sm font-bold text-gray-700">Data do
+                            Evento</label>
+                        <input type="date" id="pag-monitor-data" required class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 lg:col-span-2">
+                        <label for="pag-monitor-evento" class="block text-sm font-bold text-gray-700">
+                            <i class="fa-solid fa-link text-indigo-600 mr-1"></i>
+                            Vincular a Evento da Agenda (opcional)
+                        </label>
+                        <select id="pag-monitor-evento" class="form-input w-full">
+                            <option value="">Sem vínculo - Trabalho avulso</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fa-solid fa-info-circle"></i>
+                            Selecione a data acima para ver os eventos disponíveis
+                        </p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-data-pagamento" class="block text-sm font-bold text-gray-700">Data
+                            do
+                            Pagamento</label>
+                        <input type="date" id="pag-monitor-data-pagamento" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 lg:col-span-2">
+                        <label for="pag-monitor-select" class="block text-sm font-bold text-gray-700">Monitor</label>
+                        <select id="pag-monitor-select" required class="form-input w-full">
+                            <option value="">Selecione um monitor...</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-valor" class="block text-sm font-bold text-gray-700">Valor da Diária
+                            (R$)</label>
+                        <input type="number" id="pag-monitor-valor" step="0.01" value="100.00" class="form-input w-full"
+                            required>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-entrada" class="block text-sm font-bold text-gray-700">Entrada</label>
+                        <input type="time" id="pag-monitor-entrada" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-saida" class="block text-sm font-bold text-gray-700">Saída</label>
+                        <input type="time" id="pag-monitor-saida" class="form-input w-full">
+                        <span id="pag-monitor-he-status" class="text-[10px] text-gray-400"></span>
+                    </div>
+
+                    <input type="hidden" id="pag-monitor-he" value="0.00">
+
+                    <div class="space-y-1">
+                        <label for="pag-monitor-status" class="block text-sm font-bold text-gray-700">Status</label>
+                        <select id="pag-monitor-status" class="form-input w-full">
+                            <option value="Executado">Pago / Executado</option>
+                            <option value="Pendente" selected>Pendente</option>
+                        </select>
+                    </div>
+
+                    <!-- Adicional de Motorista -->
+                    <div class="space-y-2 lg:col-span-2 bg-blue-50/50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="pag-monitor-motorista"
+                                class="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+                            <label for="pag-monitor-motorista" class="text-sm font-bold text-gray-700 cursor-pointer">
+                                <i class="fa-solid fa-truck-fast text-indigo-600 mr-1"></i>
+                                Este monitor foi motorista no dia trabalhado?
                             </label>
-                            <select id="pag-monitor-evento" class="form-input w-full">
-                                <option value="">Sem vínculo - Trabalho avulso</option>
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1">
-                                <i class="fa-solid fa-info-circle"></i>
-                                Selecione a data acima para ver os eventos disponíveis
-                            </p>
                         </div>
-
-                        <div class="space-y-1">
-                            <label for="pag-monitor-data-pagamento" class="block text-sm font-bold text-gray-700">Data
-                                do
-                                Pagamento</label>
-                            <input type="date" id="pag-monitor-data-pagamento" class="form-input w-full">
-                        </div>
-
-                        <div class="space-y-1 lg:col-span-2">
-                            <label for="pag-monitor-select"
-                                class="block text-sm font-bold text-gray-700">Monitor</label>
-                            <select id="pag-monitor-select" required class="form-input w-full">
-                                <option value="">Selecione um monitor...</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-1">
-                            <label for="pag-monitor-valor" class="block text-sm font-bold text-gray-700">Valor da Diária
-                                (R$)</label>
-                            <input type="number" id="pag-monitor-valor" step="0.01" value="100.00"
-                                class="form-input w-full" required>
-                        </div>
-
-                        <div class="space-y-1">
-                            <label for="pag-monitor-entrada"
-                                class="block text-sm font-bold text-gray-700">Entrada</label>
-                            <input type="time" id="pag-monitor-entrada" class="form-input w-full">
-                        </div>
-
-                        <div class="space-y-1">
-                            <label for="pag-monitor-saida" class="block text-sm font-bold text-gray-700">Saída</label>
-                            <input type="time" id="pag-monitor-saida" class="form-input w-full">
-                            <span id="pag-monitor-he-status" class="text-[10px] text-gray-400"></span>
-                        </div>
-
-                        <input type="hidden" id="pag-monitor-he" value="0.00">
-
-                        <div class="space-y-1">
-                            <label for="pag-monitor-status" class="block text-sm font-bold text-gray-700">Status</label>
-                            <select id="pag-monitor-status" class="form-input w-full">
-                                <option value="Executado">Pago / Executado</option>
-                                <option value="Pendente" selected>Pendente</option>
-                            </select>
-                        </div>
-
-                        <!-- Adicional de Motorista -->
-                        <div class="space-y-2 lg:col-span-2 bg-blue-50/50 p-4 rounded-lg border border-blue-200">
-                            <div class="flex items-center gap-3">
-                                <input type="checkbox" id="pag-monitor-motorista"
-                                    class="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
-                                <label for="pag-monitor-motorista"
-                                    class="text-sm font-bold text-gray-700 cursor-pointer">
-                                    <i class="fa-solid fa-truck-fast text-indigo-600 mr-1"></i>
-                                    Este monitor foi motorista no dia trabalhado?
-                                </label>
-                            </div>
-                            <div id="pag-monitor-eventos-container" class="hidden ml-8 space-y-1">
-                                <label for="pag-monitor-eventos" class="block text-xs font-medium text-gray-600">
-                                    Quantos eventos foram entregues? <span class="text-indigo-600 font-bold">(R$ 20,00
-                                        por
-                                        evento)</span>
-                                </label>
-                                <input type="number" id="pag-monitor-eventos" step="0.5" min="0" value="0"
-                                    class="form-input w-full text-sm" placeholder="Ex: 2.5">
-                                <span id="pag-monitor-adicional-status"
-                                    class="text-xs font-bold text-indigo-600"></span>
-                            </div>
+                        <div id="pag-monitor-eventos-container" class="hidden ml-8 space-y-1">
+                            <label for="pag-monitor-eventos" class="block text-xs font-medium text-gray-600">
+                                Quantos eventos foram entregues? <span class="text-indigo-600 font-bold">(R$ 20,00
+                                    por
+                                    evento)</span>
+                            </label>
+                            <input type="number" id="pag-monitor-eventos" step="0.5" min="0" value="0"
+                                class="form-input w-full text-sm" placeholder="Ex: 2.5">
+                            <span id="pag-monitor-adicional-status" class="text-xs font-bold text-indigo-600"></span>
                         </div>
                     </div>
-
-                    <div class="bg-gray-50 p-6 rounded-xl border border-gray-100 space-y-4">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fa-solid fa-star text-yellow-500"></i> Avaliação do Monitor
-                        </h3>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-gray-500 uppercase">Proatividade</label>
-                                <input type="range" min="0" max="10" value="10"
-                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                    id="nota-proatividade">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-gray-500 uppercase">Cordialidade</label>
-                                <input type="range" min="0" max="10" value="10"
-                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                    id="nota-cordialidade">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-gray-500 uppercase">Pontualidade</label>
-                                <input type="range" min="0" max="10" value="10"
-                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                    id="nota-pontualidade">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-gray-500 uppercase">Liderança</label>
-                                <input type="range" min="0" max="10" value="10"
-                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                    id="nota-lideranca">
-                            </div>
-                        </div>
-
-                        <div class="pt-2">
-                            <label for="pag-monitor-obs" class="block text-sm font-bold text-gray-700 mb-1">Observações
-                                do
-                                Evento</label>
-                            <textarea id="pag-monitor-obs" rows="2" class="form-input w-full"
-                                placeholder="Ex: Monitor chegou cedo e foi muito atencioso com as crianças."></textarea>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4">
-                        <button type="button"
-                            onclick="document.getElementById('modal-pagamento-monitor').classList.add('hidden')"
-                            class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="flex-[2] shiny-btn font-bold py-3 rounded-xl transition-all">
-                            <i class="fa-solid fa-check mr-2"></i> Confirmar Lançamento
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Modal: Adicionar/Editar Monitor -->
-        <!-- (Reaproveitando o ID, mas com layout mobile-first) -->
-        <div id="add-monitor-modal"
-            class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-[60]">
-            <div
-                class="modal-content glassmorphism p-8 rounded-2xl shadow-2xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 id="modal-monitor-title" class="text-2xl font-bold text-gray-800">Novo Monitor</h2>
-                    <button onclick="document.getElementById('add-monitor-modal').classList.add('hidden')"
-                        class="text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
                 </div>
 
-                <form id="form-cadastro-monitor" class="space-y-4">
-                    <input type="hidden" id="monitor-id-edit">
+                <div class="bg-gray-50 p-6 rounded-xl border border-gray-100 space-y-4">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-star text-yellow-500"></i> Avaliação do Monitor
+                    </h3>
 
-                    <!-- Foto de Perfil Preview -->
-                    <div class="flex flex-col items-center justify-center mb-6">
-                        <div id="monitor-photo-preview"
-                            class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden group relative cursor-pointer hover:border-indigo-500 transition-all">
-                            <i
-                                class="fa-solid fa-camera text-gray-400 group-hover:text-indigo-500 text-2xl transition-all"></i>
-                            <img id="monitor-photo-img" class="hidden w-full h-full object-cover">
-                            <div
-                                class="absolute inset-0 bg-black/40 text-white text-[10px] items-center justify-center font-bold hidden group-hover:flex">
-                                ALTERAR</div>
-                        </div>
-                        <input type="file" id="monitor-foto-input" accept="image/*" class="hidden">
-                        <input type="hidden" id="monitor-foto-base64">
-                        <p class="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-wider">Foto do Monitor</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="space-y-1 md:col-span-2">
-                            <label for="monitor-nome" class="block text-sm font-bold text-gray-700">Nome
-                                Completo</label>
-                            <input type="text" id="monitor-nome" required class="form-input w-full">
-                        </div>
-
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="space-y-1">
-                            <label for="monitor-nascimento" class="block text-sm font-bold text-gray-700">Data de
-                                Nascimento</label>
-                            <input type="date" id="monitor-nascimento" class="form-input w-full">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Proatividade</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-proatividade">
                         </div>
-
                         <div class="space-y-1">
-                            <label for="monitor-telefone" class="block text-sm font-bold text-gray-700">Telefone /
-                                WhatsApp</label>
-                            <input type="text" id="monitor-telefone" placeholder="(00) 00000-0000"
-                                class="form-input w-full">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Cordialidade</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-cordialidade">
                         </div>
-
                         <div class="space-y-1">
-                            <label for="monitor-email" class="block text-sm font-bold text-gray-700">Email</label>
-                            <input type="email" id="monitor-email" placeholder="email@exemplo.com"
-                                class="form-input w-full">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Pontualidade</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-pontualidade">
                         </div>
-
                         <div class="space-y-1">
-                            <label for="monitor-cnh" class="block text-sm font-bold text-gray-700">Possui CNH?</label>
-                            <select id="monitor-cnh" class="form-input w-full">
-                                <option value="Não possui">Não possui</option>
-                                <option value="Sim">Sim</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-1">
-                            <label for="monitor-cnh-categoria" class="block text-sm font-bold text-gray-700">Categoria
-                                CNH</label>
-                            <input type="text" id="monitor-cnh-categoria" placeholder="Ex: AB"
-                                class="form-input w-full">
-                        </div>
-
-                        <div class="space-y-1 md:col-span-2">
-                            <label for="monitor-endereco" class="block text-sm font-bold text-gray-700">Endereço
-                                Residencial</label>
-                            <input type="text" id="monitor-endereco" placeholder="Rua, Número, Bairro, Cidade"
-                                class="form-input w-full">
-                        </div>
-
-                        <div class="space-y-1 md:col-span-2">
-                            <label for="monitor-observacoes" class="block text-sm font-bold text-gray-700">Observações
-                                Internas</label>
-                            <textarea id="monitor-observacoes" rows="2"
-                                placeholder="Informações relevantes sobre o monitor..."
-                                class="form-input w-full"></textarea>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Liderança</label>
+                            <input type="range" min="0" max="10" value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                id="nota-lideranca">
                         </div>
                     </div>
 
-                    <!-- Upload de Documento (RG/CNH) -->
-                    <div class="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <h4 id="monitor-doc-title" class="font-bold text-gray-700 mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-id-card text-indigo-600"></i>
-                            Documento de Identificação (RG)
-                        </h4>
-                        <div class="flex flex-col items-center justify-center">
-                            <div id="monitor-doc-preview"
-                                class="w-full max-w-md h-48 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden group relative cursor-pointer hover:border-indigo-500 transition-all">
-                                <div class="text-center">
-                                    <i
-                                        class="fa-solid fa-file-image text-gray-400 group-hover:text-indigo-500 text-4xl transition-all"></i>
-                                    <p class="text-sm text-gray-500 mt-2 font-medium">Clique para fazer upload</p>
-                                    <p class="text-xs text-gray-400">Tamanho máximo: 5MB</p>
-                                </div>
-                                <img id="monitor-doc-img" class="hidden w-full h-full object-contain">
-                                <div
-                                    class="absolute inset-0 bg-black/40 text-white text-sm items-center justify-center font-bold hidden group-hover:flex">
-                                    ALTERAR DOCUMENTO
-                                </div>
-                            </div>
-                            <input type="file" id="monitor-doc-input" accept="image/*" class="hidden">
-                            <input type="hidden" id="monitor-doc-base64">
-                            <p class="text-xs text-gray-400 mt-2 text-center">
-                                <i class="fa-solid fa-info-circle"></i>
-                                Upload de foto do <span id="monitor-doc-type">RG</span> (frente e verso)
-                            </p>
-                        </div>
+                    <div class="pt-2">
+                        <label for="pag-monitor-obs" class="block text-sm font-bold text-gray-700 mb-1">Observações
+                            do
+                            Evento</label>
+                        <textarea id="pag-monitor-obs" rows="2" class="form-input w-full"
+                            placeholder="Ex: Monitor chegou cedo e foi muito atencioso com as crianças."></textarea>
                     </div>
+                </div>
 
-                    <div class="pt-4">
-                        <button type="submit" class="shiny-btn w-full py-3 rounded-xl font-bold">
-                            <i class="fa-solid fa-save mr-2"></i> Salvar Monitor
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div class="flex gap-4">
+                    <button type="button"
+                        onclick="document.getElementById('modal-pagamento-monitor').classList.add('hidden')"
+                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-[2] shiny-btn font-bold py-3 rounded-xl transition-all">
+                        <i class="fa-solid fa-check mr-2"></i> Confirmar Lançamento
+                    </button>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <!-- Sistema de Autenticação -->
+    <!-- Modal: Adicionar/Editar Monitor -->
+    <!-- (Reaproveitando o ID, mas com layout mobile-first) -->
+    <div id="add-monitor-modal"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-[60]">
+        <div
+            class="modal-content glassmorphism p-8 rounded-2xl shadow-2xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-monitor-title" class="text-2xl font-bold text-gray-800">Novo Monitor</h2>
+                <button onclick="document.getElementById('add-monitor-modal').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            </div>
 
-        <script src="js/protect.js"></script>
+            <form id="form-cadastro-monitor" class="space-y-4">
+                <input type="hidden" id="monitor-id-edit">
+
+                <!-- Foto de Perfil Preview -->
+                <div class="flex flex-col items-center justify-center mb-6">
+                    <div id="monitor-photo-preview"
+                        class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden group relative cursor-pointer hover:border-indigo-500 transition-all">
+                        <i
+                            class="fa-solid fa-camera text-gray-400 group-hover:text-indigo-500 text-2xl transition-all"></i>
+                        <img id="monitor-photo-img" class="hidden w-full h-full object-cover">
+                        <div
+                            class="absolute inset-0 bg-black/40 text-white text-[10px] items-center justify-center font-bold hidden group-hover:flex">
+                            ALTERAR</div>
+                    </div>
+                    <input type="file" id="monitor-foto-input" accept="image/*" class="hidden">
+                    <input type="hidden" id="monitor-foto-base64">
+                    <p class="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-wider">Foto do Monitor</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="monitor-nome" class="block text-sm font-bold text-gray-700">Nome
+                            Completo</label>
+                        <input type="text" id="monitor-nome" required class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-nascimento" class="block text-sm font-bold text-gray-700">Data de
+                            Nascimento</label>
+                        <input type="date" id="monitor-nascimento" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-telefone" class="block text-sm font-bold text-gray-700">Telefone /
+                            WhatsApp</label>
+                        <input type="text" id="monitor-telefone" placeholder="(00) 00000-0000"
+                            class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-email" class="block text-sm font-bold text-gray-700">Email</label>
+                        <input type="email" id="monitor-email" placeholder="email@exemplo.com"
+                            class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-cnh" class="block text-sm font-bold text-gray-700">Possui CNH?</label>
+                        <select id="monitor-cnh" class="form-input w-full">
+                            <option value="Não possui">Não possui</option>
+                            <option value="Sim">Sim</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="monitor-cnh-categoria" class="block text-sm font-bold text-gray-700">Categoria
+                            CNH</label>
+                        <input type="text" id="monitor-cnh-categoria" placeholder="Ex: AB" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="monitor-endereco" class="block text-sm font-bold text-gray-700">Endereço
+                            Residencial</label>
+                        <input type="text" id="monitor-endereco" placeholder="Rua, Número, Bairro, Cidade"
+                            class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1 md:col-span-2">
+                        <label for="monitor-observacoes" class="block text-sm font-bold text-gray-700">Observações
+                            Internas</label>
+                        <textarea id="monitor-observacoes" rows="2"
+                            placeholder="Informações relevantes sobre o monitor..."
+                            class="form-input w-full"></textarea>
+                    </div>
+                </div>
+
+                <!-- Upload de Documento (RG/CNH) -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <h4 id="monitor-doc-title" class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-id-card text-indigo-600"></i>
+                        Documento de Identificação (RG)
+                    </h4>
+                    <div class="flex flex-col items-center justify-center">
+                        <div id="monitor-doc-preview"
+                            class="w-full max-w-md h-48 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden group relative cursor-pointer hover:border-indigo-500 transition-all">
+                            <div class="text-center">
+                                <i
+                                    class="fa-solid fa-file-image text-gray-400 group-hover:text-indigo-500 text-4xl transition-all"></i>
+                                <p class="text-sm text-gray-500 mt-2 font-medium">Clique para fazer upload</p>
+                                <p class="text-xs text-gray-400">Tamanho máximo: 5MB</p>
+                            </div>
+                            <img id="monitor-doc-img" class="hidden w-full h-full object-contain">
+                            <div
+                                class="absolute inset-0 bg-black/40 text-white text-sm items-center justify-center font-bold hidden group-hover:flex">
+                                ALTERAR DOCUMENTO
+                            </div>
+                        </div>
+                        <input type="file" id="monitor-doc-input" accept="image/*" class="hidden">
+                        <input type="hidden" id="monitor-doc-base64">
+                        <p class="text-xs text-gray-400 mt-2 text-center">
+                            <i class="fa-solid fa-info-circle"></i>
+                            Upload de foto do <span id="monitor-doc-type">RG</span> (frente e verso)
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="shiny-btn w-full py-3 rounded-xl font-bold">
+                        <i class="fa-solid fa-save mr-2"></i> Salvar Monitor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sistema de Autenticação -->
+
+    <script src="js/protect.js"></script>
 
 
-        <!-- Módulo de Gráficos Financeiros (Estilo Bolsa de Valores) -->
-        <script src="js/charts-financeiro.js"></script>
+    <!-- Módulo de Gráficos Financeiros (Estilo Bolsa de Valores) -->
+    <script src="js/charts-financeiro.js"></script>
 
-        <script>
-            // --- GEMINI IA LOGIC ---
-            const apiKeyModal = document.getElementById('api-key-modal');
-            const geminiModal = document.getElementById('gemini-modal');
-            const geminiChatModal = document.getElementById('gemini-chat-modal');
-            const chatMessagesEl = document.getElementById('gemini-chat-messages');
-            const chatForm = document.getElementById('gemini-chat-form');
-            const chatInput = document.getElementById('gemini-chat-input');
-            const chatSendBtn = document.getElementById('gemini-chat-send-btn');
-            const chatModalTitle = document.getElementById('gemini-chat-title');
+    <script>
+        // --- GEMINI IA LOGIC ---
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const geminiModal = document.getElementById('gemini-modal');
+        const geminiChatModal = document.getElementById('gemini-chat-modal');
+        const chatMessagesEl = document.getElementById('gemini-chat-messages');
+        const chatForm = document.getElementById('gemini-chat-form');
+        const chatInput = document.getElementById('gemini-chat-input');
+        const chatSendBtn = document.getElementById('gemini-chat-send-btn');
+        const chatModalTitle = document.getElementById('gemini-chat-title');
 
-            let chatHistory = [];
+        let chatHistory = [];
 
-            const openIAModal = (modalEl) => modalEl.classList.remove('hidden');
-            const hideIAModal = (modalEl) => modalEl.classList.add('hidden');
+        const openIAModal = (modalEl) => modalEl.classList.remove('hidden');
+        const hideIAModal = (modalEl) => modalEl.classList.add('hidden');
 
-            const showIAToast = (message, isError = true) => {
-                const toast = document.getElementById('gemini-toast');
-                const toastMessage = document.getElementById('gemini-toast-message');
-                const toastIcon = document.getElementById('gemini-toast-icon');
-                if (!toast || !toastMessage) return;
-                toastMessage.textContent = message;
-                toast.classList.toggle('bg-red-600', isError);
-                toast.classList.toggle('bg-green-600', !isError);
-                if (toastIcon) toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
-                toast.classList.remove('hidden');
-                setTimeout(() => toast.classList.add('hidden'), 5000);
-            };
+        const showIAToast = (message, isError = true) => {
+            const toast = document.getElementById('gemini-toast');
+            const toastMessage = document.getElementById('gemini-toast-message');
+            const toastIcon = document.getElementById('gemini-toast-icon');
+            if (!toast || !toastMessage) return;
+            toastMessage.textContent = message;
+            toast.classList.toggle('bg-red-600', isError);
+            toast.classList.toggle('bg-green-600', !isError);
+            if (toastIcon) toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 5000);
+        };
 
-            // Placeholder Animation for API Key
-            const animatePlaceholder = () => {
-                const input = document.getElementById('api-key-input');
-                if (!input) return;
-                const text = "Cole sua chave aqui...";
-                let i = 0;
+        // Placeholder Animation for API Key
+        const animatePlaceholder = () => {
+            const input = document.getElementById('api-key-input');
+            if (!input) return;
+            const text = "Cole sua chave aqui...";
+            let i = 0;
 
-                function type() {
-                    if (i < text.length) {
-                        i++;
-                        input.placeholder = text.substring(0, i) + "|";
-                        setTimeout(type, 100);
-                    } else {
-                        // Final blink effect
-                        let flashes = 0;
-                        const interval = setInterval(() => {
-                            input.placeholder = text + (flashes % 2 === 0 ? "" : "|");
-                            flashes++;
-                            if (flashes > 5) {
-                                clearInterval(interval);
-                                setTimeout(() => {
-                                    i = 0;
-                                    type();
-                                }, 2000);
-                            }
-                        }, 500);
-                    }
-                }
-                type();
-            };
-            animatePlaceholder();
-
-            const getApiKey = () => localStorage.getItem('gemini_api_key_v1');
-            const saveApiKey = (key) => localStorage.setItem('gemini_api_key_v1', key);
-
-            // API Key Modal Events
-            if (document.getElementById('settings-btn')) {
-                document.getElementById('settings-btn').addEventListener('click', () => {
-                    document.getElementById('api-key-input').value = getApiKey() || '';
-                    openIAModal(apiKeyModal);
-                });
-            }
-
-            document.getElementById('cancel-api-key-btn').addEventListener('click', () => hideIAModal(apiKeyModal));
-            document.getElementById('save-api-key-btn').addEventListener('click', () => {
-                const key = document.getElementById('api-key-input').value.trim();
-                if (key) {
-                    saveApiKey(key);
-                    hideIAModal(apiKeyModal);
-                    showIAToast("Chave API salva com sucesso!", false);
-                }
-            });
-
-            // Close Gemini Modals
-            document.getElementById('gemini-close-btn').addEventListener('click', () => hideIAModal(geminiModal));
-            document.getElementById('gemini-chat-close-btn').addEventListener('click', () => hideIAModal(geminiChatModal));
-
-            async function callGeminiAPI(input, generationConfig = null) {
-                const apiKey = getApiKey();
-                if (!apiKey) {
-                    showIAToast("Por favor, configure sua chave de API do Gemini.");
-                    document.getElementById('api-key-input').value = '';
-                    openIAModal(apiKeyModal);
-                    return null;
-                }
-
-                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`;
-
-                let payload = {
-                    contents: typeof input === 'string' ? [{ parts: [{ text: input }] }] : input
-                };
-
-                if (generationConfig) payload.generationConfig = generationConfig;
-
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error?.message || "Erro na chamada da API");
-                    }
-
-                    const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
-                } catch (error) {
-                    console.error("Gemini Error:", error);
-                    showIAToast("Erro ao falar com a IA: " + error.message);
-                    return null;
-                }
-            }
-
-            function addChatMessage(message, sender = 'ia') {
-                const messageEl = document.createElement('div');
-                messageEl.classList.add('p-3', 'rounded-lg', 'max-w-[85%]', 'break-words');
-
-                // Simple markdown Bold
-                let htmlMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                // Simple lists
-                htmlMessage = htmlMessage.replace(/^\s*-\s(.*?)$/gm, '<li class="ml-4">$1</li>');
-
-                if (sender === 'user') {
-                    messageEl.classList.add('bg-indigo-500', 'text-white', 'self-end', 'ml-auto');
-                    messageEl.innerHTML = htmlMessage;
+            function type() {
+                if (i < text.length) {
+                    i++;
+                    input.placeholder = text.substring(0, i) + "|";
+                    setTimeout(type, 100);
                 } else {
-                    messageEl.classList.add('bg-gray-200', 'text-gray-800', 'self-start', 'mr-auto');
-                    if (message === '...') {
-                        messageEl.innerHTML = '<div class="loader w-5 h-5 border-2 border-indigo-500 border-t-transparent"></div>';
-                    } else {
-                        messageEl.innerHTML = htmlMessage;
-                    }
-                }
-                chatMessagesEl.appendChild(messageEl);
-                chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-                return messageEl;
-            }
-
-            async function openChat(contextType) {
-                // First, check for API key to avoid modal overlap
-                const apiKey = getApiKey();
-                if (!apiKey) {
-                    showIAToast("Por favor, configure sua chave de API do Gemini.");
-                    document.getElementById('api-key-input').value = '';
-                    openIAModal(apiKeyModal);
-                    return; // Stop here
-                }
-
-                let titleText = '✨ Inteligência Aero';
-                let initialPrompt = '';
-
-                // Get current financial data for context
-                const totalReceitas = document.getElementById('total-receitas')?.textContent || 'R$ 0,00';
-                const totalDespesas = document.getElementById('total-despesas')?.textContent || 'R$ 0,00';
-                const saldoFinal = document.getElementById('saldo-total')?.textContent || 'R$ 0,00';
-
-                if (contextType === 'dashboard') {
-                    titleText = '<i class="fa-solid fa-chart-line mr-2 text-indigo-500"></i> Insights do Dashboard';
-                    initialPrompt = `Analise meu resumo financeiro atual: Receitas: ${totalReceitas}, Despesas: ${totalDespesas}, Saldo: ${saldoFinal}. Me dê 3 insights rápidos ou avisos sobre esses números.`;
-                } else if (contextType === 'gastos') {
-                    titleText = '<i class="fa-solid fa-receipt mr-2 text-red-500"></i> Análise de Gastos';
-                    initialPrompt = "Gostaria de uma análise sobre meus gastos deste mês. Quais as categorias mais pesadas e onde posso reduzir custos?";
-                }
-
-                chatModalTitle.innerHTML = titleText;
-                chatMessagesEl.innerHTML = '';
-                openIAModal(geminiChatModal);
-
-                if (initialPrompt) {
-                    const loadingEl = addChatMessage('...');
-                    chatHistory = [{ role: 'user', parts: [{ text: initialPrompt }] }];
-                    const response = await callGeminiAPI(chatHistory);
-                    loadingEl.remove();
-                    if (response) {
-                        addChatMessage(response, 'ia');
-                        chatHistory.push({ role: 'model', parts: [{ text: response }] });
-                    }
+                    // Final blink effect
+                    let flashes = 0;
+                    const interval = setInterval(() => {
+                        input.placeholder = text + (flashes % 2 === 0 ? "" : "|");
+                        flashes++;
+                        if (flashes > 5) {
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                i = 0;
+                                type();
+                            }, 2000);
+                        }
+                    }, 500);
                 }
             }
+            type();
+        };
+        animatePlaceholder();
 
-            chatForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const userInput = chatInput.value.trim();
-                if (!userInput) return;
+        const getApiKey = () => localStorage.getItem('gemini_api_key_v1');
+        const saveApiKey = (key) => localStorage.setItem('gemini_api_key_v1', key);
 
-                addChatMessage(userInput, 'user');
-                chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
-                chatInput.value = '';
-                chatSendBtn.disabled = true;
+        // API Key Modal Events
+        if (document.getElementById('settings-btn')) {
+            document.getElementById('settings-btn').addEventListener('click', () => {
+                document.getElementById('api-key-input').value = getApiKey() || '';
+                openIAModal(apiKeyModal);
+            });
+        }
 
+        document.getElementById('cancel-api-key-btn').addEventListener('click', () => hideIAModal(apiKeyModal));
+        document.getElementById('save-api-key-btn').addEventListener('click', () => {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (key) {
+                saveApiKey(key);
+                hideIAModal(apiKeyModal);
+                showIAToast("Chave API salva com sucesso!", false);
+            }
+        });
+
+        // Close Gemini Modals
+        document.getElementById('gemini-close-btn').addEventListener('click', () => hideIAModal(geminiModal));
+        document.getElementById('gemini-chat-close-btn').addEventListener('click', () => hideIAModal(geminiChatModal));
+
+        async function callGeminiAPI(input, generationConfig = null) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showIAToast("Por favor, configure sua chave de API do Gemini.");
+                document.getElementById('api-key-input').value = '';
+                openIAModal(apiKeyModal);
+                return null;
+            }
+
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`;
+
+            let payload = {
+                contents: typeof input === 'string' ? [{ parts: [{ text: input }] }] : input
+            };
+
+            if (generationConfig) payload.generationConfig = generationConfig;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || "Erro na chamada da API");
+                }
+
+                const result = await response.json();
+                return result.candidates?.[0]?.content?.parts?.[0]?.text;
+            } catch (error) {
+                console.error("Gemini Error:", error);
+                showIAToast("Erro ao falar com a IA: " + error.message);
+                return null;
+            }
+        }
+
+        function addChatMessage(message, sender = 'ia') {
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('p-3', 'rounded-lg', 'max-w-[85%]', 'break-words');
+
+            // Simple markdown Bold
+            let htmlMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Simple lists
+            htmlMessage = htmlMessage.replace(/^\s*-\s(.*?)$/gm, '<li class="ml-4">$1</li>');
+
+            if (sender === 'user') {
+                messageEl.classList.add('bg-indigo-500', 'text-white', 'self-end', 'ml-auto');
+                messageEl.innerHTML = htmlMessage;
+            } else {
+                messageEl.classList.add('bg-gray-200', 'text-gray-800', 'self-start', 'mr-auto');
+                if (message === '...') {
+                    messageEl.innerHTML = '<div class="loader w-5 h-5 border-2 border-indigo-500 border-t-transparent"></div>';
+                } else {
+                    messageEl.innerHTML = htmlMessage;
+                }
+            }
+            chatMessagesEl.appendChild(messageEl);
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+            return messageEl;
+        }
+
+        async function openChat(contextType) {
+            // First, check for API key to avoid modal overlap
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showIAToast("Por favor, configure sua chave de API do Gemini.");
+                document.getElementById('api-key-input').value = '';
+                openIAModal(apiKeyModal);
+                return; // Stop here
+            }
+
+            let titleText = '✨ Inteligência Aero';
+            let initialPrompt = '';
+
+            // Get current financial data for context
+            const totalReceitas = document.getElementById('total-receitas')?.textContent || 'R$ 0,00';
+            const totalDespesas = document.getElementById('total-despesas')?.textContent || 'R$ 0,00';
+            const saldoFinal = document.getElementById('saldo-total')?.textContent || 'R$ 0,00';
+
+            if (contextType === 'dashboard') {
+                titleText = '<i class="fa-solid fa-chart-line mr-2 text-indigo-500"></i> Insights do Dashboard';
+                initialPrompt = `Analise meu resumo financeiro atual: Receitas: ${totalReceitas}, Despesas: ${totalDespesas}, Saldo: ${saldoFinal}. Me dê 3 insights rápidos ou avisos sobre esses números.`;
+            } else if (contextType === 'gastos') {
+                titleText = '<i class="fa-solid fa-receipt mr-2 text-red-500"></i> Análise de Gastos';
+                initialPrompt = "Gostaria de uma análise sobre meus gastos deste mês. Quais as categorias mais pesadas e onde posso reduzir custos?";
+            }
+
+            chatModalTitle.innerHTML = titleText;
+            chatMessagesEl.innerHTML = '';
+            openIAModal(geminiChatModal);
+
+            if (initialPrompt) {
                 const loadingEl = addChatMessage('...');
+                chatHistory = [{ role: 'user', parts: [{ text: initialPrompt }] }];
                 const response = await callGeminiAPI(chatHistory);
                 loadingEl.remove();
-
                 if (response) {
                     addChatMessage(response, 'ia');
                     chatHistory.push({ role: 'model', parts: [{ text: response }] });
                 }
-                chatSendBtn.disabled = false;
-            });
+            }
+        }
 
-            // Expose openChat to global scope for onclick events
-            window.openChat = openChat;
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userInput = chatInput.value.trim();
+            if (!userInput) return;
 
-            // Function to edit an event - redirects to Agenda de eventos
-            window.editarEvento = function (eventoId) {
-                if (!eventoId) {
-                    showToast('ID do evento inválido', true);
-                    return;
+            addChatMessage(userInput, 'user');
+            chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
+            chatInput.value = '';
+            chatSendBtn.disabled = true;
+
+            const loadingEl = addChatMessage('...');
+            const response = await callGeminiAPI(chatHistory);
+            loadingEl.remove();
+
+            if (response) {
+                addChatMessage(response, 'ia');
+                chatHistory.push({ role: 'model', parts: [{ text: response }] });
+            }
+            chatSendBtn.disabled = false;
+        });
+
+        // Expose openChat to global scope for onclick events
+        window.openChat = openChat;
+
+        // Function to edit an event - redirects to Agenda de eventos
+        window.editarEvento = function (eventoId) {
+            if (!eventoId) {
+                showToast('ID do evento inválido', true);
+                return;
+            }
+            // Redirect to Agenda de eventos with the event ID as a URL parameter
+            window.location.href = `./Agenda de eventos.html?edit=${eventoId}`;
+        };
+
+        // Function to edit a monitor payment
+        window.editarPagamentoMonitor = async function (pagamentoId) {
+            if (!pagamentoId) {
+                showToast('ID do pagamento inválido', true);
+                return;
+            }
+
+            // Find the payment in the state
+            const pagamento = state.pagamentosMonitores.find(p => p.id === pagamentoId);
+            if (!pagamento) {
+                showToast('Pagamento não encontrado', true);
+                return;
+            }
+
+            // Populate the form fields
+            getById('pag-monitor-data').value = pagamento.data;
+            getById('pag-monitor-data-pagamento').value = pagamento.dataPagamento || '';
+            getById('pag-monitor-select').value = pagamento.monitorId;
+            getById('pag-monitor-valor').value = pagamento.valorBase || 0;
+            getById('pag-monitor-he').value = pagamento.horasExtras || 0;
+            getById('pag-monitor-entrada').value = pagamento.horaEntrada || '';
+            getById('pag-monitor-saida').value = pagamento.horaSaida || '';
+            getById('pag-monitor-status').value = pagamento.statusPagamento || 'Pendente';
+            getById('pag-monitor-obs').value = pagamento.observacoes || '';
+
+            // Motorista fields
+            const isMotorista = pagamento.foiMotorista || false;
+            getById('pag-monitor-motorista').checked = isMotorista;
+            if (isMotorista) {
+                getById('pag-monitor-eventos-container')?.classList.remove('hidden');
+                getById('pag-monitor-eventos').value = pagamento.numEventos || 0;
+            } else {
+                getById('pag-monitor-eventos-container')?.classList.add('hidden');
+            }
+
+            // Evento vinculado (if exists)
+            if (pagamento.eventoId) {
+                getById('pag-monitor-evento').value = pagamento.eventoId;
+            }
+
+            // Set the edit ID so the form knows it's in edit mode
+            let editIdField = getById('pag-monitor-edit-id');
+            if (!editIdField) {
+                // Create the hidden field if it doesn't exist
+                const form = getById('form-pagamento-monitor');
+                if (form) {
+                    editIdField = document.createElement('input');
+                    editIdField.type = 'hidden';
+                    editIdField.id = 'pag-monitor-edit-id';
+                    form.appendChild(editIdField);
                 }
-                // Redirect to Agenda de eventos with the event ID as a URL parameter
-                window.location.href = `./Agenda de eventos.html?edit=${eventoId}`;
-            };
+            }
+            if (editIdField) {
+                editIdField.value = pagamentoId;
+            }
 
-            // Function to edit a monitor payment
-            window.editarPagamentoMonitor = async function (pagamentoId) {
-                if (!pagamentoId) {
-                    showToast('ID do pagamento inválido', true);
-                    return;
-                }
+            // Show the modal
+            getById('modal-pagamento-monitor')?.classList.remove('hidden');
+            showToast('✏️ Editando pagamento', false);
+        };
 
-                // Find the payment in the state
-                const pagamento = state.pagamentosMonitores.find(p => p.id === pagamentoId);
-                if (!pagamento) {
-                    showToast('Pagamento não encontrado', true);
-                    return;
-                }
+        // Funções para Modal de Gastos Pendentes
+        window.showPendingDetailsModal = function () {
+            const listEl = getById('lista-detalhes-pendentes');
+            if (!listEl) return;
 
-                // Populate the form fields
-                getById('pag-monitor-data').value = pagamento.data;
-                getById('pag-monitor-data-pagamento').value = pagamento.dataPagamento || '';
-                getById('pag-monitor-select').value = pagamento.monitorId;
-                getById('pag-monitor-valor').value = pagamento.valorBase || 0;
-                getById('pag-monitor-he').value = pagamento.horasExtras || 0;
-                getById('pag-monitor-entrada').value = pagamento.horaEntrada || '';
-                getById('pag-monitor-saida').value = pagamento.horaSaida || '';
-                getById('pag-monitor-status').value = pagamento.statusPagamento || 'Pendente';
-                getById('pag-monitor-obs').value = pagamento.observacoes || '';
+            listEl.innerHTML = '';
+            const details = state.dashboardSummary?.pendingDetails || [];
 
-                // Motorista fields
-                const isMotorista = pagamento.foiMotorista || false;
-                getById('pag-monitor-motorista').checked = isMotorista;
-                if (isMotorista) {
-                    getById('pag-monitor-eventos-container')?.classList.remove('hidden');
-                    getById('pag-monitor-eventos').value = pagamento.numEventos || 0;
-                } else {
-                    getById('pag-monitor-eventos-container')?.classList.add('hidden');
-                }
+            if (details.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 py-4">Nenhum detalhe disponível.</p>';
+            } else {
+                details.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'group flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:bg-amber-50 hover:border-amber-200 transition-all cursor-pointer active:scale-[0.98]';
+                    itemEl.onclick = () => window.navigateToPendingItem(item.id, item.type);
 
-                // Evento vinculado (if exists)
-                if (pagamento.eventoId) {
-                    getById('pag-monitor-evento').value = pagamento.eventoId;
-                }
-
-                // Set the edit ID so the form knows it's in edit mode
-                let editIdField = getById('pag-monitor-edit-id');
-                if (!editIdField) {
-                    // Create the hidden field if it doesn't exist
-                    const form = getById('form-pagamento-monitor');
-                    if (form) {
-                        editIdField = document.createElement('input');
-                        editIdField.type = 'hidden';
-                        editIdField.id = 'pag-monitor-edit-id';
-                        form.appendChild(editIdField);
-                    }
-                }
-                if (editIdField) {
-                    editIdField.value = pagamentoId;
-                }
-
-                // Show the modal
-                getById('modal-pagamento-monitor')?.classList.remove('hidden');
-                showToast('✏️ Editando pagamento', false);
-            };
-
-            // Funções para Modal de Gastos Pendentes
-            window.showPendingDetailsModal = function () {
-                const listEl = getById('lista-detalhes-pendentes');
-                if (!listEl) return;
-
-                listEl.innerHTML = '';
-                const details = state.dashboardSummary?.pendingDetails || [];
-
-                if (details.length === 0) {
-                    listEl.innerHTML = '<p class="text-center text-gray-500 py-4">Nenhum detalhe disponível.</p>';
-                } else {
-                    details.forEach(item => {
-                        const itemEl = document.createElement('div');
-                        itemEl.className = 'group flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:bg-amber-50 hover:border-amber-200 transition-all cursor-pointer active:scale-[0.98]';
-                        itemEl.onclick = () => window.navigateToPendingItem(item.id, item.type);
-
-                        itemEl.innerHTML = `
+                    itemEl.innerHTML = `
                         <div class="flex flex-col">
                             <span class="text-sm font-bold text-gray-700 group-hover:text-amber-900">${item.description}</span>
                             <span class="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
@@ -5541,142 +5635,140 @@
                             <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 group-hover:text-amber-400 transition-colors"></i>
                         </div>
                     `;
-                        listEl.appendChild(itemEl);
-                    });
-                }
+                    listEl.appendChild(itemEl);
+                });
+            }
 
-                const modal = getById('modal-detalhes-pendentes');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    setTimeout(() => {
-                        modal.querySelector('.modal-content')?.classList.remove('scale-95', 'opacity-0');
-                        modal.querySelector('.modal-content')?.classList.add('scale-100', 'opacity-100');
-                    }, 10);
-                }
-            };
-
-            window.closePendingDetailsModal = function () {
-                const modal = getById('modal-detalhes-pendentes');
-                if (modal) {
-                    modal.querySelector('.modal-content')?.classList.remove('scale-100', 'opacity-100');
-                    modal.querySelector('.modal-content')?.classList.add('scale-95', 'opacity-0');
-                    setTimeout(() => modal.classList.add('hidden'), 300);
-                }
-            };
-
-            window.navigateToPendingItem = function (id, type) {
-                window.closePendingDetailsModal();
-
+            const modal = getById('modal-detalhes-pendentes');
+            if (modal) {
+                modal.classList.remove('hidden');
                 setTimeout(() => {
-                    const targetTab = type === 'monitor' ? 'monitores' : (type === 'salary' ? 'salarios' : 'contas-fixas');
-                    const rowId = type === 'monitor' ? `pagamento-row-${id}` : (type === 'salary' ? 'salario-calculo-container' : `fixed-card-${id}`);
-                    const containerId = type === 'monitor' ? 'tabela-pagamentos-monitores' : (type === 'salary' ? 'secao-salarios' : 'contas-fixas-cards-container');
+                    modal.querySelector('.modal-content')?.classList.remove('scale-95', 'opacity-0');
+                    modal.querySelector('.modal-content')?.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+        };
 
-                    // 1. Ativa a aba correta
-                    const tabBtn = document.querySelector(`.nav-link[data-target="${targetTab}"]`);
-                    if (tabBtn) tabBtn.click();
+        window.closePendingDetailsModal = function () {
+            const modal = getById('modal-detalhes-pendentes');
+            if (modal) {
+                modal.querySelector('.modal-content')?.classList.remove('scale-100', 'opacity-100');
+                modal.querySelector('.modal-content')?.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        };
 
-                    // 2. Rola para o elemento após um pequeno delay para a troca de aba e renderização
-                    setTimeout(() => {
-                        const targetEl = getById(rowId) || getById(containerId);
-                        if (targetEl) {
-                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            // Adiciona um destaque temporário
-                            targetEl.classList.add('ring-4', 'ring-amber-400', 'transition-all', 'duration-500');
-                            setTimeout(() => targetEl.classList.remove('ring-4', 'ring-amber-400'), 3000);
-                        } else {
-                            showToast('Localizando item...', false);
-                        }
-                    }, 500); // Delay maior para garantir que a aba carregou e renderizou
-                }, 350);
-            };
-        </script>
+        window.navigateToPendingItem = function (id, type) {
+            window.closePendingDetailsModal();
 
-        <!-- Modal Detalhes Gastos Pendentes -->
-        <div id="modal-detalhes-pendentes"
-            class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-[9999] p-4">
-            <div
-                class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0 modal-content border border-gray-100">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
-                                <i class="fa-solid fa-clock-rotate-left text-xl"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-gray-800 tracking-tight">Gastos Pendentes</h3>
+            setTimeout(() => {
+                const targetTab = type === 'monitor' ? 'monitores' : (type === 'salary' ? 'salarios' : 'contas-fixas');
+                const rowId = type === 'monitor' ? `pagamento-row-${id}` : (type === 'salary' ? 'salario-calculo-container' : `fixed-card-${id}`);
+                const containerId = type === 'monitor' ? 'tabela-pagamentos-monitores' : (type === 'salary' ? 'secao-salarios' : 'contas-fixas-cards-container');
+
+                // 1. Ativa a aba correta
+                const tabBtn = document.querySelector(`.nav-link[data-target="${targetTab}"]`);
+                if (tabBtn) tabBtn.click();
+
+                // 2. Rola para o elemento após um pequeno delay para a troca de aba e renderização
+                setTimeout(() => {
+                    const targetEl = getById(rowId) || getById(containerId);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Adiciona um destaque temporário
+                        targetEl.classList.add('ring-4', 'ring-amber-400', 'transition-all', 'duration-500');
+                        setTimeout(() => targetEl.classList.remove('ring-4', 'ring-amber-400'), 3000);
+                    } else {
+                        showToast('Localizando item...', false);
+                    }
+                }, 500); // Delay maior para garantir que a aba carregou e renderizou
+            }, 350);
+        };
+    </script>
+
+    <!-- Modal Detalhes Gastos Pendentes -->
+    <div id="modal-detalhes-pendentes"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-[9999] p-4">
+        <div
+            class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0 modal-content border border-gray-100">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+                            <i class="fa-solid fa-clock-rotate-left text-xl"></i>
                         </div>
-                        <button onclick="window.closePendingDetailsModal()"
-                            class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
-                            <i class="fa-solid fa-xmark text-lg"></i>
-                        </button>
+                        <h3 class="text-xl font-bold text-gray-800 tracking-tight">Gastos Pendentes</h3>
                     </div>
+                    <button onclick="window.closePendingDetailsModal()"
+                        class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
 
-                    <div id="lista-detalhes-pendentes"
-                        class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                        <!-- Itens inseridos via JS -->
-                    </div>
+                <div id="lista-detalhes-pendentes" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Itens inseridos via JS -->
+                </div>
 
-                    <div class="mt-8 flex justify-end">
-                        <button onclick="window.closePendingDetailsModal()"
-                            class="px-6 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all active:scale-95">
-                            Fechar
-                        </button>
-                    </div>
+                <div class="mt-8 flex justify-end">
+                    <button onclick="window.closePendingDetailsModal()"
+                        class="px-6 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all active:scale-95">
+                        Fechar
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <script src="js/charts-init.js"></script>
+    <script src="js/charts-init.js"></script>
 
-        <!-- Bottom Navigation Bar (Mobile Only) -->
-        <nav class="bottom-nav active" id="main-bottom-nav">
-            <!-- Handle Tátil (Puxador Integrado) -->
-            <div class="bottom-nav-handle" id="bottom-nav-handle">
-                <i class="fas fa-chevron-up"></i>
-            </div>
+    <!-- Bottom Navigation Bar (Mobile Only) -->
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <!-- Handle Tátil (Puxador Integrado) -->
+        <div class="bottom-nav-handle" id="bottom-nav-handle">
+            <i class="fas fa-chevron-up"></i>
+        </div>
 
-            <a href="./Dashboard.html" class="nav-item">
-                <i class="fas fa-home"></i>
-                <span>Início</span>
-            </a>
-            <a href="./Agenda de eventos.html" class="nav-item">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Agenda</span>
-            </a>
-            <a href="#" class="nav-item active">
-                <i class="fas fa-wallet"></i>
-                <span>Financeiro</span>
-            </a>
-            <a href="./Sistema de CRM.html" class="nav-item">
-                <i class="fas fa-users"></i>
-                <span>Clientes</span>
-            </a>
-        </nav>
+        <a href="./Dashboard.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="./Agenda de eventos.html" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Agenda</span>
+        </a>
+        <a href="#" class="nav-item active">
+            <i class="fas fa-wallet"></i>
+            <span>Financeiro</span>
+        </a>
+        <a href="./Sistema de CRM.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Clientes</span>
+        </a>
+    </nav>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const bottomNav = document.getElementById('main-bottom-nav');
-                const handle = document.getElementById('bottom-nav-handle');
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomNav = document.getElementById('main-bottom-nav');
+            const handle = document.getElementById('bottom-nav-handle');
 
-                if (bottomNav) {
-                    // Clique no handle ou na própria barra (quando recolhida) alterna o estado
-                    const toggleNav = (e) => {
-                        e.stopPropagation();
-                        bottomNav.classList.toggle('collapsed');
-                    };
+            if (bottomNav) {
+                // Clique no handle ou na própria barra (quando recolhida) alterna o estado
+                const toggleNav = (e) => {
+                    e.stopPropagation();
+                    bottomNav.classList.toggle('collapsed');
+                };
 
-                    handle?.addEventListener('click', toggleNav);
+                handle?.addEventListener('click', toggleNav);
 
-                    // Se estiver recolhida, clicar em qualquer lugar da pílula pequena a expande
-                    bottomNav.addEventListener('click', (e) => {
-                        if (bottomNav.classList.contains('collapsed')) {
-                            toggleNav(e);
-                        }
-                    });
-                }
-            });
-        </script>
+                // Se estiver recolhida, clicar em qualquer lugar da pílula pequena a expande
+                bottomNav.addEventListener('click', (e) => {
+                    if (bottomNav.classList.contains('collapsed')) {
+                        toggleNav(e);
+                    }
+                });
+            }
+        });
+    </script>
 
 </body>
 

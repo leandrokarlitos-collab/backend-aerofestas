@@ -3195,57 +3195,58 @@
                 initParticles(); animateParticles();
             });
         </script>
-
-        <!-- Bottom Navigation Bar (Mobile Only) -->
-        <nav class="bottom-nav active" id="main-bottom-nav">
-            <!-- Handle Tátil (Puxador Integrado) -->
-            <div class="bottom-nav-handle" id="bottom-nav-handle">
-                <i class="fas fa-chevron-up"></i>
-            </div>
-
-            <a href="./Dashboard.html" class="nav-item">
-                <i class="fas fa-home"></i>
-                <span>Início</span>
-            </a>
-            <a href="./Agenda de eventos.html" class="nav-item">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Agenda</span>
-            </a>
-            <a href="./Sistema Gestão Financeira.html" class="nav-item">
-                <i class="fas fa-wallet"></i>
-                <span>Financeiro</span>
-            </a>
-            <a href="#" class="nav-item active">
-                <i class="fas fa-users"></i>
-                <span>Clientes</span>
-            </a>
-        </nav>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const bottomNav = document.getElementById('main-bottom-nav');
-                const handle = document.getElementById('bottom-nav-handle');
-
-                if (bottomNav) {
-                    const toggleNav = (e) => {
-                        e.stopPropagation();
-                        bottomNav.classList.toggle('collapsed');
-                    };
-
-                    handle?.addEventListener('click', toggleNav);
-
-                    bottomNav.addEventListener('click', (e) => {
-                        if (bottomNav.classList.contains('collapsed')) {
-                            toggleNav(e);
-                        }
-                    });
-                }
-            });
-        </script>
-
-        <!-- Sistema de Autenticação -->
-        <script src="js/protect.js"></script>
+    </div> <!-- Fim de container -->
     </div> <!-- Fim de page-content-wrapper -->
+
+    <!-- Bottom Navigation Bar (Mobile Only) -->
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <!-- Handle Tátil (Puxador Integrado) -->
+        <div class="bottom-nav-handle" id="bottom-nav-handle">
+            <i class="fas fa-chevron-up"></i>
+        </div>
+
+        <a href="./Dashboard.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="./Agenda de eventos.html" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Agenda</span>
+        </a>
+        <a href="./Sistema Gestão Financeira.html" class="nav-item">
+            <i class="fas fa-wallet"></i>
+            <span>Financeiro</span>
+        </a>
+        <a href="#" class="nav-item active">
+            <i class="fas fa-users"></i>
+            <span>Clientes</span>
+        </a>
+    </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomNav = document.getElementById('main-bottom-nav');
+            const handle = document.getElementById('bottom-nav-handle');
+
+            if (bottomNav) {
+                const toggleNav = (e) => {
+                    e.stopPropagation();
+                    bottomNav.classList.toggle('collapsed');
+                };
+
+                handle?.addEventListener('click', toggleNav);
+
+                bottomNav.addEventListener('click', (e) => {
+                    if (bottomNav.classList.contains('collapsed')) {
+                        toggleNav(e);
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Sistema de Autenticação -->
+    <script src="js/protect.js"></script>
 
 </body>
 
