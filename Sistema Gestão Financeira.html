@@ -2871,8 +2871,10 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e5e7eb 50%, #dbeafe 100%);
+            background-attachment: fixed;
             color: #1f2937;
+            min-height: 100vh;
         }
 
         #particles-js {
@@ -2882,27 +2884,66 @@
             width: 100%;
             height: 100%;
             z-index: -1;
+            opacity: 0.5;
         }
 
         .header-title {
-            background: linear-gradient(to right, #4f46e5, #a855f7);
+            background: linear-gradient(to right, #4f46e5, #8b5cf6);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
-            text-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
         }
 
+        /* Evolução para Spatial Glass */
         .glassmorphism {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(12px) saturate(180%);
-            -webkit-backdrop-filter: blur(12px) saturate(180%);
-            border: 1px solid rgba(200, 200, 200, 0.3);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.05),
+                0 10px 15px -3px rgba(0, 0, 0, 0.03),
+                inset 0 0 20px rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dashboard-card.glassmorphism:hover {
+            transform: translateY(-4px) scale(1.01);
+            background: rgba(255, 255, 255, 0.55);
+            box-shadow: 
+                0 20px 25px -5px rgba(0, 0, 0, 0.08),
+                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.7);
         }
 
         .modal-box.glassmorphism {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(30px) saturate(190%);
+            -webkit-backdrop-filter: blur(30px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .nav-glass {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .nav-glass:hover {
+            background: rgba(255, 255, 255, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-glass.active {
+            background: white !important;
+            color: #4f46e5 !important;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2) !important;
         }
 
         .shiny-btn {
@@ -3849,32 +3890,32 @@
                     class="nav-link active shiny-btn px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
                         class="fa-solid fa-chart-pie mr-2"></i> Dashboard</button>
                 <button data-target="entradas"
-                    class="nav-link bg-white/50 hover:bg-white/80 text-gray-700 font-semibold px-4 py-2 rounded-md transition-all duration-300 text-sm md:text-base mb-2"><i
+                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
                         class="fa-solid fa-calendar-check mr-2"></i> Entradas</button>
                 <button data-target="gastos"
-                    class="nav-link bg-white/50 hover:bg-white/80 text-gray-700 font-semibold px-4 py-2 rounded-md transition-all duration-300 text-sm md:text-base mb-2"><i
+                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
                         class="fa-solid fa-cart-shopping mr-2"></i> Gastos</button>
                 <button data-target="contas-fixas"
-                    class="nav-link bg-white/50 hover:bg-white/80 text-gray-700 font-semibold px-4 py-2 rounded-md transition-all duration-300 text-sm md:text-base mb-2"><i
+                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
                         class="fa-solid fa-file-invoice-dollar mr-2"></i> Contas Fixas</button>
                 <button data-target="monitores"
-                    class="nav-link bg-white/50 hover:bg-white/80 text-gray-700 font-semibold px-4 py-2 rounded-md transition-all duration-300 text-sm md:text-base mb-2"><i
+                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
                         class="fa-solid fa-users mr-2"></i> Monitores</button>
                 <button data-target="salarios"
-                    class="nav-link bg-white/50 hover:bg-white/80 text-gray-700 font-semibold px-4 py-2 rounded-md transition-all duration-300 text-sm md:text-base mb-2"><i
+                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
                         class="fa-solid fa-money-bill-wave mr-2"></i> Salários</button>
             </nav>
 
             <div
                 class="month-filter-container glassmorphism p-4 rounded-lg mb-8 flex justify-center items-center gap-4">
                 <button
-                    class="month-nav-btn bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors font-bold text-lg"
+                    class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
                     data-direction="-1">&lt;</button>
                 <input type="month"
-                    class="month-filter form-input text-center font-semibold text-indigo-600 border-none shadow-inner"
+                    class="month-filter form-input text-center font-semibold text-indigo-600 border-none shadow-inner bg-white/50 backdrop-blur-sm"
                     id="month-filter-global">
                 <button
-                    class="month-nav-btn bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors font-bold text-lg"
+                    class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
                     data-direction="1">&gt;</button>
             </div>
 
