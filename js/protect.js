@@ -178,14 +178,16 @@ function injectPremiumUserMenu(userData) {
     avatarBtn.style.animation = 'pulseGlow 3s ease-in-out infinite';
 
     // Se houver foto do perfil, usa. Senão, usa ícone
-    if (userData.photoUrl) {
-        avatarBtn.style.backgroundImage = `url(${userData.photoUrl})`;
+    if (userData.photoUrl && userData.photoUrl !== 'null' && userData.photoUrl !== 'undefined') {
+        avatarBtn.style.backgroundImage = `url("${userData.photoUrl}")`;
         avatarBtn.style.backgroundSize = 'cover';
         avatarBtn.style.backgroundPosition = 'center';
+        avatarBtn.innerHTML = ''; // Garante que não tenha texto
     } else {
         // Pega iniciais do nome
-        const initials = userData.name
+        const initials = (userData.name || 'U')
             .split(' ')
+            .filter(n => n.length > 0)
             .map(n => n[0])
             .slice(0, 2)
             .join('')

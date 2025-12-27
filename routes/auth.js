@@ -200,7 +200,14 @@ router.post('/login', async (req, res) => {
         res.json({
             message: 'Login realizado!',
             token,
-            user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin }
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                email: user.email, 
+                isAdmin: user.isAdmin,
+                photoUrl: user.photoUrl,
+                phone: user.phone
+            }
         });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao fazer login.' });
@@ -218,7 +225,15 @@ router.get('/me', async (req, res) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         const user = await prisma.user.findUnique({ where: { id: decoded.id } });
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-        res.json({ id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin, emailConfirmed: user.emailConfirmed });
+        res.json({ 
+            id: user.id, 
+            name: user.name, 
+            email: user.email, 
+            isAdmin: user.isAdmin, 
+            emailConfirmed: user.emailConfirmed,
+            photoUrl: user.photoUrl,
+            phone: user.phone
+        });
     } catch (error) {
         res.status(401).json({ error: 'Token inválido.' });
     }

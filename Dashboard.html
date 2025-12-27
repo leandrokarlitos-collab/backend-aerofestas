@@ -1387,6 +1387,7 @@
             // --- CONFIGURAÇÕES GLOBAIS E INICIALIZAÇÃO ---
             let currentContext = { events: [], tasks: [] }; // [NOVO] Armazena o contexto do plano
             let chatHistory = []; // [NOVO] Armazena o histórico do chat
+            let currentDailyPlan = null; // [NOVO] Armazena o plano exibido no momento
 
             // --- [NOVO] Constantes do Widget Financeiro ---
             const financeWidgetLoading = document.getElementById('finance-summary-loading');
@@ -2418,6 +2419,7 @@
 
             // --- [NOVO] Função para renderizar o plano (reutilizável) ---
             function renderDailyPlan(plan, targetEl) {
+                currentDailyPlan = plan; // [NOVO] Armazena globalmente
                 document.getElementById('assistant-initial-state')?.classList.add('hidden');
 
                 const mdToHtml = (str) => str ? str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') : '';
@@ -2459,12 +2461,12 @@
                                 <tr class="hover:bg-indigo-50/30 transition-colors">
                                     <td class="px-5 py-4 font-bold text-slate-400 text-[10px] uppercase whitespace-nowrap">${item.categoria}</td>
                                     <td class="px-5 py-4">
-                                        <label for="plan-task-${index}" class="flex items-center gap-2 cursor-pointer interactive-task-label text-slate-700 font-medium transition-all">
+                                        <label for="plan-task-${index}" class="flex items-center gap-2 cursor-pointer interactive-task-label text-slate-700 font-medium transition-all" style="${item.completed ? 'text-decoration: line-through; color: var(--text-muted-color)' : ''}">
                                             ${mdToHtml(item.tarefa)}
                                         </label>
                                     </td>
                                     <td class="px-5 py-4 text-center">
-                                        <input id="plan-task-${index}" type="checkbox" class="h-5 w-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 interactive-task-checkbox cursor-pointer transition-all">
+                                        <input id="plan-task-${index}" type="checkbox" ${item.completed ? 'checked' : ''} class="h-5 w-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-4 focus:ring-indigo-500/10 interactive-task-checkbox cursor-pointer transition-all">
                                     </td>
                                 </tr>
                             `).join('')}
@@ -2517,15 +2519,28 @@
                 targetEl.innerHTML = html;
 
                 // Adicionar interatividade aos checkboxes recém-criados
-                targetEl.querySelectorAll('.interactive-task-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', (e) => {
+                targetEl.querySelectorAll('.interactive-task-checkbox').forEach((checkbox, index) => {
+                    checkbox.addEventListener('change', async (e) => {
+                        const isChecked = e.target.checked;
                         const label = e.target.closest('tr').querySelector('.interactive-task-label');
-                        if (e.target.checked) {
+
+                        // Atualiza UI
+                        if (isChecked) {
                             label.style.textDecoration = 'line-through';
                             label.style.color = 'var(--text-muted-color)';
                         } else {
                             label.style.textDecoration = 'none';
                             label.style.color = 'var(--text-color)';
+                        }
+
+                        // [NOVO] Atualiza o objeto do plano e salva na nuvem
+                        plan.planoDeAcao[index].completed = isChecked;
+                        const todayISO = new Date().toISOString().split('T')[0];
+                        try {
+                            await api.salvarPlanoDiario(todayISO, plan);
+                            console.log("✅ Estado da tarefa salvo!");
+                        } catch (err) {
+                            console.error("❌ Erro ao salvar estado da tarefa:", err);
                         }
                     });
                 });
@@ -2533,15 +2548,15 @@
                 // [NOVO] Adicionar listener para salvar a revisão do dia
                 const reviewTextarea = targetEl.querySelector('#plan-review-textarea');
                 if (reviewTextarea) {
-                    reviewTextarea.addEventListener('input', (e) => {
+                    reviewTextarea.addEventListener('input', async (e) => {
                         const todayISO = new Date().toISOString().split('T')[0];
-                        const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
-                        const plan = history[todayISO];
-
-                        if (plan) {
-                            plan.review = e.target.value;
-                            history[todayISO] = plan;
-                            localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
+                        
+                        // Atualiza o objeto do plano e salva na nuvem
+                        plan.review = e.target.value;
+                        try {
+                            await api.salvarPlanoDiario(todayISO, plan);
+                        } catch (err) {
+                            console.error("❌ Erro ao salvar revisão:", err);
                         }
                     });
                 }
@@ -2950,7 +2965,7 @@
 
                 // [NOVO] Listener para o botão "Ver Histórico"
                 if (e.target.id === 'view-plan-history-btn' || e.target.closest('#view-plan-history-btn')) {
-                    const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+                    const history = await api.getDailyPlanHistory(); // [MODIFICADO] Pega da nuvem
                     const dates = Object.keys(history).sort().reverse(); // Mais recentes primeiro
 
                     const modalTitle = document.getElementById('gemini-modal-title');
@@ -3049,9 +3064,7 @@
                     // [MODIFICADO] Define o título do modal
                     chatModalTitle.innerHTML = '<i class="fas fa-search-plus mr-2 text-blue-400"></i> O que poderia ter sido melhor?';
 
-                    const todayISO = new Date().toISOString().split('T')[0];
-                    const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
-                    const plan = history[todayISO];
+                    const plan = currentDailyPlan; // [MODIFICADO] Usa a variável global
                     const reviewText = document.getElementById('plan-review-textarea')?.value || '';
 
                     if (!plan) {
@@ -3102,7 +3115,7 @@
                     // [MODIFICADO] Define o título do modal
                     chatModalTitle.innerHTML = '<i class="fas fa-chart-line mr-2 text-green-400"></i> Análise de Desempenho';
 
-                    const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
+                    const history = await api.getDailyPlanHistory(); // [MODIFICADO] Pega da nuvem
                     const dates = Object.keys(history);
 
                     // [NOVO] Pega o histórico de análises anteriores
@@ -3222,29 +3235,24 @@
                         btn.classList.add('bg-green-500');
 
                         // 3. Atualiza o Plano Diário (se existir)
-                        // [CORRIGIDO] para usar dailyPlanHistory_v1
-                        const history = JSON.parse(localStorage.getItem('dailyPlanHistory_v1')) || {};
-                        const plan = history[todayISO];
+                        const plan = currentDailyPlan; // [MODIFICADO]
 
-                        if (plan) { // [CORRIGIDO]
+                        if (plan) { 
                             try {
-                                // const plan = JSON.parse(savedPlanRaw); // Não é mais necessário
-
                                 // Adiciona a nova tarefa ao plano
                                 plan.planoDeAcao.push({
-                                    categoria: 'Ponta Solta (IA)', // Categoria para tarefas adicionadas
+                                    categoria: 'Ponta Solta (IA)', 
                                     tarefa: taskText
                                 });
 
-                                // Salva o plano atualizado
-                                // [CORRIGIDO]
-                                history[todayISO] = plan;
-                                localStorage.setItem('dailyPlanHistory_v1', JSON.stringify(history));
-
-                                // Re-renderiza o plano no widget
-                                const contentEl = document.getElementById('widget-assistant').querySelector('.collapsible-content');
-                                renderDailyPlan(plan, contentEl);
-
+                                // Salva na nuvem
+                                await api.salvarPlanoDiario(todayISO, plan);
+                                
+                                // Re-renderiza o plano para mostrar a nova tarefa
+                                const planContainer = document.getElementById('plan-display-area');
+                                if (planContainer) {
+                                    renderDailyPlan(plan, planContainer);
+                                }
                             } catch (err) {
                                 console.error("Erro ao atualizar o plano diário:", err);
                                 showToast("Tarefa adicionada, mas falha ao atualizar o plano.");
