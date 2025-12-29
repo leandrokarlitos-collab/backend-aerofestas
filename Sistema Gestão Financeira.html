@@ -169,8 +169,7 @@
 
                 if (loader && wrapper) {
                     setTimeout(() => {
-                        loader.style.opacity = '0';
-                        loader.style.visibility = 'hidden';
+                        loader.classList.add('loader-hidden');
                         wrapper.classList.add('content-ready');
                     }, 300);
                 }
@@ -467,8 +466,7 @@
                     const wrapper = document.getElementById('page-content-wrapper');
                     if (loader && wrapper) {
                         setTimeout(() => {
-                            loader.style.opacity = '0';
-                            loader.style.visibility = 'hidden';
+                            loader.classList.add('loader-hidden');
                             wrapper.classList.add('content-ready');
                         }, 500);
                     }
@@ -4195,7 +4193,7 @@
             }
         }
 
-        /* [PREMIUM] Futuristic Loader Styles */
+        /* [AAA] Super-Premium Futuristic Loader */
         #page-loader {
             position: fixed;
             inset: 0;
@@ -4205,103 +4203,119 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s, backdrop-filter 0.8s;
+        }
+
+        .dark #page-loader {
+            background: #020617;
+        }
+
+        /* Mesh Gradient Background para o Loader */
+        #page-loader::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
+            filter: blur(100px);
+            animation: mesh-move 15s ease infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes mesh-move {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.2) translate(5%, 5%); }
         }
 
         .loader-content {
             position: relative;
-            width: 120px;
-            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .loader-logo-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .loader-logo-glow {
+            position: absolute;
+            inset: -20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            filter: blur(25px);
+            opacity: 0.4;
+            animation: morph 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes morph {
+            0% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(0deg); }
+            100% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; transform: rotate(180deg); }
+        }
+
+        .loader-logo-main {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 2.5rem;
+            color: var(--primary);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            z-index: 1;
         }
 
-        .loader-ring {
+        .loader-progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dark .loader-progress-bar { background: rgba(255,255,255,0.05); }
+
+        .loader-progress-line {
             position: absolute;
-            inset: 0;
-            border: 4px solid transparent;
-            border-top-color: #4f46e5;
-            border-bottom-color: #a855f7;
-            border-radius: 50%;
-            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+            top: 0; left: 0; height: 100%;
+            width: 50%;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            animation: progress-slide 1.5s infinite ease-in-out;
         }
 
-        .loader-ring::after {
-            content: '';
-            position: absolute;
-            inset: 8px;
-            border: 4px solid transparent;
-            border-left-color: #f093fb;
-            border-right-color: #4f46e5;
-            border-radius: 50%;
-            animation: loader-spin 2s linear infinite reverse;
+        @keyframes progress-slide {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
 
-        .loader-logo {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #4f46e5, #a855f7);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
-            animation: loader-pulse 2s ease-in-out infinite;
-            z-index: 10;
-        }
-
-        @keyframes loader-spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes loader-pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                filter: brightness(1);
-            }
-
-            50% {
-                transform: scale(1.1);
-                filter: brightness(1.2);
-            }
-        }
-
-        .loader-text {
-            margin-top: 2rem;
-            font-weight: 800;
-            letter-spacing: 0.2rem;
+        .loader-text-aaa {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
             text-transform: uppercase;
-            font-size: 0.75rem;
-            background: linear-gradient(to right, #4f46e5, #a855f7);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: text-shimmer 2s linear infinite;
+            text-align: center;
+            min-height: 1.5em;
         }
 
-        @keyframes text-shimmer {
-            0% {
-                opacity: 0.5;
-            }
-
-            50% {
-                opacity: 1;
-            }
-
-            100% {
-                opacity: 0.5;
-            }
+        /* Classe de transição de saída */
+        .loader-hidden {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            backdrop-filter: blur(0px) !important;
+            transform: scale(1.1);
         }
 
         #page-content-wrapper {
@@ -4402,16 +4416,47 @@
     <div class="liquid-blob blob-2"></div>
     <div class="liquid-blob blob-3"></div>
 
-    <!-- [PREMIUM] Futuristic Page Loader -->
+    <!-- [AAA] Super-Premium Page Loader -->
     <div id="page-loader">
         <div class="loader-content">
-            <div class="loader-ring"></div>
-            <div class="loader-logo">
-                <i class="fa-solid fa-rocket"></i>
+            <div class="loader-logo-wrapper">
+                <div class="loader-logo-glow"></div>
+                <div class="loader-logo-main">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="flex flex-col items-center gap-3">
+                <div id="loader-message" class="loader-text-aaa">Sincronizando Aero Festas</div>
+                <div class="loader-progress-bar">
+                    <div class="loader-progress-line"></div>
+                </div>
             </div>
         </div>
-        <div class="loader-text">Carregando Aero Festas</div>
     </div>
+
+    <script>
+        // Lógica do micro-copy dinâmico do loader
+        const messages = [
+            "Sincronizando com a nuvem...",
+            "Preparando seu dashboard...",
+            "Otimizando fluxo de caixa...",
+            "Calculando insights estratégicos...",
+            "Organizando agenda de eventos...",
+            "Carregando experiência premium..."
+        ];
+        let msgIndex = 0;
+        const msgElement = document.getElementById('loader-message');
+        if (msgElement) {
+            setInterval(() => {
+                msgElement.style.opacity = '0';
+                setTimeout(() => {
+                    msgIndex = (msgIndex + 1) % messages.length;
+                    msgElement.textContent = messages[msgIndex];
+                    msgElement.style.opacity = '1';
+                }, 500);
+            }, 2500);
+        }
+    </script>
 
     <canvas id="particles-js"></canvas>
 

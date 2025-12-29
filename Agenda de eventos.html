@@ -93,12 +93,17 @@
 
         .day-cell {
             min-height: 120px;
+            height: 100%;
             position: relative;
             overflow: hidden;
             border-radius: 12px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: rgba(255, 255, 255, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 8px;
         }
 
         .dark .day-cell {
@@ -164,6 +169,12 @@
 
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .calendar-grid {
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+            width: 100% !important;
         }
 
         .day-number {
@@ -608,7 +619,7 @@
             }
         }
 
-        /* [PREMIUM] Futuristic Loader Styles */
+        /* [AAA] Super-Premium Futuristic Loader */
         #page-loader {
             position: fixed;
             inset: 0;
@@ -618,103 +629,120 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s, backdrop-filter 0.8s;
+        }
+
+        .dark #page-loader { background: #020617; }
+
+        #page-loader::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
+            filter: blur(100px);
+            animation: mesh-move 15s ease infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes mesh-move {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.2) translate(5%, 5%); }
         }
 
         .loader-content {
             position: relative;
-            width: 120px;
-            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .loader-logo-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .loader-logo-glow {
+            position: absolute;
+            inset: -20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            filter: blur(25px);
+            opacity: 0.4;
+            animation: morph 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes morph {
+            0% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(0deg); }
+            100% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; transform: rotate(180deg); }
+        }
+
+        .loader-logo-main {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 2.5rem;
+            color: var(--primary);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            z-index: 1;
         }
 
-        .loader-ring {
+        .dark .loader-logo-main {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .loader-progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dark .loader-progress-bar { background: rgba(255,255,255,0.05); }
+
+        .loader-progress-line {
             position: absolute;
-            inset: 0;
-            border: 4px solid transparent;
-            border-top-color: #4f46e5;
-            border-bottom-color: #a855f7;
-            border-radius: 50%;
-            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+            top: 0; left: 0; height: 100%;
+            width: 50%;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            animation: progress-slide 1.5s infinite ease-in-out;
         }
 
-        .loader-ring::after {
-            content: '';
-            position: absolute;
-            inset: 8px;
-            border: 4px solid transparent;
-            border-left-color: #f093fb;
-            border-right-color: #4f46e5;
-            border-radius: 50%;
-            animation: loader-spin 2s linear infinite reverse;
+        @keyframes progress-slide {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
 
-        .loader-logo {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #4f46e5, #a855f7);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
-            animation: loader-pulse 2s ease-in-out infinite;
-            z-index: 10;
-        }
-
-        @keyframes loader-spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes loader-pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                filter: brightness(1);
-            }
-
-            50% {
-                transform: scale(1.1);
-                filter: brightness(1.2);
-            }
-        }
-
-        .loader-text {
-            margin-top: 2rem;
-            font-weight: 800;
-            letter-spacing: 0.2rem;
+        .loader-text-aaa {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
             text-transform: uppercase;
-            font-size: 0.75rem;
-            background: linear-gradient(to right, #4f46e5, #a855f7);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: text-shimmer 2s linear infinite;
+            text-align: center;
+            min-height: 1.5em;
+            transition: opacity 0.5s ease;
         }
 
-        @keyframes text-shimmer {
-            0% {
-                opacity: 0.5;
-            }
-
-            50% {
-                opacity: 1;
-            }
-
-            100% {
-                opacity: 0.5;
-            }
+        .loader-hidden {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: scale(1.1);
         }
 
         #page-content-wrapper {
@@ -731,16 +759,45 @@
 </head>
 
 <body class="min-h-screen">
-    <!-- [PREMIUM] Futuristic Page Loader -->
+    <!-- [AAA] Super-Premium Page Loader -->
     <div id="page-loader">
         <div class="loader-content">
-            <div class="loader-ring"></div>
-            <div class="loader-logo">
-                <i class="fa-solid fa-rocket"></i>
+            <div class="loader-logo-wrapper">
+                <div class="loader-logo-glow"></div>
+                <div class="loader-logo-main">
+                    <i class="fa-solid fa-calendar-days"></i>
+                </div>
+            </div>
+            <div class="flex flex-col items-center gap-3">
+                <div id="loader-message" class="loader-text-aaa">Sincronizando Agenda</div>
+                <div class="loader-progress-bar">
+                    <div class="loader-progress-line"></div>
+                </div>
             </div>
         </div>
-        <div class="loader-text">Carregando Aero Festas</div>
     </div>
+
+    <script>
+        const loaderMessages = [
+            "Sincronizando com a nuvem...",
+            "Preparando seu calendário...",
+            "Organizando brinquedos e eventos...",
+            "Verificando disponibilidade...",
+            "Carregando experiência premium..."
+        ];
+        let loaderMsgIndex = 0;
+        const loaderMsgElement = document.getElementById('loader-message');
+        if (loaderMsgElement) {
+            setInterval(() => {
+                loaderMsgElement.style.opacity = '0';
+                setTimeout(() => {
+                    loaderMsgIndex = (loaderMsgIndex + 1) % loaderMessages.length;
+                    loaderMsgElement.textContent = loaderMessages[loaderMsgIndex];
+                    loaderMsgElement.style.opacity = '1';
+                }, 500);
+            }, 2500);
+        }
+    </script>
 
     <canvas id="particles-js"></canvas>
 
@@ -2175,22 +2232,20 @@
             const renderCalendar = () => {
                 calendarBody.innerHTML = '';
                 
-                // Exibe skeletons se estiver carregando (simulação inicial)
-                if (!events || events.length === 0 && !selectedDate) {
-                    for (let i = 0; i < 35; i++) {
-                        calendarBody.innerHTML += `<div class="skeleton day-cell opacity-50"></div>`;
-                    }
-                }
-
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
                 monthYearHeader.textContent = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
                 calculateAndDisplayMonthlyTotal();
+                
                 const firstDayOfMonth = new Date(year, month, 1).getDay();
                 const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+                
+                // Offset dias do mês anterior
                 for (let i = 0; i < firstDayOfMonth; i++) {
-                    calendarBody.innerHTML += `<div class="bg-gray-100/50 rounded-xl"></div>`;
+                    calendarBody.innerHTML += `<div class="bg-gray-100/50 dark:bg-slate-800/20 rounded-xl"></div>`;
                 }
+                
+                // Dias do mês atual
                 for (let day = 1; day <= lastDateOfMonth; day++) {
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const today = new Date();
@@ -4617,8 +4672,7 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
             const wrapper = document.getElementById('page-content-wrapper');
             if (loader && wrapper) {
                 setTimeout(() => {
-                    loader.style.opacity = '0';
-                    loader.style.visibility = 'hidden';
+                    loader.classList.add('loader-hidden');
                     wrapper.classList.add('content-ready');
                 }, 500);
             }
