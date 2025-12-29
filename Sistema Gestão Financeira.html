@@ -1929,105 +1929,216 @@
                 getById('add-monitor-modal').classList.add('hidden');
             });
 
-            // Handler Relatório Executivo AAA
+            // Handler Relatório Executivo
             getById('export-executive-pdf')?.addEventListener('click', async () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
                 
                 showToast("Gerando relatório executivo...");
 
                 // Configurações de Cores
                 const primaryColor = [79, 70, 229]; // Indigo 600
                 const secondaryColor = [31, 41, 55]; // Slate 800
+                const successColor = [16, 185, 129]; // Emerald 500
+                const dangerColor = [239, 68, 68]; // Red 500
 
-                // 1. Cabeçalho Premium
+                // Função Auxiliar para Cabeçalho de Páginas
+                const addPageHeader = (title) => {
+                    doc.setFillColor(...secondaryColor);
+                    doc.rect(0, 0, pageWidth, 25, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(title, 15, 16);
+                    doc.setFontSize(8);
+                    doc.text(`Período: ${state.selectedMonth} | Gerado em: ${new Date().toLocaleDateString()}`, pageWidth - 15, 16, { align: 'right' });
+                    doc.setTextColor(0, 0, 0);
+                };
+
+                // --- PÁGINA 1: RESUMO EXECUTIVO ---
                 doc.setFillColor(...secondaryColor);
                 doc.rect(0, 0, pageWidth, 40, 'F');
-                
                 doc.setTextColor(255, 255, 255);
                 doc.setFontSize(24);
                 doc.setFont('helvetica', 'bold');
                 doc.text('AERO & ABC FESTAS', 15, 20);
-                
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'normal');
                 doc.text('Relatório Executivo de Desempenho Financeiro', 15, 28);
-                
                 doc.setFontSize(10);
                 doc.text(`Período: ${state.selectedMonth}`, pageWidth - 15, 20, { align: 'right' });
                 doc.text(`Gerado em: ${new Date().toLocaleDateString()}`, pageWidth - 15, 28, { align: 'right' });
 
-                // 2. Resumo Executivo (Cards)
                 let currentY = 55;
                 doc.setTextColor(...secondaryColor);
                 doc.setFontSize(16);
                 doc.text('Resumo Mensal', 15, currentY);
                 currentY += 10;
 
-                const recAtual = getById('total-receitas').textContent;
-                const despAtual = getById('total-despesas').textContent;
-                const saldoAtual = getById('saldo-total').textContent;
+                const recAtualText = getById('total-receitas').textContent;
+                const despAtualText = getById('total-despesas').textContent;
+                const saldoAtualText = getById('saldo-total').textContent;
 
                 doc.autoTable({
                     startY: currentY,
                     head: [['Categoria', 'Valor']],
                     body: [
-                        ['Total de Receitas', recAtual],
-                        ['Total de Despesas', despAtual],
-                        ['Saldo Líquido', saldoAtual]
+                        ['Total de Receitas', recAtualText],
+                        ['Total de Despesas', despAtualText],
+                        ['Saldo Líquido', saldoAtualText]
                     ],
                     theme: 'striped',
                     headStyles: { fillColor: primaryColor },
                     columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }
                 });
 
-                currentY = doc.lastAutoTable.finalY + 20;
+                currentY = doc.lastAutoTable.finalY + 15;
 
-                // 3. Gráficos (Captura as imagens dos Canvas)
+                // Gráficos
                 const chart1 = document.getElementById('empresas-chart');
                 const chart2 = document.getElementById('despesas-gerais-chart');
-
                 if (chart1 && chart2) {
-                    doc.setFontSize(16);
+                    doc.setFontSize(14);
                     doc.text('Análise Visual', 15, currentY);
-                    currentY += 10;
-
+                    currentY += 5;
                     const img1 = chart1.toDataURL('image/png');
                     const img2 = chart2.toDataURL('image/png');
-
-                    doc.addImage(img1, 'PNG', 15, currentY, 85, 60);
-                    doc.addImage(img2, 'PNG', 110, currentY, 85, 60);
-                    
-                    currentY += 70;
+                    doc.addImage(img1, 'PNG', 15, currentY, 85, 55);
+                    doc.addImage(img2, 'PNG', 110, currentY, 85, 55);
+                    currentY += 65;
                 }
 
-                // 4. Insights Inteligentes
-                doc.setFontSize(16);
+                // Insights
+                doc.setFontSize(14);
                 doc.text('Insights Estratégicos', 15, currentY);
-                currentY += 10;
-
+                currentY += 8;
                 const insights = Array.from(document.querySelectorAll('#quick-insights .insight-pill'))
                                     .map(el => '• ' + el.textContent.trim());
-
-                doc.setFontSize(11);
+                doc.setFontSize(10);
                 doc.setTextColor(50, 50, 50);
                 if (insights.length > 0) {
                     insights.forEach(insight => {
                         doc.text(insight, 20, currentY);
-                        currentY += 7;
+                        currentY += 6;
                     });
                 } else {
                     doc.text('Sem insights específicos para este período.', 20, currentY);
                 }
 
+                // --- PÁGINA 2: DETALHAMENTO DE ENTRADAS ---
+                doc.addPage();
+                addPageHeader('Detalhamento de Entradas');
+                
+                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
+                const todasEntradas = [
+                    ...eventosMes.map(e => [formatarData(e.data), 'Evento', e.contratante, formatarMoeda(e.valor)]),
+                    ...receitasMes.map(r => [formatarData(r.data), 'Avulsa', r.descricao, formatarMoeda(r.valor)])
+                ].sort((a, b) => a[0].localeCompare(b[0]));
+
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Data', 'Tipo', 'Descrição', 'Valor']],
+                    body: todasEntradas,
+                    headStyles: { fillColor: successColor },
+                    columnStyles: { 3: { halign: 'right' } }
+                });
+
+                // --- PÁGINA 3: DETALHAMENTO DE SAÍDAS (GASTOS) ---
+                doc.addPage();
+                addPageHeader('Detalhamento de Saídas: Gastos & Contas');
+                
+                const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
+                const dataGastos = gastosMes.map(g => [formatarData(g.data), g.categoria, g.descricao, formatarMoeda(g.valor)])
+                                    .sort((a, b) => a[0].localeCompare(b[0]));
+
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Data', 'Categoria', 'Descrição', 'Valor']],
+                    body: dataGastos,
+                    headStyles: { fillColor: dangerColor },
+                    columnStyles: { 3: { halign: 'right' } }
+                });
+
+                // --- PÁGINA 4: DETALHAMENTO DE SAÍDAS (MONITORES & SALÁRIOS) ---
+                doc.addPage();
+                addPageHeader('Detalhamento de Saídas: Monitores & Equipe');
+                
+                doc.setFontSize(12);
+                doc.text('Pagamentos de Monitores', 15, 35);
+                const pagMonMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
+                const dataMon = pagMonMes.map(p => {
+                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    return [formatarData(p.data), p.nome, formatarMoeda(total)];
+                });
+
+                doc.autoTable({
+                    startY: 40,
+                    head: [['Data', 'Monitor', 'Total Pago']],
+                    body: dataMon,
+                    headStyles: { fillColor: [100, 116, 139] },
+                    columnStyles: { 2: { halign: 'right' } }
+                });
+
+                let nextY = doc.lastAutoTable.finalY + 15;
+                doc.text('Cálculo de Salários (Equipe)', 15, nextY);
+                nextY += 5;
+
+                const totalEntradasVal = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0) +
+                                         receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
+
+                const dataSalarios = (state.funcionarios || []).map(f => {
+                    const faixa = [...(state.faixasComissao || [])].sort((a, b) => a.ateValor - b.ateValor).find(fx => totalEntradasVal <= fx.ateValor) || { percentual: 0 };
+                    const vComissao = totalEntradasVal * (faixa?.percentual || 0);
+                    const tBruto = (parseFloat(f.salarioFixo) || 0) + (parseFloat(f.va) || 0) + (parseFloat(f.vt) || 0) + vComissao;
+                    return [f.nome, formatarMoeda(f.salarioFixo), formatarMoeda(vComissao), formatarMoeda(tBruto)];
+                });
+
+                doc.autoTable({
+                    startY: nextY,
+                    head: [['Funcionário', 'Fixo', 'Comissão', 'Total Bruto']],
+                    body: dataSalarios,
+                    headStyles: { fillColor: [100, 116, 139] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
+                });
+
+                // --- PÁGINA 5: BALANÇO GERAL ---
+                doc.addPage();
+                addPageHeader('Balanço Geral Final');
+                
+                const totalReceitasVal = todasEntradas.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
+                const totalGastosVal = dataGastos.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
+                const totalMonitoresVal = dataMon.reduce((acc, curr) => acc + (parseFloat(curr[2].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
+                const totalSalariosVal = dataSalarios.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
+                const totalDespesasGeral = totalGastosVal + totalMonitoresVal + totalSalariosVal;
+
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Grupo de Lançamento', 'Total acumulado']],
+                    body: [
+                        ['(+) Total de Entradas (Eventos/Avulsas)', formatarMoeda(totalReceitasVal)],
+                        ['(-) Gastos Operacionais & Contas Fixas', formatarMoeda(totalGastosVal)],
+                        ['(-) Pagamentos de Monitores', formatarMoeda(totalMonitoresVal)],
+                        ['(-) Salários & Comissões da Equipe', formatarMoeda(totalSalariosVal)],
+                        [{ content: 'BALANÇO LÍQUIDO FINAL', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }, { content: formatarMoeda(totalReceitasVal - totalDespesasGeral), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: secondaryColor }
+                });
+
                 // Rodapé
-                doc.setFontSize(8);
-                doc.setTextColor(150, 150, 150);
-                doc.text('Sistema de Gestão Aero Festas - Confidencial', pageWidth / 2, 285, { align: 'center' });
+                const totalPages = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= totalPages; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text(`Página ${i} de ${totalPages} | Sistema de Gestão Aero Festas - Confidencial`, pageWidth / 2, 285, { align: 'center' });
+                }
 
                 doc.save(`Relatorio_Executivo_${state.selectedMonth}.pdf`);
-                showToast("Relatório gerado com sucesso!");
+                showToast("Relatório executivo gerado com sucesso!");
             });
 
             getById('export-monitores-pdf-btn')?.addEventListener('click', () => {
@@ -4430,7 +4541,7 @@
                                 <i class="fa-solid fa-sparkles"></i> Gerar Insights
                             </button>
                             <button id="export-executive-pdf" class="w-full py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-lg">
-                                <i class="fa-solid fa-file-pdf"></i> Relatório Executivo AAA
+                                <i class="fa-solid fa-file-pdf"></i> Relatório Executivo
                             </button>
                         </div>
                     </section>
