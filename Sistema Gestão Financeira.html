@@ -4240,18 +4240,48 @@
 
         .loader-logo-wrapper {
             position: relative;
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .loader-logo-glow {
             position: absolute;
-            inset: -20px;
+            inset: -10px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-            filter: blur(25px);
-            opacity: 0.4;
+            filter: blur(20px);
+            opacity: 0.3;
             animation: morph 8s ease-in-out infinite alternate;
+        }
+
+        .loader-ring {
+            position: absolute;
+            inset: 0;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            border-bottom-color: var(--secondary);
+            border-radius: 50%;
+            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+            z-index: 2;
+        }
+
+        .loader-ring::after {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border: 3px solid transparent;
+            border-left-color: #f093fb;
+            border-right-color: #4f46e5;
+            border-radius: 50%;
+            animation: loader-spin 2s linear infinite reverse;
+        }
+
+        @keyframes loader-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @keyframes morph {
@@ -4261,43 +4291,25 @@
 
         .loader-logo-main {
             position: relative;
-            width: 100%;
-            height: 100%;
+            width: 60px;
+            height: 60px;
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
-            border-radius: 24px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             color: var(--primary);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            z-index: 1;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            z-index: 3;
+            animation: loader-pulse 2s ease-in-out infinite;
         }
 
-        .loader-progress-bar {
-            width: 200px;
-            height: 4px;
-            background: rgba(0,0,0,0.05);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .dark .loader-progress-bar { background: rgba(255,255,255,0.05); }
-
-        .loader-progress-line {
-            position: absolute;
-            top: 0; left: 0; height: 100%;
-            width: 50%;
-            background: linear-gradient(to right, transparent, var(--primary), transparent);
-            animation: progress-slide 1.5s infinite ease-in-out;
-        }
-
-        @keyframes progress-slide {
-            0% { left: -100%; }
-            100% { left: 100%; }
+        @keyframes loader-pulse {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.1); }
         }
 
         .loader-text-aaa {
@@ -4308,6 +4320,7 @@
             text-transform: uppercase;
             text-align: center;
             min-height: 1.5em;
+            transition: opacity 0.5s ease;
         }
 
         /* Classe de transição de saída */
@@ -4421,15 +4434,13 @@
         <div class="loader-content">
             <div class="loader-logo-wrapper">
                 <div class="loader-logo-glow"></div>
+                <div class="loader-ring"></div>
                 <div class="loader-logo-main">
                     <i class="fa-solid fa-chart-line"></i>
                 </div>
             </div>
             <div class="flex flex-col items-center gap-3">
                 <div id="loader-message" class="loader-text-aaa">Sincronizando Aero Festas</div>
-                <div class="loader-progress-bar">
-                    <div class="loader-progress-line"></div>
-                </div>
             </div>
         </div>
     </div>
