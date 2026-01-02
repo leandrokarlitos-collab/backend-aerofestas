@@ -1,6 +1,6 @@
 {
     "name": "sistema-operante-auth",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Sistema de autenticação para Sistema Operante - Aero Festas",
     "main": "server.js",
     "scripts": {

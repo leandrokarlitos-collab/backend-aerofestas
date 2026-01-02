@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const pkg = require('./package.json');
+const pkg = require('../package.json');
 
-const versionFilePath = path.join(__dirname, 'version.json');
+const versionFilePath = path.join(__dirname, '..', 'version.json');
 const versionData = JSON.parse(fs.readFileSync(versionFilePath, 'utf8'));
 
 versionData.version = pkg.version;
