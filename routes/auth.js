@@ -25,6 +25,10 @@ const transporter = nodemailer.createTransport({
  */
 router.post('/register', async (req, res) => {
     try {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:27',message:'Iniciando registro',data:{hasGmailUser:!!process.env.GMAIL_USER,hasGmailPass:!!process.env.GMAIL_APP_PASSWORD,gmailUserValue:process.env.GMAIL_USER},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
         const { name, email, password } = req.body;
 
         if (!name || !email || !password) return res.status(400).json({ error: 'Preencha todos os campos.' });
@@ -44,6 +48,10 @@ router.post('/register', async (req, res) => {
             }
         });
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:48',message:'Usuário criado, preparando email',data:{userId:newUser.id,email:newUser.email,token:verificationToken},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+
         const confirmLink = `${FRONTEND_URL}/confirm-email.html?token=${verificationToken}`;
 
         const mailOptions = {
@@ -60,11 +68,27 @@ router.post('/register', async (req, res) => {
             `
         };
 
-        transporter.sendMail(mailOptions).catch(err => console.error("Erro email:", err));
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:68',message:'Chamando transporter.sendMail',data:{to:mailOptions.to,from:mailOptions.from,hasTransporter:!!transporter},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C,D'})}).catch(()=>{});
+        // #endregion
+
+        transporter.sendMail(mailOptions).catch(err => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:72',message:'ERRO ao enviar email',data:{errorMessage:err.message,errorCode:err.code,errorStack:err.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,D,E'})}).catch(()=>{});
+            // #endregion
+            console.error("Erro email:", err);
+        });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:79',message:'Resposta enviada ao cliente (antes do email ser processado)',data:{status:201},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
 
         res.status(201).json({ message: 'Cadastro realizado! Verifique seu e-mail.', userId: newUser.id });
 
     } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:86',message:'ERRO GERAL no registro',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'ALL'})}).catch(()=>{});
+        // #endregion
         console.error("Erro no Registro:", error);
         res.status(500).json({ error: 'Erro interno.' });
     }
@@ -76,6 +100,10 @@ router.post('/register', async (req, res) => {
  */
 router.post('/forgot-password', async (req, res) => {
     try {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:77',message:'Iniciando recuperação de senha',data:{hasGmailUser:!!process.env.GMAIL_USER,hasGmailPass:!!process.env.GMAIL_APP_PASSWORD},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
         const { email } = req.body;
         if (!email) return res.status(400).json({ error: 'E-mail obrigatório.' });
 
@@ -94,6 +122,10 @@ router.post('/forgot-password', async (req, res) => {
             }
         });
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:100',message:'Token de reset gerado',data:{userId:user.id,email:user.email,token:resetToken},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+
         const resetLink = `${FRONTEND_URL}/reset-password.html?token=${resetToken}`;
 
         const mailOptions = {
@@ -110,11 +142,27 @@ router.post('/forgot-password', async (req, res) => {
             `
         };
 
-        transporter.sendMail(mailOptions).catch(err => console.error("Erro email reset:", err));
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:120',message:'Chamando transporter.sendMail (reset)',data:{to:mailOptions.to,from:mailOptions.from},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C,D'})}).catch(()=>{});
+        // #endregion
+
+        transporter.sendMail(mailOptions).catch(err => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:124',message:'ERRO ao enviar email de reset',data:{errorMessage:err.message,errorCode:err.code,errorStack:err.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B,D,E'})}).catch(()=>{});
+            // #endregion
+            console.error("Erro email reset:", err);
+        });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:131',message:'Resposta de recuperação enviada (antes do email)',data:{status:200},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
 
         res.json({ message: 'E-mail de recuperação enviado!' });
 
     } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e86956f9-839f-4740-959d-9f6ee0fb88b1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'routes/auth.js:138',message:'ERRO GERAL no forgot-password',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'ALL'})}).catch(()=>{});
+        // #endregion
         console.error("Erro Forgot Password:", error);
         res.status(500).json({ error: 'Erro interno.' });
     }

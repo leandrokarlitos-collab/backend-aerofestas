@@ -1,0 +1,19 @@
+{
+    "version": "1.0.0",
+    "releaseDate": "2026-01-02",
+    "changelog": [
+        {
+            "version": "1.0.0",
+            "date": "2026-01-02",
+            "description": "Lançamento oficial v1.0.0 - Transformação em PWA e Sistema de Atualização Forçada.",
+            "changes": [
+                "Implementação de Progressive Web App (PWA)",
+                "Suporte para instalação em dispositivos mobile e desktop",
+                "Sistema de atualização automática sincronizado com GitHub",
+                "Cache offline para carregamento instantâneo",
+                "Padronização de versão oficial do sistema"
+            ]
+        }
+    ]
+}
+
