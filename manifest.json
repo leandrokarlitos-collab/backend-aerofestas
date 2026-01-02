@@ -33,5 +33,47 @@
             "type": "image/png",
             "purpose": "maskable"
         }
+    ],
+    "screenshots": [
+        {
+            "src": "icons/pwa-desktop.png",
+            "sizes": "1024x1024",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Dashboard Aero Festas"
+        },
+        {
+            "src": "icons/pwa-mobile.png",
+            "sizes": "1024x1024",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Aero Festas no Celular"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "url": "/Dashboard.html",
+            "icons": [
+                {
+                    "src": "icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Agenda",
+            "url": "/Agenda%20de%20eventos.html",
+            "icons": [
+                {
+                    "src": "icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "categories": [
+        "business",
+        "productivity"
     ]
 }
