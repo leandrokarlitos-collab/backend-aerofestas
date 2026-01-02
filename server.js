@@ -13,6 +13,16 @@ const historyRoutes = require('./routes/history');
 const financeRoutes = require('./routes/finance');
 const taskRoutes = require('./routes/tasks');
 const dailyPlanRoutes = require('./routes/dailyPlans');
+const webpush = require('web-push');
+
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BIiU_AzAKYphDuzGTCEy-tvcZGZtEjdaW4JZZ3WVGJYOrDJ4hjpmOmA_yOD_R4O_n1N8RrTm190cLPd10grA4g0';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'Gyay8GSr9huvXx-5OGG1YTp18j28I9PpBg33ORBfs6Y';
+
+webpush.setVapidDetails(
+    'mailto:contato@aerofestas.com.br',
+    VAPID_PUBLIC,
+    VAPID_PRIVATE
+);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -432,6 +442,92 @@ app.use('/api/admin/history', historyRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/daily-plans', dailyPlanRoutes);
+
+// --- NOTIFICAÇÕES PUSH ---
+
+// Rota de Inscrição
+app.post('/api/notifications/subscribe', async (req, res) => {
+    const subscription = req.body;
+
+    try {
+        await prisma.pushSubscription.upsert({
+            where: { endpoint: subscription.endpoint },
+            update: {
+                p256dh: subscription.keys.p256dh,
+                auth: subscription.keys.auth
+            },
+            create: {
+                endpoint: subscription.endpoint,
+                p256dh: subscription.keys.p256dh,
+                auth: subscription.keys.auth
+            }
+        });
+        res.status(201).json({ message: 'Inscrito com sucesso!' });
+    } catch (error) {
+        console.error('Erro subscribe:', error);
+        res.status(500).json({ error: 'Erro ao processar assinatura' });
+    }
+});
+
+// Função para verificar contas e enviar notificações
+async function checkDueDatesAndNotify() {
+    console.log("🔍 Verificando contas para enviar notificações...");
+    try {
+        const today = new Date();
+        const tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1);
+
+        const currentDay = today.getDate();
+        const tomorrowDay = tomorrow.getDate();
+
+        // Busca contas que vencem hoje ou amanhã
+        const expensesToNotify = await prisma.fixedExpense.findMany({
+            where: {
+                OR: [
+                    { dueDay: currentDay },
+                    { dueDay: tomorrowDay }
+                ]
+            }
+        });
+
+        if (expensesToNotify.length === 0) return;
+
+        const subscriptions = await prisma.pushSubscription.findMany();
+
+        for (const expense of expensesToNotify) {
+            const isToday = expense.dueDay === currentDay;
+            const title = isToday ? '⚠️ Conta Vencendo Hoje!' : '📅 Conta Vencendo Amanhã';
+            const body = `${expense.description}: R$ ${expense.amount.toFixed(2)}`;
+            const url = '/Sistema%20Gest%C3%A3o%20Financeira.html';
+
+            const payload = JSON.stringify({ title, body, url });
+
+            for (const sub of subscriptions) {
+                try {
+                    await webpush.sendNotification({
+                        endpoint: sub.endpoint,
+                        keys: {
+                            p256dh: sub.p256dh,
+                            auth: sub.auth
+                        }
+                    }, payload);
+                } catch (err) {
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        // Inscrição expirada ou inválida
+                        await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Erro checkDueDates:', error);
+    }
+}
+
+// Verifica a cada 12 horas
+setInterval(checkDueDatesAndNotify, 12 * 60 * 60 * 1000);
+// Executa 1 minuto após iniciar o servidor
+setTimeout(checkDueDatesAndNotify, 60000);
 
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.redirect('/login.html'));

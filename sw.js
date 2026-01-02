@@ -89,3 +89,49 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
+// Evento de Recebimento de Push
+self.addEventListener('push', (event) => {
+    let data = { title: 'Aero Festas', body: 'Novidade no sistema!' };
+
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
+
+    const options = {
+        body: data.body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        data: data.url || '/',
+        vibrate: [100, 50, 100],
+        actions: [
+            { action: 'open', title: 'Ver Agora' }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+// Evento de Clique na Notificação
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then((clientList) => {
+            for (const client of clientList) {
+                if (client.url === event.notification.data && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(event.notification.data);
+            }
+        })
+    );
+});
+

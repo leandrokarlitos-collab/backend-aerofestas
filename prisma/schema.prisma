@@ -199,6 +199,7 @@ model User {
 
   tasks             Task[]   // Relacionamento com tarefas
   dailyPlans        DailyPlan[] // Relacionamento com planos diários
+  pushSubscriptions PushSubscription[]
 }
 
 model Task {
@@ -276,4 +277,13 @@ model ExpenseCategory {
 model FixedExpenseCategory {
   id   String @id
   name String
+}
+model PushSubscription {
+  id        String   @id @default(uuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

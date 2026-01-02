@@ -152,3 +152,59 @@ function showUpdateToast() {
     document.body.appendChild(toast);
 }
 
+
+// --- Lógica de Notificações Push ---
+
+const VAPID_PUBLIC_KEY = 'BIiU_AzAKYphDuzGTCEy-tvcZGZtEjdaW4JZZ3WVGJYOrDJ4hjpmOmA_yOD_R4O_n1N8RrTm190cLPd10grA4g0';
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function subscribeUserToPush() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+
+        // Verifica se já existe uma assinatura
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+            // Solicita permissão e cria assinatura
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+        }
+
+        // Envia para o servidor
+        const response = await fetch('https://backend-aerofestas-production.up.railway.app/api/notifications/subscribe', {
+            method: 'POST',
+            body: JSON.stringify(subscription),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Se estiver logado
+            }
+        });
+
+        if (response.ok) {
+            console.log('🔔 PWA: Notificações ativadas!');
+        }
+    } catch (e) {
+        console.warn('🔔 PWA: Não foi possível ativar notificações push:', e);
+    }
+}
+
+// Tenta inscrever o usuário 2 segundos após carregar
+// (Dá tempo do SW estar pronto e não interromper o carregamento inicial)
+setTimeout(subscribeUserToPush, 2000);
