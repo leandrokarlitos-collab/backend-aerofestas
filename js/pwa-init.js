@@ -26,6 +26,27 @@ if ('serviceWorker' in navigator) {
             });
     });
 
+    // Evento para capturar o prompt de instalação
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Impede que o mini-infobar apareça no mobile
+        e.preventDefault();
+        // Guarda o evento para ser disparado depois
+        deferredPrompt = e;
+        console.log('📱 PWA: Prompt de instalação capturado');
+        
+        // Opcional: Mostrar um botão de instalação personalizado
+        showInstallPromotion();
+    });
+
+    window.addEventListener('appinstalled', (event) => {
+        console.log('🎉 PWA: Aplicativo instalado com sucesso!');
+        deferredPrompt = null;
+        // Esconde o botão de instalação se ele estiver visível
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) installBtn.style.display = 'none';
+    });
+
     // Evento crucial: Disparado quando o novo Service Worker assume o controle
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -41,6 +62,58 @@ if ('serviceWorker' in navigator) {
             }, 1500);
         }
     });
+}
+
+function showInstallPromotion() {
+    // Só mostra se ainda não existir o botão
+    if (document.getElementById('pwa-install-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'pwa-install-btn';
+    btn.innerHTML = '<i class="fas fa-download mr-2"></i>Instalar App';
+    btn.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4f46e5;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 9999;
+        font-family: sans-serif;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        animation: slideDownPWA 0.5s ease-out;
+    `;
+
+    btn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        // Mostra o prompt nativo
+        deferredPrompt.prompt();
+        
+        // Aguarda a resposta do usuário
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        
+        // Limpa o prompt
+        deferredPrompt = null;
+        btn.style.display = 'none';
+    });
+
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDownPWA {
+            from { transform: translateY(-120%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(btn);
 }
 
 function showUpdateToast() {

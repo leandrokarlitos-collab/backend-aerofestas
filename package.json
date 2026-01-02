@@ -7,7 +7,11 @@
         "start": "node server.js",
         "dev": "nodemon server.js",
         "build": "npx prisma generate",
-        "create-admin": "node scripts/create-admin.js"
+        "create-admin": "node scripts/create-admin.js",
+        "version": "node scripts/update-version.js && git add version.json",
+        "release": "npm version patch && git push origin main --tags",
+        "release:minor": "npm version minor && git push origin main --tags",
+        "release:major": "npm version major && git push origin main --tags"
     },
     "keywords": [
         "auth",
