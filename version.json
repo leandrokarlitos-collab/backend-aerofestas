@@ -1,7 +1,15 @@
 {
-    "version": "1.0.0",
+    "version": "1.0.2",
     "releaseDate": "2026-01-02",
     "changelog": [
+        {
+            "version": "1.0.2",
+            "date": "2026-01-02",
+            "description": "Release v1.0.2",
+            "changes": [
+                "Atualização automática de versão"
+            ]
+        },
         {
             "version": "1.0.0",
             "date": "2026-01-02",
@@ -16,4 +24,3 @@
         }
     ]
 }
-
