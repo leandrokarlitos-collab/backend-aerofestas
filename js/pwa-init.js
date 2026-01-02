@@ -5,7 +5,7 @@
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('sw.js')
             .then((registration) => {
                 console.log('✅ PWA: Service Worker registrado com sucesso:', registration.scope);
 
@@ -34,7 +34,7 @@ if ('serviceWorker' in navigator) {
         // Guarda o evento para ser disparado depois
         deferredPrompt = e;
         console.log('📱 PWA: Prompt de instalação capturado');
-        
+
         // Opcional: Mostrar um botão de instalação personalizado
         showInstallPromotion();
     });
@@ -53,10 +53,10 @@ if ('serviceWorker' in navigator) {
         if (!refreshing) {
             refreshing = true;
             console.log('🚀 PWA: Forçando atualização para a nova versão...');
-            
+
             // Exibe um aviso rápido antes de recarregar (opcional, mas bom UX)
             showUpdateToast();
-            
+
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
@@ -92,14 +92,14 @@ function showInstallPromotion() {
 
     btn.addEventListener('click', async () => {
         if (!deferredPrompt) return;
-        
+
         // Mostra o prompt nativo
         deferredPrompt.prompt();
-        
+
         // Aguarda a resposta do usuário
         const { outcome } = await deferredPrompt.userChoice;
         console.log(`User response to the install prompt: ${outcome}`);
-        
+
         // Limpa o prompt
         deferredPrompt = null;
         btn.style.display = 'none';
@@ -135,12 +135,12 @@ function showUpdateToast() {
         gap: 10px;
         animation: slideInPWA 0.5s ease-out;
     `;
-    
+
     toast.innerHTML = `
         <i class="fas fa-sync fa-spin"></i>
         <span>Atualizando para a v1.0.0...</span>
     `;
-    
+
     const style = document.createElement('style');
     style.textContent = `
         @keyframes slideInPWA {
