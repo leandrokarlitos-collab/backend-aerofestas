@@ -521,31 +521,6 @@
             transform: translateY(0);
         }
 
-        .featured-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(238, 242, 255, 0.75) 100%) !important;
-            border: 2px solid transparent !important;
-            background-clip: padding-box !important;
-            position: relative;
-        }
-
-        .featured-card::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            bottom: -2px;
-            left: -2px;
-            right: -2px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--info));
-            border-radius: inherit;
-            z-index: -1;
-            opacity: 0.3;
-            transition: opacity 0.3s;
-        }
-
-        .featured-card:hover::before {
-            opacity: 0.6;
-        }
-
         .ai-badge {
             background: linear-gradient(to right, var(--primary), var(--secondary));
             color: white;
@@ -556,24 +531,6 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
-        }
-
-        @keyframes pulse-glow {
-            0% {
-                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2);
-            }
-
-            70% {
-                box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
-            }
-        }
-
-        .animate-glow {
-            animation: pulse-glow 2s infinite;
         }
 
         .stat-icon-bg {
@@ -1071,7 +1028,7 @@
 
             <div class="lg:col-span-2 flex flex-col gap-8">
                 <section id="widget-assistant"
-                    class="glassmorphism rounded-2xl overflow-hidden dashboard-card ia featured-card animate-glow">
+                    class="glassmorphism rounded-2xl overflow-hidden dashboard-card ia">
                     <div
                         class="p-6 border-b border-white/20 flex justify-between items-center cursor-pointer collapsible-header">
                         <div class="flex items-center gap-3">
