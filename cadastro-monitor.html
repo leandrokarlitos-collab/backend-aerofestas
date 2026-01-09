@@ -75,7 +75,7 @@
             font-size: 0.875rem;
             font-weight: 600;
             color: #475569;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             display: block;
         }
 
@@ -91,7 +91,6 @@
             gap: 0.5rem;
         }
 
-        /* Custom File Upload Styling */
         .file-upload-wrapper {
             position: relative;
             overflow: hidden;
@@ -116,25 +115,12 @@
             border-color: #94a3b8;
         }
 
-        .file-upload-btn i {
-            font-size: 1.5rem;
-            color: #64748b;
-            margin-bottom: 0.5rem;
-        }
-
         .preview-image {
             max-width: 100%;
             max-height: 200px;
             border-radius: 0.5rem;
             margin-top: 0.75rem;
             object-fit: contain;
-        }
-
-        /* Responsive Adjustments */
-        @media (max-width: 640px) {
-            .glass-card {
-                padding: 1.5rem;
-            }
         }
 
         .loader {
@@ -156,121 +142,136 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* Custom Select Appearance */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
     </style>
 </head>
 
-<body class="py-8 px-4 sm:px-6 lg:px-8">
+<body class="py-12 px-4 sm:px-6 lg:px-8">
 
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-4xl mx-auto">
         <!-- Header -->
-        <div class="text-center mb-10 animate-fade-in">
-            <div class="inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-sm mb-4">
-                <i class="fa-solid fa-user-plus text-primary-600 text-3xl"></i>
+        <div class="text-center mb-12 animate-fade-in">
+            <div class="inline-flex items-center justify-center p-4 bg-white rounded-3xl shadow-sm mb-6">
+                <i class="fa-solid fa-user-astronaut text-primary-600 text-4xl"></i>
             </div>
-            <h1 class="text-3xl font-bold text-slate-800 tracking-tight" id="page-title">Cadastro de Monitor</h1>
-            <p class="mt-2 text-slate-500 font-medium" id="page-subtitle">Preencha seus dados para fazer parte da nossa
-                equipe Aero Festas.</p>
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight" id="page-title">Monitor Aero Festas</h1>
+            <p class="mt-3 text-slate-500 text-lg font-medium" id="page-subtitle">Faça parte do time que leva alegria
+                para todo o Brasil.</p>
         </div>
 
-        <!-- Passo 1: Identificação (Proteção de Dados) -->
-        <div id="step-id" class="glass-card p-8 sm:p-10 rounded-3xl space-y-8 animate-slide-up">
-            <div class="text-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Vamos começar?</h2>
-                <p class="text-sm text-slate-500">Informe seu nome e data de nascimento para identificarmos seu
-                    cadastro.</p>
+        <!-- Passo 1: Identificação -->
+        <div id="step-id" class="glass-card p-10 sm:p-12 rounded-[2.5rem] space-y-10 animate-slide-up">
+            <div class="text-center space-y-2">
+                <h2 class="text-2xl font-bold text-slate-800">Vamos começar?</h2>
+                <p class="text-slate-500">Informe seus dados básicos para continuarmos.</p>
             </div>
 
-            <div class="space-y-4">
+            <div class="space-y-6">
                 <div>
-                    <label for="check-nome" class="form-label">Seu Nome Completo</label>
+                    <label for="check-nome" class="form-label text-base">Seu Nome Completo</label>
                     <input type="text" id="check-nome" placeholder="Como no documento"
-                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 text-lg shadow-sm">
                 </div>
                 <div>
-                    <label for="check-nascimento" class="form-label">Data de Nascimento</label>
+                    <label for="check-nascimento" class="form-label text-base">Data de Nascimento</label>
                     <input type="date" id="check-nascimento"
-                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 text-lg shadow-sm">
                 </div>
                 <button id="btn-iniciar"
-                    class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white font-bold text-lg rounded-2xl shadow-xl shadow-primary-500/20 transition-all flex items-center justify-center gap-2">
-                    <span>Acessar Formulário</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                    class="w-full py-5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xl rounded-2xl shadow-2xl shadow-primary-500/30 transition-all flex items-center justify-center gap-3">
+                    <span>Acessar Identidade Aero</span>
+                    <i class="fa-solid fa-chevron-right"></i>
                 </button>
             </div>
         </div>
 
         <!-- Form Success State -->
-        <div id="success-state" class="hidden glass-card p-10 rounded-3xl text-center animate-slide-up">
+        <div id="success-state" class="hidden glass-card p-12 rounded-[2.5rem] text-center animate-slide-up">
             <div
-                class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="fa-solid fa-check text-4xl"></i>
+                class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                <i class="fa-solid fa-check text-5xl"></i>
             </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-2">Dados Enviados com Sucesso!</h2>
-            <p class="text-slate-500 mb-8">Seu cadastro foi recebido e atualizado em nosso sistema. Obrigado!</p>
+            <h2 class="text-3xl font-bold text-slate-800 mb-3">Missão Cumprida!</h2>
+            <p class="text-slate-500 text-lg mb-10">Seus dados foram processados. Em breve entraremos em contato!</p>
             <button onclick="window.location.reload()"
-                class="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-lg transition-all transform hover:-translate-y-1">
-                Fazer outro cadastro
+                class="px-10 py-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-2xl shadow-xl transition-all transform hover:-translate-y-1">
+                Novo Cadastro
             </button>
         </div>
 
-        <!-- Passo 2: O Formulário Completo (Escondido initially) -->
-        <form id="monitor-form" class="hidden glass-card p-8 sm:p-10 rounded-3xl space-y-12 animate-slide-up">
+        <!-- Passo 2: O Formulário -->
+        <form id="monitor-form" class="hidden glass-card p-10 sm:p-14 rounded-[2.5rem] space-y-16 animate-slide-up">
             <input type="hidden" id="monitor-id">
+
             <div id="update-badge"
-                class="hidden bg-amber-100 text-amber-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 mb-4">
-                <i class="fa-solid fa-user-check"></i>
-                Cadastro existente encontrado! Você pode atualizar seus dados abaixo.
+                class="hidden bg-indigo-100/80 text-indigo-700 px-6 py-4 rounded-2xl text-base font-bold flex items-center gap-3 border border-indigo-200">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg"><i class="fa-solid fa-id-card"></i></div>
+                <span>Monitor Aero detectado! Mantenha seus dados sempre atualizados.</span>
             </div>
 
             <!-- Seção 1: Dados Pessoais -->
-            <section>
-                <h3 class="section-title"><i class="fa-solid fa-user text-primary-500"></i> Dados Pessoais</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="space-y-8">
+                <h3 class="section-title text-2xl"><i class="fa-solid fa-fingerprint text-primary-500"></i> Identidade
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="md:col-span-2">
-                        <label for="nome" class="form-label">Nome Completo <span class="text-red-500">*</span></label>
+                        <label for="nome" class="form-label">Nome Completo</label>
                         <input type="text" id="nome" name="nome" readonly
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 outline-none text-slate-500 cursor-not-allowed">
-                        <p class="text-[10px] text-slate-400 mt-1">Para alterar o nome, entre em contato com a
-                            administração.</p>
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-slate-100/50 outline-none text-slate-400 font-medium cursor-not-allowed">
                     </div>
                     <div>
                         <label for="nascimento" class="form-label">Data de Nascimento</label>
                         <input type="date" id="nascimento" name="nascimento" readonly
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 outline-none text-slate-500 cursor-not-allowed">
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-slate-100/50 outline-none text-slate-400 font-medium cursor-not-allowed">
                     </div>
-                    <div>
-                        <label for="telefone" class="form-label">Telefone / WhatsApp <span
-                                class="text-red-500">*</span></label>
-                        <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                    <div class="relative">
+                        <label for="telefone" class="form-label">WhatsApp</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000"
+                                class="flex-1 px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                            <button type="button" id="btn-whatsapp"
+                                class="bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-2xl transition-all shadow-lg hidden">
+                                <i class="fa-brands fa-whatsapp text-2xl"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="md:col-span-2">
                         <label for="email" class="form-label">E-mail</label>
                         <input type="email" id="email" name="email" placeholder="seu@email.com"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
                     </div>
                     <div class="md:col-span-2">
                         <label for="endereco" class="form-label">Endereço Completo</label>
                         <input type="text" id="endereco" name="endereco" placeholder="Rua, número, bairro, cidade - UF"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:col-span-2">
+                        <div>
+                            <label for="cnh" class="form-label">Possui CNH?</label>
+                            <select id="cnh" name="cnh"
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                                <option value="false">Não</option>
+                                <option value="true">Sim</option>
+                            </select>
+                        </div>
+                        <div id="cnh-categoria-wrapper" class="hidden">
+                            <label for="cnhCategoria" class="form-label">Categoria</label>
+                            <input type="text" id="cnhCategoria" name="cnhCategoria" placeholder="Ex: AB, D"
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                        </div>
                     </div>
                     <div>
-                        <label for="cnh" class="form-label">Possui CNH?</label>
-                        <select id="cnh" name="cnh"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_1rem_center] bg-no-repeat">
-                            <option value="false">Não</option>
-                            <option value="true">Sim</option>
-                        </select>
-                    </div>
-                    <div id="cnh-categoria-wrapper" class="hidden">
-                        <label for="cnhCategoria" class="form-label">Categoria CNH</label>
-                        <input type="text" id="cnhCategoria" name="cnhCategoria" placeholder="Ex: AB, B, D"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
-                    </div>
-                    <div>
-                        <label for="tamanhoCamiseta" class="form-label">Tamanho da Camiseta (Uniforme)</label>
+                        <label for="tamanhoCamiseta" class="form-label">Uniforme (Tamanho)</label>
                         <select id="tamanhoCamiseta" name="tamanhoCamiseta"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_1rem_center] bg-no-repeat">
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
                             <option value="">Selecione...</option>
                             <option value="PP">PP</option>
                             <option value="P">P</option>
@@ -284,13 +285,14 @@
             </section>
 
             <!-- Seção 2: Saúde e Segurança -->
-            <section>
-                <h3 class="section-title"><i class="fa-solid fa-heart-pulse text-red-500"></i> Saúde e Segurança</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="space-y-10">
+                <h3 class="section-title text-2xl"><i class="fa-solid fa-kit-medical text-red-500"></i> Saúde &
+                    Emergência</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
                     <div>
                         <label for="tipoSanguineo" class="form-label">Tipo Sanguíneo</label>
                         <select id="tipoSanguineo" name="tipoSanguineo"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_1rem_center] bg-no-repeat">
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
                             <option value="">Selecione...</option>
                             <option value="A+">A+</option>
                             <option value="A-">A-</option>
@@ -302,150 +304,399 @@
                             <option value="O-">O-</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="planoSaude" class="form-label">Plano de Saúde</label>
-                        <input type="text" id="planoSaude" name="planoSaude"
-                            placeholder="Operadora e Nº da carteirinha (ou SUS)"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+
+                    <!-- Plano de Saúde -->
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label">Possui Plano de Saúde?</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_plano" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'plano-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-primary-50 peer-checked:border-primary-500 transition-all font-bold text-slate-600 peer-checked:text-primary-600">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_plano" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'plano-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-red-50 peer-checked:border-red-500 transition-all font-bold text-slate-600 peer-checked:text-red-600">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="plano-wrapper" class="hidden pt-2 animate-fade-in">
+                            <input type="text" id="planoSaude" name="planoSaude"
+                                placeholder="Qual o plano? (Ex: Unimed)"
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-4 focus:ring-primary-500/10">
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="medicamentos" class="form-label">Medicamentos de Uso Contínuo</label>
-                        <textarea id="medicamentos" name="medicamentos" rows="2"
-                            placeholder="Liste se houver, ou 'Nenhum'"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 resize-none"></textarea>
+
+                    <!-- Medicamentos -->
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label text-red-600">Usa Medicamento de Uso Contínuo?</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_medicamento" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'medicamento-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-primary-50 peer-checked:border-primary-500 transition-all font-bold text-slate-600">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_medicamento" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'medicamento-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 transition-all font-bold text-slate-600">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="medicamento-wrapper" class="hidden pt-2">
+                            <textarea id="medicamentos" name="medicamentos" rows="2"
+                                placeholder="Quais medicamentos e para quê?"
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm resize-none outline-none focus:ring-4 focus:ring-primary-500/10"></textarea>
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="restricoesAlimentares" class="form-label">Restrições Alimentares / Alergias</label>
-                        <textarea id="restricoesAlimentares" name="restricoesAlimentares" rows="2"
-                            placeholder="Vegetariano, intolerante a lactose, alergias, etc."
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 resize-none"></textarea>
+
+                    <!-- Restrições Alimentares -->
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label">Possui Alguma Restrição Alimentar? (Ex: Vegano, Intolerante)</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_restricao" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'restricao-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-primary-50 peer-checked:border-primary-500 transition-all font-bold text-slate-600">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_restricao" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'restricao-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 transition-all font-bold text-slate-600">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="restricao-wrapper" class="hidden pt-2">
+                            <textarea id="restricoesAlimentares" name="restricoesAlimentares" rows="2"
+                                placeholder="Descreva as restrições..."
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm resize-none outline-none"></textarea>
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="condicaoMedica" class="form-label">Possui alguma condição médica ou física?</label>
-                        <textarea id="condicaoMedica" name="condicaoMedica" rows="2"
-                            placeholder="Asma, diabetes, lesões, etc."
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 resize-none"></textarea>
+
+                    <!-- Alergias -->
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label text-amber-600">Possui Alguma Alergia?</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_alergia" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'alergia-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-primary-50 peer-checked:border-primary-500 transition-all font-bold text-slate-600">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_alergia" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'alergia-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 transition-all font-bold text-slate-600">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="alergia-wrapper" class="hidden pt-2">
+                            <textarea id="alergias" name="alergias" rows="2" placeholder="Alergia a quê? Reações?"
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm resize-none outline-none"></textarea>
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="fobias" class="form-label">Possui alguma fobia ou medo intenso?</label>
-                        <input type="text" id="fobias" name="fobias"
-                            placeholder="Ex: Altura, palhaços, lugares fechados..."
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+
+                    <!-- Condição Médica -->
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label">Possui Alguma Condição Médica ou Física?</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_condicao" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'condicao-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-primary-50 peer-checked:border-primary-500 transition-all font-bold text-slate-600">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_condicao" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'condicao-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 transition-all font-bold text-slate-600">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="condicao-wrapper" class="hidden pt-2">
+                            <textarea id="condicaoMedica" name="condicaoMedica" rows="2"
+                                placeholder="Labirintite, lesões, asma..."
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm resize-none outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Fobias -->
+                    <div class="md:col-span-2 space-y-3">
+                        <label class="form-label">Possui Medo Intenso ou Fobia?</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_fobia" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'fobia-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-primary-50 peer-checked:border-primary-500 transition-all font-bold text-slate-600">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="has_fobia" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'fobia-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 transition-all font-bold text-slate-600">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="fobia-wrapper" class="hidden pt-2">
+                            <input type="text" id="fobias" name="fobias"
+                                placeholder="Ex: Altura, palhaços, lugares fechados..."
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-4 focus:ring-primary-500/10">
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Seção 3: Formação e Experiência -->
-            <section>
-                <h3 class="section-title"><i class="fa-solid fa-graduation-cap text-indigo-500"></i> Formação e
-                    Experiência</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Seção 3: Formação -->
+            <section class="space-y-10">
+                <h3 class="section-title text-2xl"><i class="fa-solid fa-graduation-cap text-indigo-500"></i> Formação &
+                    Habilidades</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
                     <div class="md:col-span-2">
-                        <label for="escolaridade" class="form-label">Escolaridade / Curso em andamento</label>
-                        <input type="text" id="escolaridade" name="escolaridade"
-                            placeholder="Ex: Cursando Ed. Física (4º semestre)"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                        <label for="escolaridade" class="form-label">Escolaridade</label>
+                        <select id="escolaridade" name="escolaridade" onchange="handleEscolaridade(this)"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                            <option value="">Selecione...</option>
+                            <option value="Ensino Médio Incompleto">Ensino Médio Incompleto</option>
+                            <option value="Ensino Médio Completo">Ensino Médio Completo</option>
+                            <option value="Superior Incompleto">Superior Incompleto</option>
+                            <option value="Superior Completo">Superior Completo</option>
+                            <option value="Pós-Graduação">Pós-Graduação</option>
+                        </select>
+                        <div id="escolaridade-desc-wrapper" class="hidden pt-4">
+                            <input type="text" id="escolaridade_curso" placeholder="Qual curso? Em qual instituição?"
+                                class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none">
+                        </div>
                     </div>
-                    <div>
-                        <label for="certificadoPrimeirosSocorros" class="form-label">Certificado Primeiros
-                            Socorros</label>
-                        <input type="text" id="certificadoPrimeirosSocorros" name="certificadoPrimeirosSocorros"
-                            placeholder="Data da última reciclagem"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+
+                    <!-- Primeiro Socorros -->
+                    <div class="md:col-span-2 space-y-4">
+                        <label class="form-label">Possui Certificado de Primeiros Socorros?</label>
+                        <div class="flex gap-4 mb-2">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="possuiCursoPS" value="true" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'ps-doc-wrapper')">
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-white peer-checked:border-primary-500 peer-checked:shadow-primary-100 peer-checked:shadow-lg transition-all font-bold">
+                                    Sim</div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="possuiCursoPS" value="false" class="hidden peer"
+                                    onchange="toggleHealthField(this, 'ps-doc-wrapper')" checked>
+                                <div
+                                    class="p-4 text-center rounded-2xl border border-slate-200 peer-checked:bg-white peer-checked:border-red-500 peer-checked:shadow-red-100 peer-checked:shadow-lg transition-all font-bold">
+                                    Não</div>
+                            </label>
+                        </div>
+                        <div id="ps-doc-wrapper"
+                            class="hidden pt-2 border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50/50">
+                            <label class="file-upload-wrapper">
+                                <div class="file-upload-btn mb-4">
+                                    <input type="file" id="fotoPSInput" accept="image/*" class="hidden"
+                                        onchange="previewFile(this, 'preview-ps', 'foto-ps-base64')">
+                                    <div class="text-center">
+                                        <i class="fa-solid fa-file-shield text-3xl text-primary-500 mb-2"></i>
+                                        <span class="block text-sm text-slate-500 font-bold">Enviar Foto do
+                                            Certificado</span>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="foto-ps-base64">
+                                <img id="preview-ps"
+                                    class="preview-image hidden mx-auto shadow-2xl border-4 border-white">
+                            </label>
+                        </div>
                     </div>
-                    <div>
-                        <label for="idiomas" class="form-label">Idiomas</label>
-                        <input type="text" id="idiomas" name="idiomas" placeholder="Ex: Inglês Básico, Espanhol Fluente"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
-                    </div>
+
+                    <!-- Idiomas -->
                     <div class="md:col-span-2">
-                        <label for="habilidadesEspecificas" class="form-label">Habilidades Específicas</label>
+                        <label class="form-label mb-3">Idiomas</label>
+                        <div id="idiomas-container" class="space-y-4">
+                            <!-- Idiomas serão adicionados aqui -->
+                        </div>
+                        <button type="button" onclick="addIdiomaRow()"
+                            class="mt-4 flex items-center gap-2 text-primary-600 font-bold hover:text-primary-700 transition-colors">
+                            <i class="fa-solid fa-plus-circle"></i> Adicionar Idioma
+                        </button>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="habilidadesEspecificas" class="form-label">Destaques Aero (Mágica, Dança, Esportes,
+                            etc.)</label>
                         <textarea id="habilidadesEspecificas" name="habilidadesEspecificas" rows="2"
-                            placeholder="Toca instrumentos? Sabe nadar? Recreação infantil? Artes manuais?"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 resize-none"></textarea>
+                            placeholder="Quais suas habilidades especiais que encantam o público?"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none shadow-sm"></textarea>
                     </div>
+
                     <div class="md:col-span-2">
-                        <label for="experiencias" class="form-label">Experiências Anteriores (Resumo)</label>
-                        <textarea id="experiencias" name="experiencias" rows="3"
-                            placeholder="Onde já trabalhou como monitor ou recreador?"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 resize-none"></textarea>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label for="redesSociais" class="form-label">Redes Sociais (Instagram / LinkedIn)</label>
-                        <input type="text" id="redesSociais" name="redesSociais"
-                            placeholder="@seuusuario / linkedin.com/in/seu-perfil"
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700">
+                        <label for="experiencias" class="form-label">Sua Jornada (Experiências)</label>
+                        <textarea id="experiencias" name="experiencias" rows="3" placeholder="Onde já trabalhou?"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none shadow-sm"></textarea>
                     </div>
                 </div>
             </section>
 
-            <!-- Seção 4: Documentação -->
-            <section>
-                <h3 class="section-title"><i class="fa-solid fa-camera-retro text-slate-500"></i> Fotos e Documentos
+            <!-- Seção 4: Redes Sociais -->
+            <section class="space-y-10">
+                <h3 class="section-title text-2xl"><i class="fa-solid fa-hashtag text-pink-500"></i> Presença Digital
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Foto Perfil -->
-                    <div>
-                        <label class="form-label">Foto de Perfil (Rosto)</label>
-                        <div class="file-upload-wrapper">
-                            <label class="file-upload-btn">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="relative">
+                        <i class="fa-brands fa-instagram absolute left-5 top-[3.25rem] text-pink-500 text-xl"></i>
+                        <label for="instagram" class="form-label">Instagram</label>
+                        <input type="text" id="instagram" placeholder="@usuario"
+                            class="w-full pl-12 pr-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-4 focus:ring-pink-500/10">
+                    </div>
+                    <div class="relative">
+                        <i class="fa-brands fa-facebook absolute left-5 top-[3.25rem] text-blue-600 text-xl"></i>
+                        <label for="facebook" class="form-label">Facebook</label>
+                        <input type="text" id="facebook" placeholder="Perfil ou Link"
+                            class="w-full pl-12 pr-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none">
+                    </div>
+                    <div class="relative">
+                        <i class="fa-brands fa-linkedin absolute left-5 top-[3.25rem] text-blue-700 text-xl"></i>
+                        <label for="linkedin" class="form-label">LinkedIn</label>
+                        <input type="text" id="linkedin" placeholder="LinkedIn URL"
+                            class="w-full pl-12 pr-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none">
+                    </div>
+                    <div class="relative">
+                        <i class="fa-brands fa-tiktok absolute left-5 top-[3.25rem] text-black text-xl"></i>
+                        <label for="tiktok" class="form-label">TikTok</label>
+                        <input type="text" id="tiktok" placeholder="@usuario"
+                            class="w-full pl-12 pr-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção 5: Documentos -->
+            <section class="space-y-10">
+                <h3 class="section-title text-2xl"><i class="fa-solid fa-camera-retro text-slate-500"></i> Fotos
+                    Oficiais</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div class="space-y-4">
+                        <label class="form-label">Sua Foto (No Estilo Aero!)</label>
+                        <div
+                            class="file-upload-wrapper border-2 border-dashed border-slate-200 rounded-[2rem] p-4 bg-white hover:bg-slate-50 transition-all">
+                            <label class="file-upload-btn border-none bg-transparent">
                                 <input type="file" id="fotoPerfilInput" accept="image/*" class="hidden"
                                     onchange="previewFile(this, 'preview-perfil', 'foto-perfil-base64')">
                                 <div class="text-center">
-                                    <i class="fa-solid fa-camera"></i>
-                                    <span class="block text-xs text-slate-500 font-medium">Foto para crachá</span>
+                                    <div
+                                        class="w-16 h-16 bg-primary-100 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-primary-500/10">
+                                        <i class="fa-solid fa-smile-wink text-2xl"></i>
+                                    </div>
+                                    <span class="block text-sm text-slate-500 font-bold">Enviar Foto Rosto</span>
                                 </div>
                             </label>
                             <input type="hidden" id="foto-perfil-base64">
-                            <img id="preview-perfil" class="preview-image hidden mx-auto shadow-md">
+                            <img id="preview-perfil"
+                                class="preview-image hidden mx-auto shadow-2xl border-4 border-white">
                         </div>
                     </div>
 
-                    <!-- Foto Documento -->
-                    <div>
-                        <label class="form-label">Foto do Documento (RG/CNH)</label>
-                        <div class="file-upload-wrapper">
-                            <label class="file-upload-btn">
+                    <div class="space-y-4">
+                        <label class="form-label">Foto do Documento (ID/CNH)</label>
+                        <div
+                            class="file-upload-wrapper border-2 border-dashed border-slate-200 rounded-[2rem] p-4 bg-white hover:bg-slate-50 transition-all">
+                            <label class="file-upload-btn border-none bg-transparent">
                                 <input type="file" id="fotoDocInput" accept="image/*" class="hidden"
                                     onchange="previewFile(this, 'preview-doc', 'foto-doc-base64')">
                                 <div class="text-center">
-                                    <i class="fa-solid fa-id-card"></i>
-                                    <span class="block text-xs text-slate-500 font-medium">Frente e Verso</span>
+                                    <div
+                                        class="w-16 h-16 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                        <i class="fa-solid fa-address-card text-2xl"></i>
+                                    </div>
+                                    <span class="block text-sm text-slate-500 font-bold">Frente e Verso</span>
                                 </div>
                             </label>
                             <input type="hidden" id="foto-doc-base64">
-                            <img id="preview-doc" class="preview-image hidden mx-auto shadow-md">
+                            <img id="preview-doc" class="preview-image hidden mx-auto shadow-2xl border-4 border-white">
                         </div>
                     </div>
 
-                    <!-- Observacoes -->
                     <div class="md:col-span-2">
-                        <label for="observacoes" class="form-label">Outras Observações</label>
-                        <textarea id="observacoes" name="observacoes" rows="3"
-                            placeholder="Informações adicionais que deseja compartilhar..."
-                            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 resize-none"></textarea>
+                        <label for="observacoes" class="form-label">Mensagem para os Comandantes Aero</label>
+                        <textarea id="observacoes" name="observacoes" rows="3" placeholder="Alguma consideração final?"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none shadow-sm"></textarea>
                     </div>
                 </div>
             </section>
 
-            <div class="pt-6">
+            <div class="pt-10">
                 <button type="submit" id="submit-btn"
-                    class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white font-bold text-lg rounded-2xl shadow-xl shadow-primary-500/20 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    <span>Tudo pronto! Salvar meus dados</span>
+                    class="w-full py-6 bg-primary-600 hover:bg-primary-700 text-white font-bold text-2xl rounded-3xl shadow-2xl shadow-primary-500/40 transition-all transform hover:-translate-y-2 active:scale-95 flex items-center justify-center gap-4">
+                    <i class="fa-solid fa-rocket"></i>
+                    <span>Tudo pronto! Enviar Decolagem</span>
                 </button>
             </div>
         </form>
 
-        <footer class="mt-12 text-center text-slate-400 text-sm font-medium animate-fade-in">
-            &copy; 2026 Aero Festas - Todos os direitos reservados.
+        <footer class="mt-20 mb-12 text-center">
+            <p class="text-slate-400 text-sm font-bold uppercase tracking-widest">&copy; 2026 Aero Festas Entertainment
+            </p>
+            <div class="flex justify-center gap-6 mt-4 text-slate-300">
+                <i class="fa-brands fa-instagram text-xl"></i>
+                <i class="fa-brands fa-facebook text-xl"></i>
+                <i class="fa-brands fa-whatsapp text-xl"></i>
+            </div>
         </footer>
     </div>
 
     <!-- Script Logic -->
     <script>
-        // URL do Backend centralizada (mesma do api.js)
         const API_BASE = "https://backend-aerofestas-production.up.railway.app/api";
+
+        // Logic Helper for Toggles
+        function toggleHealthField(radio, wrapperId) {
+            const wrapper = document.getElementById(wrapperId);
+            if (radio.value === 'true') {
+                wrapper.classList.remove('hidden');
+                wrapper.classList.add('animate-fade-in');
+            } else {
+                wrapper.classList.add('hidden');
+                // Opcional: Limpar campo ao esconder
+                const input = wrapper.querySelector('input, textarea');
+                if (input) input.value = '';
+            }
+        }
+
+        function handleEscolaridade(select) {
+            const wrapper = document.getElementById('escolaridade-desc-wrapper');
+            const cursoInput = document.getElementById('escolaridade_curso');
+            if (select.value.includes('Superior') || select.value.includes('Pós')) {
+                wrapper.classList.remove('hidden');
+                wrapper.classList.add('animate-fade-in');
+            } else {
+                wrapper.classList.add('hidden');
+                cursoInput.value = '';
+            }
+        }
+
+        // WhatsApp Helper
+        document.getElementById('telefone').addEventListener('input', function (e) {
+            const btn = document.getElementById('btn-whatsapp');
+            const val = e.target.value.replace(/\D/g, '');
+            if (val.length >= 10) {
+                btn.classList.remove('hidden');
+                btn.onclick = () => window.open(`https://wa.me/55${val}`, '_blank');
+            } else {
+                btn.classList.add('hidden');
+            }
+        });
 
         // Toggle CNH Category
         document.getElementById('cnh').addEventListener('change', function (e) {
@@ -458,21 +709,54 @@
             }
         });
 
+        // Idiomas Logic
+        function addIdiomaRow(data = { name: '', level: 'Básico' }) {
+            const container = document.getElementById('idiomas-container');
+            const id = Date.now();
+            const div = document.createElement('div');
+            div.className = 'flex gap-3 animate-fade-in';
+            div.id = `idioma-${id}`;
+            div.innerHTML = `
+                <select class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none focus:ring-4 focus:ring-primary-500/10">
+                    <option value="Inglês" ${data.name === 'Inglês' ? 'selected' : ''}>Inglês</option>
+                    <option value="Espanhol" ${data.name === 'Espanhol' ? 'selected' : ''}>Espanhol</option>
+                    <option value="Outro" ${data.name !== 'Inglês' && data.name !== 'Espanhol' && data.name ? 'selected' : ''}>Outro</option>
+                </select>
+                <input type="text" placeholder="Qual?" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none ${data.name !== 'Inglês' && data.name !== 'Espanhol' && data.name ? '' : 'hidden'}" value="${data.name !== 'Inglês' && data.name !== 'Espanhol' ? data.name : ''}">
+                <select class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white outline-none">
+                    <option value="Básico" ${data.level === 'Básico' ? 'selected' : ''}>Básico</option>
+                    <option value="Intermediário" ${data.level === 'Intermediário' ? 'selected' : ''}>Intermediário</option>
+                    <option value="Fluente" ${data.level === 'Fluente' ? 'selected' : ''}>Fluente</option>
+                </select>
+                <button type="button" onclick="document.getElementById('idioma-${id}').remove()" class="text-red-500 hover:bg-red-50 px-3 rounded-xl transition-all">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+
+            const typeSelect = div.querySelector('select:first-child');
+            const customInput = div.querySelector('input');
+            typeSelect.onchange = () => {
+                if (typeSelect.value === 'Outro') customInput.classList.remove('hidden');
+                else {
+                    customInput.classList.add('hidden');
+                    customInput.value = '';
+                }
+            };
+
+            container.appendChild(div);
+        }
+
         // Preview and Convert to Base64
         function previewFile(input, imgId, hiddenId) {
             const file = input.files[0];
             const reader = new FileReader();
-
             reader.onloadend = function () {
                 const img = document.getElementById(imgId);
                 img.src = reader.result;
                 img.classList.remove('hidden');
                 document.getElementById(hiddenId).value = reader.result;
             }
-
-            if (file) {
-                reader.readAsDataURL(file);
-            }
+            if (file) reader.readAsDataURL(file);
         }
 
         // Lógica de Identificação
@@ -481,7 +765,7 @@
             const nascimento = document.getElementById('check-nascimento').value;
 
             if (!nome || !nascimento) {
-                alert('Por favor, informe seu nome completo e data de nascimento.');
+                alert('Informe seu nome e nascimento.');
                 return;
             }
 
@@ -498,72 +782,96 @@
                 });
 
                 const data = await res.json();
-
-                // Preenche Nome e Nascimento nos campos readonly
                 document.getElementById('nome').value = nome;
                 document.getElementById('nascimento').value = nascimento;
 
                 if (data.found) {
-                    // Monitor Existente: Carrega dados para atualizar
                     const m = data.monitor;
                     document.getElementById('monitor-id').value = m.id;
                     document.getElementById('telefone').value = m.telefone || '';
                     document.getElementById('email').value = m.email || '';
                     document.getElementById('endereco').value = m.endereco || '';
+
+                    // CNH
                     document.getElementById('cnh').value = m.cnh ? 'true' : 'false';
                     if (m.cnh) {
                         document.getElementById('cnh-categoria-wrapper').classList.remove('hidden');
                         document.getElementById('cnhCategoria').value = m.cnhCategoria || '';
                     }
 
-                    document.getElementById('tipoSanguineo').value = m.tipoSanguineo || '';
-                    document.getElementById('medicamentos').value = m.medicamentos || '';
-                    document.getElementById('restricoesAlimentares').value = m.restricoesAlimentares || '';
-                    document.getElementById('planoSaude').value = m.planoSaude || '';
-                    document.getElementById('condicaoMedica').value = m.condicaoMedica || '';
-                    document.getElementById('tamanhoCamiseta').value = m.tamanhoCamiseta || '';
-                    document.getElementById('escolaridade').value = m.escolaridade || '';
-                    document.getElementById('certificadoPrimeirosSocorros').value = m.certificadoPrimeirosSocorros || '';
-                    document.getElementById('habilidadesEspecificas').value = m.habilidadesEspecificas || '';
-                    document.getElementById('idiomas').value = m.idiomas || '';
-                    document.getElementById('experiencias').value = m.experiencias || '';
-                    document.getElementById('redesSociais').value = m.redesSociais || '';
-                    document.getElementById('fobias').value = m.fobias || '';
-                    document.getElementById('observacoes').value = m.observacoes || '';
+                    // Saúde Logic - Restaurar "Sim/Não" baseado no conteúdo
+                    const checkField = (val, radioName, wrapperId, inputId) => {
+                        if (val) {
+                            document.querySelector(`input[name="${radioName}"][value="true"]`).checked = true;
+                            document.getElementById(wrapperId).classList.remove('hidden');
+                            document.getElementById(inputId).value = val;
+                        }
+                    };
+                    checkField(m.planoSaude, 'has_plano', 'plano-wrapper', 'planoSaude');
+                    checkField(m.medicamentos, 'has_medicamento', 'medicamento-wrapper', 'medicamentos');
+                    checkField(m.restricoesAlimentares, 'has_restricao', 'restricao-wrapper', 'restricoesAlimentares');
+                    checkField(m.alergias, 'has_alergia', 'alergia-wrapper', 'alergias');
+                    checkField(m.condicaoMedica, 'has_condicao', 'condicao-wrapper', 'condicaoMedica');
+                    checkField(m.fobias, 'has_fobia', 'fobia-wrapper', 'fobias');
 
-                    if (m.fotoPerfil) {
-                        const imgP = document.getElementById('preview-perfil');
-                        imgP.src = m.fotoPerfil;
-                        imgP.classList.remove('hidden');
-                        document.getElementById('foto-perfil-base64').value = m.fotoPerfil;
+                    // Escolaridade
+                    if (m.escolaridade) {
+                        const [nivel, curso] = m.escolaridade.split(' - ');
+                        document.getElementById('escolaridade').value = nivel || '';
+                        if (curso) {
+                            document.getElementById('escolaridade-desc-wrapper').classList.remove('hidden');
+                            document.getElementById('escolaridade_curso').value = curso;
+                        }
                     }
 
+                    // Primeiros Socorros
+                    if (m.possuiCursoPS) {
+                        document.querySelector('input[name="possuiCursoPS"][value="true"]').checked = true;
+                        document.getElementById('ps-doc-wrapper').classList.remove('hidden');
+                        if (m.fotoCertificadoPS) {
+                            document.getElementById('preview-ps').src = m.fotoCertificadoPS;
+                            document.getElementById('preview-ps').classList.remove('hidden');
+                            document.getElementById('foto-ps-base64').value = m.fotoCertificadoPS;
+                        }
+                    }
+
+                    // Idiomas (JSON)
+                    if (m.idiomas) {
+                        try {
+                            const list = JSON.parse(m.idiomas);
+                            list.forEach(i => addIdiomaRow(i));
+                        } catch (e) { console.error("Erro idiomas:", e); }
+                    }
+
+                    // Sociais
+                    document.getElementById('instagram').value = m.instagram || '';
+                    document.getElementById('facebook').value = m.facebook || '';
+                    document.getElementById('linkedin').value = m.linkedin || '';
+                    document.getElementById('tiktok').value = m.tiktok || '';
+
+                    // Fotos Base
+                    if (m.fotoPerfil) {
+                        document.getElementById('preview-perfil').src = m.fotoPerfil;
+                        document.getElementById('preview-perfil').classList.remove('hidden');
+                        document.getElementById('foto-perfil-base64').value = m.fotoPerfil;
+                    }
                     if (m.fotoDocumento) {
-                        const imgD = document.getElementById('preview-doc');
-                        imgD.src = m.fotoDocumento;
-                        imgD.classList.remove('hidden');
+                        document.getElementById('preview-doc').src = m.fotoDocumento;
+                        document.getElementById('preview-doc').classList.remove('hidden');
                         document.getElementById('foto-doc-base64').value = m.fotoDocumento;
                     }
 
                     document.getElementById('update-badge').classList.remove('hidden');
-                    document.getElementById('page-title').textContent = 'Atualizar meus Dados';
-                    document.getElementById('page-subtitle').textContent = 'Confirme e atualize suas informações abaixo.';
                 } else {
-                    // Monitor Novo: Inicia formulário limpo
-                    document.getElementById('monitor-id').value = '';
-                    document.getElementById('update-badge').classList.add('hidden');
-                    document.getElementById('page-title').textContent = 'Novo Cadastro';
-                    document.getElementById('page-subtitle').textContent = 'Bem-vindo! Preencha seus dados para começar.';
+                    addIdiomaRow(); // Primeira linha de idioma padrão para novos
                 }
 
-                // Transição de tela
                 document.getElementById('step-id').classList.add('hidden');
                 document.getElementById('monitor-form').classList.remove('hidden');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
             } catch (error) {
-                console.error('Erro ao verificar:', error);
-                alert('Erro de conexão com o servidor. Tente novamente.');
+                alert('Erro na conexão. Tente novamente.');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
@@ -577,9 +885,24 @@
             const submitBtn = document.getElementById('submit-btn');
             const originalContent = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xl"></i> Enviando...';
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparando Decolagem...';
 
             const id = document.getElementById('monitor-id').value;
+
+            // Collect Idiomas
+            const idiomasList = [];
+            document.querySelectorAll('#idiomas-container > div').forEach(row => {
+                const type = row.querySelector('select:first-child').value;
+                const name = type === 'Outro' ? row.querySelector('input').value : type;
+                const level = row.querySelector('select:last-of-type').value;
+                if (name) idiomasList.push({ name, level });
+            });
+
+            // Escolaridade format: "Nível - Curso"
+            const escolaridadeNivel = document.getElementById('escolaridade').value;
+            const escolaridadeCurso = document.getElementById('escolaridade_curso').value;
+            const fullEscolaridade = escolaridadeCurso ? `${escolaridadeNivel} - ${escolaridadeCurso}` : escolaridadeNivel;
+
             const payload = {
                 id: id || undefined,
                 nome: document.getElementById('nome').value,
@@ -589,20 +912,27 @@
                 endereco: document.getElementById('endereco').value,
                 cnh: document.getElementById('cnh').value === 'true',
                 cnhCategoria: document.getElementById('cnhCategoria').value,
+                tamanhoCamiseta: document.getElementById('tamanhoCamiseta').value,
 
                 tipoSanguineo: document.getElementById('tipoSanguineo').value,
-                medicamentos: document.getElementById('medicamentos').value,
-                restricoesAlimentares: document.getElementById('restricoesAlimentares').value,
-                planoSaude: document.getElementById('planoSaude').value,
-                condicaoMedica: document.getElementById('condicaoMedica').value,
-                tamanhoCamiseta: document.getElementById('tamanhoCamiseta').value,
-                escolaridade: document.getElementById('escolaridade').value,
-                certificadoPrimeirosSocorros: document.getElementById('certificadoPrimeirosSocorros').value,
+                planoSaude: document.querySelector('input[name="has_plano"]:checked').value === 'true' ? document.getElementById('planoSaude').value : '',
+                medicamentos: document.querySelector('input[name="has_medicamento"]:checked').value === 'true' ? document.getElementById('medicamentos').value : '',
+                restricoesAlimentares: document.querySelector('input[name="has_restricao"]:checked').value === 'true' ? document.getElementById('restricoesAlimentares').value : '',
+                alergias: document.querySelector('input[name="has_alergia"]:checked').value === 'true' ? document.getElementById('alergias').value : '',
+                condicaoMedica: document.querySelector('input[name="has_condicao"]:checked').value === 'true' ? document.getElementById('condicaoMedica').value : '',
+                fobias: document.querySelector('input[name="has_fobia"]:checked').value === 'true' ? document.getElementById('fobias').value : '',
+
+                escolaridade: fullEscolaridade,
+                possuiCursoPS: document.querySelector('input[name="possuiCursoPS"]:checked').value === 'true',
+                fotoCertificadoPS: document.getElementById('foto-ps-base64').value,
+                idiomas: JSON.stringify(idiomasList),
                 habilidadesEspecificas: document.getElementById('habilidadesEspecificas').value,
-                idiomas: document.getElementById('idiomas').value,
                 experiencias: document.getElementById('experiencias').value,
-                redesSociais: document.getElementById('redesSociais').value,
-                fobias: document.getElementById('fobias').value,
+
+                instagram: document.getElementById('instagram').value,
+                facebook: document.getElementById('facebook').value,
+                linkedin: document.getElementById('linkedin').value,
+                tiktok: document.getElementById('tiktok').value,
 
                 fotoPerfil: document.getElementById('foto-perfil-base64').value,
                 fotoDocumento: document.getElementById('foto-doc-base64').value,
@@ -615,7 +945,7 @@
                 const url = id ? `${API_BASE}/finance/monitores/${id}` : `${API_BASE}/finance/monitores`;
 
                 const res = await fetch(url, {
-                    method: method,
+                    method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
@@ -627,13 +957,12 @@
                     document.getElementById('page-subtitle').classList.add('hidden');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
-                    alert('Erro ao enviar dados. Por favor, tente novamente.');
+                    alert('Erro ao salvar. Verifique sua conexão.');
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalContent;
                 }
             } catch (e) {
-                console.error('Erro no submit:', e);
-                alert('Erro de conexão com o servidor.');
+                alert('Erro no servidor.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalContent;
             }

@@ -487,16 +487,21 @@ router.post('/monitores', async (req, res) => {
                 tipoSanguineo: m.tipoSanguineo,
                 medicamentos: m.medicamentos,
                 restricoesAlimentares: m.restricoesAlimentares,
+                alergias: m.alergias,
                 planoSaude: m.planoSaude,
                 condicaoMedica: m.condicaoMedica,
                 tamanhoCamiseta: m.tamanhoCamiseta,
                 escolaridade: m.escolaridade,
-                certificadoPrimeirosSocorros: m.certificadoPrimeirosSocorros,
+                possuiCursoPS: m.possuiCursoPS,
+                fotoCertificadoPS: m.fotoCertificadoPS,
                 habilidadesEspecificas: m.habilidadesEspecificas,
-                idiomas: m.idiomas,
+                idiomas: m.idiomas, // Já vem como stringified JSON do front
                 experiencias: m.experiencias,
-                redesSociais: m.redesSociais,
-                fobias: m.fobias
+                fobias: m.fobias,
+                instagram: m.instagram,
+                facebook: m.facebook,
+                linkedin: m.linkedin,
+                tiktok: m.tiktok
             }
         });
         res.json(novoMonitor);
@@ -528,16 +533,21 @@ router.put('/monitores/:id', async (req, res) => {
                 tipoSanguineo: m.tipoSanguineo,
                 medicamentos: m.medicamentos,
                 restricoesAlimentares: m.restricoesAlimentares,
+                alergias: m.alergias,
                 planoSaude: m.planoSaude,
                 condicaoMedica: m.condicaoMedica,
                 tamanhoCamiseta: m.tamanhoCamiseta,
                 escolaridade: m.escolaridade,
-                certificadoPrimeirosSocorros: m.certificadoPrimeirosSocorros,
+                possuiCursoPS: m.possuiCursoPS,
+                fotoCertificadoPS: m.fotoCertificadoPS,
                 habilidadesEspecificas: m.habilidadesEspecificas,
                 idiomas: m.idiomas,
                 experiencias: m.experiencias,
-                redesSociais: m.redesSociais,
-                fobias: m.fobias
+                fobias: m.fobias,
+                instagram: m.instagram,
+                facebook: m.facebook,
+                linkedin: m.linkedin,
+                tiktok: m.tiktok
             }
         });
         res.json(updated);

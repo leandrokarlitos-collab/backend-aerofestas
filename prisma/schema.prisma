@@ -133,16 +133,21 @@ model Monitor {
   tipoSanguineo     String?
   medicamentos      String?
   restricoesAlimentares String?
+  alergias          String?
   planoSaude        String?
   condicaoMedica    String?
   tamanhoCamiseta   String?
   escolaridade      String?
-  certificadoPrimeirosSocorros String?
+  possuiCursoPS     Boolean?            @default(false)
+  fotoCertificadoPS String?             // Base64
   habilidadesEspecificas String?
-  idiomas           String?
+  idiomas           String?             // JSON
   experiencias      String?
-  redesSociais      String?
   fobias            String?
+  instagram         String?
+  facebook          String?
+  linkedin          String?
+  tiktok            String?
   desempenho        Desempenho[]
   pagamentos        PagamentoMonitor[]
 }

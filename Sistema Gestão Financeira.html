@@ -66,6 +66,23 @@
         const getById = id => document.getElementById(id);
         window.getById = getById;
 
+        window.handleMonitorFile = (input, previewId, base64Id) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result;
+                getById(base64Id).value = base64;
+                const preview = getById(previewId);
+                if (preview) {
+                    const img = preview.querySelector('img');
+                    if (img) img.src = base64;
+                    preview.classList.remove('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
         const showModal = (modalId) => {
             const modal = getById(modalId);
             if (modal) modal.classList.remove('hidden');
@@ -1578,6 +1595,12 @@
                     </div>
                 `;
 
+                const parseIdiomas = (json) => {
+                    try { return JSON.parse(json || '[]'); } catch (e) { return []; }
+                };
+                const idiomas = parseIdiomas(m.idiomas);
+                const waPhone = m.telefone ? m.telefone.replace(/\D/g, '') : '';
+
                 body.innerHTML = `
                     <div class="flex flex-col gap-6">
                         <div class="flex items-center gap-6">
@@ -1586,10 +1609,20 @@
                             </div>
                             <div>
                                 <h3 class="text-2xl font-bold text-gray-800">${m.nome}</h3>
-                                <p class="text-gray-500 font-medium">${m.telefone || 'Sem telefone'}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-gray-500 font-medium">${m.telefone || 'Sem telefone'}</p>
+                                    ${waPhone ? `<a href="https://wa.me/55${waPhone}" target="_blank" class="text-emerald-500 hover:text-emerald-600"><i class="fa-brands fa-whatsapp text-lg"></i></a>` : ''}
+                                </div>
                                 <span class="inline-block mt-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold border border-indigo-100">
                                     ID: #${m.id}
                                 </span>
+
+                                <div class="flex gap-2 mt-3">
+                                    ${m.instagram ? `<a href="https://instagram.com/${m.instagram.replace('@', '')}" target="_blank" class="p-2 bg-pink-50 text-pink-600 rounded-lg"><i class="fa-brands fa-instagram"></i></a>` : ''}
+                                    ${m.facebook ? `<a href="${m.facebook}" target="_blank" class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-brands fa-facebook-f"></i></a>` : ''}
+                                    ${m.linkedin ? `<a href="${m.linkedin}" target="_blank" class="p-2 bg-sky-50 text-sky-600 rounded-lg"><i class="fa-brands fa-linkedin-in"></i></a>` : ''}
+                                    ${m.tiktok ? `<a href="https://tiktok.com/@${m.tiktok.replace('@', '')}" target="_blank" class="p-2 bg-slate-100 text-black rounded-lg"><i class="fa-brands fa-tiktok"></i></a>` : ''}
+                                </div>
                             </div>
                         </div>
 
@@ -1612,32 +1645,44 @@
                                 ${m.cnhCategoria ? `<p><strong>Categoria:</strong> ${m.cnhCategoria}</p>` : ''}
                                 <p><strong>Tamanho Camiseta:</strong> ${m.tamanhoCamiseta || 'Não informado'}</p>
                             </div>
+
                             <div class="md:col-span-2 p-4 bg-red-50/50 rounded-xl border border-red-100">
                                 <p class="text-red-700 uppercase font-bold text-[10px] mb-2 flex items-center gap-1">
                                     <i class="fa-solid fa-heart-pulse"></i> Saúde e Emergência
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
                                     <p><strong>Tipo Sanguíneo:</strong> <span class="text-red-600 font-bold">${m.tipoSanguineo || '-'}</span></p>
-                                    <p><strong>Plano de Saúde:</strong> ${m.planoSaude || '-'}</p>
+                                    <p><strong>Plano de Saúde:</strong> ${m.planoSaude || 'Não possui'}</p>
                                     <p class="md:col-span-2"><strong>Medicamentos:</strong> ${m.medicamentos || 'Nenhum'}</p>
-                                    <p class="md:col-span-2"><strong>Restrições/Alergias:</strong> ${m.restricoesAlimentares || 'Nenhuma'}</p>
+                                    <p><strong>Restrições Alimentares:</strong> ${m.restricoesAlimentares || 'Nenhuma'}</p>
+                                    <p><strong>Alergias:</strong> ${m.alergias || 'Nenhuma'}</p>
                                     <p class="md:col-span-2"><strong>Condição Médica:</strong> ${m.condicaoMedica || 'Nenhuma'}</p>
                                     <p class="md:col-span-2"><strong>Fobias/Medos:</strong> ${m.fobias || 'Nenhum'}</p>
                                 </div>
                             </div>
+
                             <div class="md:col-span-2 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
                                 <p class="text-indigo-700 uppercase font-bold text-[10px] mb-2 flex items-center gap-1">
                                     <i class="fa-solid fa-graduation-cap"></i> Profissional e Habilidades
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
-                                    <p><strong>Escolaridade:</strong> ${m.escolaridade || '-'}</p>
-                                    <p><strong>Primeiros Socorros:</strong> ${m.certificadoPrimeirosSocorros || '-'}</p>
-                                    <p><strong>Idiomas:</strong> ${m.idiomas || '-'}</p>
-                                    <p><strong>Redes Sociais:</strong> ${m.redesSociais || '-'}</p>
-                                    <p class="md:col-span-2"><strong>Habilidades:</strong> ${m.habilidadesEspecificas || '-'}</p>
-                                    <p class="md:col-span-2"><strong>Experiências:</strong> ${m.experiencias || '-'}</p>
+                                    <p class="md:col-span-2"><strong>Escolaridade:</strong> ${m.escolaridade || '-'}</p>
+                                    <div class="md:col-span-2 border-t border-indigo-100 pt-2 mt-1">
+                                        <p><strong>Primeiros Socorros:</strong> ${m.possuiCursoPS ? '<span class="text-emerald-600 font-bold">Sim (Possui Certificado)</span>' : '<span class="text-gray-400">Não possui</span>'}</p>
+                                        ${m.fotoCertificadoPS ? `
+                                            <button onclick="window.open('${m.fotoCertificadoPS}', '_blank')" class="mt-2 text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
+                                                <i class="fa-solid fa-file-invoice mr-1"></i> VER CERTIFICADO
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                    <p class="md:col-span-2 border-t border-indigo-100 pt-2 mt-1"><strong>Idiomas:</strong> 
+                                        ${idiomas.length > 0 ? idiomas.map(i => `<span class="inline-block bg-white px-2 py-0.5 rounded border border-indigo-100 mr-2 mt-1">${i.name} (${i.level})</span>`).join('') : '-'}
+                                    </p>
+                                    <p class="md:col-span-2 border-t border-indigo-100 pt-2 mt-1"><strong>Destaques:</strong> ${m.habilidadesEspecificas || '-'}</p>
+                                    <p class="md:col-span-2 border-t border-indigo-100 pt-2 mt-1"><strong>Experiências:</strong> ${m.experiencias || '-'}</p>
                                 </div>
                             </div>
+                        </div>
                             <div class="md:col-span-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Observações</p>
                                 <p class="italic text-gray-600">${m.observacoes || 'Nenhuma observação registrada.'}</p>
@@ -1681,15 +1726,34 @@
                 getById('monitor-plano-saude').value = m.planoSaude || '';
                 getById('monitor-medicamentos').value = m.medicamentos || '';
                 getById('monitor-restricoes').value = m.restricoesAlimentares || '';
+                getById('monitor-alergias').value = m.alergias || '';
                 getById('monitor-condicao-medica').value = m.condicaoMedica || '';
                 getById('monitor-fobias').value = m.fobias || '';
                 getById('monitor-tamanho-camiseta').value = m.tamanhoCamiseta || '';
                 getById('monitor-escolaridade').value = m.escolaridade || '';
-                getById('monitor-psocorros').value = m.certificadoPrimeirosSocorros || '';
+
+                // PS e Idiomas
+                getById('monitor-possui-ps').value = String(m.possuiCursoPS || false);
                 getById('monitor-idiomas').value = m.idiomas || '';
                 getById('monitor-habilidades-esp').value = m.habilidadesEspecificas || '';
                 getById('monitor-experiencias').value = m.experiencias || '';
-                getById('monitor-redes-sociais').value = m.redesSociais || '';
+
+                // Redes Sociais
+                getById('monitor-instagram').value = m.instagram || '';
+                getById('monitor-facebook').value = m.facebook || '';
+                getById('monitor-linkedin').value = m.linkedin || '';
+                getById('monitor-tiktok').value = m.tiktok || '';
+
+                // PS Preview
+                const psImg = getById('monitor-ps-preview').querySelector('img');
+                if (m.fotoCertificadoPS) {
+                    psImg.src = m.fotoCertificadoPS;
+                    getById('monitor-ps-preview').classList.remove('hidden');
+                    getById('monitor-ps-base64').value = m.fotoCertificadoPS;
+                } else {
+                    getById('monitor-ps-preview').classList.add('hidden');
+                    getById('monitor-ps-base64').value = '';
+                }
 
                 // Foto Preview
                 const photoImg = getById('monitor-photo-img');
@@ -2281,15 +2345,20 @@
                     planoSaude: getById('monitor-plano-saude').value,
                     medicamentos: getById('monitor-medicamentos').value,
                     restricoesAlimentares: getById('monitor-restricoes').value,
+                    alergias: getById('monitor-alergias').value,
                     condicaoMedica: getById('monitor-condicao-medica').value,
                     fobias: getById('monitor-fobias').value,
                     tamanhoCamiseta: getById('monitor-tamanho-camiseta').value,
                     escolaridade: getById('monitor-escolaridade').value,
-                    certificadoPrimeirosSocorros: getById('monitor-psocorros').value,
+                    possuiCursoPS: getById('monitor-possui-ps').value === 'true',
+                    fotoCertificadoPS: getById('monitor-ps-base64').value,
                     idiomas: getById('monitor-idiomas').value,
                     habilidadesEspecificas: getById('monitor-habilidades-esp').value,
                     experiencias: getById('monitor-experiencias').value,
-                    redesSociais: getById('monitor-redes-sociais').value,
+                    instagram: getById('monitor-instagram').value,
+                    facebook: getById('monitor-facebook').value,
+                    linkedin: getById('monitor-linkedin').value,
+                    tiktok: getById('monitor-tiktok').value,
                     habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
 
@@ -6186,8 +6255,14 @@
                             </div>
                             <div class="space-y-1 md:col-span-2">
                                 <label for="monitor-restricoes" class="block text-sm font-bold text-gray-700">Restrições
-                                    Alimentares / Alergias</label>
+                                    Alimentares</label>
                                 <input type="text" id="monitor-restricoes" placeholder="Ex: Vegano, Lactose, Glúten..."
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-alergias"
+                                    class="block text-sm font-bold text-gray-700">Alergias</label>
+                                <input type="text" id="monitor-alergias" placeholder="Ex: Amendoim, Frutos do Mar..."
                                     class="form-input w-full">
                             </div>
                             <div class="space-y-1 md:col-span-2">
@@ -6199,7 +6274,7 @@
                             <div class="space-y-1 md:col-span-2">
                                 <label for="monitor-fobias" class="block text-sm font-bold text-gray-700">Fobias ou
                                     Medos</label>
-                                <input type="text" id="monitor-fobias" placeholder="Ex: Altura, Escuro..."
+                                <input type="text" id="monitor-fobias" placeholder="Ex: Altura, Palhaços..."
                                     class="form-input w-full">
                             </div>
                         </div>
@@ -6228,16 +6303,31 @@
                                 <input type="text" id="monitor-escolaridade" placeholder="Ex: Pedagogia"
                                     class="form-input w-full">
                             </div>
-                            <div class="space-y-1">
-                                <label for="monitor-psocorros" class="block text-sm font-bold text-gray-700">Primeiros
-                                    Socorros</label>
-                                <input type="text" id="monitor-psocorros" placeholder="Data última reciclagem"
-                                    class="form-input w-full">
+                            <div class="space-y-2 md:col-span-2">
+                                <label class="block text-sm font-bold text-gray-700">Primeiros Socorros</label>
+                                <div class="flex items-center gap-4">
+                                    <select id="monitor-possui-ps" class="form-input w-24">
+                                        <option value="false">Não</option>
+                                        <option value="true">Sim</option>
+                                    </select>
+                                    <div class="flex-1 flex items-center gap-2">
+                                        <input type="file" id="monitor-ps-input" accept="image/*" class="hidden">
+                                        <button type="button" onclick="getById('monitor-ps-input').click()"
+                                            class="bg-gray-100 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">
+                                            <i class="fa-solid fa-file-arrow-up mr-2"></i> SUBIR CERTIFICADO
+                                        </button>
+                                        <input type="hidden" id="monitor-ps-base64">
+                                        <div id="monitor-ps-preview"
+                                            class="hidden h-10 w-10 rounded border overflow-hidden">
+                                            <img src="" class="w-full h-full object-cover">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="space-y-1">
+                            <div class="space-y-1 md:col-span-2">
                                 <label for="monitor-idiomas"
                                     class="block text-sm font-bold text-gray-700">Idiomas</label>
-                                <input type="text" id="monitor-idiomas" placeholder="Ex: Inglês Básico"
+                                <input type="text" id="monitor-idiomas" placeholder="Inglês, Espanhol..."
                                     class="form-input w-full">
                             </div>
                             <div class="space-y-1 md:col-span-2">
