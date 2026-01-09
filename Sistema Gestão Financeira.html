@@ -1743,10 +1743,11 @@
                 if (!m) return;
 
                 getById('monitor-id-edit').value = m.id;
-                getById('monitor-nome').value = m.nome;
+                getById('monitor-nome').value = m.nome || '';
                 getById('monitor-nascimento').value = m.nascimento || '';
                 getById('monitor-telefone').value = m.telefone || '';
                 getById('monitor-email').value = m.email || '';
+                getById('monitor-cpf').value = m.cpf || '';
                 getById('monitor-endereco').value = m.endereco || '';
                 getById('monitor-cnh').value = m.cnh ? 'Sim' : 'Não possui';
                 getById('monitor-cnh-categoria').value = m.cnhCategoria || '';
@@ -2100,6 +2101,18 @@
             aplicarMascaraTelefone('monitor-telefone');
             aplicarMascaraTelefone('monitor-emergencia-telefone');
 
+            const aplicarMascaraCPF = (id) => {
+                getById(id)?.addEventListener('input', function (e) {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.length > 11) val = val.slice(0, 11);
+                    if (val.length > 3) val = val.slice(0, 3) + '.' + val.slice(3);
+                    if (val.length > 7) val = val.slice(0, 7) + '.' + val.slice(7);
+                    if (val.length > 11) val = val.slice(0, 11) + '-' + val.slice(11);
+                    e.target.value = val;
+                });
+            };
+            aplicarMascaraCPF('monitor-cpf');
+
             // Listeners para fechar modais de monitores
             document.querySelector('.monitor-details-close-btn')?.addEventListener('click', () => {
                 getById('monitor-details-modal').classList.add('hidden');
@@ -2384,6 +2397,7 @@
                     nascimento: getById('monitor-nascimento').value,
                     telefone: getById('monitor-telefone').value,
                     email: getById('monitor-email').value,
+                    cpf: getById('monitor-cpf').value,
                     endereco: getById('monitor-endereco').value,
                     cnh: getById('monitor-cnh').value === 'Sim',
                     cnhCategoria: getById('monitor-cnh-categoria').value,
@@ -6253,6 +6267,11 @@
                     </div>
 
                     <div class="space-y-1">
+                        <label for="monitor-cpf" class="block text-sm font-bold text-gray-700">CPF</label>
+                        <input type="text" id="monitor-cpf" placeholder="000.000.000-00" class="form-input w-full">
+                    </div>
+
+                    <div class="space-y-1">
                         <label for="monitor-cnh" class="block text-sm font-bold text-gray-700">Possui CNH?</label>
                         <select id="monitor-cnh" class="form-input w-full">
                             <option value="Não possui">Não possui</option>
@@ -6308,7 +6327,7 @@
                             <div class="space-y-1 md:col-span-2">
                                 <label for="monitor-restricoes" class="block text-sm font-bold text-gray-700">Restrições
                                     Alimentares</label>
-                                <input type="text" id="monitor-restricoes" placeholder="Ex: Vegano, Lactose, Glúten..."
+                                <input type="text" id="monitor-restricoes" placeholder="Ex: Lactose, Glúten..."
                                     class="form-input w-full">
                             </div>
                             <div class="space-y-1 md:col-span-2">

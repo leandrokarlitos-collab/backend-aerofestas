@@ -120,6 +120,7 @@ model EventItem {
 model Monitor {
   id                String              @id
   nome              String
+  cpf               String?             @unique
   nascimento        String?
   telefone          String?
   email             String?
