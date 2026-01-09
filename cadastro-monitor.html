@@ -887,7 +887,9 @@
                 }
 
                 // Se chegou aqui, CPF bate ou monitor não tinha CPF. Procedemos para o formulário.
+                // Preenchemos o CPF no formulário com o que foi usado na verificação
                 abrirFormulario(monitorEncontrado);
+                document.getElementById('cpf').value = cpfInput.value;
                 return;
             }
 
