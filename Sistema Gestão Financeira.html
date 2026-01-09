@@ -129,7 +129,7 @@
                 const isDark = htmlElement.classList.toggle('dark');
                 bodyElement.classList.toggle('dark');
                 localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                
+
                 // Atualiza cores dos gráficos se existirem
                 if (window.Chart) {
                     Chart.helpers.each(Chart.instances, (instance) => {
@@ -203,7 +203,7 @@
             loadDataFromCloud = async function () {
                 try {
                     console.log("☁️ Sincronizando com o servidor...");
-                    
+
                     // Exibe Skeletons nos Cards
                     const skeletonHTML = `
                         <div class="skeleton skeleton-title mx-auto"></div>
@@ -572,7 +572,7 @@
                 const insightsContainer = getById('quick-insights');
                 if (insightsContainer) {
                     const insights = [];
-                    
+
                     // Insight de Crescimento
                     if (recAnterior > 0) {
                         const cresc = ((recAtual - recAnterior) / recAnterior) * 100;
@@ -1278,6 +1278,9 @@
                             <div class="flex justify-between items-center pt-2 border-t border-gray-100/50">
                                 <span class="text-xs font-medium text-gray-400">ID: #${m.id.slice(-4)}</span>
                                 <div class="flex gap-2" onclick="event.stopPropagation()">
+                                    <button onclick="window.copiarLinkMonitor('${m.id}')" class="btn-action-small bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Copiar Link de Atualização">
+                                        <i class="fa-solid fa-link text-sm"></i>
+                                    </button>
                                     <button onclick="editarMonitor('${m.id}')" class="btn-action-small bg-amber-50 text-amber-600 hover:bg-amber-100" title="Editar">
                                         <i class="fa-solid fa-pen-to-square text-sm"></i>
                                     </button>
@@ -1604,9 +1607,36 @@
                                 <p><strong>Endereço:</strong> ${m.endereco || 'Não informado'}</p>
                             </div>
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Habilitação (CNH)</p>
+                                <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Habilitação (CNH) e Uniforme</p>
                                 <p><strong>Possui CNH?</strong> ${m.cnh ? 'Sim' : 'Não'}</p>
                                 ${m.cnhCategoria ? `<p><strong>Categoria:</strong> ${m.cnhCategoria}</p>` : ''}
+                                <p><strong>Tamanho Camiseta:</strong> ${m.tamanhoCamiseta || 'Não informado'}</p>
+                            </div>
+                            <div class="md:col-span-2 p-4 bg-red-50/50 rounded-xl border border-red-100">
+                                <p class="text-red-700 uppercase font-bold text-[10px] mb-2 flex items-center gap-1">
+                                    <i class="fa-solid fa-heart-pulse"></i> Saúde e Emergência
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                                    <p><strong>Tipo Sanguíneo:</strong> <span class="text-red-600 font-bold">${m.tipoSanguineo || '-'}</span></p>
+                                    <p><strong>Plano de Saúde:</strong> ${m.planoSaude || '-'}</p>
+                                    <p class="md:col-span-2"><strong>Medicamentos:</strong> ${m.medicamentos || 'Nenhum'}</p>
+                                    <p class="md:col-span-2"><strong>Restrições/Alergias:</strong> ${m.restricoesAlimentares || 'Nenhuma'}</p>
+                                    <p class="md:col-span-2"><strong>Condição Médica:</strong> ${m.condicaoMedica || 'Nenhuma'}</p>
+                                    <p class="md:col-span-2"><strong>Fobias/Medos:</strong> ${m.fobias || 'Nenhum'}</p>
+                                </div>
+                            </div>
+                            <div class="md:col-span-2 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                <p class="text-indigo-700 uppercase font-bold text-[10px] mb-2 flex items-center gap-1">
+                                    <i class="fa-solid fa-graduation-cap"></i> Profissional e Habilidades
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                                    <p><strong>Escolaridade:</strong> ${m.escolaridade || '-'}</p>
+                                    <p><strong>Primeiros Socorros:</strong> ${m.certificadoPrimeirosSocorros || '-'}</p>
+                                    <p><strong>Idiomas:</strong> ${m.idiomas || '-'}</p>
+                                    <p><strong>Redes Sociais:</strong> ${m.redesSociais || '-'}</p>
+                                    <p class="md:col-span-2"><strong>Habilidades:</strong> ${m.habilidadesEspecificas || '-'}</p>
+                                    <p class="md:col-span-2"><strong>Experiências:</strong> ${m.experiencias || '-'}</p>
+                                </div>
                             </div>
                             <div class="md:col-span-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <p class="text-gray-400 uppercase font-bold text-[10px] mb-1">Observações</p>
@@ -1645,6 +1675,21 @@
                 getById('monitor-cnh').value = m.cnh ? 'Sim' : 'Não possui';
                 getById('monitor-cnh-categoria').value = m.cnhCategoria || '';
                 getById('monitor-observacoes').value = m.observacoes || '';
+
+                // Novos campos
+                getById('monitor-tipo-sanguineo').value = m.tipoSanguineo || '';
+                getById('monitor-plano-saude').value = m.planoSaude || '';
+                getById('monitor-medicamentos').value = m.medicamentos || '';
+                getById('monitor-restricoes').value = m.restricoesAlimentares || '';
+                getById('monitor-condicao-medica').value = m.condicaoMedica || '';
+                getById('monitor-fobias').value = m.fobias || '';
+                getById('monitor-tamanho-camiseta').value = m.tamanhoCamiseta || '';
+                getById('monitor-escolaridade').value = m.escolaridade || '';
+                getById('monitor-psocorros').value = m.certificadoPrimeirosSocorros || '';
+                getById('monitor-idiomas').value = m.idiomas || '';
+                getById('monitor-habilidades-esp').value = m.habilidadesEspecificas || '';
+                getById('monitor-experiencias').value = m.experiencias || '';
+                getById('monitor-redes-sociais').value = m.redesSociais || '';
 
                 // Foto Preview
                 const photoImg = getById('monitor-photo-img');
@@ -1731,6 +1776,22 @@
                 }
             };
 
+            window.copiarLinkCadastro = () => {
+                const baseUrl = window.location.origin;
+                const link = `${baseUrl}/cadastro-monitor.html`;
+                navigator.clipboard.writeText(link).then(() => {
+                    showToastModal('✅ Link de cadastro copiado!');
+                });
+            };
+
+            window.copiarLinkMonitor = (id) => {
+                const baseUrl = window.location.origin;
+                const link = `${baseUrl}/cadastro-monitor.html?id=${id}`;
+                navigator.clipboard.writeText(link).then(() => {
+                    showToastModal('✅ Link de atualização do monitor copiado!');
+                });
+            };
+
             // Event Listeners dos Novos Botões
             getById('open-monitores-modal-btn')?.addEventListener('click', () => {
                 renderMonitorCards();
@@ -1765,6 +1826,11 @@
                 getById('monitor-photo-preview').querySelector('i').classList.remove('hidden');
                 getById('monitor-doc-base64').value = '';
                 getById('monitor-doc-img').classList.add('hidden');
+
+                // Limpar campos de texto e selects explicitamente (opcional, reset() já cuida do básico)
+                getById('monitor-tipo-sanguineo').value = '';
+                getById('monitor-tamanho-camiseta').value = '';
+
                 const docPlaceholder = getById('monitor-doc-preview').querySelector('div');
                 if (docPlaceholder) docPlaceholder.classList.remove('hidden');
                 getById('modal-monitor-title').textContent = 'Novo Monitor';
@@ -1941,7 +2007,7 @@
                 const doc = new jsPDF('p', 'mm', 'a4');
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const pageHeight = doc.internal.pageSize.getHeight();
-                
+
                 showToast("Gerando relatório executivo...");
 
                 // Configurações de Cores
@@ -2021,7 +2087,7 @@
                 doc.text('Insights Estratégicos', 15, currentY);
                 currentY += 8;
                 const insights = Array.from(document.querySelectorAll('#quick-insights .insight-pill'))
-                                    .map(el => '• ' + el.textContent.trim());
+                    .map(el => '• ' + el.textContent.trim());
                 doc.setFontSize(10);
                 doc.setTextColor(50, 50, 50);
                 if (insights.length > 0) {
@@ -2036,7 +2102,7 @@
                 // --- PÁGINA 2: DETALHAMENTO DE ENTRADAS ---
                 doc.addPage();
                 addPageHeader('Detalhamento de Entradas');
-                
+
                 const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
                 const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
                 const todasEntradas = [
@@ -2055,10 +2121,10 @@
                 // --- PÁGINA 3: DETALHAMENTO DE SAÍDAS (GASTOS) ---
                 doc.addPage();
                 addPageHeader('Detalhamento de Saídas: Gastos & Contas');
-                
+
                 const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
                 const dataGastos = gastosMes.map(g => [formatarData(g.data), g.categoria, g.descricao, formatarMoeda(g.valor)])
-                                    .sort((a, b) => a[0].localeCompare(b[0]));
+                    .sort((a, b) => a[0].localeCompare(b[0]));
 
                 doc.autoTable({
                     startY: 35,
@@ -2071,7 +2137,7 @@
                 // --- PÁGINA 4: DETALHAMENTO DE SAÍDAS (MONITORES & SALÁRIOS) ---
                 doc.addPage();
                 addPageHeader('Detalhamento de Saídas: Monitores & Equipe');
-                
+
                 doc.setFontSize(12);
                 doc.text('Pagamentos de Monitores', 15, 35);
                 const pagMonMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
@@ -2093,7 +2159,7 @@
                 nextY += 5;
 
                 const totalEntradasVal = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0) +
-                                         receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
+                    receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
 
                 const dataSalarios = (state.funcionarios || []).map(f => {
                     const faixa = [...(state.faixasComissao || [])].sort((a, b) => a.ateValor - b.ateValor).find(fx => totalEntradasVal <= fx.ateValor) || { percentual: 0 };
@@ -2113,7 +2179,7 @@
                 // --- PÁGINA 5: BALANÇO GERAL ---
                 doc.addPage();
                 addPageHeader('Balanço Geral Final');
-                
+
                 const totalReceitasVal = todasEntradas.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
                 const totalGastosVal = dataGastos.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
                 const totalMonitoresVal = dataMon.reduce((acc, curr) => acc + (parseFloat(curr[2].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
@@ -2211,6 +2277,19 @@
                     observacoes: getById('monitor-observacoes').value,
                     fotoPerfil: getById('monitor-foto-base64').value,
                     fotoDocumento: getById('monitor-doc-base64').value,
+                    tipoSanguineo: getById('monitor-tipo-sanguineo').value,
+                    planoSaude: getById('monitor-plano-saude').value,
+                    medicamentos: getById('monitor-medicamentos').value,
+                    restricoesAlimentares: getById('monitor-restricoes').value,
+                    condicaoMedica: getById('monitor-condicao-medica').value,
+                    fobias: getById('monitor-fobias').value,
+                    tamanhoCamiseta: getById('monitor-tamanho-camiseta').value,
+                    escolaridade: getById('monitor-escolaridade').value,
+                    certificadoPrimeirosSocorros: getById('monitor-psocorros').value,
+                    idiomas: getById('monitor-idiomas').value,
+                    habilidadesEspecificas: getById('monitor-habilidades-esp').value,
+                    experiencias: getById('monitor-experiencias').value,
+                    redesSociais: getById('monitor-redes-sociais').value,
                     habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
 
@@ -3335,10 +3414,21 @@
         }
 
         @keyframes move {
-            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-            33% { transform: translate(150px, 100px) rotate(30deg) scale(1.1); }
-            66% { transform: translate(-100px, 200px) rotate(-20deg) scale(0.9); }
-            100% { transform: translate(50px, -50px) rotate(10deg) scale(1); }
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            33% {
+                transform: translate(150px, 100px) rotate(30deg) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-100px, 200px) rotate(-20deg) scale(0.9);
+            }
+
+            100% {
+                transform: translate(50px, -50px) rotate(10deg) scale(1);
+            }
         }
 
         #particles-js {
@@ -3366,7 +3456,7 @@
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 
+            box-shadow:
                 0 8px 32px 0 rgba(31, 38, 135, 0.07),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.2);
             border-radius: 20px;
@@ -3392,7 +3482,7 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             transform: rotate(45deg);
             pointer-events: none;
             transition: all 0.6s ease;
@@ -3403,10 +3493,21 @@
             top: -30%;
         }
 
-        .dashboard-card.receita { border-bottom: 4px solid #10b981; }
-        .dashboard-card.despesa { border-bottom: 4px solid #ef4444; }
-        .dashboard-card.saldo { border-bottom: 4px solid #3b82f6; }
-        .dashboard-card.pendente { border-bottom: 4px solid #f59e0b; }
+        .dashboard-card.receita {
+            border-bottom: 4px solid #10b981;
+        }
+
+        .dashboard-card.despesa {
+            border-bottom: 4px solid #ef4444;
+        }
+
+        .dashboard-card.saldo {
+            border-bottom: 4px solid #3b82f6;
+        }
+
+        .dashboard-card.pendente {
+            border-bottom: 4px solid #f59e0b;
+        }
 
         .stat-icon-bg {
             position: absolute;
@@ -3457,13 +3558,32 @@
         }
 
         @keyframes skeleton-loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
 
-        .skeleton-text { height: 1rem; margin-bottom: 0.5rem; width: 100%; }
-        .skeleton-title { height: 1.5rem; margin-bottom: 1rem; width: 60%; }
-        .skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+        .skeleton-text {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+            width: 100%;
+        }
+
+        .skeleton-title {
+            height: 1.5rem;
+            margin-bottom: 1rem;
+            width: 60%;
+        }
+
+        .skeleton-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+        }
 
         .modal-box.glassmorphism {
             background: rgba(255, 255, 255, 0.8);
@@ -4223,7 +4343,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: 
+            background:
                 radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
                 radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
                 radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
@@ -4234,8 +4354,13 @@
         }
 
         @keyframes mesh-move {
-            0% { transform: scale(1) translate(0, 0); }
-            100% { transform: scale(1.2) translate(5%, 5%); }
+            0% {
+                transform: scale(1) translate(0, 0);
+            }
+
+            100% {
+                transform: scale(1.2) translate(5%, 5%);
+            }
         }
 
         .loader-content {
@@ -4288,13 +4413,25 @@
         }
 
         @keyframes loader-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         @keyframes morph {
-            0% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(0deg); }
-            100% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; transform: rotate(180deg); }
+            0% {
+                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+                transform: rotate(0deg);
+            }
+
+            100% {
+                border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
+                transform: rotate(180deg);
+            }
         }
 
         .loader-logo-main {
@@ -4310,14 +4447,23 @@
             justify-content: center;
             font-size: 1.8rem;
             color: var(--primary);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
             z-index: 3;
             animation: loader-pulse 2s ease-in-out infinite;
         }
 
         @keyframes loader-pulse {
-            0%, 100% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.05); filter: brightness(1.1); }
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+                filter: brightness(1.1);
+            }
         }
 
         .loader-text-aaa {
@@ -4407,8 +4553,15 @@
 
         /* [AAA] Custom Animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .animate-fade-in {
@@ -4416,8 +4569,15 @@
         }
 
         @keyframes bounceSubtle {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-4px);
+            }
         }
 
         .animate-bounce-subtle {
@@ -4425,9 +4585,20 @@
         }
 
         /* [AAA] Liquid Blobs Dark Mode Adjustment */
-        .dark .blob-1 { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); opacity: 0.4; }
-        .dark .blob-2 { background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%); opacity: 0.4; }
-        .dark .blob-3 { background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%); opacity: 0.4; }
+        .dark .blob-1 {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            opacity: 0.4;
+        }
+
+        .dark .blob-2 {
+            background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
+            opacity: 0.4;
+        }
+
+        .dark .blob-3 {
+            background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%);
+            opacity: 0.4;
+        }
     </style>
 </head>
 
@@ -4549,14 +4720,12 @@
 
             <div
                 class="month-filter-container glassmorphism p-4 rounded-lg mb-8 flex justify-center items-center gap-4">
-                <button
-                    class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
+                <button class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
                     data-direction="-1">&lt;</button>
                 <input type="month"
                     class="month-filter form-input text-center font-semibold text-indigo-600 border-none shadow-inner bg-white/50 backdrop-blur-sm"
                     id="month-filter-global">
-                <button
-                    class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
+                <button class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
                     data-direction="1">&gt;</button>
             </div>
 
@@ -4604,7 +4773,8 @@
                             <button onclick="openChat('dashboard')" class="gemini-btn w-full mb-2">
                                 <i class="fa-solid fa-sparkles"></i> Gerar Insights
                             </button>
-                            <button id="export-executive-pdf" class="w-full py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-lg">
+                            <button id="export-executive-pdf"
+                                class="w-full py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-lg">
                                 <i class="fa-solid fa-file-pdf"></i> Relatório Executivo
                             </button>
                         </div>
@@ -4785,19 +4955,26 @@
                             <p class="text-gray-500 mb-6 font-medium">Gerencie sua equipe e realize pagamentos de forma
                                 rápida.</p>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
                                 <!-- Botão 1: Ver Monitores -->
                                 <button id="open-monitores-modal-btn"
                                     class="shiny-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
                                     <i class="fa-solid fa-users-viewfinder text-3xl"></i>
-                                    <span class="text-lg font-bold">Monitores Cadastrados</span>
+                                    <span class="text-sm font-bold">Monitores Cadastrados</span>
                                 </button>
 
                                 <!-- Botão 2: Lançar Pagamento -->
                                 <button id="open-pagamento-modal-btn"
                                     class="gemini-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
                                     <i class="fa-solid fa-hand-holding-dollar text-3xl"></i>
-                                    <span class="text-lg font-bold">Lançar Pagamento & Avaliação</span>
+                                    <span class="text-sm font-bold">Lançar Pagamento & Avaliação</span>
+                                </button>
+
+                                <!-- Botão 3: Link de Cadastro -->
+                                <button onclick="window.copiarLinkCadastro()"
+                                    class="bg-indigo-600 text-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-200">
+                                    <i class="fa-solid fa-link text-3xl"></i>
+                                    <span class="text-sm font-bold">Copiar Link de Cadastro</span>
                                 </button>
                             </div>
                         </div>
@@ -5973,6 +6150,115 @@
                             Residencial</label>
                         <input type="text" id="monitor-endereco" placeholder="Rua, Número, Bairro, Cidade"
                             class="form-input w-full">
+                    </div>
+
+                    <!-- Novos campos agrupados -->
+                    <div class="col-span-full pt-4 border-t border-gray-100">
+                        <h4 class="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Saúde e Segurança
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label for="monitor-tipo-sanguineo" class="block text-sm font-bold text-gray-700">Tipo
+                                    Sanguíneo</label>
+                                <select id="monitor-tipo-sanguineo" class="form-input w-full">
+                                    <option value="">Selecione...</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="monitor-plano-saude" class="block text-sm font-bold text-gray-700">Plano de
+                                    Saúde</label>
+                                <input type="text" id="monitor-plano-saude" placeholder="Operadora/Nº ou SUS"
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-medicamentos"
+                                    class="block text-sm font-bold text-gray-700">Medicamentos Contínuos</label>
+                                <input type="text" id="monitor-medicamentos" placeholder="Quais medicamentos?"
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-restricoes" class="block text-sm font-bold text-gray-700">Restrições
+                                    Alimentares / Alergias</label>
+                                <input type="text" id="monitor-restricoes" placeholder="Ex: Vegano, Lactose, Glúten..."
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-condicao-medica"
+                                    class="block text-sm font-bold text-gray-700">Condições Médicas / Físicas</label>
+                                <input type="text" id="monitor-condicao-medica" placeholder="Asma, Diabetes, Lesões..."
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-fobias" class="block text-sm font-bold text-gray-700">Fobias ou
+                                    Medos</label>
+                                <input type="text" id="monitor-fobias" placeholder="Ex: Altura, Escuro..."
+                                    class="form-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-full pt-4 border-t border-gray-100">
+                        <h4 class="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Profissional e
+                            Uniforme</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label for="monitor-tamanho-camiseta"
+                                    class="block text-sm font-bold text-gray-700">Tamanho Camiseta</label>
+                                <select id="monitor-tamanho-camiseta" class="form-input w-full">
+                                    <option value="">Selecione...</option>
+                                    <option value="PP">PP</option>
+                                    <option value="P">P</option>
+                                    <option value="M">M</option>
+                                    <option value="G">G</option>
+                                    <option value="GG">GG</option>
+                                    <option value="XG">XG</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="monitor-escolaridade"
+                                    class="block text-sm font-bold text-gray-700">Escolaridade / Curso</label>
+                                <input type="text" id="monitor-escolaridade" placeholder="Ex: Pedagogia"
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="monitor-psocorros" class="block text-sm font-bold text-gray-700">Primeiros
+                                    Socorros</label>
+                                <input type="text" id="monitor-psocorros" placeholder="Data última reciclagem"
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="monitor-idiomas"
+                                    class="block text-sm font-bold text-gray-700">Idiomas</label>
+                                <input type="text" id="monitor-idiomas" placeholder="Ex: Inglês Básico"
+                                    class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-habilidades-esp"
+                                    class="block text-sm font-bold text-gray-700">Habilidades Específicas</label>
+                                <input type="text" id="monitor-habilidades-esp"
+                                    placeholder="Toca violão, sabe nadar, artes manuais..." class="form-input w-full">
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-experiencias"
+                                    class="block text-sm font-bold text-gray-700">Experiências Anteriores</label>
+                                <textarea id="monitor-experiencias" rows="2" class="form-input w-full"
+                                    placeholder="Resumo de onde trabalhou..."></textarea>
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="monitor-redes-sociais" class="block text-sm font-bold text-gray-700">Redes
+                                    Sociais</label>
+                                <input type="text" id="monitor-redes-sociais"
+                                    placeholder="@instagram / linkedin.com/in/perfil" class="form-input w-full">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="space-y-1 md:col-span-2">

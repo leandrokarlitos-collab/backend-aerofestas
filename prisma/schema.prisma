@@ -130,6 +130,19 @@ model Monitor {
   fotoPerfil        String?             // Base64 ou URL
   fotoDocumento     String?             // Base64 ou URL
   habilidades       String?             // JSON: {forca, agilidade, proatividade, comunicacao, disponibilidade, respeito}
+  tipoSanguineo     String?
+  medicamentos      String?
+  restricoesAlimentares String?
+  planoSaude        String?
+  condicaoMedica    String?
+  tamanhoCamiseta   String?
+  escolaridade      String?
+  certificadoPrimeirosSocorros String?
+  habilidadesEspecificas String?
+  idiomas           String?
+  experiencias      String?
+  redesSociais      String?
+  fobias            String?
   desempenho        Desempenho[]
   pagamentos        PagamentoMonitor[]
 }

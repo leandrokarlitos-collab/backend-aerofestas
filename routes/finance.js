@@ -421,6 +421,51 @@ router.get('/monitores', async (req, res) => {
     }
 });
 
+// GET /api/finance/monitores/:id
+router.get('/monitores/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const monitor = await prisma.monitor.findUnique({
+            where: { id },
+            include: {
+                desempenho: true,
+                pagamentos: true
+            }
+        });
+        if (!monitor) return res.status(404).json({ error: "Monitor não encontrado" });
+        res.json(monitor);
+    } catch (e) {
+        console.error("Erro ao buscar monitor:", e);
+        res.status(500).json({ error: "Erro ao buscar monitor" });
+    }
+});
+
+// POST /api/finance/monitores/verificar
+router.post('/monitores/verificar', async (req, res) => {
+    try {
+        const { nome, nascimento } = req.body;
+        if (!nome || !nascimento) {
+            return res.status(400).json({ error: "Nome e data de nascimento são obrigatórios." });
+        }
+
+        const monitor = await prisma.monitor.findFirst({
+            where: {
+                nome: { equals: nome, mode: 'insensitive' },
+                nascimento: nascimento
+            }
+        });
+
+        if (monitor) {
+            return res.json({ found: true, monitor });
+        } else {
+            return res.json({ found: false });
+        }
+    } catch (e) {
+        console.error("Erro ao verificar monitor:", e);
+        res.status(500).json({ error: "Erro interno ao verificar monitor." });
+    }
+});
+
 // POST /api/finance/monitores
 router.post('/monitores', async (req, res) => {
     try {
@@ -438,7 +483,20 @@ router.post('/monitores', async (req, res) => {
                 cnhCategoria: m.cnhCategoria,
                 fotoPerfil: m.fotoPerfil,
                 fotoDocumento: m.fotoDocumento,
-                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null
+                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null,
+                tipoSanguineo: m.tipoSanguineo,
+                medicamentos: m.medicamentos,
+                restricoesAlimentares: m.restricoesAlimentares,
+                planoSaude: m.planoSaude,
+                condicaoMedica: m.condicaoMedica,
+                tamanhoCamiseta: m.tamanhoCamiseta,
+                escolaridade: m.escolaridade,
+                certificadoPrimeirosSocorros: m.certificadoPrimeirosSocorros,
+                habilidadesEspecificas: m.habilidadesEspecificas,
+                idiomas: m.idiomas,
+                experiencias: m.experiencias,
+                redesSociais: m.redesSociais,
+                fobias: m.fobias
             }
         });
         res.json(novoMonitor);
@@ -466,7 +524,20 @@ router.put('/monitores/:id', async (req, res) => {
                 cnhCategoria: m.cnhCategoria,
                 fotoPerfil: m.fotoPerfil,
                 fotoDocumento: m.fotoDocumento,
-                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null
+                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : undefined,
+                tipoSanguineo: m.tipoSanguineo,
+                medicamentos: m.medicamentos,
+                restricoesAlimentares: m.restricoesAlimentares,
+                planoSaude: m.planoSaude,
+                condicaoMedica: m.condicaoMedica,
+                tamanhoCamiseta: m.tamanhoCamiseta,
+                escolaridade: m.escolaridade,
+                certificadoPrimeirosSocorros: m.certificadoPrimeirosSocorros,
+                habilidadesEspecificas: m.habilidadesEspecificas,
+                idiomas: m.idiomas,
+                experiencias: m.experiencias,
+                redesSociais: m.redesSociais,
+                fobias: m.fobias
             }
         });
         res.json(updated);

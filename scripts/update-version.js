@@ -22,3 +22,5 @@ if (!existingEntry) {
 fs.writeFileSync(versionFilePath, JSON.stringify(versionData, null, 4));
 console.log(`✅ version.json atualizado para v${pkg.version}`);
 
+
+
