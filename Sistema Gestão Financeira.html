@@ -382,7 +382,26 @@
                             fotoPerfil: m.fotoPerfil,
                             fotoDocumento: m.fotoDocumento,
                             habilidades: habilidades || { forca: 5, agilidade: 5, proatividade: 5, comunicacao: 5, disponibilidade: 5, respeito: 5 },
-                            desempenho: m.desempenho || []
+                            desempenho: m.desempenho || [],
+                            // Novos campos mapeados
+                            tipoSanguineo: m.tipoSanguineo,
+                            planoSaude: m.planoSaude,
+                            medicamentos: m.medicamentos,
+                            restricoesAlimentares: m.restricoesAlimentares,
+                            alergias: m.alergias,
+                            condicaoMedica: m.condicaoMedica,
+                            fobias: m.fobias,
+                            tamanhoCamiseta: m.tamanhoCamiseta,
+                            escolaridade: m.escolaridade,
+                            possuiCursoPS: m.possuiCursoPS,
+                            fotoCertificadoPS: m.fotoCertificadoPS,
+                            idiomas: m.idiomas,
+                            habilidadesEspecificas: m.habilidadesEspecificas,
+                            experiencias: m.experiencias,
+                            instagram: m.instagram,
+                            facebook: m.facebook,
+                            linkedin: m.linkedin,
+                            tiktok: m.tiktok
                         };
                     });
 
@@ -6342,11 +6361,32 @@
                                 <textarea id="monitor-experiencias" rows="2" class="form-input w-full"
                                     placeholder="Resumo de onde trabalhou..."></textarea>
                             </div>
-                            <div class="space-y-1 md:col-span-2">
-                                <label for="monitor-redes-sociais" class="block text-sm font-bold text-gray-700">Redes
-                                    Sociais</label>
-                                <input type="text" id="monitor-redes-sociais"
-                                    placeholder="@instagram / linkedin.com/in/perfil" class="form-input w-full">
+                            <div class="col-span-full pt-4 border-t border-gray-100">
+                                <h4 class="text-xs font-bold text-pink-600 uppercase tracking-widest mb-4">Redes Sociais
+                                </h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-1">
+                                        <label
+                                            class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Instagram</label>
+                                        <input type="text" id="monitor-instagram" placeholder="@usuario"
+                                            class="form-input w-full">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label
+                                            class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Facebook</label>
+                                        <input type="text" id="monitor-facebook" class="form-input w-full">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label
+                                            class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">LinkedIn</label>
+                                        <input type="text" id="monitor-linkedin" class="form-input w-full">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label
+                                            class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TikTok</label>
+                                        <input type="text" id="monitor-tiktok" class="form-input w-full">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

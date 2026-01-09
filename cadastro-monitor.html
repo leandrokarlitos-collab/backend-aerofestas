@@ -160,9 +160,9 @@
         <!-- Header -->
         <div class="text-center mb-12 animate-fade-in">
             <div class="inline-flex items-center justify-center p-4 bg-white rounded-3xl shadow-sm mb-6">
-                <i class="fa-solid fa-user-astronaut text-primary-600 text-4xl"></i>
+                <i class="fa-solid fa-user-check text-primary-600 text-4xl"></i>
             </div>
-            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight" id="page-title">Monitor Aero Festas</h1>
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight" id="page-title">Cadastro de Monitor</h1>
             <p class="mt-3 text-slate-500 text-lg font-medium" id="page-subtitle">Faça parte do time que leva alegria
                 para todo o Brasil.</p>
         </div>
@@ -199,7 +199,7 @@
                 class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
                 <i class="fa-solid fa-check text-5xl"></i>
             </div>
-            <h2 class="text-3xl font-bold text-slate-800 mb-3">Missão Cumprida!</h2>
+            <h2 class="text-3xl font-bold text-slate-800 mb-3">Cadastro Realizado!</h2>
             <p class="text-slate-500 text-lg mb-10">Seus dados foram processados. Em breve entraremos em contato!</p>
             <button onclick="window.location.reload()"
                 class="px-10 py-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-2xl shadow-xl transition-all transform hover:-translate-y-1">
@@ -214,7 +214,7 @@
             <div id="update-badge"
                 class="hidden bg-indigo-100/80 text-indigo-700 px-6 py-4 rounded-2xl text-base font-bold flex items-center gap-3 border border-indigo-200">
                 <div class="bg-indigo-600 text-white p-2 rounded-lg"><i class="fa-solid fa-id-card"></i></div>
-                <span>Monitor Aero detectado! Mantenha seus dados sempre atualizados.</span>
+                <span>Monitor detectado! Mantenha seus dados sempre atualizados.</span>
             </div>
 
             <!-- Seção 1: Dados Pessoais -->
@@ -234,19 +234,21 @@
                     </div>
                     <div class="relative">
                         <label for="telefone" class="form-label">WhatsApp</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000"
-                                class="flex-1 px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
-                            <button type="button" id="btn-whatsapp"
-                                class="bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-2xl transition-all shadow-lg hidden">
-                                <i class="fa-brands fa-whatsapp text-2xl"></i>
-                            </button>
-                        </div>
+                        <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
                     </div>
                     <div class="md:col-span-2">
                         <label for="email" class="form-label">E-mail</label>
-                        <input type="email" id="email" name="email" placeholder="seu@email.com"
-                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                        <input type="email" id="email" name="email" placeholder="seu@email.com" required
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm transition-all">
+                        <div class="mt-2 flex items-center gap-2">
+                            <input type="checkbox" id="no-email"
+                                class="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                                onchange="toggleNoEmail(this)">
+                            <label for="no-email"
+                                class="text-xs text-slate-500 font-medium cursor-pointer uppercase tracking-wider">Não
+                                possuo e-mail</label>
+                        </div>
                     </div>
                     <div class="md:col-span-2">
                         <label for="endereco" class="form-label">Endereço Completo</label>
@@ -529,7 +531,7 @@
                             <!-- Idiomas serão adicionados aqui -->
                         </div>
                         <button type="button" onclick="addIdiomaRow()"
-                            class="mt-4 flex items-center gap-2 text-primary-600 font-bold hover:text-primary-700 transition-colors">
+                            class="mt-4 flex items-center justify-center gap-2 w-full py-4 bg-white text-primary-600 font-bold border-2 border-primary-100 rounded-2xl hover:bg-primary-50 hover:border-primary-200 transition-all shadow-sm">
                             <i class="fa-solid fa-plus-circle"></i> Adicionar Idioma
                         </button>
                     </div>
@@ -629,7 +631,7 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label for="observacoes" class="form-label">Mensagem para os Comandantes Aero</label>
+                        <label for="observacoes" class="form-label">Mensagem para Aero Festas</label>
                         <textarea id="observacoes" name="observacoes" rows="3" placeholder="Alguma consideração final?"
                             class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none shadow-sm"></textarea>
                     </div>
@@ -639,8 +641,8 @@
             <div class="pt-10">
                 <button type="submit" id="submit-btn"
                     class="w-full py-6 bg-primary-600 hover:bg-primary-700 text-white font-bold text-2xl rounded-3xl shadow-2xl shadow-primary-500/40 transition-all transform hover:-translate-y-2 active:scale-95 flex items-center justify-center gap-4">
-                    <i class="fa-solid fa-rocket"></i>
-                    <span>Tudo pronto! Enviar Decolagem</span>
+                    <i class="fa-solid fa-check-circle"></i>
+                    <span>Tudo pronto! Finalizar Cadastro</span>
                 </button>
             </div>
         </form>
@@ -668,9 +670,25 @@
                 wrapper.classList.add('animate-fade-in');
             } else {
                 wrapper.classList.add('hidden');
-                // Opcional: Limpar campo ao esconder
                 const input = wrapper.querySelector('input, textarea');
                 if (input) input.value = '';
+            }
+        }
+
+        function toggleNoEmail(checkbox) {
+            const emailInput = document.getElementById('email');
+            if (checkbox.checked) {
+                emailInput.value = 'naopossui@aerofestas.com.br';
+                emailInput.readOnly = true;
+                emailInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-400');
+                emailInput.classList.remove('bg-white/50', 'text-slate-700');
+                emailInput.required = false;
+            } else {
+                emailInput.value = '';
+                emailInput.readOnly = false;
+                emailInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-400');
+                emailInput.classList.add('bg-white/50', 'text-slate-700');
+                emailInput.required = true;
             }
         }
 
@@ -686,16 +704,15 @@
             }
         }
 
-        // WhatsApp Helper
+        // WhatsApp Helper (Visual confirmation only)
         document.getElementById('telefone').addEventListener('input', function (e) {
-            const btn = document.getElementById('btn-whatsapp');
-            const val = e.target.value.replace(/\D/g, '');
-            if (val.length >= 10) {
-                btn.classList.remove('hidden');
-                btn.onclick = () => window.open(`https://wa.me/55${val}`, '_blank');
-            } else {
-                btn.classList.add('hidden');
-            }
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 11) val = val.slice(0, 11);
+
+            // Basic mask
+            if (val.length > 2) val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+            if (val.length > 9) val = `${val.slice(0, 9)}-${val.slice(9)}`;
+            e.target.value = val;
         });
 
         // Toggle CNH Category
@@ -789,7 +806,12 @@
                     const m = data.monitor;
                     document.getElementById('monitor-id').value = m.id;
                     document.getElementById('telefone').value = m.telefone || '';
-                    document.getElementById('email').value = m.email || '';
+                    if (m.email === 'naopossui@aerofestas.com.br') {
+                        document.getElementById('no-email').checked = true;
+                        toggleNoEmail(document.getElementById('no-email'));
+                    } else {
+                        document.getElementById('email').value = m.email || '';
+                    }
                     document.getElementById('endereco').value = m.endereco || '';
 
                     // CNH
@@ -885,7 +907,7 @@
             const submitBtn = document.getElementById('submit-btn');
             const originalContent = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparando Decolagem...';
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
 
             const id = document.getElementById('monitor-id').value;
 
