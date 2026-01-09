@@ -401,7 +401,10 @@
                             instagram: m.instagram,
                             facebook: m.facebook,
                             linkedin: m.linkedin,
-                            tiktok: m.tiktok
+                            tiktok: m.tiktok,
+                            contatoEmergenciaNome: m.contatoEmergenciaNome,
+                            contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
+                            contatoEmergenciaTelefone: m.contatoEmergenciaTelefone
                         };
                     });
 
@@ -1291,7 +1294,8 @@
 
                 container.innerHTML = monitores.map(m => {
                     const iniciais = m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                    const cnhInfo = m.cnh !== 'Não possui' ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnh}</span>` : '';
+                    const cnhInfo = m.cnh ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnhCategoria || ''}</span>` : '';
+                    const psBadge = m.possuiCursoPS ? `<span class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1" title="Possui Curso de Primeiros Socorros"><i class="fa-solid fa-heart-pulse"></i> PS</span>` : '';
 
                     // Avatar: foto ou iniciais
                     const avatarHTML = m.fotoPerfil
@@ -1306,6 +1310,7 @@
                                     <h4 class="font-bold text-gray-800 truncate">${m.nome}</h4>
                                     <div class="flex items-center gap-2 mt-1">
                                         ${cnhInfo}
+                                        ${psBadge}
                                         <span class="text-xs text-gray-500">${m.telefone || 'Sem tel'}</span>
                                     </div>
                                 </div>
@@ -1670,6 +1675,13 @@
                                     <i class="fa-solid fa-heart-pulse"></i> Saúde e Emergência
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                                    ${m.contatoEmergenciaNome ? `
+                                    <div class="md:col-span-2 bg-white/50 p-2 rounded-lg border border-red-100 mb-2">
+                                        <p class="text-[10px] text-red-500 font-bold uppercase mb-1">Contato de Referência</p>
+                                        <p class="font-bold text-gray-800">${m.contatoEmergenciaNome} (${m.contatoEmergenciaParentesco || 'N/A'})</p>
+                                        <p class="text-indigo-600 font-bold"><i class="fa-solid fa-phone"></i> ${m.contatoEmergenciaTelefone || '-'}</p>
+                                    </div>
+                                    ` : ''}
                                     <p><strong>Tipo Sanguíneo:</strong> <span class="text-red-600 font-bold">${m.tipoSanguineo || '-'}</span></p>
                                     <p><strong>Plano de Saúde:</strong> ${m.planoSaude || 'Não possui'}</p>
                                     <p class="md:col-span-2"><strong>Medicamentos:</strong> ${m.medicamentos || 'Nenhum'}</p>
@@ -1750,6 +1762,11 @@
                 getById('monitor-fobias').value = m.fobias || '';
                 getById('monitor-tamanho-camiseta').value = m.tamanhoCamiseta || '';
                 getById('monitor-escolaridade').value = m.escolaridade || '';
+
+                // Emergência
+                getById('monitor-emergencia-parentesco').value = m.contatoEmergenciaParentesco || '';
+                getById('monitor-emergencia-nome').value = m.contatoEmergenciaNome || '';
+                getById('monitor-emergencia-telefone').value = m.contatoEmergenciaTelefone || '';
 
                 // PS e Idiomas
                 getById('monitor-possui-ps').value = String(m.possuiCursoPS || false);
@@ -2070,6 +2087,19 @@
 
             eventosInput?.addEventListener('input', calcularAdicionalMotorista);
 
+            // Máscaras de Telefone
+            const aplicarMascaraTelefone = (id) => {
+                getById(id)?.addEventListener('input', function (e) {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.length > 11) val = val.slice(0, 11);
+                    if (val.length > 2) val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+                    if (val.length > 9) val = `${val.slice(0, 9)}-${val.slice(9)}`;
+                    e.target.value = val;
+                });
+            };
+            aplicarMascaraTelefone('monitor-telefone');
+            aplicarMascaraTelefone('monitor-emergencia-telefone');
+
             // Listeners para fechar modais de monitores
             document.querySelector('.monitor-details-close-btn')?.addEventListener('click', () => {
                 getById('monitor-details-modal').classList.add('hidden');
@@ -2378,6 +2408,9 @@
                     facebook: getById('monitor-facebook').value,
                     linkedin: getById('monitor-linkedin').value,
                     tiktok: getById('monitor-tiktok').value,
+                    contatoEmergenciaParentesco: getById('monitor-emergencia-parentesco').value,
+                    contatoEmergenciaNome: getById('monitor-emergencia-nome').value,
+                    contatoEmergenciaTelefone: getById('monitor-emergencia-telefone').value,
                     habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
 
@@ -6295,6 +6328,35 @@
                                     Medos</label>
                                 <input type="text" id="monitor-fobias" placeholder="Ex: Altura, Palhaços..."
                                     class="form-input w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-full pt-4 border-t border-gray-100">
+                        <h4 class="text-xs font-bold text-red-600 uppercase tracking-widest mb-4">Contato de Referência
+                            (Emergência)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label for="monitor-emergencia-parentesco"
+                                    class="block text-sm font-bold text-gray-700">Parentesco</label>
+                                <select id="monitor-emergencia-parentesco" class="form-input w-full">
+                                    <option value="">Selecione...</option>
+                                    <option value="Mãe">Mãe</option>
+                                    <option value="Pai">Pai</option>
+                                    <option value="Esposa/Esposo">Esposa/Esposo</option>
+                                    <option value="Outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="monitor-emergencia-nome"
+                                    class="block text-sm font-bold text-gray-700">Nome</label>
+                                <input type="text" id="monitor-emergencia-nome" class="form-input w-full">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="monitor-emergencia-telefone"
+                                    class="block text-sm font-bold text-gray-700">Telefone</label>
+                                <input type="text" id="monitor-emergencia-telefone" class="form-input w-full"
+                                    placeholder="(00) 00000-0000">
                             </div>
                         </div>
                     </div>

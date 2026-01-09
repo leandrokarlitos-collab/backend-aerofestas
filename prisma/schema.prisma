@@ -144,6 +144,9 @@ model Monitor {
   idiomas           String?             // JSON
   experiencias      String?
   fobias            String?
+  contatoEmergenciaNome      String?
+  contatoEmergenciaParentesco String?
+  contatoEmergenciaTelefone  String?
   instagram         String?
   facebook          String?
   linkedin          String?

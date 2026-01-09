@@ -584,6 +584,37 @@
                 </div>
             </section>
 
+            <!-- Seção 5: Contato de Referência -->
+            <section class="space-y-10">
+                <h3 class="section-title text-2xl"><i class="fa-solid fa-phone-volume text-red-500"></i> Contato de
+                    Referência (Emergência)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="contatoEmergenciaParentesco" class="form-label">Nível de Parentesco</label>
+                        <select id="contatoEmergenciaParentesco" name="contatoEmergenciaParentesco"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-4 focus:ring-primary-500/10">
+                            <option value="">Selecione...</option>
+                            <option value="Mãe">Mãe</option>
+                            <option value="Pai">Pai</option>
+                            <option value="Esposa/Esposo">Esposa/Esposo</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="contatoEmergenciaNome" class="form-label">Nome do Contato</label>
+                        <input type="text" id="contatoEmergenciaNome" name="contatoEmergenciaNome"
+                            placeholder="Nome Completo"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-4 focus:ring-primary-500/10">
+                    </div>
+                    <div>
+                        <label for="contatoEmergenciaTelefone" class="form-label">Telefone do Contato</label>
+                        <input type="text" id="contatoEmergenciaTelefone" name="contatoEmergenciaTelefone"
+                            placeholder="(00) 00000-0000"
+                            class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-4 focus:ring-primary-500/10">
+                    </div>
+                </div>
+            </section>
+
             <!-- Seção 5: Documentos -->
             <section class="space-y-10">
                 <h3 class="section-title text-2xl"><i class="fa-solid fa-camera-retro text-slate-500"></i> Fotos
@@ -710,6 +741,14 @@
             if (val.length > 11) val = val.slice(0, 11);
 
             // Basic mask
+            if (val.length > 2) val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+            if (val.length > 9) val = `${val.slice(0, 9)}-${val.slice(9)}`;
+            e.target.value = val;
+        });
+
+        document.getElementById('contatoEmergenciaTelefone').addEventListener('input', function (e) {
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 11) val = val.slice(0, 11);
             if (val.length > 2) val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
             if (val.length > 9) val = `${val.slice(0, 9)}-${val.slice(9)}`;
             e.target.value = val;
@@ -871,6 +910,11 @@
                     document.getElementById('linkedin').value = m.linkedin || '';
                     document.getElementById('tiktok').value = m.tiktok || '';
 
+                    // Emergência
+                    document.getElementById('contatoEmergenciaParentesco').value = m.contatoEmergenciaParentesco || '';
+                    document.getElementById('contatoEmergenciaNome').value = m.contatoEmergenciaNome || '';
+                    document.getElementById('contatoEmergenciaTelefone').value = m.contatoEmergenciaTelefone || '';
+
                     // Fotos Base
                     if (m.fotoPerfil) {
                         document.getElementById('preview-perfil').src = m.fotoPerfil;
@@ -955,6 +999,10 @@
                 facebook: document.getElementById('facebook').value,
                 linkedin: document.getElementById('linkedin').value,
                 tiktok: document.getElementById('tiktok').value,
+
+                contatoEmergenciaParentesco: document.getElementById('contatoEmergenciaParentesco').value,
+                contatoEmergenciaNome: document.getElementById('contatoEmergenciaNome').value,
+                contatoEmergenciaTelefone: document.getElementById('contatoEmergenciaTelefone').value,
 
                 fotoPerfil: document.getElementById('foto-perfil-base64').value,
                 fotoDocumento: document.getElementById('foto-doc-base64').value,
