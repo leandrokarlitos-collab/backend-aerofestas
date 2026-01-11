@@ -217,6 +217,30 @@
             // Torna o state acessível globalmente para os gráficos
             window.state = state;
 
+            // Função auxiliar para filtrar contas fixas ativas em um mês
+            const getContasFixasDoMes = (mesAno) => {
+                if (!state.contasFixas || state.contasFixas.length === 0) return [];
+
+                const [ano, mes] = mesAno.split('-').map(Number);
+
+                return state.contasFixas.filter(cf => {
+                    // Se for permanente, sempre aparece
+                    if (cf.tipoRecorrencia === 'permanente') return true;
+
+                    // Se for parcelada, verifica se está no intervalo
+                    if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
+                        const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
+                        const dataInicio = new Date(anoInicio, mesInicio - 1);
+                        const dataFim = new Date(anoInicio, mesInicio - 1 + cf.numParcelas);
+                        const dataAtual = new Date(ano, mes - 1);
+
+                        return dataAtual >= dataInicio && dataAtual < dataFim;
+                    }
+
+                    return false;
+                });
+            };
+
             // Atribui a função à variável global
             loadDataFromCloud = async function () {
                 try {
@@ -483,7 +507,7 @@
             window.loadDataFromCloud = loadDataFromCloud;
 
             // --- 2. RENDERIZAÇÃO ---
-            const renderAll = () => {
+            function renderAll() {
                 const monthInput = getById('month-filter-global');
                 if (monthInput) monthInput.value = state.selectedMonth;
 
@@ -744,7 +768,28 @@
                         if (todasEntradas.length === 0) {
                             tbodyEventos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma entrada neste mês.</td></tr>';
                         } else {
-                            tbodyEventos.innerHTML = todasEntradas.map(entry => `
+                            tbodyEventos.innerHTML = todasEntradas.map(entry => {
+                                let btnEdit = "";
+                                if (entry.editavel) {
+                                    btnEdit = `<button onclick="editarEvento('${entry.eventoId}')" 
+                                                        class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                                        title="Editar Evento">
+                                                    <i class="fa-solid fa-edit"></i>
+                                                </button>`;
+                                }
+                                
+                                let btnDel = "";
+                                if (entry.deletavel) {
+                                    btnDel = `<button onclick="deletarEntradaManual('${entry.id}')" 
+                                                        class="text-red-600 hover:text-red-900 transition-colors"
+                                                        title="Deletar">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>`;
+                                } else if (!entry.editavel) {
+                                    btnDel = '<span class="text-gray-400 text-xs">-</span>';
+                                }
+
+                                return `
                                     <tr>
                                         <td>${formatarData(entry.data)}</td>
                                         <td>${entry.empresa}</td>
@@ -754,26 +799,13 @@
                                         <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
                                         <td>
                                             <div class="flex space-x-2">
-                                                ${entry.editavel
-                                    ? `<button onclick="editarEvento('${entry.eventoId}')" 
-                                                            class="text-indigo-600 hover:text-indigo-900 transition-colors"
-                                                            title="Editar Evento">
-                                                        <i class="fa-solid fa-edit"></i>
-                                                    </button>`
-                                    : ''
-                                }
-                                                ${entry.deletavel
-                                    ? `<button onclick="deletarEntradaManual('${entry.id}')" 
-                                                            class="text-red-600 hover:text-red-900 transition-colors"
-                                                            title="Deletar">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </button>`
-                                    : entry.editavel ? '' : '<span class="text-gray-400 text-xs">-</span>'
-                                }
+                                                ${btnEdit}
+                                                ${btnDel}
                                             </div>
                                         </td>
                                     </tr>
-                                `).join('');
+                                `;
+                            }).join('');
                         }
                     }
                 }
@@ -854,6 +886,15 @@
                                     statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">⏳ PENDENTE</span>';
                                 }
 
+                                const recurrenceInfo = cf.tipoRecorrencia === 'parcelada' ? 'Parcelada (' + cf.numParcelas + 'x)' : 'Permanente';
+                                const badgeRecurrence = parcelaAtual 
+                                    ? '<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">📊 Parcela ' + parcelaAtual + '/' + cf.numParcelas + '</span>'
+                                    : '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">♾️ PERMANENTE</span>';
+
+                                const btnLancar = !foiLancada 
+                                    ? '<button class="shiny-btn px-3 py-1.5 rounded text-sm flex-1 min-w-[120px]" onclick="lancarGastoDeContaFixa(\'' + cf.id + '\')" title="Lançar como Gasto"><i class="fa-solid fa-money-bill-wave mr-1"></i> Lançar Gasto</button>'
+                                    : '<div class="flex-1 px-3 py-1.5 bg-green-100 text-green-800 rounded text-sm text-center font-semibold"><i class="fa-solid fa-check-double mr-1"></i> Já Lançado</div>';
+
                                 return `
                                     <div id="fixed-card-${cf.id}" class="glassmorphism ${statusClass} p-4 rounded-lg mb-3 hover:shadow-lg transition-all duration-300">
                                         <div class="flex justify-between items-start mb-3">
@@ -864,7 +905,7 @@
                                                 </div>
                                                 <div class="flex items-center gap-2 flex-wrap mt-1">
                                                     ${statusBadge}
-                                                    ${parcelaAtual ? `<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">📊 Parcela ${parcelaAtual}/${cf.numParcelas}</span>` : '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">♾️ PERMANENTE</span>'}
+                                                    ${badgeRecurrence}
                                                     <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">${cf.categoria}</span>
                                                 </div>
                                             </div>
@@ -874,21 +915,11 @@
                                             </div>
                                         </div>
                                         <div class="flex items-center justify-between text-xs text-gray-600 mb-3 pb-3 border-b border-gray-200">
-                                            <span><i class="fa-solid fa-calendar-days mr-1"></i> ${cf.tipoRecorrencia === 'parcelada' ? `Parcelada (${cf.numParcelas}x)` : 'Permanente'}</span>
-                                            ${cf.anexos && cf.anexos.length > 0 ? `<span><i class="fa-solid fa-paperclip mr-1"></i> ${cf.anexos.length} anexo(s)</span>` : ''}
+                                            <span><i class="fa-solid fa-calendar-days mr-1"></i> ${recurrenceInfo}</span>
+                                            ${cf.anexos && cf.anexos.length > 0 ? '<span><i class="fa-solid fa-paperclip mr-1"></i> ' + cf.anexos.length + ' anexo(s)</span>' : ''}
                                         </div>
                                         <div class="flex gap-2 flex-wrap">
-                                            ${!foiLancada ? `
-                                                <button class="shiny-btn px-3 py-1.5 rounded text-sm flex-1 min-w-[120px]" 
-                                                        onclick="lancarGastoDeContaFixa('${cf.id}')" 
-                                                        title="Lançar como Gasto">
-                                                    <i class="fa-solid fa-money-bill-wave mr-1"></i> Lançar Gasto
-                                                </button>
-                                            ` : `
-                                                <div class="flex-1 px-3 py-1.5 bg-green-100 text-green-800 rounded text-sm text-center font-semibold">
-                                                    <i class="fa-solid fa-check-double mr-1"></i> Já Lançado
-                                                </div>
-                                            `}
+                                            ${btnLancar}
                                             <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm transition-colors" 
                                                     onclick="window.editarContaFixa('${cf.id}')" 
                                                     title="Editar">
@@ -964,7 +995,7 @@
                 const selectContaCF = getById('lancamento-cf-conta');
                 if (state.contas) {
                     const options = '<option value="">-- Selecione uma conta --</option>' +
-                        state.contas.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
 
                     if (selectConta) {
                         const cur = selectConta.value;
@@ -979,14 +1010,13 @@
                 }
 
                 console.log(`✅ Renderização da aba [${tab}] completa!`);
-            };
-
                 console.log("✅ Renderização completa!");
-            };
+            }
+            window.renderAll = renderAll;
 
             // ========== LOGICA DA ABA SALÁRIOS ==========
 
-            const renderSalariosTab = () => {
+            function renderSalariosTab() {
                 const select = getById('salario-funcionario-select');
                 if (!select) return;
 
@@ -1254,7 +1284,7 @@
 
             // ========== LOGICA DA ABA MONITORES (REWORK MOBILE) ==========
 
-            const renderMonitorCards = () => {
+            function renderMonitorCards() {
                 const container = getById('monitor-cards-container');
                 const countText = getById('monitor-count-text');
                 if (!container) return;
@@ -1310,7 +1340,7 @@
                 }).join('');
             };
 
-            const renderPagamentosMonitores = () => {
+            function renderPagamentosMonitores() {
                 const tbody = getById('tabela-pagamentos-monitores')?.querySelector('tbody');
                 const tfoot = getById('tabela-pagamentos-monitores')?.querySelector('tfoot');
                 if (!tbody) return;
@@ -1616,8 +1646,12 @@
                         : '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">PENDENTE</span>';
 
                     const motoristaInfo = pagamento.foiMotorista
-                        ? `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full"><i class="fa-solid fa-truck-fast"></i> MOTORISTA (${pagamento.numEventos || 0} eventos)</span>`
+                        ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full"><i class="fa-solid fa-truck-fast"></i> MOTORISTA (' + (pagamento.numEventos || 0) + ' eventos)</span>'
                         : '';
+
+                    const valorBaseStr = (parseFloat(pagamento.valorBase) || 0).toFixed(2);
+                    const horasExtrasStr = pagamento.horasExtras > 0 ? `<span><strong>HE:</strong> R$ ${(parseFloat(pagamento.horasExtras) || 0).toFixed(2)}</span>` : '';
+                    const adicionalStr = pagamento.adicional > 0 ? `<span><strong>Motorista:</strong> R$ ${(parseFloat(pagamento.adicional) || 0).toFixed(2)}</span>` : '';
 
                     return `
                                     <div class="bg-white p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
@@ -1650,9 +1684,9 @@
                                         </div>
                                         ${pagamento.horasExtras > 0 || pagamento.adicional > 0 ? `
                                             <div class="flex gap-2 mt-2 text-[10px] text-gray-500 border-t border-gray-100 pt-2">
-                                                <span><strong>Base:</strong> R$ ${(parseFloat(pagamento.valorBase) || 0).toFixed(2)}</span>
-                                                ${pagamento.horasExtras > 0 ? `<span><strong>HE:</strong> R$ ${(parseFloat(pagamento.horasExtras) || 0).toFixed(2)}</span>` : ''}
-                                                ${pagamento.adicional > 0 ? `<span><strong>Motorista:</strong> R$ ${(parseFloat(pagamento.adicional) || 0).toFixed(2)}</span>` : ''}
+                                                <span><strong>Base:</strong> R$ ${valorBaseStr}</span>
+                                                ${horasExtrasStr}
+                                                ${adicionalStr}
                                             </div>
                                         ` : ''}
                                     </div>
@@ -2933,30 +2967,6 @@
                     btn.closest('.modal-backdrop')?.classList.add('hidden');
                 });
             });
-
-            // NOTA: Função auxiliar para filtrar contas fixas ativas em um mês
-            const getContasFixasDoMes = (mesAno) => {
-                if (!state.contasFixas || state.contasFixas.length === 0) return [];
-
-                const [ano, mes] = mesAno.split('-').map(Number);
-
-                return state.contasFixas.filter(cf => {
-                    // Se for permanente, sempre aparece
-                    if (cf.tipoRecorrencia === 'permanente') return true;
-
-                    // Se for parcelada, verifica se está no intervalo
-                    if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
-                        const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
-                        const dataInicio = new Date(anoInicio, mesInicio - 1);
-                        const dataFim = new Date(anoInicio, mesInicio - 1 + cf.numParcelas);
-                        const dataAtual = new Date(ano, mes - 1);
-
-                        return dataAtual >= dataInicio && dataAtual < dataFim;
-                    }
-
-                    return false;
-                });
-            };
 
             // --- 3. EXPORTAR PDF ELEGANTE (Integrado) ---
             const exportarGastosPDF = () => {
