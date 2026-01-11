@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v1.0.4';
+const CACHE_NAME = 'aero-festas-v1.0.5';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -25,9 +25,8 @@ const ASSETS_TO_CACHE = [
     '/icons/icon-512.png',
     '/icons/pwa-desktop.png',
     '/icons/pwa-mobile.png',
-    '/Logo_aviao.ico',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://cdn.tailwindcss.com'
+    '/Logo_aviao.ico'
+    // CDNs externos removidos para evitar erro de CORS no cache inicial
 ];
 
 // Instalação - Cache inicial
@@ -58,33 +57,54 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch - Estratégia Stale-While-Revalidate
+// Fetch - Estratégia Stale-While-Revalidate (Otimizada para CDNs)
 self.addEventListener('fetch', (event) => {
-    // Ignora requisições de API e Chrome Extensions
-    if (event.request.url.includes('/api/') || event.request.url.startsWith('chrome-extension')) {
+    const { request } = event;
+    const url = new URL(request.url);
+
+    // Ignora requisições de API, websockets e extensões do Chrome
+    if (url.pathname.includes('/api/') || 
+        url.protocol === 'chrome-extension:' || 
+        url.protocol === 'ws:' || 
+        url.protocol === 'wss:') {
         return;
     }
 
+    // Estratégia especial para CDNs externos
+    const isExternalCDN = !url.origin.includes('agenda-aero-festas.web.app') && 
+                          !url.origin.includes('localhost') &&
+                          !url.origin.includes('127.0.0.1');
+
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            const fetchPromise = fetch(event.request)
+        caches.match(request).then((cachedResponse) => {
+            // Se temos cache e é CDN externo, usa cache primeiro
+            if (cachedResponse && isExternalCDN) {
+                return cachedResponse;
+            }
+
+            // Tenta buscar da rede
+            const fetchRequest = isExternalCDN 
+                ? new Request(request.url, { mode: 'no-cors' })
+                : request;
+
+            return fetch(fetchRequest)
                 .then((networkResponse) => {
-                    // Cacheia apenas respostas bem-sucedidas (status 200)
-                    // Permitimos 'basic' (mesma origem) e 'cors' (CDNs)
-                    if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+                    // Cacheia apenas respostas bem-sucedidas
+                    if (networkResponse && networkResponse.status === 200) {
                         const responseToCache = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
+                            cache.put(request, responseToCache);
                         });
                     }
                     return networkResponse;
                 })
                 .catch(() => {
-                    // Offline fallback
-                    return cachedResponse || Response.error();
+                    // Se falhar e temos cache, retorna cache
+                    return cachedResponse || new Response('Offline', { 
+                        status: 503, 
+                        statusText: 'Service Unavailable' 
+                    });
                 });
-
-            return cachedResponse || fetchPromise;
         })
     );
 });
