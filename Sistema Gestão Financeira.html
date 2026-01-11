@@ -1534,6 +1534,33 @@
                 link.click();
             };
 
+            // Função atualizada para download de imagens (Base64 ou URL)
+            window.downloadImage = async (src, filename) => {
+                if (!src) return;
+                
+                // Se for Base64, usa o método antigo
+                if (src.startsWith('data:')) {
+                    window.baixarArquivoBase64(src, filename);
+                    return;
+                }
+                
+                // Se for URL (Cloudinary), faz download via fetch
+                try {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.click();
+                    window.URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error("Erro ao baixar imagem:", error);
+                    // Fallback: abre em nova aba
+                    window.open(src, '_blank');
+                }
+            };
+
             window.abrirVisualizadorFoto = (src, titulo) => {
                 const img = getById('visualizador-foto-img');
                 const title = getById('visualizador-foto-titulo');
@@ -1601,9 +1628,17 @@
                 if (!m_basic) return;
 
                 // Carrega detalhes completos (incluindo fotos) apenas sob demanda
-                showToast("Carregando detalhes...", false);
+                showToastModal("Carregando detalhes...", false);
                 const m = await window.api.getMonitorById(id);
-                if (!m) return showToast("Erro ao carregar detalhes", true);
+                if (!m) return showToastModal("Erro ao carregar detalhes", true);
+
+                console.log("📸 Dados do monitor carregados:", {
+                    nome: m.nome,
+                    temFotoPerfil: !!m.fotoPerfil,
+                    temFotoDoc: !!m.fotoDocumento,
+                    temPS: !!m.fotoCertificadoPS,
+                    fotoPerfil: m.fotoPerfil?.substring(0, 50) + '...'
+                });
 
                 const body = getById('monitor-details-body');
                 if (!body) return;
@@ -1735,17 +1770,17 @@
 
                         ${m.fotoPerfil ? `
                         <div class="w-full flex flex-col items-center gap-2">
-                            <img src="${m.fotoPerfil}" class="max-w-[200px] h-auto rounded-2xl shadow-lg border-2 border-white">
+                            <img src="${m.fotoPerfil}" loading="lazy" class="max-w-[200px] h-auto rounded-2xl shadow-lg border-2 border-white" alt="Foto de ${m.nome}">
                             <div class="flex gap-2">
                                 <button onclick="abrirVisualizadorFoto('${m.fotoPerfil}', 'Foto de ${m.nome}')" class="text-[10px] bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-all font-bold">
                                     <i class="fa-solid fa-eye"></i> VER FOTO
                                 </button>
-                                <button onclick="baixarArquivoBase64('${m.fotoPerfil}', 'foto-${m.nome.toLowerCase().replace(/\s+/g, '-')}.png')" class="text-[10px] bg-indigo-600 border border-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all font-bold">
+                                <button onclick="window.downloadImage('${m.fotoPerfil}', 'foto-${m.nome.toLowerCase().replace(/\s+/g, '-')}.jpg')" class="text-[10px] bg-indigo-600 border border-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all font-bold">
                                     <i class="fa-solid fa-download"></i> BAIXAR
                                 </button>
                             </div>
                         </div>
-                        ` : ''}
+                        ` : '<p class="text-center text-gray-400 text-sm py-4">Sem foto de perfil cadastrada</p>'}
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -1796,7 +1831,7 @@
                                                 <button onclick="abrirVisualizadorFoto('${m.fotoCertificadoPS}', 'Certificado PS - ${m.nome}')" class="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
                                                     <i class="fa-solid fa-eye"></i> VER CERTIFICADO
                                                 </button>
-                                                <button onclick="baixarArquivoBase64('${m.fotoCertificadoPS}', 'certificado-ps-${m.nome.toLowerCase().replace(/\s+/g, '-')}.png')" class="text-[10px] bg-emerald-600 border border-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition-all font-bold">
+                                                <button onclick="window.downloadImage('${m.fotoCertificadoPS}', 'certificado-ps-${m.nome.toLowerCase().replace(/\s+/g, '-')}.jpg')" class="text-[10px] bg-emerald-600 border border-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition-all font-bold">
                                                     <i class="fa-solid fa-download"></i> BAIXAR
                                                 </button>
                                             </div>
@@ -1821,12 +1856,12 @@
                                         ${m.cnh ? 'CNH - Carteira Nacional de Habilitação' : 'RG - Documento de Identificação'}
                                     </p>
                                     <div class="flex flex-col items-center gap-3">
-                                        <img src="${m.fotoDocumento}" class="max-w-full max-h-64 rounded-lg shadow-md border-2 border-white object-contain" alt="Documento">
+                                        <img src="${m.fotoDocumento}" loading="lazy" class="max-w-full max-h-64 rounded-lg shadow-md border-2 border-white object-contain" alt="Documento">
                                         <div class="flex gap-2">
                                             <button onclick="abrirVisualizadorFoto('${m.fotoDocumento}', 'Documento - ${m.nome}')" class="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
                                                 <i class="fa-solid fa-eye"></i> VER DOCUMENTO
                                             </button>
-                                            <button onclick="baixarArquivoBase64('${m.fotoDocumento}', 'documento-${m.nome.toLowerCase().replace(/\s+/g, '-')}.png')" class="text-[10px] bg-indigo-600 border border-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all font-bold">
+                                            <button onclick="window.downloadImage('${m.fotoDocumento}', 'documento-${m.nome.toLowerCase().replace(/\s+/g, '-')}.jpg')" class="text-[10px] bg-indigo-600 border border-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all font-bold">
                                                 <i class="fa-solid fa-download"></i> BAIXAR
                                             </button>
                                         </div>
@@ -1846,9 +1881,9 @@
                 const m_basic = state.monitores.find(mon => mon.id === id);
                 if (!m_basic) return;
 
-                showToast("Carregando dados para edição...", false);
+                showToastModal("Carregando dados para edição...", false);
                 const m = await window.api.getMonitorById(id);
-                if (!m) return showToast("Erro ao carregar monitor", true);
+                if (!m) return showToastModal("Erro ao carregar monitor", true);
 
                 getById('monitor-id-edit').value = m.id;
                 getById('monitor-nome').value = m.nome || '';
