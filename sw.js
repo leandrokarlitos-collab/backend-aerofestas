@@ -57,37 +57,25 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch - Estratégia Stale-While-Revalidate (Otimizada para CDNs)
+// Fetch - Estratégia Stale-While-Revalidate (Apenas recursos locais)
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Ignora requisições de API, websockets e extensões do Chrome
+    // Ignora requisições de API, websockets, extensões e CDNs EXTERNOS
     if (url.pathname.includes('/api/') || 
         url.protocol === 'chrome-extension:' || 
         url.protocol === 'ws:' || 
-        url.protocol === 'wss:') {
+        url.protocol === 'wss:' ||
+        !url.origin.includes('agenda-aero-festas.web.app')) {
+        // Deixa passar direto para a rede, sem interceptar
         return;
     }
 
-    // Estratégia especial para CDNs externos
-    const isExternalCDN = !url.origin.includes('agenda-aero-festas.web.app') && 
-                          !url.origin.includes('localhost') &&
-                          !url.origin.includes('127.0.0.1');
-
+    // Apenas para recursos LOCAIS da aplicação
     event.respondWith(
         caches.match(request).then((cachedResponse) => {
-            // Se temos cache e é CDN externo, usa cache primeiro
-            if (cachedResponse && isExternalCDN) {
-                return cachedResponse;
-            }
-
-            // Tenta buscar da rede
-            const fetchRequest = isExternalCDN 
-                ? new Request(request.url, { mode: 'no-cors' })
-                : request;
-
-            return fetch(fetchRequest)
+            const fetchPromise = fetch(request)
                 .then((networkResponse) => {
                     // Cacheia apenas respostas bem-sucedidas
                     if (networkResponse && networkResponse.status === 200) {
@@ -99,12 +87,14 @@ self.addEventListener('fetch', (event) => {
                     return networkResponse;
                 })
                 .catch(() => {
-                    // Se falhar e temos cache, retorna cache
+                    // Offline fallback
                     return cachedResponse || new Response('Offline', { 
                         status: 503, 
                         statusText: 'Service Unavailable' 
                     });
                 });
+
+            return cachedResponse || fetchPromise;
         })
     );
 });
