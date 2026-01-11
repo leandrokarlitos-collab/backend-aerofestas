@@ -187,8 +187,8 @@
                     wrapper.classList.remove('content-ready');
                 }
 
-                // Pequeno delay para o loader aparecer
-                await new Promise(resolve => setTimeout(resolve, 400));
+                // Pequeno delay para o loader aparecer (REMOVIDO PARA PERFORMANCE)
+                // await new Promise(resolve => setTimeout(resolve, 400));
 
                 await action();
 
@@ -210,7 +210,8 @@
                 receitas: [], // 🆕 Transações do tipo REVENUE (entradas manuais)
                 contas: [],
                 contasFixas: [],
-                selectedMonth: new Date().toISOString().slice(0, 7) // YYYY-MM
+                selectedMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
+                currentTab: 'dashboard'
             };
 
             // Torna o state acessível globalmente para os gráficos
@@ -235,48 +236,45 @@
                         <div class="insight-pill skeleton w-40 h-6"></div>
                     `;
 
-                    // 1. Busca primeiro o resumo do Dashboard para renderização imediata (Velocidade)
+                    // 1. Busca todos os dados em paralelo (Otimizado)
                     const [ano, mes] = state.selectedMonth.split('-');
-                    const dashboardData = await window.api.getFinanceiro(mes, ano);
-                    if (dashboardData) {
-                        state.dashboardSummary = dashboardData.summary;
-                        console.log("📊 Resumo do Dashboard recebido");
-                        renderAll(); // Chamada rápida para mostrar os cards
-                    }
-
-                    // 2. Busca o restante dos dados em paralelo
+                    
                     const [
+                        dashboardData,
                         eventosCloud,
                         transacoesCloud,
                         contasCloud,
                         fixasCloud,
                         catGastos,
                         catFixas,
-                        monitoresCloud,
                         pagamentosCloud,
                         funcionariosCloud,
                         faixasCloud
                     ] = await Promise.all([
+                        window.api.getFinanceiro(mes, ano),
                         window.api.getEventos(),
                         window.api.getTransacoes(),
                         window.api.getContas(),
                         window.api.getContasFixas(),
                         window.api.getCategoriasGastos(),
                         window.api.getCategoriasFixas(),
-                        window.api.getMonitores(),
                         window.api.getPagamentosMonitores(),
                         window.api.getFuncionarios(),
                         window.api.getFaixasComissao()
                     ]);
 
-                    console.log("📊 Dados recebidos:", {
+                    if (dashboardData) {
+                        state.dashboardSummary = dashboardData.summary;
+                        console.log("📊 Resumo do Dashboard recebido");
+                    }
+
+                    console.log("📊 Dados recebidos (exceto monitores):", {
                         eventos: eventosCloud?.length || 0,
                         transacoes: transacoesCloud?.length || 0,
                         contas: contasCloud?.length || 0,
                         contasFixas: fixasCloud?.length || 0,
                         catGastos: catGastos?.length || 0,
                         catFixas: catFixas?.length || 0,
-                        monitores: monitoresCloud?.length || 0,
                         pagamentos: pagamentosCloud?.length || 0,
                         funcionarios: funcionariosCloud?.length || 0,
                         faixas: faixasCloud?.length || 0
@@ -360,53 +358,9 @@
                     // 6. Mapeia Categorias de Contas Fixas
                     state.contaFixaCategorias = catFixas.map(c => ({ id: c.id, nome: c.name }));
 
-                    // 7. Mapeia MONITORES
-                    state.monitores = monitoresCloud.map(m => {
-                        let habilidades = null;
-                        try {
-                            habilidades = m.habilidades ? JSON.parse(m.habilidades) : null;
-                        } catch (e) {
-                            console.warn('Erro ao parsear habilidades:', m.id, e);
-                        }
-
-                        return {
-                            id: m.id,
-                            nome: m.nome,
-                            nascimento: m.nascimento,
-                            telefone: m.telefone,
-                            email: m.email,
-                            endereco: m.endereco,
-                            observacoes: m.observacoes,
-                            cnh: m.cnh,
-                            cnhCategoria: m.cnhCategoria,
-                            fotoPerfil: m.fotoPerfil,
-                            fotoDocumento: m.fotoDocumento,
-                            habilidades: habilidades || { forca: 5, agilidade: 5, proatividade: 5, comunicacao: 5, disponibilidade: 5, respeito: 5 },
-                            desempenho: m.desempenho || [],
-                            // Novos campos mapeados
-                            tipoSanguineo: m.tipoSanguineo,
-                            planoSaude: m.planoSaude,
-                            medicamentos: m.medicamentos,
-                            restricoesAlimentares: m.restricoesAlimentares,
-                            alergias: m.alergias,
-                            condicaoMedica: m.condicaoMedica,
-                            fobias: m.fobias,
-                            tamanhoCamiseta: m.tamanhoCamiseta,
-                            escolaridade: m.escolaridade,
-                            possuiCursoPS: m.possuiCursoPS,
-                            fotoCertificadoPS: m.fotoCertificadoPS,
-                            idiomas: m.idiomas,
-                            habilidadesEspecificas: m.habilidadesEspecificas,
-                            experiencias: m.experiencias,
-                            instagram: m.instagram,
-                            facebook: m.facebook,
-                            linkedin: m.linkedin,
-                            tiktok: m.tiktok,
-                            contatoEmergenciaNome: m.contatoEmergenciaNome,
-                            contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
-                            contatoEmergenciaTelefone: m.contatoEmergenciaTelefone
-                        };
-                    });
+                    // 7. Mapeia MONITORES (REMOVIDO DO CARREGAMENTO INICIAL PARA PERFORMANCE)
+                    // Agora é carregado apenas sob demanda ao abrir o modal de monitores.
+                    if (!state.monitores) state.monitores = [];
 
                     // 8. Mapeia PAGAMENTOS DE MONITORES
                     state.pagamentosMonitores = pagamentosCloud.map(p => ({
@@ -580,242 +534,425 @@
                     return `<span class="${colorClass} font-bold"><i class="fa-solid ${icon} mr-1"></i>${Math.abs(diff).toFixed(1)}%</span> vs mês anterior`;
                 };
 
-                // Atualiza Cards do Dashboard
-                getById('total-receitas').textContent = formatarMoeda(recAtual);
-                getById('receitas-comparison').innerHTML = getChangeHTML(recAtual, recAnterior);
+                // --- [PERFORMANCE] Renderização por Aba ---
+                const tab = state.currentTab || 'dashboard';
 
-                getById('total-despesas').textContent = formatarMoeda(despAtual);
-                const despesasComparison = getById('despesas-comparison');
-                despesasComparison.innerHTML = getChangeHTML(despAtual, despAnterior, true);
+                // Atualiza Cards do Dashboard (Apenas se estiver no Dashboard)
+                if (tab === 'dashboard') {
+                    getById('total-receitas').textContent = formatarMoeda(recAtual);
+                    getById('receitas-comparison').innerHTML = getChangeHTML(recAtual, recAnterior);
 
-                // Adiciona Gastos Pendentes (Centralizado no Backend)
-                if (state.dashboardSummary && state.dashboardSummary.pendingExpenses > 0) {
-                    const pendingVal = state.dashboardSummary.pendingExpenses;
-                    despesasComparison.innerHTML += `<div class="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 flex flex-col gap-1 text-amber-800 animate-bounce-subtle">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Gastos Pendentes:</span>
-                            <span class="font-bold">${formatarMoeda(pendingVal)}</span>
-                        </div>
-                        <button onclick="window.showPendingDetailsModal()" class="text-[9px] text-amber-600 hover:text-amber-700 underline text-right transition-colors">
-                            <i class="fa-solid fa-list-check mr-1"></i> Ver detalhes
-                        </button>
-                    </div>`;
+                    getById('total-despesas').textContent = formatarMoeda(despAtual);
+                    const despesasComparison = getById('despesas-comparison');
+                    despesasComparison.innerHTML = getChangeHTML(despAtual, despAnterior, true);
+
+                    // Adiciona Gastos Pendentes (Centralizado no Backend)
+                    if (state.dashboardSummary && state.dashboardSummary.pendingExpenses > 0) {
+                        const pendingVal = state.dashboardSummary.pendingExpenses;
+                        despesasComparison.innerHTML += `<div class="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 flex flex-col gap-1 text-amber-800 animate-bounce-subtle">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Gastos Pendentes:</span>
+                                <span class="font-bold">${formatarMoeda(pendingVal)}</span>
+                            </div>
+                            <button onclick="window.showPendingDetailsModal()" class="text-[9px] text-amber-600 hover:text-amber-700 underline text-right transition-colors">
+                                <i class="fa-solid fa-list-check mr-1"></i> Ver detalhes
+                            </button>
+                        </div>`;
+                    }
+
+                    const elSaldo = getById('saldo-total');
+                    elSaldo.textContent = formatarMoeda(saldoAtual);
+                    elSaldo.className = `text-4xl font-bold ${saldoAtual >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+                    getById('saldo-comparison').innerHTML = getChangeHTML(saldoAtual, saldoAnterior);
+
+                    // --- [AAA] Geração de Insights Inteligentes ---
+                    const insightsContainer = getById('quick-insights');
+                    if (insightsContainer) {
+                        const insights = [];
+
+                        // Insight de Crescimento
+                        if (recAnterior > 0) {
+                            const cresc = ((recAtual - recAnterior) / recAnterior) * 100;
+                            if (cresc > 5) {
+                                insights.push({
+                                    icon: 'fa-arrow-trend-up',
+                                    text: `Crescimento de ${cresc.toFixed(1)}% em receitas`,
+                                    color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                });
+                            }
+                        }
+
+                        // Insight de Despesa
+                        if (despAtual > recAtual * 0.7) {
+                            insights.push({
+                                icon: 'fa-triangle-exclamation',
+                                text: `Despesas altas: ${((despAtual / recAtual) * 100).toFixed(0)}% da receita`,
+                                color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                            });
+                        }
+
+                        // Insight de Eficiência
+                        if (saldoAtual > 0) {
+                            insights.push({
+                                icon: 'fa-chart-line',
+                                text: `Margem de lucro atual: ${((saldoAtual / recAtual) * 100).toFixed(1)}%`,
+                                color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            });
+                        }
+
+                        // Insight de Pendências
+                        if (state.dashboardSummary?.pendingExpenses > 0) {
+                            insights.push({
+                                icon: 'fa-clock-rotate-left',
+                                text: `${formatarMoeda(state.dashboardSummary.pendingExpenses)} em pagamentos pendentes`,
+                                color: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                            });
+                        }
+
+                        insightsContainer.innerHTML = insights.map(i => `
+                            <div class="insight-pill ${i.color} animate-fade-in">
+                                <i class="fa-solid ${i.icon}"></i> ${i.text}
+                            </div>
+                        `).join('');
+                    }
+
+                    // Renderiza os gráficos com os dados atualizados
+                    if (window.renderAllCharts && typeof window.renderAllCharts === 'function') {
+                        console.log('📊 Atualizando gráficos para o mês:', state.selectedMonth);
+                        window.renderAllCharts(state);
+                    }
                 }
 
-                const elSaldo = getById('saldo-total');
-                elSaldo.textContent = formatarMoeda(saldoAtual);
-                elSaldo.className = `text-4xl font-bold ${saldoAtual >= 0 ? 'text-blue-600' : 'text-red-600'}`;
-                getById('saldo-comparison').innerHTML = getChangeHTML(saldoAtual, saldoAnterior);
-
-                // --- [AAA] Geração de Insights Inteligentes ---
-                const insightsContainer = getById('quick-insights');
-                if (insightsContainer) {
-                    const insights = [];
-
-                    // Insight de Crescimento
-                    if (recAnterior > 0) {
-                        const cresc = ((recAtual - recAnterior) / recAnterior) * 100;
-                        if (cresc > 5) {
-                            insights.push({
-                                icon: 'fa-arrow-trend-up',
-                                text: `Crescimento de ${cresc.toFixed(1)}% em receitas`,
-                                color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            });
+                // Renderiza Tabela de Gastos (Apenas se estiver na aba Gastos)
+                if (tab === 'gastos') {
+                    const tbodyGastos = getById('tabela-gastos')?.querySelector('tbody');
+                    if (tbodyGastos) {
+                        if (gastosMes.length === 0) {
+                            tbodyGastos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
+                        } else {
+                            tbodyGastos.innerHTML = gastosMes.sort((a, b) => new Date(a.data) - new Date(b.data)).map(g => `
+                                    <tr>
+                                        <td>${formatarData(g.data)}</td>
+                                        <td>${g.descricao}</td>
+                                        <td>${g.categoria}</td>
+                                        <td>${g.conta}</td>
+                                        <td>${g.pagamento}</td>
+                                        <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
+                                        <td>
+                                            <div class="flex space-x-2">
+                                                <button onclick="editarGasto('${g.id}')" 
+                                                        class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                                        title="Editar Gasto">
+                                                    <i class="fa-solid fa-edit"></i>
+                                                </button>
+                                                <button onclick="deletarGasto('${g.id}')" 
+                                                        class="text-red-600 hover:text-red-900 transition-colors"
+                                                        title="Excluir Gasto">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('');
                         }
                     }
 
-                    // Insight de Despesa
-                    if (despAtual > recAtual * 0.7) {
-                        insights.push({
-                            icon: 'fa-triangle-exclamation',
-                            text: `Despesas altas: ${((despAtual / recAtual) * 100).toFixed(0)}% da receita`,
-                            color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                        });
-                    }
-
-                    // Insight de Eficiência
-                    if (saldoAtual > 0) {
-                        insights.push({
-                            icon: 'fa-chart-line',
-                            text: `Margem de lucro atual: ${((saldoAtual / recAtual) * 100).toFixed(1)}%`,
-                            color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        });
-                    }
-
-                    // Insight de Pendências
-                    if (state.dashboardSummary?.pendingExpenses > 0) {
-                        insights.push({
-                            icon: 'fa-clock-rotate-left',
-                            text: `${formatarMoeda(state.dashboardSummary.pendingExpenses)} em pagamentos pendentes`,
-                            color: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                        });
-                    }
-
-                    insightsContainer.innerHTML = insights.map(i => `
-                        <div class="insight-pill ${i.color} animate-fade-in">
-                            <i class="fa-solid ${i.icon}"></i> ${i.text}
-                        </div>
-                    `).join('');
-                }
-
-                // Renderiza Tabela de Gastos
-                const tbodyGastos = getById('tabela-gastos')?.querySelector('tbody');
-                if (tbodyGastos) {
-                    if (gastosMes.length === 0) {
-                        tbodyGastos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
-                    } else {
-                        tbodyGastos.innerHTML = gastosMes.sort((a, b) => new Date(a.data) - new Date(b.data)).map(g => `
+                    // Renderiza Tabela de Contas Bancárias (Config de Gastos)
+                    const tbodyContas = getById('tabela-contas-db')?.querySelector('tbody');
+                    if (tbodyContas && state.contas) {
+                        if (state.contas.length === 0) {
+                            tbodyContas.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhuma conta bancária cadastrada.</td></tr>';
+                        } else {
+                            tbodyContas.innerHTML = state.contas.map(c => `
                                 <tr>
-                                    <td>${formatarData(g.data)}</td>
-                                    <td>${g.descricao}</td>
-                                    <td>${g.categoria}</td>
-                                    <td>${g.conta}</td>
-                                    <td>${g.pagamento}</td>
-                                    <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
+                                    <td>${c.nome}</td>
+                                    <td>${c.banco}</td>
+                                    <td>${c.tipo}</td>
+                                    <td>${c.agencia || ''} / ${c.numero || ''}</td>
                                     <td>
                                         <div class="flex space-x-2">
-                                            <button onclick="editarGasto('${g.id}')" 
-                                                    class="text-indigo-600 hover:text-indigo-900 transition-colors"
-                                                    title="Editar Gasto">
-                                                <i class="fa-solid fa-edit"></i>
+                                            <button onclick="editarContaBancaria('${c.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
+                                            <button onclick="deletarContaBancaria('${c.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('');
+                        }
+                    }
+
+                    // Renderiza Tabela de Categorias de Gastos (Config de Gastos)
+                    const tbodyGastoCategorias = getById('tabela-gasto-categorias-db')?.querySelector('tbody');
+                    if (tbodyGastoCategorias && state.gastoCategorias) {
+                        if (state.gastoCategorias.length === 0) {
+                            tbodyGastoCategorias.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-500">Nenhuma categoria cadastrada.</td></tr>';
+                        } else {
+                            tbodyGastoCategorias.innerHTML = state.gastoCategorias.map(cat => `
+                                <tr>
+                                    <td>${cat.nome}</td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="action-btn edit-btn" onclick="editarCategoriaGasto('${cat.id}')" title="Editar">
+                                                <i class="fa-solid fa-pen-to-square"></i>
                                             </button>
-                                            <button onclick="deletarGasto('${g.id}')" 
-                                                    class="text-red-600 hover:text-red-900 transition-colors"
-                                                    title="Excluir Gasto">
+                                            <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaGasto('${cat.id}'); }" title="Excluir">
                                                 <i class="fa-solid fa-trash-can"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                             `).join('');
+                        }
                     }
                 }
 
                 // Renderiza Tabela de Entradas (Eventos + Receitas Manuais)
-                const tbodyEventos = getById('tabela-eventos')?.querySelector('tbody');
-                if (tbodyEventos) {
-                    // Combina eventos e receitas manuais
-                    const entradasEventos = eventosMes.map(e => ({
-                        data: e.data,
-                        tipo: '📅 Evento',
-                        empresa: e.empresa || '-',
-                        descricao: e.contratante,
-                        local: e.local || '-',
-                        detalhes: 'Itens do Evento',
-                        valor: e.valor,
-                        deletavel: false,
-                        editavel: true,
-                        eventoId: e.id,
-                        id: null
-                    }));
+                if (tab === 'entradas') {
+                    const tbodyEventos = getById('tabela-eventos')?.querySelector('tbody');
+                    if (tbodyEventos) {
+                        // Combina eventos e receitas manuais
+                        const entradasEventos = eventosMes.map(e => ({
+                            data: e.data,
+                            tipo: '📅 Evento',
+                            empresa: e.empresa || '-',
+                            descricao: e.contratante,
+                            local: e.local || '-',
+                            detalhes: 'Itens do Evento',
+                            valor: e.valor,
+                            deletavel: false,
+                            editavel: true,
+                            eventoId: e.id,
+                            id: null
+                        }));
 
-                    const entradasManuais = receitasMes.map(r => ({
-                        data: r.data,
-                        tipo: '💰 Entrada Avulsa',
-                        empresa: '-',
-                        descricao: r.descricao,
-                        local: '-',
-                        detalhes: r.categoria,
-                        valor: r.valor,
-                        deletavel: true,
-                        editavel: false,
-                        eventoId: null,
-                        id: r.id
-                    }));
+                        const entradasManuais = receitasMes.map(r => ({
+                            data: r.data,
+                            tipo: '💰 Entrada Avulsa',
+                            empresa: '-',
+                            descricao: r.descricao,
+                            local: '-',
+                            detalhes: r.categoria,
+                            valor: r.valor,
+                            deletavel: true,
+                            editavel: false,
+                            eventoId: null,
+                            id: r.id
+                        }));
 
-                    const todasEntradas = [...entradasEventos, ...entradasManuais]
-                        .sort((a, b) => new Date(a.data) - new Date(b.data));
+                        const todasEntradas = [...entradasEventos, ...entradasManuais]
+                            .sort((a, b) => new Date(a.data) - new Date(b.data));
 
-                    if (todasEntradas.length === 0) {
-                        tbodyEventos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma entrada neste mês.</td></tr>';
-                    } else {
-                        tbodyEventos.innerHTML = todasEntradas.map(entry => `
+                        if (todasEntradas.length === 0) {
+                            tbodyEventos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma entrada neste mês.</td></tr>';
+                        } else {
+                            tbodyEventos.innerHTML = todasEntradas.map(entry => `
+                                    <tr>
+                                        <td>${formatarData(entry.data)}</td>
+                                        <td>${entry.empresa}</td>
+                                        <td>${entry.descricao}</td>
+                                        <td>${entry.local}</td>
+                                        <td>${entry.detalhes}</td>
+                                        <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
+                                        <td>
+                                            <div class="flex space-x-2">
+                                                ${entry.editavel
+                                    ? `<button onclick="editarEvento('${entry.eventoId}')" 
+                                                            class="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                                            title="Editar Evento">
+                                                        <i class="fa-solid fa-edit"></i>
+                                                    </button>`
+                                    : ''
+                                }
+                                                ${entry.deletavel
+                                    ? `<button onclick="deletarEntradaManual('${entry.id}')" 
+                                                            class="text-red-600 hover:text-red-900 transition-colors"
+                                                            title="Deletar">
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>`
+                                    : entry.editavel ? '' : '<span class="text-gray-400 text-xs">-</span>'
+                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('');
+                        }
+                    }
+                }
+
+                // Renderiza Aba de Contas Fixas
+                if (tab === 'contas-fixas') {
+                    // Renderiza Tabela de Contas Fixas (Cadastros)
+                    const tbodyContasFixas = getById('tabela-contas-fixas-db')?.querySelector('tbody');
+                    if (tbodyContasFixas && state.contasFixas) {
+                        if (state.contasFixas.length === 0) {
+                            tbodyContasFixas.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
+                        } else {
+                            tbodyContasFixas.innerHTML = state.contasFixas.map(cf => `
                                 <tr>
-                                    <td>${formatarData(entry.data)}</td>
-                                    <td>${entry.empresa}</td>
-                                    <td>${entry.descricao}</td>
-                                    <td>${entry.local}</td>
-                                    <td>${entry.detalhes}</td>
-                                    <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
+                                    <td>${cf.descricao}</td>
+                                    <td>${formatarMoeda(cf.valor)}</td>
+                                    <td>${cf.diaVencimento}</td>
+                                    <td>${cf.categoria}</td>
+                                    <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
+                                    <td class="text-center">${cf.anexos?.length || 0}</td>
                                     <td>
                                         <div class="flex space-x-2">
-                                            ${entry.editavel
-                                ? `<button onclick="editarEvento('${entry.eventoId}')" 
-                                                        class="text-indigo-600 hover:text-indigo-900 transition-colors"
-                                                        title="Editar Evento">
-                                                    <i class="fa-solid fa-edit"></i>
-                                                </button>`
-                                : ''
-                            }
-                                            ${entry.deletavel
-                                ? `<button onclick="deletarEntradaManual('${entry.id}')" 
-                                                        class="text-red-600 hover:text-red-900 transition-colors"
-                                                        title="Deletar">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </button>`
-                                : entry.editavel ? '' : '<span class="text-gray-400 text-xs">-</span>'
-                            }
+                                            <button onclick="editarContaFixa('${cf.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
+                                            <button onclick="deletarContaFixa('${cf.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
                                         </div>
                                     </td>
                                 </tr>
                             `).join('');
+                        }
                     }
-                }
 
-                // Renderiza Tabela de Contas Fixas (Cadastros)
-                const tbodyContasFixas = getById('tabela-contas-fixas-db')?.querySelector('tbody');
-                if (tbodyContasFixas && state.contasFixas) {
-                    if (state.contasFixas.length === 0) {
-                        tbodyContasFixas.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma conta fixa cadastrada.</td></tr>';
-                    } else {
-                        tbodyContasFixas.innerHTML = state.contasFixas.map(cf => `
-                            <tr>
-                                <td>${cf.descricao}</td>
-                                <td>${formatarMoeda(cf.valor)}</td>
-                                <td>${cf.diaVencimento}</td>
-                                <td>${cf.categoria}</td>
-                                <td>${cf.tipoRecorrencia === 'parcelada' ? `${cf.numParcelas}x` : 'Permanente'}</td>
-                                <td class="text-center">${cf.anexos?.length || 0}</td>
-                                <td>
-                                    <div class="flex space-x-2">
-                                        <button onclick="editarContaFixa('${cf.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
-                                        <button onclick="deletarContaFixa('${cf.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    // Renderiza Cards de Lançamento de Contas Fixas do Mês
+                    const containerContasFixasMes = getById('contas-fixas-cards-container');
+                    if (containerContasFixasMes) {
+                        const contasDoMes = getContasFixasDoMes(state.selectedMonth);
+
+                        if (contasDoMes.length === 0) {
+                            containerContasFixasMes.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-inbox text-4xl mb-2"></i><p>Nenhuma conta fixa ativa neste mês.</p></div>';
+                        } else {
+                            const [anoMes, mesMes] = state.selectedMonth.split('-').map(Number);
+                            const hoje = new Date();
+                            const diaHoje = hoje.getDate();
+                            const mesHoje = hoje.getMonth() + 1;
+                            const anoHoje = hoje.getFullYear();
+                            const ehMesAtual = (anoMes === anoHoje && mesMes === mesHoje);
+
+                            const cardsHTML = contasDoMes.map(cf => {
+                                let parcelaAtual = null;
+                                if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
+                                    const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
+                                    const mesesPassados = (anoMes - anoInicio) * 12 + (mesMes - mesInicio);
+                                    parcelaAtual = mesesPassados + 1;
+                                }
+
+                                const foiLancada = state.gastos.some(g =>
+                                    g.data.startsWith(state.selectedMonth) &&
+                                    g.descricao.includes(cf.descricao) &&
+                                    g.descricao.includes('[Conta Fixa]')
+                                );
+
+                                const estaAtrasada = ehMesAtual && diaHoje > cf.diaVencimento && !foiLancada;
+
+                                let statusClass, statusIcon, statusText, statusBadge;
+                                if (foiLancada) {
+                                    statusClass = 'border-l-4 border-green-500 bg-green-50/50';
+                                    statusIcon = 'fa-circle-check text-green-600';
+                                    statusText = 'Pago';
+                                    statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">✓ PAGO</span>';
+                                } else if (estaAtrasada) {
+                                    statusClass = 'border-l-4 border-red-500 bg-red-50/50 animate-pulse';
+                                    statusIcon = 'fa-circle-exclamation text-red-600';
+                                    statusText = 'Atrasado';
+                                    statusBadge = '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full animate-pulse">⚠ ATRASADA</span>';
+                                } else {
+                                    statusClass = 'border-l-4 border-yellow-500 bg-yellow-50/50';
+                                    statusIcon = 'fa-clock text-yellow-600';
+                                    statusText = 'Pendente';
+                                    statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">⏳ PENDENTE</span>';
+                                }
+
+                                return `
+                                    <div id="fixed-card-${cf.id}" class="glassmorphism ${statusClass} p-4 rounded-lg mb-3 hover:shadow-lg transition-all duration-300">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <i class="fa-solid ${statusIcon} text-lg"></i>
+                                                    <h4 class="font-bold text-gray-800 text-base">${cf.descricao}</h4>
+                                                </div>
+                                                <div class="flex items-center gap-2 flex-wrap mt-1">
+                                                    ${statusBadge}
+                                                    ${parcelaAtual ? `<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">📊 Parcela ${parcelaAtual}/${cf.numParcelas}</span>` : '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">♾️ PERMANENTE</span>'}
+                                                    <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">${cf.categoria}</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-right ml-3">
+                                                <p class="text-2xl font-bold ${estaAtrasada ? 'text-red-600' : 'text-gray-800'}">${formatarMoeda(cf.valor)}</p>
+                                                <p class="text-xs text-gray-500">Venc: dia ${cf.diaVencimento}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between text-xs text-gray-600 mb-3 pb-3 border-b border-gray-200">
+                                            <span><i class="fa-solid fa-calendar-days mr-1"></i> ${cf.tipoRecorrencia === 'parcelada' ? `Parcelada (${cf.numParcelas}x)` : 'Permanente'}</span>
+                                            ${cf.anexos && cf.anexos.length > 0 ? `<span><i class="fa-solid fa-paperclip mr-1"></i> ${cf.anexos.length} anexo(s)</span>` : ''}
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap">
+                                            ${!foiLancada ? `
+                                                <button class="shiny-btn px-3 py-1.5 rounded text-sm flex-1 min-w-[120px]" 
+                                                        onclick="lancarGastoDeContaFixa('${cf.id}')" 
+                                                        title="Lançar como Gasto">
+                                                    <i class="fa-solid fa-money-bill-wave mr-1"></i> Lançar Gasto
+                                                </button>
+                                            ` : `
+                                                <div class="flex-1 px-3 py-1.5 bg-green-100 text-green-800 rounded text-sm text-center font-semibold">
+                                                    <i class="fa-solid fa-check-double mr-1"></i> Já Lançado
+                                                </div>
+                                            `}
+                                            <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm transition-colors" 
+                                                    onclick="window.editarContaFixa('${cf.id}')" 
+                                                    title="Editar">
+                                                <i class="fa-solid fa-pencil"></i>
+                                            </button>
+                                            <button class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded text-sm transition-colors" 
+                                                    onclick="if(confirm('Excluir esta conta?')) { deletarContaFixa('${cf.id}'); }" 
+                                                    title="Excluir">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                </td>
-                            </tr>
-                        `).join('');
+                                `;
+                            }).join('');
+
+                            containerContasFixasMes.innerHTML = cardsHTML;
+                        }
+                    }
+
+                    // Renderiza Tabela de Categorias de Contas Fixas (Config)
+                    const tbodyCFCategorias = getById('tabela-cf-categorias-db')?.querySelector('tbody');
+                    if (tbodyCFCategorias && state.contaFixaCategorias) {
+                        if (state.contaFixaCategorias.length === 0) {
+                            tbodyCFCategorias.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-500">Nenhuma categoria cadastrada.</td></tr>';
+                        } else {
+                            tbodyCFCategorias.innerHTML = state.contaFixaCategorias.map(cat => `
+                                <tr>
+                                    <td>${cat.nome}</td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="action-btn edit-btn" onclick="editarCategoriaContaFixa('${cat.id}')" title="Editar">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
+                                            <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaContaFixa('${cat.id}'); }" title="Excluir">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('');
+                        }
                     }
                 }
 
-                // Renderiza Tabela de Contas Bancárias
-                const tbodyContas = getById('tabela-contas-db')?.querySelector('tbody');
-                if (tbodyContas && state.contas) {
-                    if (state.contas.length === 0) {
-                        tbodyContas.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhuma conta bancária cadastrada.</td></tr>';
-                    } else {
-                        tbodyContas.innerHTML = state.contas.map(c => `
-                            <tr>
-                                <td>${c.nome}</td>
-                                <td>${c.banco}</td>
-                                <td>${c.tipo}</td>
-                                <td>${c.agencia || ''} / ${c.numero || ''}</td>
-                                <td>
-                                    <div class="flex space-x-2">
-                                        <button onclick="editarContaBancaria('${c.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
-                                        <button onclick="deletarContaBancaria('${c.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
+                // Renderiza Aba de Monitores
+                if (tab === 'monitores') {
+                    renderPagamentosMonitores();
                 }
 
+                // Renderiza Aba de Salários
+                if (tab === 'salarios') {
+                    renderSalariosTab();
+                }
+
+                // --- Elementos Comuns (Sempre renderizados ou atualizados) ---
+                
                 // Popula Selects de Categorias
                 const populateSelect = (selectId, items, placeholder, nameField = 'nome') => {
                     const select = getById(selectId);
                     if (select && items) {
+                        const currentVal = select.value;
                         select.innerHTML = `<option value="">-- ${placeholder} --</option>` +
                             items.map(item => `<option value="${item[nameField]}">${item[nameField]}</option>`).join('');
+                        if (currentVal) select.value = currentVal;
                     }
                 };
 
@@ -827,184 +964,22 @@
                 const selectContaCF = getById('lancamento-cf-conta');
                 if (state.contas) {
                     const options = '<option value="">-- Selecione uma conta --</option>' +
-                        state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+                        state.contas.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
-                    if (selectConta) selectConta.innerHTML = options;
-                    if (selectContaCF) selectContaCF.innerHTML = options;
-                }
-
-                // Renderiza Cards de Lançamento de Contas Fixas do Mês (VISUAL UPGRADE)
-                const containerContasFixasMes = getById('contas-fixas-cards-container');
-                if (containerContasFixasMes) {
-                    const contasDoMes = getContasFixasDoMes(state.selectedMonth);
-
-                    if (contasDoMes.length === 0) {
-                        containerContasFixasMes.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-inbox text-4xl mb-2"></i><p>Nenhuma conta fixa ativa neste mês.</p></div>';
-                    } else {
-                        // Para cada conta, verifica status
-                        const [anoMes, mesMes] = state.selectedMonth.split('-').map(Number);
-                        const hoje = new Date();
-                        const diaHoje = hoje.getDate();
-                        const mesHoje = hoje.getMonth() + 1;
-                        const anoHoje = hoje.getFullYear();
-                        const ehMesAtual = (anoMes === anoHoje && mesMes === mesHoje);
-
-                        const cardsHTML = contasDoMes.map(cf => {
-                            // Calcula número da parcela (se parcelada)
-                            let parcelaAtual = null;
-                            if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
-                                const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
-                                const mesesPassados = (anoMes - anoInicio) * 12 + (mesMes - mesInicio);
-                                parcelaAtual = mesesPassados + 1;
-                            }
-
-                            // Verifica se já foi lançada (procura nos gastos)
-                            const foiLancada = state.gastos.some(g =>
-                                g.data.startsWith(state.selectedMonth) &&
-                                g.descricao.includes(cf.descricao) &&
-                                g.descricao.includes('[Conta Fixa]')
-                            );
-
-                            // Verifica se está atrasada
-                            const estaAtrasada = ehMesAtual && diaHoje > cf.diaVencimento && !foiLancada;
-
-                            // Define status e cores
-                            let statusClass, statusIcon, statusText, statusBadge;
-                            if (foiLancada) {
-                                statusClass = 'border-l-4 border-green-500 bg-green-50/50';
-                                statusIcon = 'fa-circle-check text-green-600';
-                                statusText = 'Pago';
-                                statusBadge = '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">✓ PAGO</span>';
-                            } else if (estaAtrasada) {
-                                statusClass = 'border-l-4 border-red-500 bg-red-50/50 animate-pulse';
-                                statusIcon = 'fa-circle-exclamation text-red-600';
-                                statusText = 'Atrasado';
-                                statusBadge = '<span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full animate-pulse">⚠ ATRASADA</span>';
-                            } else {
-                                statusClass = 'border-l-4 border-yellow-500 bg-yellow-50/50';
-                                statusIcon = 'fa-clock text-yellow-600';
-                                statusText = 'Pendente';
-                                statusBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">⏳ PENDENTE</span>';
-                            }
-
-                            return `
-                                <div id="fixed-card-${cf.id}" class="glassmorphism ${statusClass} p-4 rounded-lg mb-3 hover:shadow-lg transition-all duration-300">
-                                    <!-- Cabeçalho do Card -->
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <i class="fa-solid ${statusIcon} text-lg"></i>
-                                                <h4 class="font-bold text-gray-800 text-base">${cf.descricao}</h4>
-                                            </div>
-                                            <div class="flex items-center gap-2 flex-wrap mt-1">
-                                                ${statusBadge}
-                                                ${parcelaAtual ? `<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">📊 Parcela ${parcelaAtual}/${cf.numParcelas}</span>` : '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">♾️ PERMANENTE</span>'}
-                                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">${cf.categoria}</span>
-                                            </div>
-                                        </div>
-                                        <div class="text-right ml-3">
-                                            <p class="text-2xl font-bold ${estaAtrasada ? 'text-red-600' : 'text-gray-800'}">${formatarMoeda(cf.valor)}</p>
-                                            <p class="text-xs text-gray-500">Venc: dia ${cf.diaVencimento}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Informações Adicionais -->
-                                    <div class="flex items-center justify-between text-xs text-gray-600 mb-3 pb-3 border-b border-gray-200">
-                                        <span><i class="fa-solid fa-calendar-days mr-1"></i> ${cf.tipoRecorrencia === 'parcelada' ? `Parcelada (${cf.numParcelas}x)` : 'Permanente'}</span>
-                                        ${cf.anexos && cf.anexos.length > 0 ? `<span><i class="fa-solid fa-paperclip mr-1"></i> ${cf.anexos.length} anexo(s)</span>` : ''}
-                                    </div>
-                                    
-                                    <!-- Botões de Ação -->
-                                    <div class="flex gap-2 flex-wrap">
-                                        ${!foiLancada ? `
-                                            <button class="shiny-btn px-3 py-1.5 rounded text-sm flex-1 min-w-[120px]" 
-                                                    onclick="lancarGastoDeContaFixa('${cf.id}')" 
-                                                    title="Lançar como Gasto">
-                                                <i class="fa-solid fa-money-bill-wave mr-1"></i> Lançar Gasto
-                                            </button>
-                                        ` : `
-                                            <div class="flex-1 px-3 py-1.5 bg-green-100 text-green-800 rounded text-sm text-center font-semibold">
-                                                <i class="fa-solid fa-check-double mr-1"></i> Já Lançado
-                                            </div>
-                                        `}
-                                        <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm transition-colors" 
-                                                onclick="window.editarContaFixa('${cf.id}')" 
-                                                title="Editar">
-                                            <i class="fa-solid fa-pencil"></i>
-                                        </button>
-                                        <button class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded text-sm transition-colors" 
-                                                onclick="if(confirm('Excluir esta conta?')) { deletarContaFixa('${cf.id}'); }" 
-                                                title="Excluir">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-
-                        containerContasFixasMes.innerHTML = cardsHTML;
+                    if (selectConta) {
+                        const cur = selectConta.value;
+                        selectConta.innerHTML = options;
+                        if (cur) selectConta.value = cur;
+                    }
+                    if (selectContaCF) {
+                        const cur = selectContaCF.value;
+                        selectContaCF.innerHTML = options;
+                        if (cur) selectContaCF.value = cur;
                     }
                 }
 
-                // Renderiza Tabela de Categorias de Gastos
-                const tbodyGastoCategorias = getById('tabela-gasto-categorias-db')?.querySelector('tbody');
-                if (tbodyGastoCategorias && state.gastoCategorias) {
-                    if (state.gastoCategorias.length === 0) {
-                        tbodyGastoCategorias.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-500">Nenhuma categoria cadastrada.</td></tr>';
-                    } else {
-                        tbodyGastoCategorias.innerHTML = state.gastoCategorias.map(cat => `
-                            <tr>
-                                <td>${cat.nome}</td>
-                                <td>
-                                    <div class="flex space-x-2">
-                                        <button class="action-btn edit-btn" onclick="editarCategoriaGasto('${cat.id}')" title="Editar">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaGasto('${cat.id}'); }" title="Excluir">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-
-                // Renderiza Tabela de Categorias de Contas Fixas
-                const tbodyCFCategorias = getById('tabela-cf-categorias-db')?.querySelector('tbody');
-                if (tbodyCFCategorias && state.contaFixaCategorias) {
-                    if (state.contaFixaCategorias.length === 0) {
-                        tbodyCFCategorias.innerHTML = '<tr><td colspan="2" class="text-center py-4 text-gray-500">Nenhuma categoria cadastrada.</td></tr>';
-                    } else {
-                        tbodyCFCategorias.innerHTML = state.contaFixaCategorias.map(cat => `
-                            <tr>
-                                <td>${cat.nome}</td>
-                                <td>
-                                    <div class="flex space-x-2">
-                                        <button class="action-btn edit-btn" onclick="editarCategoriaContaFixa('${cat.id}')" title="Editar">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button class="action-btn delete-btn" onclick="if(confirm('Excluir categoria ${cat.nome}?')) { deletarCategoriaContaFixa('${cat.id}'); }" title="Excluir">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-
-                // Renderiza os gráficos com os dados atualizados
-                if (window.renderAllCharts && typeof window.renderAllCharts === 'function') {
-                    console.log('📊 Atualizando gráficos para o mês:', state.selectedMonth);
-                    window.renderAllCharts(state);
-                }
-
-                // Renderiza Histórico de Pagamentos de Monitores (NOVO)
-                renderPagamentosMonitores();
-
-                // Renderiza a aba de Salários
-                renderSalariosTab();
+                console.log(`✅ Renderização da aba [${tab}] completa!`);
+            };
 
                 console.log("✅ Renderização completa!");
             };
@@ -1529,9 +1504,76 @@
                 link.click();
             };
 
-            window.visualizarMonitor = (id) => {
-                const m = state.monitores.find(mon => mon.id === id);
-                if (!m) return;
+            window.abrirVisualizadorFoto = (src, titulo) => {
+                const img = getById('visualizador-foto-img');
+                const title = getById('visualizador-foto-titulo');
+                const modal = getById('modal-visualizador-foto');
+
+                if (img && title && modal) {
+                    img.src = src;
+                    title.textContent = titulo;
+                    modal.classList.remove('hidden');
+                }
+            };
+
+            window.fecharVisualizadorFoto = () => {
+                getById('modal-visualizador-foto')?.classList.add('hidden');
+            };
+
+            // --- CONFIGURAÇÃO CLOUDINARY ---
+            const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dyqgxvptu/image/upload";
+            const CLOUDINARY_PRESET = "c4h43hti";
+
+            // Função para comprimir imagem no Navegador
+            async function compressImage(base64Str, maxWidth = 1200, maxHeight = 1200) {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = base64Str;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                        } else {
+                            if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                });
+            }
+
+            // Função para Upload Direto para Cloudinary
+            async function uploadToCloudinary(base64Image) {
+                if (!base64Image || base64Image.startsWith('http')) return base64Image;
+                if (CLOUDINARY_URL.includes("seu_cloud_name")) return base64Image;
+                try {
+                    const compressed = await compressImage(base64Image);
+                    const formData = new FormData();
+                    formData.append("file", compressed);
+                    formData.append("upload_preset", CLOUDINARY_PRESET);
+                    const res = await fetch(CLOUDINARY_URL, { method: "POST", body: formData });
+                    if (!res.ok) throw new Error("Erro no upload");
+                    const data = await res.json();
+                    return data.secure_url;
+                } catch (error) {
+                    console.error("Erro Cloudinary:", error);
+                    return base64Image;
+                }
+            }
+
+            window.visualizarMonitor = async (id) => {
+                const m_basic = state.monitores.find(mon => mon.id === id);
+                if (!m_basic) return;
+
+                // Carrega detalhes completos (incluindo fotos) apenas sob demanda
+                showToast("Carregando detalhes...", false);
+                const m = await window.api.getMonitorById(id);
+                if (!m) return showToast("Erro ao carregar detalhes", true);
 
                 const body = getById('monitor-details-body');
                 if (!body) return;
@@ -1661,7 +1703,7 @@
                         <div class="w-full flex flex-col items-center gap-2">
                             <img src="${m.fotoPerfil}" class="max-w-[200px] h-auto rounded-2xl shadow-lg border-2 border-white">
                             <div class="flex gap-2">
-                                <button onclick="window.open('${m.fotoPerfil}', '_blank')" class="text-[10px] bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-all font-bold">
+                                <button onclick="abrirVisualizadorFoto('${m.fotoPerfil}', 'Foto de ${m.nome}')" class="text-[10px] bg-white border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-all font-bold">
                                     <i class="fa-solid fa-eye"></i> VER FOTO
                                 </button>
                                 <button onclick="baixarArquivoBase64('${m.fotoPerfil}', 'foto-${m.nome.toLowerCase().replace(/\s+/g, '-')}.png')" class="text-[10px] bg-indigo-600 border border-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all font-bold">
@@ -1717,7 +1759,7 @@
                                         <p><strong>Primeiros Socorros:</strong> ${m.possuiCursoPS ? '<span class="text-emerald-600 font-bold">Sim (Possui Certificado)</span>' : '<span class="text-gray-400">Não possui</span>'}</p>
                                         ${m.fotoCertificadoPS ? `
                                             <div class="flex gap-2 mt-2">
-                                                <button onclick="window.open('${m.fotoCertificadoPS}', '_blank')" class="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
+                                                <button onclick="abrirVisualizadorFoto('${m.fotoCertificadoPS}', 'Certificado PS - ${m.nome}')" class="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
                                                     <i class="fa-solid fa-eye"></i> VER CERTIFICADO
                                                 </button>
                                                 <button onclick="baixarArquivoBase64('${m.fotoCertificadoPS}', 'certificado-ps-${m.nome.toLowerCase().replace(/\s+/g, '-')}.png')" class="text-[10px] bg-emerald-600 border border-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition-all font-bold">
@@ -1747,7 +1789,7 @@
                                     <div class="flex flex-col items-center gap-3">
                                         <img src="${m.fotoDocumento}" class="max-w-full max-h-64 rounded-lg shadow-md border-2 border-white object-contain" alt="Documento">
                                         <div class="flex gap-2">
-                                            <button onclick="window.open('${m.fotoDocumento}', '_blank')" class="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
+                                            <button onclick="abrirVisualizadorFoto('${m.fotoDocumento}', 'Documento - ${m.nome}')" class="text-[10px] bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-all font-bold">
                                                 <i class="fa-solid fa-eye"></i> VER DOCUMENTO
                                             </button>
                                             <button onclick="baixarArquivoBase64('${m.fotoDocumento}', 'documento-${m.nome.toLowerCase().replace(/\s+/g, '-')}.png')" class="text-[10px] bg-indigo-600 border border-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all font-bold">
@@ -1766,9 +1808,13 @@
                 getById('monitor-details-modal').classList.remove('hidden');
             };
 
-            window.editarMonitor = (id) => {
-                const m = state.monitores.find(mon => mon.id === id);
-                if (!m) return;
+            window.editarMonitor = async (id) => {
+                const m_basic = state.monitores.find(mon => mon.id === id);
+                if (!m_basic) return;
+
+                showToast("Carregando dados para edição...", false);
+                const m = await window.api.getMonitorById(id);
+                if (!m) return showToast("Erro ao carregar monitor", true);
 
                 getById('monitor-id-edit').value = m.id;
                 getById('monitor-nome').value = m.nome || '';
@@ -1921,10 +1967,83 @@
                 });
             };
 
+            // Função para carregar monitores sob demanda (Otimização de Performance)
+            window.loadMonitores = async function (page = 1) {
+                try {
+                    const countText = getById('monitor-count-text');
+                    if (countText) countText.textContent = `Carregando monitores (Página ${page})...`;
+                    
+                    const monitoresCloud = await window.api.getMonitores(page);
+                    
+                    // Se for página 1, substitui. Se for > 1, concatena (Infinite Scroll / Load More)
+                    const mapped = monitoresCloud.map(m => {
+                        let habilidades = null;
+                        try {
+                            habilidades = m.habilidades ? JSON.parse(m.habilidades) : null;
+                        } catch (e) {
+                            console.warn('Erro ao parsear habilidades:', m.id, e);
+                        }
+
+                        return {
+                            id: m.id,
+                            nome: m.nome,
+                            nascimento: m.nascimento,
+                            telefone: m.telefone,
+                            email: m.email,
+                            endereco: m.endereco,
+                            observacoes: m.observacoes,
+                            cnh: m.cnh,
+                            cnhCategoria: m.cnhCategoria,
+                            fotoPerfil: m.fotoPerfil,
+                            fotoDocumento: m.fotoDocumento,
+                            habilidades: habilidades || { forca: 5, agilidade: 5, proatividade: 5, comunicacao: 5, disponibilidade: 5, respeito: 5 },
+                            desempenho: m.desempenho || [],
+                            tipoSanguineo: m.tipoSanguineo,
+                            planoSaude: m.planoSaude,
+                            medicamentos: m.medicamentos,
+                            restricoesAlimentares: m.restricoesAlimentares,
+                            alergias: m.alergias,
+                            condicaoMedica: m.condicaoMedica,
+                            fobias: m.fobias,
+                            tamanhoCamiseta: m.tamanhoCamiseta,
+                            escolaridade: m.escolaridade,
+                            possuiCursoPS: m.possuiCursoPS,
+                            fotoCertificadoPS: m.fotoCertificadoPS,
+                            idiomas: m.idiomas,
+                            habilidadesEspecificas: m.habilidadesEspecificas,
+                            experiencias: m.experiencias,
+                            instagram: m.instagram,
+                            facebook: m.facebook,
+                            linkedin: m.linkedin,
+                            tiktok: m.tiktok,
+                            contatoEmergenciaNome: m.contatoEmergenciaNome,
+                            contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
+                            contatoEmergenciaTelefone: m.contatoEmergenciaTelefone
+                        };
+                    });
+
+                    if (page === 1) state.monitores = mapped;
+                    else state.monitores = [...state.monitores, ...mapped];
+
+                    renderMonitorCards();
+                    
+                    if (countText) {
+                        countText.textContent = `${state.monitores.length} monitores carregados.`;
+                        if (monitoresCloud.length === 50) {
+                            countText.innerHTML += ` <button onclick="window.loadMonitores(${page + 1})" class="text-indigo-600 underline ml-2">Carregar mais...</button>`;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar monitores:", error);
+                    showToast("Erro ao carregar lista de monitores", true);
+                }
+            };
+
             // Event Listeners dos Novos Botões
-            getById('open-monitores-modal-btn')?.addEventListener('click', () => {
-                renderMonitorCards();
+            getById('open-monitores-modal-btn')?.addEventListener('click', async () => {
                 getById('modal-lista-monitores').classList.remove('hidden');
+                // Carrega apenas se ainda não tiver carregado ou se quiser atualizar
+                await window.loadMonitores();
             });
             getById('open-pagamento-modal-btn')?.addEventListener('click', () => {
                 const select = getById('pag-monitor-select');
@@ -2430,8 +2549,8 @@
                     cnh: getById('monitor-cnh').value === 'Sim',
                     cnhCategoria: getById('monitor-cnh-categoria').value,
                     observacoes: getById('monitor-observacoes').value,
-                    fotoPerfil: getById('monitor-foto-base64').value,
-                    fotoDocumento: getById('monitor-doc-base64').value,
+                    // fotoPerfil: getById('monitor-foto-base64').value, // Upload abaixo
+                    // fotoDocumento: getById('monitor-doc-base64').value, // Upload abaixo
                     tipoSanguineo: getById('monitor-tipo-sanguineo').value,
                     planoSaude: getById('monitor-plano-saude').value,
                     medicamentos: getById('monitor-medicamentos').value,
@@ -2442,7 +2561,7 @@
                     tamanhoCamiseta: getById('monitor-tamanho-camiseta').value,
                     escolaridade: getById('monitor-escolaridade').value,
                     possuiCursoPS: getById('monitor-possui-ps').value === 'true',
-                    fotoCertificadoPS: getById('monitor-ps-base64').value,
+                    // fotoCertificadoPS: getById('monitor-ps-base64').value, // Upload abaixo
                     idiomas: getById('monitor-idiomas').value,
                     habilidadesEspecificas: getById('monitor-habilidades-esp').value,
                     experiencias: getById('monitor-experiencias').value,
@@ -2455,6 +2574,36 @@
                     contatoEmergenciaTelefone: getById('monitor-emergencia-telefone').value,
                     habilidades: JSON.stringify({ forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 })
                 };
+
+                // --- UPLOAD PARA CLOUDINARY (ADMIN) ---
+                try {
+                    const fPerfil = getById('monitor-foto-base64').value;
+                    const fDoc = getById('monitor-doc-base64').value;
+                    const fPS = getById('monitor-ps-base64').value;
+
+                    if (fPerfil && !fPerfil.startsWith('http')) {
+                        showToast("Subindo foto de perfil...", false);
+                        dados.fotoPerfil = await uploadToCloudinary(fPerfil);
+                    } else if (fPerfil) {
+                        dados.fotoPerfil = fPerfil;
+                    }
+
+                    if (fDoc && !fDoc.startsWith('http')) {
+                        showToast("Subindo documento...", false);
+                        dados.fotoDocumento = await uploadToCloudinary(fDoc);
+                    } else if (fDoc) {
+                        dados.fotoDocumento = fDoc;
+                    }
+
+                    if (fPS && !fPS.startsWith('http')) {
+                        showToast("Subindo certificado PS...", false);
+                        dados.fotoCertificadoPS = await uploadToCloudinary(fPS);
+                    } else if (fPS) {
+                        dados.fotoCertificadoPS = fPS;
+                    }
+                } catch (err) {
+                    console.error("Erro no upload Cloudinary:", err);
+                }
 
                 console.log('📦 Dados coletados:', dados);
                 console.log('🔌 window.api disponível?', !!window.api);
@@ -2988,6 +3137,9 @@
 
                     // 2. Transição Granular com Loader Local
                     if (selectedPage) {
+                        state.currentTab = targetPage;
+                        renderAll();
+
                         // Troca de página (display block)
                         pages.forEach(page => page.classList.remove('active'));
                         selectedPage.classList.add('active');
@@ -7004,6 +7156,26 @@
             }
         });
     </script>
+
+    <!-- Modal Visualizador de Foto -->
+    <div id="modal-visualizador-foto"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center z-[99999] p-4"
+        onclick="fecharVisualizadorFoto()">
+        <div class="relative max-w-4xl w-full flex flex-col items-center gap-4" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center w-full text-white mb-2">
+                <h3 id="visualizador-foto-titulo" class="text-lg font-bold truncate pr-10">Visualização</h3>
+                <button onclick="fecharVisualizadorFoto()" class="text-white/60 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="bg-white p-2 rounded-2xl shadow-2xl overflow-hidden">
+                <img id="visualizador-foto-img"
+                    class="max-w-full max-h-[80vh] object-contain rounded-xl shadow-inner shadow-black/10" src=""
+                    alt="Ampliação">
+            </div>
+            <p class="text-white/40 text-xs font-medium uppercase tracking-widest mt-2">Clique fora para fechar</p>
+        </div>
+    </div>
 
 </body>
 

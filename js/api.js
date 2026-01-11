@@ -277,16 +277,29 @@ export const api = {
 
     // --- MONITORES ---
 
-    getMonitores: async () => {
+    getMonitores: async (page = 1, limit = 50) => {
         try {
             const token = getToken();
-            const res = await fetch(`${BASE_URL}/finance/monitores`, {
+            const res = await fetch(`${BASE_URL}/finance/monitores?page=${page}&limit=${limit}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             return res.ok ? await res.json() : [];
         } catch (e) {
             console.error("Erro ao buscar monitores:", e);
             return [];
+        }
+    },
+
+    getMonitorById: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao buscar detalhes do monitor:", e);
+            return null;
         }
     },
 

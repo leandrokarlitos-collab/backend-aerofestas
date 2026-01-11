@@ -404,14 +404,34 @@ router.post('/seed-categories', async (req, res) => {
 
 // --- MONITORES ---
 
-// GET /api/finance/monitores
+// GET /api/finance/monitores (Otimizado para Performance)
 router.get('/monitores', async (req, res) => {
     try {
+        const { page = 1, limit = 50 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
         const monitores = await prisma.monitor.findMany({
-            include: {
-                desempenho: true,
-                pagamentos: true
+            select: {
+                id: true,
+                nome: true,
+                nascimento: true,
+                telefone: true,
+                email: true,
+                cpf: true,
+                endereco: true,
+                cnh: true,
+                cnhCategoria: true,
+                tamanhoCamiseta: true,
+                possuiCursoPS: true,
+                // Não trazemos as fotos (Base64) na listagem para não pesar
+                fotoPerfil: false, 
+                fotoDocumento: false,
+                fotoCertificadoPS: false,
+                // Relacionamentos básicos se necessário
+                desempenho: { take: 1, orderBy: { data: 'desc' } }
             },
+            skip: skip,
+            take: parseInt(limit),
             orderBy: { nome: 'asc' }
         });
         res.json(monitores);
