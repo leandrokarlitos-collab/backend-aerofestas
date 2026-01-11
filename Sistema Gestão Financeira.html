@@ -262,7 +262,7 @@
 
                     // 1. Busca todos os dados em paralelo (Otimizado)
                     const [ano, mes] = state.selectedMonth.split('-');
-                    
+
                     const [
                         dashboardData,
                         eventosCloud,
@@ -777,7 +777,7 @@
                                                     <i class="fa-solid fa-edit"></i>
                                                 </button>`;
                                 }
-                                
+
                                 let btnDel = "";
                                 if (entry.deletavel) {
                                     btnDel = `<button onclick="deletarEntradaManual('${entry.id}')" 
@@ -887,11 +887,11 @@
                                 }
 
                                 const recurrenceInfo = cf.tipoRecorrencia === 'parcelada' ? 'Parcelada (' + cf.numParcelas + 'x)' : 'Permanente';
-                                const badgeRecurrence = parcelaAtual 
+                                const badgeRecurrence = parcelaAtual
                                     ? '<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">📊 Parcela ' + parcelaAtual + '/' + cf.numParcelas + '</span>'
                                     : '<span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">♾️ PERMANENTE</span>';
 
-                                const btnLancar = !foiLancada 
+                                const btnLancar = !foiLancada
                                     ? '<button class="shiny-btn px-3 py-1.5 rounded text-sm flex-1 min-w-[120px]" onclick="lancarGastoDeContaFixa(\'' + cf.id + '\')" title="Lançar como Gasto"><i class="fa-solid fa-money-bill-wave mr-1"></i> Lançar Gasto</button>'
                                     : '<div class="flex-1 px-3 py-1.5 bg-green-100 text-green-800 rounded text-sm text-center font-semibold"><i class="fa-solid fa-check-double mr-1"></i> Já Lançado</div>';
 
@@ -975,7 +975,7 @@
                 }
 
                 // --- Elementos Comuns (Sempre renderizados ou atualizados) ---
-                
+
                 // Popula Selects de Categorias
                 const populateSelect = (selectId, items, placeholder, nameField = 'nome') => {
                     const select = getById(selectId);
@@ -1289,18 +1289,42 @@
                 const countText = getById('monitor-count-text');
                 if (!container) return;
 
-                const monitores = state.monitores || [];
-                countText.textContent = `${monitores.length} monitores ativos`;
+                let monitores = [...(state.monitores || [])];
+
+                // --- Aplicar Filtros ---
+                const filterCNH = getById('filter-monitor-cnh')?.checked;
+                const filterPS = getById('filter-monitor-ps')?.checked;
+                const sortType = getById('filter-monitor-sort')?.value || 'nome';
+
+                if (filterCNH) {
+                    monitores = monitores.filter(m => m.cnh === true || m.cnh === 'Sim');
+                }
+                if (filterPS) {
+                    monitores = monitores.filter(m => m.possuiCursoPS === true || m.possuiCursoPS === 'Sim' || m.possuiCursoPS === 'true');
+                }
+
+                // --- Aplicar Ordenação ---
+                if (sortType === 'nome') {
+                    monitores.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+                } else if (sortType === 'recente') {
+                    monitores.sort((a, b) => {
+                        // Tenta ordenar pelo ID se for string comparável ou por posição original
+                        if (a.id && b.id) return b.id.localeCompare(a.id);
+                        return 0;
+                    });
+                }
+
+                countText.textContent = `${monitores.length} monitores encontrados`;
 
                 if (monitores.length === 0) {
-                    container.innerHTML = '<div class="col-span-full py-10 text-center text-gray-500">Nenhum monitor cadastrado ainda.</div>';
+                    container.innerHTML = '<div class="col-span-full py-10 text-center text-gray-500">Nenhum monitor encontrado com estes filtros.</div>';
                     return;
                 }
 
                 container.innerHTML = monitores.map(m => {
                     const iniciais = m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
                     const cnhInfo = m.cnh ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnhCategoria || ''}</span>` : '';
-                    const psBadge = m.possuiCursoPS ? `<span class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1" title="Possui Curso de Primeiros Socorros"><i class="fa-solid fa-heart-pulse"></i> PS</span>` : '';
+                    const psBadge = (m.possuiCursoPS === true || m.possuiCursoPS === 'Sim' || m.possuiCursoPS === 'true') ? `<span class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1" title="Possui Curso de Primeiros Socorros"><i class="fa-solid fa-heart-pulse"></i> PS</span>` : '';
 
                     // Avatar: foto otimizada (thumbnail) ou iniciais
                     const avatarHTML = m.fotoPerfil
@@ -1322,7 +1346,7 @@
                             </div>
                             
                             <div class="flex justify-between items-center pt-2 border-t border-gray-100/50">
-                                <span class="text-xs font-medium text-gray-400">ID: #${m.id.slice(-4)}</span>
+                                <span class="text-xs font-medium text-gray-400">ID: #${m.id ? m.id.slice(-4) : '????'}</span>
                                 <div class="flex gap-2" onclick="event.stopPropagation()">
                                     <button onclick="window.copiarLinkMonitor('${m.id}')" class="btn-action-small bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Copiar Link de Atualização">
                                         <i class="fa-solid fa-link text-sm"></i>
@@ -1339,6 +1363,11 @@
                     `;
                 }).join('');
             };
+
+            // Adicionar event listeners para os filtros
+            getById('filter-monitor-sort')?.addEventListener('change', renderMonitorCards);
+            getById('filter-monitor-cnh')?.addEventListener('change', renderMonitorCards);
+            getById('filter-monitor-ps')?.addEventListener('change', renderMonitorCards);
 
             function renderPagamentosMonitores() {
                 const tbody = getById('tabela-pagamentos-monitores')?.querySelector('tbody');
@@ -1537,13 +1566,13 @@
             // Função atualizada para download de imagens (Base64 ou URL)
             window.downloadImage = async (src, filename) => {
                 if (!src) return;
-                
+
                 // Se for Base64, usa o método antigo
                 if (src.startsWith('data:')) {
                     window.baixarArquivoBase64(src, filename);
                     return;
                 }
-                
+
                 // Se for URL (Cloudinary), faz download via fetch
                 try {
                     const response = await fetch(src);
@@ -1583,23 +1612,35 @@
 
             // Função para comprimir imagem no Navegador
             async function compressImage(base64Str, maxWidth = 1200, maxHeight = 1200) {
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     const img = new Image();
+                    img.crossOrigin = 'anonymous';
                     img.src = base64Str;
+
                     img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > height) {
-                            if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                        } else {
-                            if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                        try {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            if (width > height) {
+                                if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                            } else {
+                                if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg', 0.85));
+                        } catch (error) {
+                            console.error("Erro ao comprimir:", error);
+                            resolve(base64Str);
                         }
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+
+                    img.onerror = (error) => {
+                        console.error("Erro ao carregar imagem:", error);
+                        resolve(base64Str);
                     };
                 });
             }
@@ -1609,16 +1650,27 @@
                 if (!base64Image || base64Image.startsWith('http')) return base64Image;
                 if (CLOUDINARY_URL.includes("seu_cloud_name")) return base64Image;
                 try {
+                    console.log("🔄 Comprimindo imagem...");
                     const compressed = await compressImage(base64Image);
+
+                    console.log("📤 Enviando para Cloudinary...");
                     const formData = new FormData();
                     formData.append("file", compressed);
                     formData.append("upload_preset", CLOUDINARY_PRESET);
                     const res = await fetch(CLOUDINARY_URL, { method: "POST", body: formData });
-                    if (!res.ok) throw new Error("Erro no upload");
+
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        console.error("Erro do Cloudinary:", errorData);
+                        throw new Error(errorData.error?.message || "Erro no upload");
+                    }
+
                     const data = await res.json();
+                    console.log("✅ Upload concluído:", data.secure_url);
                     return data.secure_url;
                 } catch (error) {
-                    console.error("Erro Cloudinary:", error);
+                    console.error("❌ Erro Cloudinary:", error.message);
+                    console.warn("⚠️ Salvando como Base64 (fallback)");
                     return base64Image;
                 }
             }
@@ -1628,7 +1680,7 @@
                 if (!url) return '';
                 if (url.startsWith('data:')) return url; // Base64, retorna original
                 if (!url.includes('cloudinary.com')) return url; // Não é Cloudinary, retorna original
-                
+
                 // Injeta transformação de thumbnail na URL
                 return url.replace('/upload/', `/upload/w_${width},h_${height},c_fill,g_face/`);
             };
@@ -2051,9 +2103,9 @@
                 try {
                     const countText = getById('monitor-count-text');
                     if (countText) countText.textContent = `Carregando monitores (Página ${page})...`;
-                    
+
                     const monitoresCloud = await window.api.getMonitores(page);
-                    
+
                     // Se for página 1, substitui. Se for > 1, concatena (Infinite Scroll / Load More)
                     const mapped = monitoresCloud.map(m => {
                         let habilidades = null;
@@ -2105,7 +2157,7 @@
                     else state.monitores = [...state.monitores, ...mapped];
 
                     renderMonitorCards();
-                    
+
                     if (countText) {
                         countText.textContent = `${state.monitores.length} monitores carregados.`;
                         if (monitoresCloud.length === 50) {
@@ -6274,10 +6326,41 @@
                     class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
             </div>
 
-            <div class="flex justify-between items-center mb-4 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
+            <div
+                class="flex flex-col md:flex-row justify-between items-center mb-4 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 gap-4">
                 <span class="text-sm font-medium text-indigo-700" id="monitor-count-text">0 monitores ativos</span>
+
+                <!-- Filtros e Ordenação -->
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ordenar:</label>
+                        <select id="filter-monitor-sort"
+                            class="text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 font-bold text-gray-700 cursor-pointer">
+                            <option value="nome">Ordem Alfabética</option>
+                            <option value="recente">Mais Recentes</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-3 border-l border-indigo-200 pl-4">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" id="filter-monitor-cnh"
+                                class="w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 transition-all">
+                            <span
+                                class="text-[11px] font-bold text-gray-600 group-hover:text-indigo-600 transition-colors">Com
+                                CNH</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" id="filter-monitor-ps"
+                                class="w-3.5 h-3.5 rounded border-indigo-300 text-red-500 focus:ring-red-500 transition-all">
+                            <span
+                                class="text-[11px] font-bold text-gray-600 group-hover:text-red-500 transition-colors">Primeiros
+                                Socorros</span>
+                        </label>
+                    </div>
+                </div>
+
                 <button id="add-new-monitor-btn"
-                    class="shiny-btn px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    class="shiny-btn px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap">
                     <i class="fa-solid fa-plus"></i> Novo Monitor
                 </button>
             </div>
