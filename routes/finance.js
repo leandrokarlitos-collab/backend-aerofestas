@@ -423,10 +423,9 @@ router.get('/monitores', async (req, res) => {
                 cnhCategoria: true,
                 tamanhoCamiseta: true,
                 possuiCursoPS: true,
-                // Não trazemos as fotos (Base64) na listagem para não pesar
-                fotoPerfil: false, 
-                fotoDocumento: false,
-                fotoCertificadoPS: false,
+                fotoPerfil: true, // Traz URL (leve) para mostrar nos cards
+                fotoDocumento: false, // Documento não precisa na listagem
+                fotoCertificadoPS: false, // PS não precisa na listagem
                 // Relacionamentos básicos se necessário
                 desempenho: { take: 1, orderBy: { data: 'desc' } }
             },

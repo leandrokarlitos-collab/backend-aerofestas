@@ -1302,9 +1302,9 @@
                     const cnhInfo = m.cnh ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnhCategoria || ''}</span>` : '';
                     const psBadge = m.possuiCursoPS ? `<span class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1" title="Possui Curso de Primeiros Socorros"><i class="fa-solid fa-heart-pulse"></i> PS</span>` : '';
 
-                    // Avatar: foto ou iniciais
+                    // Avatar: foto otimizada (thumbnail) ou iniciais
                     const avatarHTML = m.fotoPerfil
-                        ? `<div class="monitor-avatar overflow-hidden"><img src="${m.fotoPerfil}" class="w-full h-full object-cover" alt="${m.nome}"></div>`
+                        ? `<div class="monitor-avatar overflow-hidden"><img src="${window.getCloudinaryThumbnail(m.fotoPerfil, 100, 100)}" loading="lazy" class="w-full h-full object-cover" alt="${m.nome}"></div>`
                         : `<div class="monitor-avatar">${iniciais}</div>`;
 
                     return `
@@ -1622,6 +1622,16 @@
                     return base64Image;
                 }
             }
+
+            // Função para gerar thumbnail Cloudinary (Performance nos Cards)
+            window.getCloudinaryThumbnail = (url, width = 200, height = 200) => {
+                if (!url) return '';
+                if (url.startsWith('data:')) return url; // Base64, retorna original
+                if (!url.includes('cloudinary.com')) return url; // Não é Cloudinary, retorna original
+                
+                // Injeta transformação de thumbnail na URL
+                return url.replace('/upload/', `/upload/w_${width},h_${height},c_fill,g_face/`);
+            };
 
             window.visualizarMonitor = async (id) => {
                 const m_basic = state.monitores.find(mon => mon.id === id);
