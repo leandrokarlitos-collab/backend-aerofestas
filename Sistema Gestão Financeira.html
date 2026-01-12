@@ -399,7 +399,12 @@
                         statusPagamento: p.statusPagamento,
                         horaEntrada: p.horaEntrada,
                         horaSaida: p.horaSaida,
-                        numEventos: p.numEventos
+                        numEventos: p.numEventos,
+                        isNaoCadastrado: p.isNaoCadastrado || !p.monitorId,
+                        eventoId: p.eventoId,
+                        dataPagamento: p.dataPagamento,
+                        foiMotorista: p.foiMotorista,
+                        observacoes: p.observacoes
                     }));
 
                     // 9. Mapeia FUNCIONÁRIOS
@@ -1394,6 +1399,12 @@
                     const statusClass = isPago ? 'text-emerald-700 bg-emerald-100 border-emerald-200' : 'text-amber-700 bg-amber-100 border-amber-200';
                     const statusText = isPago ? 'Pago' : 'Pendente';
                     const nota = p.numEventos || '-';
+                    
+                    // Tag para monitor não cadastrado
+                    const isNaoCadastrado = p.isNaoCadastrado || !p.monitorId;
+                    const tagNaoCadastrado = isNaoCadastrado 
+                        ? '<span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-bold rounded-full border border-gray-300" title="Monitor não está cadastrado no sistema"><i class="fa-solid fa-user-slash"></i> NÃO CADASTRADO</span>' 
+                        : '';
 
                     return `
                         <tr id="pagamento-row-${p.id}" class="hover:bg-gray-50/50 transition-colors">
@@ -1404,7 +1415,12 @@
                                        data-valor="${total.toFixed(2)}">
                             </td>
                             <td class="text-sm py-4 border-b border-gray-100">${p.data.split('-').reverse().slice(0, 2).join('/')}</td>
-                            <td class="font-bold text-gray-800 border-b border-gray-100">${p.nome}</td>
+                            <td class="font-bold text-gray-800 border-b border-gray-100">
+                                <div class="flex items-center flex-wrap">
+                                    ${p.nome}
+                                    ${tagNaoCadastrado}
+                                </div>
+                            </td>
                             <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.valorBase) || 0).toFixed(2)}</td>
                             <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.horasExtras) || 0).toFixed(2)}</td>
                             <td class="font-bold text-indigo-600 border-b border-gray-100">R$ ${total.toFixed(2)}</td>
@@ -2180,6 +2196,7 @@
                 const select = getById('pag-monitor-select');
                 if (select) {
                     select.innerHTML = '<option value="">Selecione um monitor...</option>' +
+                        '<option value="NAO_CADASTRADO">🚫 Monitor Não-Cadastrado</option>' +
                         state.monitores.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
                 }
                 getById('pag-monitor-entrada').value = '';
@@ -2194,7 +2211,25 @@
                 getById('pag-monitor-eventos').value = '0';
                 getById('pag-monitor-eventos-container').classList.add('hidden');
                 getById('pag-monitor-adicional-status').textContent = '';
+                // Reset campo de monitor não cadastrado
+                getById('pag-monitor-nome-container').classList.add('hidden');
+                getById('pag-monitor-nome-nao-cadastrado').value = '';
                 getById('modal-pagamento-monitor').classList.remove('hidden');
+            });
+
+            // Listener para mostrar campo de nome quando selecionar "Não Cadastrado"
+            getById('pag-monitor-select')?.addEventListener('change', function() {
+                const nomeContainer = getById('pag-monitor-nome-container');
+                const nomeInput = getById('pag-monitor-nome-nao-cadastrado');
+                
+                if (this.value === 'NAO_CADASTRADO') {
+                    nomeContainer.classList.remove('hidden');
+                    nomeInput.required = true;
+                } else {
+                    nomeContainer.classList.add('hidden');
+                    nomeInput.required = false;
+                    nomeInput.value = '';
+                }
             });
 
             getById('add-new-monitor-btn')?.addEventListener('click', () => {
@@ -2768,7 +2803,21 @@
                 e.preventDefault();
                 const editId = getById('pag-monitor-edit-id')?.value; // ID do pagamento sendo editado
                 const monitorId = getById('pag-monitor-select').value;
-                const monitor = state.monitores.find(m => m.id === monitorId);
+                
+                // Verifica se é monitor não cadastrado
+                const isNaoCadastrado = monitorId === 'NAO_CADASTRADO';
+                let nomeMonitor;
+                
+                if (isNaoCadastrado) {
+                    nomeMonitor = getById('pag-monitor-nome-nao-cadastrado').value.trim();
+                    if (!nomeMonitor) {
+                        showToastModal('❌ Por favor, insira o nome do monitor.', true);
+                        return;
+                    }
+                } else {
+                    const monitor = state.monitores.find(m => m.id === monitorId);
+                    nomeMonitor = monitor ? monitor.nome : 'Monitor Desconhecido';
+                }
 
                 // Calcula nota média das estrelas/ranges
                 const notas = [
@@ -2792,8 +2841,8 @@
                     data: getById('pag-monitor-data').value,
                     dataPagamento: getById('pag-monitor-data-pagamento').value,
                     eventoId: getById('pag-monitor-evento').value || null,
-                    monitorId: monitorId,
-                    nome: monitor ? monitor.nome : 'Monitor Desconhecido',
+                    monitorId: isNaoCadastrado ? null : monitorId,
+                    nome: nomeMonitor,
                     valorBase: valorBase,
                     adicional: adicionalMotorista,
                     horasExtras: horasExtras,
@@ -2803,7 +2852,8 @@
                     statusPagamento: getById('pag-monitor-status').value,
                     foiMotorista: foiMotorista,
                     numEventos: eventosEntregues,
-                    observacoes: getById('pag-monitor-obs').value
+                    observacoes: getById('pag-monitor-obs').value,
+                    isNaoCadastrado: isNaoCadastrado
                 };
 
                 let sucesso;
@@ -2823,6 +2873,8 @@
                     if (getById('pag-monitor-edit-id')) {
                         getById('pag-monitor-edit-id').value = '';
                     }
+                    // Esconde o campo de nome de monitor não cadastrado
+                    getById('pag-monitor-nome-container').classList.add('hidden');
                     await window.loadDataFromCloud();
                 } else {
                     showToastModal('❌ Erro ao salvar pagamento.', true);
@@ -6418,7 +6470,21 @@
                         <label for="pag-monitor-select" class="block text-sm font-bold text-gray-700">Monitor</label>
                         <select id="pag-monitor-select" required class="form-input w-full">
                             <option value="">Selecione um monitor...</option>
+                            <option value="NAO_CADASTRADO">🚫 Monitor Não-Cadastrado</option>
                         </select>
+                    </div>
+
+                    <div id="pag-monitor-nome-container" class="hidden space-y-1 lg:col-span-2">
+                        <label for="pag-monitor-nome-nao-cadastrado" class="block text-sm font-bold text-gray-700">
+                            Nome do Monitor
+                        </label>
+                        <input type="text" id="pag-monitor-nome-nao-cadastrado" 
+                               placeholder="Digite o nome completo do monitor" 
+                               class="form-input w-full">
+                        <p class="text-xs text-amber-600 mt-1">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            Este monitor não estará cadastrado no sistema
+                        </p>
                     </div>
 
                     <div class="space-y-1">
@@ -7088,7 +7154,21 @@
             // Populate the form fields
             getById('pag-monitor-data').value = pagamento.data;
             getById('pag-monitor-data-pagamento').value = pagamento.dataPagamento || '';
-            getById('pag-monitor-select').value = pagamento.monitorId;
+            
+            // Verifica se é monitor não cadastrado
+            const isNaoCadastrado = pagamento.isNaoCadastrado || !pagamento.monitorId;
+            
+            if (isNaoCadastrado) {
+                getById('pag-monitor-select').value = 'NAO_CADASTRADO';
+                getById('pag-monitor-nome-container').classList.remove('hidden');
+                getById('pag-monitor-nome-nao-cadastrado').value = pagamento.nome;
+                getById('pag-monitor-nome-nao-cadastrado').required = true;
+            } else {
+                getById('pag-monitor-select').value = pagamento.monitorId;
+                getById('pag-monitor-nome-container').classList.add('hidden');
+                getById('pag-monitor-nome-nao-cadastrado').required = false;
+            }
+            
             getById('pag-monitor-valor').value = pagamento.valorBase || 0;
             getById('pag-monitor-he').value = pagamento.horasExtras || 0;
             getById('pag-monitor-entrada').value = pagamento.horaEntrada || '';
