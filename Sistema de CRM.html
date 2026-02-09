@@ -1387,14 +1387,59 @@
                 // --- Funções Principais ---
                 const loadData = async () => {
                     const apiClients = await api.getClientes();
-                    clients = apiClients || [];
+                    const rawClients = apiClients || [];
+
+                    // Tenta carregar dados enriquecidos do localStorage (CRM local)
+                    const localCrmData = JSON.parse(localStorage.getItem('crmToyClients_v8') || '[]');
+                    const localMap = {};
+                    localCrmData.forEach(c => { if (c.id) localMap[c.id] = c; });
+
+                    // Mescla: dados locais (CRM) têm prioridade, API preenche clientes novos
+                    // Mapeia campos da API (name/phone/address) para campos do CRM (nome/telefone/enderecoResidencial)
+                    clients = rawClients.map(apiClient => {
+                        const local = localMap[apiClient.id];
+                        if (local) {
+                            // Cliente já existe no CRM local, mantém dados locais e atualiza dados básicos da API
+                            return { ...local, id: apiClient.id };
+                        }
+                        // Cliente novo vindo da API - mapeia campos
+                        return {
+                            id: apiClient.id,
+                            nome: apiClient.name || apiClient.nome || '',
+                            telefone: apiClient.phone || apiClient.telefone || '',
+                            enderecoResidencial: apiClient.address || apiClient.enderecoResidencial || '',
+                            cpf: apiClient.cpf || '',
+                            estagio: apiClient.estagio || 1,
+                            conversationHistory: [],
+                            historicoEventosFechados: [],
+                            clientType: 'PF',
+                            company: '',
+                            anotacoes: '',
+                            isRecorrente: false,
+                            createdAt: apiClient.id // id é Date.now()
+                        };
+                    });
+
+                    // Adiciona clientes que estão no localStorage mas não na API
+                    const apiIds = new Set(rawClients.map(c => c.id));
+                    localCrmData.forEach(localClient => {
+                        if (localClient.id && !apiIds.has(localClient.id)) {
+                            clients.push(localClient);
+                        }
+                    });
 
                     // Data migration / enrichment
                     clients.forEach(client => {
-                        // Garante que o histórico de conversas exista
+                        // Garante que campos essenciais existam
+                        if (!client.nome) client.nome = client.name || '';
+                        if (!client.telefone) client.telefone = client.phone || '';
                         if (!client.conversationHistory) {
                             client.conversationHistory = [];
                         }
+                        if (!client.historicoEventosFechados) {
+                            client.historicoEventosFechados = [];
+                        }
+                        if (!client.estagio) client.estagio = 1;
                         if (client.clientType) {
                             if (client.estagio === 7) {
                                 client.estagio = 6;
@@ -1458,8 +1503,8 @@
                     // 1. Filtrar por Pesquisa (Nome ou Telefone)
                     if (searchTerm) {
                         processedClients = processedClients.filter(client => {
-                            const nome = client.nome.toLowerCase();
-                            const telefone = client.telefone ? client.telefone.replace(/[\(\)\-\s]/g, '') : ''; // Limpa telefone
+                            const nome = (client.nome || '').toLowerCase();
+                            const telefone = client.telefone ? client.telefone.replace(/[\(\)\-\s]/g, '') : '';
                             const searchTermClean = searchTerm.replace(/[\(\)\-\s]/g, '');
                             return nome.includes(searchTerm) || telefone.includes(searchTermClean);
                         });
@@ -1502,8 +1547,8 @@
 
                     // 3. Ordenar
                     if (viewState.sortKey === 'name') {
-                        processedClients.sort((a, b) => a.nome.localeCompare(b.nome));
-                    } else if (viewState.sortKey === 'phone') { // ADICIONADO: Ordenar por telefone
+                        processedClients.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+                    } else if (viewState.sortKey === 'phone') {
                         processedClients.sort((a, b) => (a.telefone || '').localeCompare(b.telefone || ''));
                     } else if (viewState.sortKey === 'event') {
                         processedClients.sort((a, b) => {
