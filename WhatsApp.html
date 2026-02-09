@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp - Aero Festas</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#25D366">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="js/pwa-init.js"></script>
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>💬</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --wa-green: #25D366;
+            --wa-dark-green: #128C7E;
+            --wa-light-green: #dcf8c6;
+            --wa-bg: #e5ddd5;
+            --primary: #4f46e5;
+            --secondary: #a855f7;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; color: #1f2937; }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(200, 200, 200, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
+        .form-input {
+            background-color: #f9fafb; border: 1px solid #d1d5db; color: #1f2937;
+            border-radius: 0.375rem; padding: 0.5rem 0.75rem; transition: all 0.2s ease-in-out;
+        }
+        .form-input::placeholder { color: #6b7280; }
+        .form-input:focus { outline: none; box-shadow: 0 0 0 2px var(--wa-green); border-color: var(--wa-green); }
+
+        .shiny-btn {
+            position: relative; border: 2px solid transparent;
+            background-image: linear-gradient(to right, var(--wa-dark-green) 0%, var(--wa-green) 51%, var(--wa-dark-green) 100%);
+            background-size: 200% auto; color: white;
+            box-shadow: 0 4px 15px 0 rgba(37, 211, 102, 0.4); transition: all 0.4s ease;
+        }
+        .shiny-btn:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 8px 25px 0 rgba(37, 211, 102, 0.6); }
+        .shiny-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+
+        /* Chat bubbles */
+        .bubble-received {
+            background: white; border-radius: 0 12px 12px 12px; max-width: 75%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .bubble-sent {
+            background: var(--wa-light-green); border-radius: 12px 0 12px 12px; max-width: 75%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+
+        /* Conversation item */
+        .conv-item { transition: background 0.15s ease; }
+        .conv-item:hover { background: rgba(255,255,255,0.5); }
+        .conv-item.active { background: rgba(37, 211, 102, 0.08); border-left: 3px solid var(--wa-green); }
+
+        /* Instance tabs */
+        .instance-tab {
+            padding: 0.5rem 1.25rem; border-radius: 20px; font-weight: 600; font-size: 0.875rem;
+            cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent;
+        }
+        .instance-tab.active { background: var(--wa-green); color: white; box-shadow: 0 4px 12px rgba(37,211,102,0.3); }
+        .instance-tab:not(.active) { background: rgba(255,255,255,0.5); color: #6b7280; }
+        .instance-tab:not(.active):hover { background: rgba(255,255,255,0.8); }
+
+        /* Unread badge */
+        .unread-badge {
+            background: var(--wa-green); color: white; font-size: 0.7rem; font-weight: 700;
+            min-width: 20px; height: 20px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; padding: 0 5px;
+        }
+
+        /* Status indicator */
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .status-dot.connected { background: var(--wa-green); box-shadow: 0 0 6px rgba(37,211,102,0.5); }
+        .status-dot.disconnected { background: #ef4444; }
+        .status-dot.connecting { background: #f59e0b; animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* Bottom nav (same as CRM) */
+        .bottom-nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 480px; height: 75px; background: rgba(255,255,255,0.6); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255,255,255,0.4); display: flex; justify-content: space-around; align-items: center; padding: 12px 10px 0 10px; z-index: 10000; border-radius: 40px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(255,255,255,0.8); transition: all 0.7s cubic-bezier(0.19,1,0.22,1); user-select: none; overflow: hidden; }
+        .bottom-nav-handle { position: absolute; top: 0; left: 0; right: 0; height: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .bottom-nav-handle::after { content: ''; width: 40px; height: 4px; background: rgba(79,70,229,0.2); border-radius: 10px; transition: all 0.5s cubic-bezier(0.19,1,0.22,1); }
+        .bottom-nav-handle i { position: absolute; font-size: 1.2rem; color: #4f46e5; opacity: 0; transform: translateY(10px); transition: all 0.5s cubic-bezier(0.19,1,0.22,1); }
+        .bottom-nav.collapsed { transform: translateX(-50%) translateY(15px); width: 80px; height: 48px; padding: 0; border-radius: 100px; background: rgba(255,255,255,0.5); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+        .bottom-nav.collapsed .nav-item { opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .bottom-nav.collapsed .bottom-nav-handle::after { opacity: 0; transform: scaleX(0); }
+        .bottom-nav.collapsed .bottom-nav-handle i { opacity: 1; transform: translateY(0); }
+        @media (min-width: 1024px) { .bottom-nav { display: none; } }
+        .nav-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; width: 55px; height: 100%; text-decoration: none; z-index: 1; transition: all 0.6s cubic-bezier(0.19,1,0.22,1); }
+        .nav-item::before { content: ''; position: absolute; top: 50%; left: 50%; width: 45px; height: 45px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; transform: translate(-50%,-50%) scale(0); opacity: 0; z-index: -1; transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 8px 16px rgba(79,70,229,0.3); }
+        .nav-item.active { color: white; transform: translateY(-8px); }
+        .nav-item.active::before { transform: translate(-50%,-60%) scale(1); opacity: 1; }
+        .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
+        .nav-item span { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
+        .nav-item.active span { opacity: 1; transform: translateY(2px); color: #4f46e5; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 8px; font-size: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+        @media (max-width: 768px) { .container { padding-bottom: 100px; } }
+
+        /* Toast */
+        #toast { position: fixed; top: 20px; right: 20px; z-index: 99999; }
+        .toast-enter { animation: toast-in 0.5s ease-out forwards; }
+        @keyframes toast-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* QR Modal */
+        #qr-modal.hidden { display: none; }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="container mx-auto p-4 md:p-6 relative z-10 max-w-7xl">
+
+        <!-- Header -->
+        <header class="glassmorphism p-4 rounded-xl mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <div class="flex items-center gap-3">
+                <!-- Desktop back -->
+                <button onclick="window.location.href='./Dashboard.html'" class="hidden lg:flex bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors items-center justify-center" title="Dashboard">
+                    <i class="fa-solid fa-house"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="fab fa-whatsapp text-[var(--wa-green)]"></i>
+                        <span>WhatsApp</span>
+                    </h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="status-dot disconnected" id="connection-status-dot"></span>
+                        <span class="text-xs text-gray-500" id="connection-status-text">Verificando...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instance Tabs -->
+            <div class="flex items-center gap-2" id="instance-tabs">
+                <button class="instance-tab active" data-instance="aero-festas">
+                    Aero Festas <span class="ml-1 text-xs" id="badge-aero-festas"></span>
+                </button>
+                <button class="instance-tab" data-instance="abc-festas">
+                    ABC Festas <span class="ml-1 text-xs" id="badge-abc-festas"></span>
+                </button>
+            </div>
+
+            <!-- Admin connect button -->
+            <button id="connect-btn" class="hidden shiny-btn text-sm py-2 px-4 rounded-lg font-bold">
+                <i class="fas fa-qrcode mr-1"></i> Conectar
+            </button>
+        </header>
+
+        <!-- Main Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-4" style="height: calc(100vh - 220px);">
+
+            <!-- Conversation List -->
+            <div id="conversation-panel" class="lg:col-span-4 glassmorphism rounded-xl overflow-hidden flex flex-col">
+                <div class="p-3 border-b border-gray-200/50">
+                    <div class="relative">
+                        <input type="text" id="search-conversations" placeholder="Buscar conversa..."
+                            class="form-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                </div>
+                <div id="conversation-list" class="flex-1 overflow-y-auto">
+                    <div class="flex items-center justify-center h-full text-gray-400 text-sm p-4">
+                        <div class="text-center">
+                            <i class="fab fa-whatsapp text-4xl text-gray-300 mb-2"></i>
+                            <p>Carregando conversas...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div id="chat-panel" class="lg:col-span-8 glassmorphism rounded-xl overflow-hidden flex-col hidden lg:flex">
+                <!-- Chat Header -->
+                <div id="chat-header" class="p-3 border-b border-gray-200/50 flex items-center justify-between bg-white/30">
+                    <div class="flex items-center gap-3">
+                        <button id="back-to-list-btn" class="lg:hidden text-gray-500 hover:text-gray-700 p-1">
+                            <i class="fas fa-arrow-left text-lg"></i>
+                        </button>
+                        <div class="w-10 h-10 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white font-bold" id="chat-avatar">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div>
+                            <h3 id="chat-contact-name" class="font-semibold text-gray-900 text-sm"></h3>
+                            <p id="chat-contact-phone" class="text-xs text-gray-500"></p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="link-crm-btn" class="hidden text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-200 font-semibold transition">
+                            <i class="fas fa-users mr-1"></i> CRM
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-2" style="background: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22><rect fill=%22%23f0f2f5%22 width=%2220%22 height=%2220%22/><circle fill=%22%23e8e8e8%22 cx=%2210%22 cy=%2210%22 r=%221%22/></svg>') repeat;">
+                    <div id="chat-welcome" class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fab fa-whatsapp text-6xl text-gray-200 mb-4"></i>
+                            <p class="text-lg font-medium">Selecione uma conversa</p>
+                            <p class="text-sm mt-1">As mensagens aparecem aqui</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading more indicator -->
+                <div id="loading-more" class="hidden text-center py-2 text-xs text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-1"></i> Carregando mais mensagens...
+                </div>
+
+                <!-- Input Bar -->
+                <div id="input-bar" class="hidden p-3 border-t border-gray-200/50 bg-white/50">
+                    <div class="flex items-end gap-2">
+                        <textarea id="message-input" rows="1" placeholder="Digite uma mensagem..."
+                            class="form-input flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 max-h-32"
+                            style="field-sizing: content;"></textarea>
+                        <button id="send-btn" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" disabled>
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="glassmorphism p-8 rounded-2xl max-w-sm w-full text-center" style="background: rgba(255,255,255,0.95);">
+            <h3 class="text-lg font-bold mb-2">
+                <i class="fab fa-whatsapp text-[var(--wa-green)] mr-2"></i>Conectar WhatsApp
+            </h3>
+            <p class="text-sm text-gray-500 mb-4" id="qr-instance-name"></p>
+            <div id="qr-container" class="mx-auto mb-4 flex items-center justify-center min-h-[264px]">
+                <div class="text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p class="text-sm">Gerando QR Code...</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500">Abra o WhatsApp no celular &gt; Dispositivos conectados &gt; Conectar dispositivo</p>
+            <button id="close-qr-modal" class="mt-4 text-gray-500 hover:text-gray-700 text-sm font-semibold">
+                <i class="fas fa-times mr-1"></i> Fechar
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed top-4 right-4 z-[99999] bg-white rounded-xl shadow-lg border border-gray-200 p-4 flex items-center gap-3 toast-enter">
+        <i id="toast-icon" class="text-lg"></i>
+        <p id="toast-message" class="text-sm"></p>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <div class="bottom-nav-handle" id="bottom-nav-handle"><i class="fas fa-chevron-up"></i></div>
+        <a href="./Dashboard.html" class="nav-item"><i class="fas fa-home"></i><span>Início</span></a>
+        <a href="./Agenda de eventos.html" class="nav-item"><i class="fas fa-calendar-alt"></i><span>Agenda</span></a>
+        <a href="./Sistema Gestão Financeira.html" class="nav-item"><i class="fas fa-wallet"></i><span>Financeiro</span></a>
+        <a href="./Sistema de CRM.html" class="nav-item"><i class="fas fa-users"></i><span>Clientes</span></a>
+        <a href="#" class="nav-item active"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>
+    </nav>
+
+    <script type="module">
+        import { getToken } from './js/auth.js';
+        import { API_BASE_URL } from './js/api.js';
+
+        const BASE = `${API_BASE_URL}/api/whatsapp`;
+        const token = getToken();
+        const headers = () => ({ 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' });
+
+        // --- STATE ---
+        let currentInstance = new URLSearchParams(window.location.search).get('instance') || 'aero-festas';
+        let conversations = [];
+        let currentConversationId = null;
+        let currentConversation = null;
+        let messages = [];
+        let messagesPage = 1;
+        let isLoadingMore = false;
+        let hasMoreMessages = true;
+        let pollInterval = null;
+        let instances = [];
+        let userData = null;
+
+        try { userData = JSON.parse(localStorage.getItem('userData')); } catch(e) {}
+
+        // --- API ---
+        const api = {
+            getInstances: async () => {
+                try { const r = await fetch(`${BASE}/instances`, { headers: headers() }); return r.ok ? await r.json() : []; } catch(e) { return []; }
+            },
+            getConversations: async (instance, search = '') => {
+                try {
+                    const params = new URLSearchParams({ instance, search, limit: '100' });
+                    const r = await fetch(`${BASE}/conversations?${params}`, { headers: headers() });
+                    return r.ok ? await r.json() : [];
+                } catch(e) { return []; }
+            },
+            getMessages: async (convId, page = 1) => {
+                try {
+                    const r = await fetch(`${BASE}/conversations/${convId}/messages?page=${page}&limit=50`, { headers: headers() });
+                    return r.ok ? await r.json() : [];
+                } catch(e) { return []; }
+            },
+            send: async (instanceName, remoteJid, text) => {
+                try {
+                    const r = await fetch(`${BASE}/send`, {
+                        method: 'POST', headers: headers(),
+                        body: JSON.stringify({ instanceName, remoteJid, text })
+                    });
+                    return r.ok ? await r.json() : null;
+                } catch(e) { return null; }
+            },
+            markRead: async (convId) => {
+                try { await fetch(`${BASE}/conversations/${convId}/read`, { method: 'PUT', headers: headers() }); } catch(e) {}
+            },
+            getUnreadCount: async () => {
+                try { const r = await fetch(`${BASE}/unread-count`, { headers: headers() }); return r.ok ? await r.json() : {}; } catch(e) { return {}; }
+            },
+            connect: async (name) => {
+                try { const r = await fetch(`${BASE}/instances/${name}/connect`, { method: 'POST', headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            getQR: async (name) => {
+                try { const r = await fetch(`${BASE}/instances/${name}/qr`, { headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            }
+        };
+
+        // --- HELPERS ---
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatTime(dateStr) {
+            return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatRelative(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const now = new Date();
+            const diff = now - d;
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today - 86400000);
+
+            if (d >= today) return formatTime(dateStr);
+            if (d >= yesterday) return 'Ontem';
+            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').filter(n => n).map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            const icon = document.getElementById('toast-icon');
+            icon.className = isError ? 'fas fa-exclamation-circle text-red-500 text-lg' : 'fas fa-check-circle text-green-500 text-lg';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // --- RENDER: INSTANCE TABS ---
+        function setupInstanceTabs() {
+            document.querySelectorAll('.instance-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    currentInstance = tab.dataset.instance;
+                    document.querySelectorAll('.instance-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentConversationId = null;
+                    currentConversation = null;
+                    showChatWelcome();
+                    loadConversations();
+                    updateConnectionStatus();
+                    // Atualiza URL sem recarregar
+                    history.replaceState(null, '', `WhatsApp.html?instance=${currentInstance}`);
+                });
+            });
+        }
+
+        // --- RENDER: CONNECTION STATUS ---
+        function updateConnectionStatus() {
+            const inst = instances.find(i => i.instanceName === currentInstance);
+            const dot = document.getElementById('connection-status-dot');
+            const text = document.getElementById('connection-status-text');
+            const connectBtn = document.getElementById('connect-btn');
+
+            if (!inst) {
+                dot.className = 'status-dot disconnected';
+                text.textContent = 'Não configurado';
+                connectBtn.classList.add('hidden');
+                return;
+            }
+
+            dot.className = `status-dot ${inst.status}`;
+            const statusMap = { connected: 'Conectado', disconnected: 'Desconectado', connecting: 'Conectando...', qr_pending: 'Aguardando QR...' };
+            text.textContent = statusMap[inst.status] || inst.status;
+            if (inst.phoneNumber) text.textContent += ` (${inst.phoneNumber})`;
+
+            // Show connect button for admins when disconnected
+            if (userData?.isAdmin && inst.status !== 'connected') {
+                connectBtn.classList.remove('hidden');
+                connectBtn.onclick = () => showQRModal(currentInstance);
+            } else {
+                connectBtn.classList.add('hidden');
+            }
+        }
+
+        // --- RENDER: CONVERSATION LIST ---
+        function renderConversationList() {
+            const listEl = document.getElementById('conversation-list');
+            const search = document.getElementById('search-conversations').value.toLowerCase().trim();
+
+            let filtered = conversations;
+            if (search) {
+                filtered = conversations.filter(c =>
+                    (c.contactName || '').toLowerCase().includes(search) ||
+                    c.phoneNumber.includes(search.replace(/\D/g, ''))
+                );
+            }
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 text-sm p-4">
+                    <div class="text-center">
+                        <i class="fab fa-whatsapp text-4xl text-gray-300 mb-2"></i>
+                        <p>${search ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}</p>
+                    </div>
+                </div>`;
+                return;
+            }
+
+            listEl.innerHTML = '';
+            filtered.forEach(conv => {
+                const div = document.createElement('div');
+                const isActive = conv.id === currentConversationId;
+                div.className = `conv-item p-3 cursor-pointer flex items-center gap-3 border-b border-gray-100/50 ${isActive ? 'active' : ''}`;
+
+                const initials = getInitials(conv.contactName || conv.phoneNumber);
+                const unread = conv.unreadCount > 0 ? `<span class="unread-badge">${conv.unreadCount > 99 ? '99+' : conv.unreadCount}</span>` : '';
+                const crmIcon = conv.clientId ? '<i class="fas fa-link text-indigo-400 text-[10px]" title="Vinculado ao CRM"></i>' : '';
+                const preview = conv.lastMessagePreview || '';
+                const time = formatRelative(conv.lastMessageAt);
+
+                div.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                        ${initials}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-sm truncate ${conv.unreadCount > 0 ? 'text-gray-900' : 'text-gray-700'}">${escapeHtml(conv.contactName || conv.phoneNumber)} ${crmIcon}</span>
+                            <span class="text-[11px] text-gray-400 flex-shrink-0 ml-2">${time}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-0.5">
+                            <p class="text-xs truncate ${conv.unreadCount > 0 ? 'text-gray-800 font-medium' : 'text-gray-500'}">${escapeHtml(preview)}</p>
+                            ${unread}
+                        </div>
+                    </div>
+                `;
+
+                div.addEventListener('click', () => openConversation(conv));
+                listEl.appendChild(div);
+            });
+        }
+
+        // --- OPEN CONVERSATION ---
+        async function openConversation(conv) {
+            currentConversationId = conv.id;
+            currentConversation = conv;
+            messagesPage = 1;
+            hasMoreMessages = true;
+            messages = [];
+
+            // Update header
+            document.getElementById('chat-contact-name').textContent = conv.contactName || conv.phoneNumber;
+            document.getElementById('chat-contact-phone').textContent = conv.phoneNumber;
+            document.getElementById('chat-avatar').textContent = getInitials(conv.contactName || conv.phoneNumber);
+
+            // CRM link
+            const crmBtn = document.getElementById('link-crm-btn');
+            if (conv.clientId) {
+                crmBtn.classList.remove('hidden');
+                crmBtn.onclick = () => window.open(`Sistema de CRM.html?clientId=${conv.clientId}`, '_blank');
+            } else {
+                crmBtn.classList.add('hidden');
+            }
+
+            // Show chat panel, hide welcome
+            document.getElementById('chat-panel').classList.remove('hidden');
+            document.getElementById('chat-panel').classList.add('flex');
+            document.getElementById('chat-welcome').classList.add('hidden');
+            document.getElementById('input-bar').classList.remove('hidden');
+
+            // Mobile: hide conversation list
+            document.getElementById('conversation-panel').classList.add('hidden');
+            document.getElementById('conversation-panel').classList.remove('lg:flex');
+
+            // Load messages
+            await loadMessages();
+
+            // Mark as read
+            if (conv.unreadCount > 0) {
+                await api.markRead(conv.id);
+                conv.unreadCount = 0;
+                renderConversationList();
+            }
+
+            renderConversationList();
+        }
+
+        // --- LOAD MESSAGES ---
+        async function loadMessages() {
+            const data = await api.getMessages(currentConversationId, messagesPage);
+            if (data.length < 50) hasMoreMessages = false;
+
+            // API returns newest first, reverse for display
+            const newMsgs = data.reverse();
+
+            if (messagesPage === 1) {
+                messages = newMsgs;
+            } else {
+                messages = [...newMsgs, ...messages];
+            }
+
+            renderMessages(messagesPage === 1);
+        }
+
+        // --- RENDER MESSAGES ---
+        function renderMessages(scrollToBottom = true) {
+            const area = document.getElementById('messages-area');
+            area.innerHTML = '';
+
+            let lastDate = null;
+
+            messages.forEach(msg => {
+                const msgDate = new Date(msg.timestamp).toLocaleDateString('pt-BR');
+
+                if (msgDate !== lastDate) {
+                    const sep = document.createElement('div');
+                    sep.className = 'text-center my-3';
+                    sep.innerHTML = `<span class="bg-white/80 text-gray-500 text-xs px-3 py-1 rounded-full shadow-sm">${msgDate}</span>`;
+                    area.appendChild(sep);
+                    lastDate = msgDate;
+                }
+
+                const bubble = document.createElement('div');
+                bubble.className = `p-2.5 ${msg.fromMe ? 'bubble-sent ml-auto' : 'bubble-received mr-auto'}`;
+
+                const time = formatTime(msg.timestamp);
+                const statusIcon = msg.fromMe ? (
+                    msg.status === 'read' ? '<i class="fas fa-check-double text-blue-400"></i>' :
+                    msg.status === 'delivered' ? '<i class="fas fa-check-double text-gray-400"></i>' :
+                    '<i class="fas fa-check text-gray-400"></i>'
+                ) : '';
+
+                const isMedia = msg.messageType !== 'text' && msg.content.startsWith('[');
+                const contentHtml = isMedia
+                    ? `<p class="text-gray-400 italic text-xs"><i class="fas fa-${msg.messageType === 'image' ? 'image' : msg.messageType === 'audio' ? 'microphone' : msg.messageType === 'video' ? 'video' : 'file'} mr-1"></i>${escapeHtml(msg.content)}</p>`
+                    : `<p class="whitespace-pre-wrap break-words text-sm">${escapeHtml(msg.content)}</p>`;
+
+                bubble.innerHTML = `
+                    ${contentHtml}
+                    <div class="text-right mt-1 flex items-center justify-end gap-1">
+                        <span class="text-[10px] text-gray-400">${time}</span>
+                        <span class="text-[10px]">${statusIcon}</span>
+                    </div>
+                `;
+
+                area.appendChild(bubble);
+            });
+
+            if (scrollToBottom) {
+                area.scrollTop = area.scrollHeight;
+            }
+        }
+
+        // --- INFINITE SCROLL (load older messages) ---
+        document.getElementById('messages-area').addEventListener('scroll', async function() {
+            if (this.scrollTop === 0 && hasMoreMessages && !isLoadingMore && currentConversationId) {
+                isLoadingMore = true;
+                document.getElementById('loading-more').classList.remove('hidden');
+
+                const prevHeight = this.scrollHeight;
+                messagesPage++;
+                await loadMessages();
+
+                // Manter scroll position
+                this.scrollTop = this.scrollHeight - prevHeight;
+                document.getElementById('loading-more').classList.add('hidden');
+                isLoadingMore = false;
+            }
+        });
+
+        // --- SEND MESSAGE ---
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !currentConversation) return;
+
+            input.value = '';
+            input.style.height = 'auto';
+            document.getElementById('send-btn').disabled = true;
+
+            // Optimistic UI
+            const tempMsg = {
+                id: 'temp-' + Date.now(),
+                fromMe: true,
+                content: text,
+                timestamp: new Date().toISOString(),
+                messageType: 'text',
+                status: 'sending'
+            };
+            messages.push(tempMsg);
+            renderMessages(true);
+
+            const result = await api.send(currentInstance, currentConversation.remoteJid, text);
+            if (result) {
+                const idx = messages.findIndex(m => m.id === tempMsg.id);
+                if (idx >= 0) messages[idx] = result;
+                renderMessages(true);
+            } else {
+                showToast('Erro ao enviar mensagem', true);
+                messages = messages.filter(m => m.id !== tempMsg.id);
+                renderMessages(true);
+                input.value = text;
+            }
+        }
+
+        document.getElementById('send-btn').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        document.getElementById('message-input').addEventListener('input', function() {
+            document.getElementById('send-btn').disabled = !this.value.trim();
+        });
+
+        // --- BACK BUTTON (mobile) ---
+        document.getElementById('back-to-list-btn').addEventListener('click', () => {
+            document.getElementById('conversation-panel').classList.remove('hidden');
+            document.getElementById('conversation-panel').classList.add('lg:flex');
+            document.getElementById('chat-panel').classList.add('hidden');
+            document.getElementById('chat-panel').classList.remove('flex');
+            currentConversationId = null;
+        });
+
+        // --- SHOW CHAT WELCOME ---
+        function showChatWelcome() {
+            document.getElementById('chat-welcome').classList.remove('hidden');
+            document.getElementById('input-bar').classList.add('hidden');
+            document.getElementById('messages-area').innerHTML = '';
+            document.getElementById('messages-area').appendChild(document.getElementById('chat-welcome'));
+            document.getElementById('chat-contact-name').textContent = '';
+            document.getElementById('chat-contact-phone').textContent = '';
+
+            // Desktop: show chat panel but with welcome
+            document.getElementById('chat-panel').classList.remove('hidden');
+            document.getElementById('chat-panel').classList.add('flex');
+        }
+
+        // --- QR CODE MODAL ---
+        let qrPollInterval = null;
+
+        async function showQRModal(instanceName) {
+            const modal = document.getElementById('qr-modal');
+            const container = document.getElementById('qr-container');
+            document.getElementById('qr-instance-name').textContent = instanceName === 'aero-festas' ? 'Aero Festas' : 'ABC Festas';
+
+            modal.classList.remove('hidden');
+            container.innerHTML = '<div class="text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Gerando QR Code...</p></div>';
+
+            const data = await api.connect(instanceName);
+            if (data?.base64) {
+                container.innerHTML = `<img src="${data.base64}" class="mx-auto" style="width: 264px; height: 264px;">`;
+            } else if (data?.code) {
+                container.innerHTML = `<img src="data:image/png;base64,${data.code}" class="mx-auto" style="width: 264px; height: 264px;">`;
+            } else {
+                container.innerHTML = '<p class="text-red-500 text-sm">Erro ao gerar QR Code. Verifique se a Evolution API está ativa.</p>';
+            }
+
+            // Poll para QR atualizado
+            qrPollInterval = setInterval(async () => {
+                const inst = instances.find(i => i.instanceName === instanceName);
+                if (inst) {
+                    const refreshedInstances = await api.getInstances();
+                    instances = refreshedInstances;
+                    const updated = refreshedInstances.find(i => i.instanceName === instanceName);
+                    if (updated?.status === 'connected') {
+                        clearInterval(qrPollInterval);
+                        modal.classList.add('hidden');
+                        showToast('WhatsApp conectado com sucesso!');
+                        updateConnectionStatus();
+                        return;
+                    }
+                }
+                // Atualiza QR
+                const qrData = await api.getQR(instanceName);
+                if (qrData?.base64) {
+                    container.innerHTML = `<img src="${qrData.base64}" class="mx-auto" style="width: 264px; height: 264px;">`;
+                } else if (qrData?.code) {
+                    container.innerHTML = `<img src="data:image/png;base64,${qrData.code}" class="mx-auto" style="width: 264px; height: 264px;">`;
+                }
+            }, 5000);
+        }
+
+        document.getElementById('close-qr-modal').addEventListener('click', () => {
+            document.getElementById('qr-modal').classList.add('hidden');
+            if (qrPollInterval) clearInterval(qrPollInterval);
+        });
+
+        // --- SEARCH ---
+        document.getElementById('search-conversations').addEventListener('input', renderConversationList);
+
+        // --- UNREAD BADGES ---
+        async function updateUnreadBadges() {
+            const counts = await api.getUnreadCount();
+            ['aero-festas', 'abc-festas'].forEach(name => {
+                const badge = document.getElementById(`badge-${name}`);
+                if (badge) {
+                    const count = counts[name] || 0;
+                    badge.textContent = count > 0 ? `(${count > 99 ? '99+' : count})` : '';
+                }
+            });
+        }
+
+        // --- LOAD CONVERSATIONS ---
+        async function loadConversations() {
+            conversations = await api.getConversations(currentInstance);
+            renderConversationList();
+        }
+
+        // --- POLLING ---
+        function startPolling() {
+            pollInterval = setInterval(async () => {
+                await loadConversations();
+                await updateUnreadBadges();
+
+                // Refresh current conversation messages
+                if (currentConversationId && messagesPage === 1) {
+                    const freshMsgs = await api.getMessages(currentConversationId, 1);
+                    const newMsgs = freshMsgs.reverse();
+                    // Check if there are new messages
+                    if (newMsgs.length > 0 && messages.length > 0) {
+                        const lastKnown = messages[messages.length - 1];
+                        const hasNew = newMsgs.some(m => m.id !== lastKnown.id && new Date(m.timestamp) > new Date(lastKnown.timestamp));
+                        if (hasNew) {
+                            messages = newMsgs;
+                            renderMessages(true);
+                            // Mark as read since user is viewing
+                            const conv = conversations.find(c => c.id === currentConversationId);
+                            if (conv?.unreadCount > 0) {
+                                await api.markRead(currentConversationId);
+                                conv.unreadCount = 0;
+                                renderConversationList();
+                            }
+                        }
+                    } else if (messages.length === 0 && newMsgs.length > 0) {
+                        messages = newMsgs;
+                        renderMessages(true);
+                    }
+                }
+
+                // Update instance status
+                instances = await api.getInstances();
+                updateConnectionStatus();
+            }, 5000);
+        }
+
+        // --- INIT ---
+        async function init() {
+            instances = await api.getInstances();
+
+            // Set active tab based on URL
+            document.querySelectorAll('.instance-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.instance === currentInstance);
+            });
+
+            updateConnectionStatus();
+            setupInstanceTabs();
+            await loadConversations();
+            await updateUnreadBadges();
+            showChatWelcome();
+            startPolling();
+
+            // Handle URL parameter for conversation
+            const urlConv = new URLSearchParams(window.location.search).get('conversation');
+            if (urlConv) {
+                const conv = conversations.find(c => c.id === urlConv);
+                if (conv) openConversation(conv);
+            }
+
+            document.title = `WhatsApp - ${currentInstance === 'aero-festas' ? 'Aero Festas' : 'ABC Festas'}`;
+        }
+
+        init();
+    </script>
+
+    <!-- Bottom Nav Collapse -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomNav = document.getElementById('main-bottom-nav');
+            const handle = document.getElementById('bottom-nav-handle');
+            if (bottomNav) {
+                const toggleNav = (e) => { e.stopPropagation(); bottomNav.classList.toggle('collapsed'); };
+                handle?.addEventListener('click', toggleNav);
+                bottomNav.addEventListener('click', (e) => { if (bottomNav.classList.contains('collapsed')) toggleNav(e); });
+            }
+        });
+    </script>
+
+    <script src="js/protect.js"></script>
+</body>
+</html>

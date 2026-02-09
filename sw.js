@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v1.0.5';
+const CACHE_NAME = 'aero-festas-v1.1.0';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
     '/Sistema%20de%20CRM.html',
     '/Sistema%20Gest%C3%A3o%20Financeira.html',
     '/Agenda%20de%20eventos.html',
+    '/WhatsApp.html',
     '/admin.html',
     '/profile.html',
     '/register.html',
@@ -17,6 +18,7 @@ const ASSETS_TO_CACHE = [
     '/js/api.js',
     '/js/protect.js',
     '/js/pwa-init.js',
+    '/js/whatsapp-badge.js',
     '/js/charts-financeiro.js',
     '/js/charts-init.js',
     '/js/profile.js',

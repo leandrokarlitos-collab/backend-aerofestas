@@ -18,11 +18,13 @@ model Toy {
 }
 
 model Client {
-  id      Float   @id 
+  id      Float   @id
   name    String
   phone   String?
   address String?
   cpf     String?
+
+  whatsappConversations WhatsAppConversation[]
 }
 
 // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
@@ -308,4 +310,60 @@ model PushSubscription {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// --- WHATSAPP INTEGRATION ---
+
+model WhatsAppInstance {
+  id            String   @id @default(uuid())
+  instanceName  String   @unique
+  displayName   String
+  phoneNumber   String?
+  status        String   @default("disconnected")
+  companyName   String
+  evolutionUrl  String
+  apiKey        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  conversations WhatsAppConversation[]
+}
+
+model WhatsAppConversation {
+  id                 String   @id @default(uuid())
+  remoteJid          String
+  phoneNumber        String
+  contactName        String?
+  profilePicUrl      String?
+  clientId           Float?
+  client             Client?  @relation(fields: [clientId], references: [id])
+  instanceId         String
+  instance           WhatsAppInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  unreadCount        Int      @default(0)
+  isArchived         Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  messages           WhatsAppMessage[]
+
+  @@unique([remoteJid, instanceId])
+  @@index([instanceId, lastMessageAt])
+  @@index([clientId])
+}
+
+model WhatsAppMessage {
+  id              String   @id
+  conversationId  String
+  conversation    WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fromMe          Boolean
+  content         String
+  messageType     String   @default("text")
+  mediaUrl        String?
+  timestamp       DateTime
+  status          String   @default("sent")
+  createdAt       DateTime @default(now())
+
+  @@index([conversationId, timestamp])
 }

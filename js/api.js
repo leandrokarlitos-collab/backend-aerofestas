@@ -627,5 +627,75 @@ export const api = {
             });
             return res.ok ? await res.json() : null;
         } catch (e) { return null; }
+    },
+
+    // --- WHATSAPP ---
+
+    getWhatsAppInstances: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/whatsapp/instances`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    getWhatsAppConversations: async (instanceName, search = '') => {
+        try {
+            const token = getToken();
+            let url = `${BASE_URL}/whatsapp/conversations?`;
+            if (instanceName) url += `instance=${encodeURIComponent(instanceName)}&`;
+            if (search) url += `search=${encodeURIComponent(search)}`;
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    getWhatsAppMessages: async (conversationId, limit = 50, before = '') => {
+        try {
+            const token = getToken();
+            let url = `${BASE_URL}/whatsapp/conversations/${conversationId}/messages?limit=${limit}`;
+            if (before) url += `&before=${encodeURIComponent(before)}`;
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    sendWhatsAppMessage: async (instanceName, conversationId, text) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/whatsapp/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ instanceName, conversationId, text })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    getWhatsAppUnreadCount: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/whatsapp/unread-count`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : { total: 0, instances: [] };
+        } catch (e) { return { total: 0, instances: [] }; }
+    },
+
+    markWhatsAppRead: async (conversationId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/whatsapp/conversations/${conversationId}/read`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) { return false; }
     }
 };

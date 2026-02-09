@@ -70,6 +70,16 @@
                     "sizes": "192x192"
                 }
             ]
+        },
+        {
+            "name": "WhatsApp",
+            "url": "/WhatsApp.html",
+            "icons": [
+                {
+                    "src": "icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
         }
     ],
     "categories": [

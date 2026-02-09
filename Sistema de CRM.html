@@ -852,6 +852,52 @@
                                     </div>
                                 </details>
 
+                                <!-- Seção: WhatsApp -->
+                                <details class="group border-t pt-6" id="detail-whatsapp-section">
+                                    <summary
+                                        class="font-semibold text-lg text-gray-800 cursor-pointer hover:text-indigo-600 list-none mb-2">
+                                        <i class="fas fa-chevron-right group-open:rotate-90 transition-transform duration-200 mr-2 text-sm"></i>
+                                        <i class="fab fa-whatsapp text-green-500 mr-1"></i>
+                                        WhatsApp
+                                        <span id="detail-wa-badge" class="hidden ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full"></span>
+                                    </summary>
+                                    <div class="mt-2">
+                                        <!-- Loading state -->
+                                        <div id="wa-crm-loading" class="text-center py-4 text-gray-500 hidden">
+                                            <i class="fas fa-spinner fa-spin mr-2"></i> Carregando conversas...
+                                        </div>
+                                        <!-- No conversations -->
+                                        <div id="wa-crm-empty" class="hidden text-center py-4">
+                                            <p class="text-gray-500 text-sm">Nenhuma conversa WhatsApp vinculada a este cliente.</p>
+                                            <a id="wa-crm-search-link" href="#" class="text-indigo-600 hover:underline text-sm mt-1 inline-block">
+                                                <i class="fas fa-search mr-1"></i> Buscar por telefone no WhatsApp
+                                            </a>
+                                        </div>
+                                        <!-- Conversations list -->
+                                        <div id="wa-crm-conversations" class="hidden space-y-3">
+                                        </div>
+                                        <!-- Mini chat -->
+                                        <div id="wa-crm-chat" class="hidden mt-3">
+                                            <div class="bg-[#e5ddd5] rounded-lg p-3 max-h-64 overflow-y-auto space-y-2" id="wa-crm-messages">
+                                            </div>
+                                            <div class="flex mt-2 gap-2">
+                                                <input type="text" id="wa-crm-input" placeholder="Resposta rápida..."
+                                                    class="form-input flex-1 text-sm" />
+                                                <button id="wa-crm-send-btn"
+                                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </button>
+                                            </div>
+                                            <div class="text-right mt-1">
+                                                <a id="wa-crm-full-link" href="#" target="_blank"
+                                                    class="text-indigo-600 hover:underline text-xs">
+                                                    Abrir conversa completa <i class="fas fa-external-link-alt ml-1"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+
                                 <!-- Seção: Dados Gerais -->
                                 <details class="group border-t pt-6" open>
                                     <summary
@@ -2073,6 +2119,9 @@
                             }
                         };
 
+                        // Carrega conversas WhatsApp do cliente
+                        loadWhatsAppForClient(client);
+
                         showView(detailView);
                     });
                 };
@@ -3217,6 +3266,227 @@
                     });
 
 
+                    // ===================================================================
+                    // WhatsApp Mini-Chat no CRM
+                    // ===================================================================
+                    const WA_API = 'https://backend-aerofestas-production.up.railway.app/api/whatsapp';
+                    let waCurrentConvId = null;
+                    let waCurrentInstanceName = null;
+
+                    async function loadWhatsAppForClient(client) {
+                        const loadingEl = document.getElementById('wa-crm-loading');
+                        const emptyEl = document.getElementById('wa-crm-empty');
+                        const convsEl = document.getElementById('wa-crm-conversations');
+                        const chatEl = document.getElementById('wa-crm-chat');
+                        const badgeEl = document.getElementById('detail-wa-badge');
+                        const searchLink = document.getElementById('wa-crm-search-link');
+
+                        // Reset state
+                        loadingEl.classList.remove('hidden');
+                        emptyEl.classList.add('hidden');
+                        convsEl.classList.add('hidden');
+                        chatEl.classList.add('hidden');
+                        badgeEl.classList.add('hidden');
+                        convsEl.innerHTML = '';
+                        waCurrentConvId = null;
+                        waCurrentInstanceName = null;
+
+                        try {
+                            const token = localStorage.getItem('authToken');
+                            if (!token) { loadingEl.classList.add('hidden'); emptyEl.classList.remove('hidden'); return; }
+
+                            // Try to find conversations by phone number
+                            let telefone = (client.telefone || '').replace(/\D/g, '');
+                            if (!telefone) {
+                                loadingEl.classList.add('hidden');
+                                emptyEl.classList.remove('hidden');
+                                searchLink.href = '#';
+                                searchLink.classList.add('hidden');
+                                return;
+                            }
+
+                            // Search across all instances
+                            const res = await fetch(`${WA_API}/conversations?search=${encodeURIComponent(telefone)}`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+
+                            loadingEl.classList.add('hidden');
+
+                            if (!res.ok) { emptyEl.classList.remove('hidden'); return; }
+
+                            const conversations = await res.json();
+
+                            if (!conversations || conversations.length === 0) {
+                                emptyEl.classList.remove('hidden');
+                                searchLink.classList.remove('hidden');
+                                searchLink.href = `WhatsApp.html?search=${encodeURIComponent(telefone)}`;
+                                return;
+                            }
+
+                            // Show conversations
+                            convsEl.classList.remove('hidden');
+
+                            let totalUnread = 0;
+                            conversations.forEach(conv => {
+                                totalUnread += conv.unreadCount || 0;
+                                const lastMsg = conv.lastMessagePreview || 'Sem mensagens';
+                                const lastDate = conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                                const instanceLabel = conv.instance?.displayName || conv.instance?.instanceName || '';
+
+                                const convEl = document.createElement('div');
+                                convEl.className = 'p-3 bg-white/80 rounded-lg border border-gray-200 cursor-pointer hover:bg-green-50 transition-colors';
+                                convEl.innerHTML = `
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-semibold text-sm text-gray-800 truncate">
+                                                ${conv.contactName || conv.phoneNumber}
+                                                <span class="text-xs font-normal text-gray-400 ml-1">(${instanceLabel})</span>
+                                            </p>
+                                            <p class="text-xs text-gray-500 truncate mt-0.5">${lastMsg}</p>
+                                        </div>
+                                        <div class="text-right ml-2 flex-shrink-0">
+                                            <p class="text-xs text-gray-400">${lastDate}</p>
+                                            ${conv.unreadCount > 0 ? `<span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-500 rounded-full mt-1">${conv.unreadCount}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                                convEl.addEventListener('click', () => {
+                                    openWaCrmChat(conv.id, conv.instance?.instanceName);
+                                });
+                                convsEl.appendChild(convEl);
+                            });
+
+                            // Show badge
+                            if (totalUnread > 0) {
+                                badgeEl.textContent = totalUnread;
+                                badgeEl.classList.remove('hidden');
+                            }
+
+                            // Auto-open first conversation
+                            if (conversations.length === 1) {
+                                openWaCrmChat(conversations[0].id, conversations[0].instance?.instanceName);
+                            }
+
+                        } catch (err) {
+                            console.error('Erro ao carregar WhatsApp do cliente:', err);
+                            loadingEl.classList.add('hidden');
+                            emptyEl.classList.remove('hidden');
+                        }
+                    }
+
+                    async function openWaCrmChat(conversationId, instanceName) {
+                        const chatEl = document.getElementById('wa-crm-chat');
+                        const msgsEl = document.getElementById('wa-crm-messages');
+                        const fullLink = document.getElementById('wa-crm-full-link');
+
+                        waCurrentConvId = conversationId;
+                        waCurrentInstanceName = instanceName;
+
+                        chatEl.classList.remove('hidden');
+                        msgsEl.innerHTML = '<p class="text-center text-gray-400 text-xs py-2"><i class="fas fa-spinner fa-spin"></i></p>';
+
+                        // Link to full conversation
+                        fullLink.href = `WhatsApp.html?instance=${encodeURIComponent(instanceName || '')}&conv=${encodeURIComponent(conversationId)}`;
+
+                        try {
+                            const token = localStorage.getItem('authToken');
+                            const res = await fetch(`${WA_API}/conversations/${conversationId}/messages?limit=20`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+
+                            if (!res.ok) { msgsEl.innerHTML = '<p class="text-center text-red-400 text-xs py-2">Erro ao carregar</p>'; return; }
+
+                            const messages = await res.json();
+                            msgsEl.innerHTML = '';
+
+                            if (messages.length === 0) {
+                                msgsEl.innerHTML = '<p class="text-center text-gray-400 text-xs py-2">Nenhuma mensagem</p>';
+                                return;
+                            }
+
+                            // Render messages (oldest first)
+                            const sorted = messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                            sorted.forEach(msg => {
+                                const bubble = document.createElement('div');
+                                bubble.className = msg.fromMe
+                                    ? 'ml-auto max-w-[80%] bg-[#dcf8c6] rounded-lg px-3 py-1.5 text-sm shadow-sm'
+                                    : 'mr-auto max-w-[80%] bg-white rounded-lg px-3 py-1.5 text-sm shadow-sm';
+                                const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                bubble.innerHTML = `
+                                    <p class="text-gray-800 break-words">${msg.content}</p>
+                                    <p class="text-[10px] text-gray-400 text-right mt-0.5">${time}</p>
+                                `;
+                                msgsEl.appendChild(bubble);
+                            });
+
+                            msgsEl.scrollTop = msgsEl.scrollHeight;
+
+                            // Mark as read
+                            fetch(`${WA_API}/conversations/${conversationId}/read`, {
+                                method: 'PUT',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            }).catch(() => {});
+
+                        } catch (err) {
+                            console.error('Erro ao carregar mensagens:', err);
+                            msgsEl.innerHTML = '<p class="text-center text-red-400 text-xs py-2">Erro de conexão</p>';
+                        }
+                    }
+
+                    // Send message from CRM mini-chat
+                    document.getElementById('wa-crm-send-btn')?.addEventListener('click', sendWaCrmMessage);
+                    document.getElementById('wa-crm-input')?.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendWaCrmMessage(); }
+                    });
+
+                    async function sendWaCrmMessage() {
+                        const input = document.getElementById('wa-crm-input');
+                        const text = (input?.value || '').trim();
+                        if (!text || !waCurrentConvId) return;
+
+                        input.value = '';
+                        const msgsEl = document.getElementById('wa-crm-messages');
+
+                        // Optimistic UI
+                        const bubble = document.createElement('div');
+                        bubble.className = 'ml-auto max-w-[80%] bg-[#dcf8c6] rounded-lg px-3 py-1.5 text-sm shadow-sm opacity-70';
+                        const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        bubble.innerHTML = `<p class="text-gray-800 break-words">${text}</p><p class="text-[10px] text-gray-400 text-right mt-0.5">${time} <i class="fas fa-clock text-[8px]"></i></p>`;
+                        msgsEl.appendChild(bubble);
+                        msgsEl.scrollTop = msgsEl.scrollHeight;
+
+                        try {
+                            const token = localStorage.getItem('authToken');
+                            // First get the conversation to know the remoteJid
+                            const convRes = await fetch(`${WA_API}/conversations/${waCurrentConvId}/messages?limit=1`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+
+                            if (!convRes.ok) throw new Error('Erro ao buscar conversa');
+
+                            const res = await fetch(`${WA_API}/send`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify({
+                                    instanceName: waCurrentInstanceName,
+                                    conversationId: waCurrentConvId,
+                                    text: text
+                                })
+                            });
+
+                            if (res.ok) {
+                                bubble.classList.remove('opacity-70');
+                            } else {
+                                bubble.classList.add('bg-red-100');
+                                bubble.querySelector('p:last-child').innerHTML += ' <i class="fas fa-exclamation-circle text-red-500 text-[8px]"></i>';
+                            }
+                        } catch (err) {
+                            console.error('Erro ao enviar mensagem:', err);
+                            bubble.classList.add('bg-red-100');
+                        }
+                    }
+
+
                     renderClientList();
                     handleUrlParameters();
 
@@ -3274,6 +3544,11 @@
             <i class="fas fa-users"></i>
             <span>Clientes</span>
         </a>
+        <a href="./WhatsApp.html" class="nav-item" style="position:relative;">
+            <i class="fab fa-whatsapp"></i>
+            <span>WhatsApp</span>
+            <span id="wa-nav-badge" class="hidden" style="position:absolute;top:2px;right:8px;background:#ef4444;color:white;font-size:10px;font-weight:bold;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;"></span>
+        </a>
     </nav>
 
     <script>
@@ -3297,6 +3572,9 @@
             }
         });
     </script>
+
+    <!-- WhatsApp Badge Global -->
+    <script src="js/whatsapp-badge.js"></script>
 
     <!-- Sistema de Autenticação -->
     <script src="js/protect.js"></script>

@@ -13,6 +13,7 @@ const historyRoutes = require('./routes/history');
 const financeRoutes = require('./routes/finance');
 const taskRoutes = require('./routes/tasks');
 const dailyPlanRoutes = require('./routes/dailyPlans');
+const whatsappRoutes = require('./routes/whatsapp');
 const webpush = require('web-push');
 
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BIiU_AzAKYphDuzGTCEy-tvcZGZtEjdaW4JZZ3WVGJYOrDJ4hjpmOmA_yOD_R4O_n1N8RrTm190cLPd10grA4g0';
@@ -442,6 +443,7 @@ app.use('/api/admin/history', historyRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/daily-plans', dailyPlanRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // --- NOTIFICAÇÕES PUSH ---
 
