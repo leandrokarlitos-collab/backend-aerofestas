@@ -272,34 +272,39 @@ router.get('/instances', authenticate, async (req, res) => {
             }
         });
 
-        // Sincroniza status com Evolution API em tempo real
-        for (const inst of instances) {
-            if (!inst.evolutionUrl || !inst.apiKey) continue;
+        // Sincroniza status com Evolution API em tempo real (via fetchInstances - mais confiável)
+        const firstInst = instances.find(i => i.evolutionUrl && i.apiKey);
+        if (firstInst) {
             try {
-                const evoRes = await fetch(`${inst.evolutionUrl}/instance/connectionState/${inst.instanceName}`, {
-                    headers: { 'apikey': inst.apiKey }
+                const evoRes = await fetch(`${firstInst.evolutionUrl}/instance/fetchInstances`, {
+                    headers: { 'apikey': firstInst.apiKey }
                 });
                 if (evoRes.ok) {
-                    const evoData = await evoRes.json();
-                    const evoState = evoData?.instance?.state;
-                    let newStatus = inst.status;
-                    if (evoState === 'open') newStatus = 'connected';
-                    else if (evoState === 'connecting') newStatus = 'connecting';
-                    else if (evoState === 'close') {
-                        if (inst.status === 'connected') newStatus = 'disconnected';
-                    }
+                    const evoInstances = await evoRes.json();
+                    for (const inst of instances) {
+                        const evoInst = evoInstances.find(e => e.name === inst.instanceName);
+                        if (!evoInst) continue;
 
-                    if (newStatus !== inst.status) {
-                        await prisma.whatsAppInstance.update({
-                            where: { instanceName: inst.instanceName },
-                            data: { status: newStatus }
-                        });
-                        inst.status = newStatus;
-                        console.log(`[WA Sync] ${inst.instanceName}: ${inst.status} → ${newStatus}`);
+                        const evoStatus = evoInst.connectionStatus;
+                        let newStatus = inst.status;
+                        if (evoStatus === 'open') newStatus = 'connected';
+                        else if (evoStatus === 'connecting') newStatus = 'connecting';
+                        else if (evoStatus === 'close') {
+                            newStatus = inst.status === 'qr_pending' ? 'qr_pending' : 'disconnected';
+                        }
+
+                        if (newStatus !== inst.status) {
+                            await prisma.whatsAppInstance.update({
+                                where: { instanceName: inst.instanceName },
+                                data: { status: newStatus }
+                            });
+                            console.log(`[WA Sync] ${inst.instanceName}: ${inst.status} → ${newStatus}`);
+                            inst.status = newStatus;
+                        }
                     }
                 }
             } catch (e) {
-                console.warn(`[WA Sync] Erro ao consultar Evolution para ${inst.instanceName}:`, e.message);
+                console.warn(`[WA Sync] Erro ao consultar Evolution API:`, e.message);
             }
         }
 
