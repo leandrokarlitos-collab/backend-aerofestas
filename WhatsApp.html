@@ -512,7 +512,8 @@
             // Show chat panel, hide welcome
             document.getElementById('chat-panel').classList.remove('hidden');
             document.getElementById('chat-panel').classList.add('flex');
-            document.getElementById('chat-welcome').classList.add('hidden');
+            const welcomeEl = document.getElementById('chat-welcome');
+            if (welcomeEl) welcomeEl.classList.add('hidden');
             document.getElementById('input-bar').classList.remove('hidden');
 
             // Mobile: hide conversation list
@@ -672,12 +673,27 @@
 
         // --- SHOW CHAT WELCOME ---
         function showChatWelcome() {
-            document.getElementById('chat-welcome').classList.remove('hidden');
+            const messagesArea = document.getElementById('messages-area');
+            const welcomeEl = document.getElementById('chat-welcome');
             document.getElementById('input-bar').classList.add('hidden');
-            document.getElementById('messages-area').innerHTML = '';
-            document.getElementById('messages-area').appendChild(document.getElementById('chat-welcome'));
             document.getElementById('chat-contact-name').textContent = '';
             document.getElementById('chat-contact-phone').textContent = '';
+
+            // Preserve chat-welcome before clearing
+            if (welcomeEl) {
+                messagesArea.innerHTML = '';
+                messagesArea.appendChild(welcomeEl);
+                welcomeEl.classList.remove('hidden');
+            } else {
+                messagesArea.innerHTML = `
+                    <div id="chat-welcome" class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fab fa-whatsapp text-6xl text-gray-200 mb-4"></i>
+                            <p class="text-lg font-medium">Selecione uma conversa</p>
+                            <p class="text-sm mt-1">As mensagens aparecem aqui</p>
+                        </div>
+                    </div>`;
+            }
 
             // Desktop: show chat panel but with welcome
             document.getElementById('chat-panel').classList.remove('hidden');
