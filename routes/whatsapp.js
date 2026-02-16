@@ -258,19 +258,28 @@ router.post('/webhook', async (req, res) => {
         if (event === 'messages.update' || event === 'messages_update') {
             const updates = Array.isArray(data) ? data : [data];
             for (const update of updates) {
-                const msgId = update.key?.id;
-                const status = update.update?.status;
-                if (msgId && status) {
-                    let statusStr = 'sent';
-                    if (status === 3 || status === 'DELIVERY_ACK') statusStr = 'delivered';
-                    if (status === 4 || status === 'READ') statusStr = 'read';
-                    if (status === 5 || status === 'PLAYED') statusStr = 'read';
+                // v2.3.6 formato: { keyId, status, messageId }
+                // v1 formato: { key: { id }, update: { status } }
+                const msgId = update.keyId || update.key?.id;
+                const rawStatus = update.status || update.update?.status;
+                if (!rawStatus) continue;
 
+                let statusStr = 'sent';
+                if (rawStatus === 2 || rawStatus === 'SERVER_ACK') statusStr = 'sent';
+                if (rawStatus === 3 || rawStatus === 'DELIVERY_ACK') statusStr = 'delivered';
+                if (rawStatus === 4 || rawStatus === 'READ') statusStr = 'read';
+                if (rawStatus === 5 || rawStatus === 'PLAYED') statusStr = 'read';
+
+                if (msgId) {
+                    // Tenta atualizar pela keyId (ID WhatsApp = id na nossa tabela)
                     await prisma.whatsAppMessage.update({
                         where: { id: msgId },
                         data: { status: statusStr }
-                    }).catch(() => {}); // Ignora se msg não existe
+                    }).catch(() => {});
                 }
+
+                // v2.3.6 também envia messageId (ID interno Prisma do Evolution)
+                // Não usamos, mas o keyId já é suficiente
             }
         }
 
