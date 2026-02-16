@@ -82,14 +82,42 @@ async function sendPushToAll(title, body, url) {
 // WEBHOOK — Recebe eventos do Evolution API (sem JWT, valida por apikey)
 // ===================================================================
 
+// Armazena últimos webhooks recebidos para debug (máx 20)
+const webhookDebugLog = [];
+
+// GET /api/whatsapp/webhook/debug — Ver últimos webhooks recebidos (admin)
+router.get('/webhook/debug', authenticate, async (req, res) => {
+    res.json(webhookDebugLog);
+});
+
 router.post('/webhook', async (req, res) => {
     // Responde rápido para não travar o Evolution API
     res.status(200).json({ status: 'received' });
 
     try {
-        const { event, instance: instanceName, data } = req.body;
+        // Log de debug - guarda últimos 20 webhooks
+        webhookDebugLog.unshift({
+            timestamp: new Date().toISOString(),
+            body: JSON.stringify(req.body).substring(0, 2000)
+        });
+        if (webhookDebugLog.length > 20) webhookDebugLog.pop();
 
-        if (!instanceName || !data) return;
+        console.log('[WA Webhook] Evento recebido:', JSON.stringify(req.body).substring(0, 500));
+
+        // v2.3.x pode enviar o evento em formatos diferentes
+        const body = req.body;
+        const event = (body.event || '').toLowerCase();
+        // instanceName pode vir como string ou como objeto {instanceName: '...'}
+        let instanceName = body.instance;
+        if (typeof instanceName === 'object' && instanceName !== null) {
+            instanceName = instanceName.instanceName || instanceName.name;
+        }
+        const data = body.data;
+
+        if (!instanceName || !data) {
+            console.warn('[WA Webhook] Evento sem instance ou data:', { event, instanceName: body.instance, hasData: !!data });
+            return;
+        }
 
         // Busca a instância no banco
         const instance = await prisma.whatsAppInstance.findUnique({
@@ -100,8 +128,8 @@ router.post('/webhook', async (req, res) => {
             return;
         }
 
-        // --- MESSAGES_UPSERT ---
-        if (event === 'messages.upsert') {
+        // --- MESSAGES_UPSERT --- (v1: messages.upsert, v2.3: messages_upsert ou messages.upsert)
+        if (event === 'messages.upsert' || event === 'messages_upsert') {
             const key = data.key;
             if (!key || !key.remoteJid) return;
 
@@ -208,8 +236,8 @@ router.post('/webhook', async (req, res) => {
             }
         }
 
-        // --- CONNECTION_UPDATE ---
-        if (event === 'connection.update') {
+        // --- CONNECTION_UPDATE --- (v1: connection.update, v2.3: connection_update ou connection.update)
+        if (event === 'connection.update' || event === 'connection_update') {
             const state = data.state || data.status;
             let status = 'disconnected';
             if (state === 'open' || state === 'connected') status = 'connected';
@@ -227,7 +255,7 @@ router.post('/webhook', async (req, res) => {
         }
 
         // --- MESSAGES_UPDATE (status: delivered, read) ---
-        if (event === 'messages.update') {
+        if (event === 'messages.update' || event === 'messages_update') {
             const updates = Array.isArray(data) ? data : [data];
             for (const update of updates) {
                 const msgId = update.key?.id;
