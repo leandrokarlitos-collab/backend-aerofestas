@@ -14,6 +14,8 @@ const financeRoutes = require('./routes/finance');
 const taskRoutes = require('./routes/tasks');
 const dailyPlanRoutes = require('./routes/dailyPlans');
 const whatsappRoutes = require('./routes/whatsapp');
+const { router: backupRoutes, runBackup } = require('./routes/backup');
+const cron = require('node-cron');
 const webpush = require('web-push');
 
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BIiU_AzAKYphDuzGTCEy-tvcZGZtEjdaW4JZZ3WVGJYOrDJ4hjpmOmA_yOD_R4O_n1N8RrTm190cLPd10grA4g0';
@@ -444,6 +446,7 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/daily-plans', dailyPlanRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/backup', backupRoutes);
 
 // --- NOTIFICAÇÕES PUSH ---
 
@@ -530,6 +533,14 @@ async function checkDueDatesAndNotify() {
 setInterval(checkDueDatesAndNotify, 12 * 60 * 60 * 1000);
 // Executa 1 minuto após iniciar o servidor
 setTimeout(checkDueDatesAndNotify, 60000);
+
+// --- BACKUP DIÁRIO AUTOMÁTICO (03:00) ---
+cron.schedule('0 3 * * *', async () => {
+    console.log('⏰ Executando backup diário automático...');
+    await runBackup('cron-diario');
+});
+// Executa backup 2 minutos após iniciar o servidor
+setTimeout(() => runBackup('startup'), 120000);
 
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.redirect('/login.html'));

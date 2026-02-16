@@ -697,5 +697,44 @@ export const api = {
             });
             return res.ok;
         } catch (e) { return false; }
+    },
+
+    // --- BACKUP ---
+
+    getBackupFull: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/backup/full`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao gerar backup:", e);
+            return null;
+        }
+    },
+
+    getBackupStatus: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/backup/status`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    runBackup: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/backup/run`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao executar backup:", e);
+            return null;
+        }
     }
 };
