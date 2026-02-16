@@ -266,10 +266,46 @@ router.get('/instances', authenticate, async (req, res) => {
                 displayName: true,
                 phoneNumber: true,
                 status: true,
-                companyName: true
+                companyName: true,
+                evolutionUrl: true,
+                apiKey: true
             }
         });
-        res.json(instances);
+
+        // Sincroniza status com Evolution API em tempo real
+        for (const inst of instances) {
+            if (!inst.evolutionUrl || !inst.apiKey) continue;
+            try {
+                const evoRes = await fetch(`${inst.evolutionUrl}/instance/connectionState/${inst.instanceName}`, {
+                    headers: { 'apikey': inst.apiKey }
+                });
+                if (evoRes.ok) {
+                    const evoData = await evoRes.json();
+                    const evoState = evoData?.instance?.state;
+                    let newStatus = inst.status;
+                    if (evoState === 'open') newStatus = 'connected';
+                    else if (evoState === 'connecting') newStatus = 'connecting';
+                    else if (evoState === 'close') {
+                        if (inst.status === 'connected') newStatus = 'disconnected';
+                    }
+
+                    if (newStatus !== inst.status) {
+                        await prisma.whatsAppInstance.update({
+                            where: { instanceName: inst.instanceName },
+                            data: { status: newStatus }
+                        });
+                        inst.status = newStatus;
+                        console.log(`[WA Sync] ${inst.instanceName}: ${inst.status} → ${newStatus}`);
+                    }
+                }
+            } catch (e) {
+                console.warn(`[WA Sync] Erro ao consultar Evolution para ${inst.instanceName}:`, e.message);
+            }
+        }
+
+        // Retorna sem campos sensíveis
+        const result = instances.map(({ evolutionUrl, apiKey, ...rest }) => rest);
+        res.json(result);
     } catch (error) {
         console.error('Erro ao listar instâncias:', error);
         res.status(500).json({ error: 'Erro ao listar instâncias' });
@@ -320,23 +356,27 @@ router.post('/instances/seed', isAdmin, async (req, res) => {
             results.push(dbInst);
         }
 
-        // Configura webhook global na Evolution API
+        // Configura webhook na Evolution API (formato v2.3.x)
         try {
             const backendUrl = process.env.BACKEND_URL || 'https://backend-aerofestas-production.up.railway.app';
             for (const inst of instancesToCreate) {
-                await fetch(`${evolutionUrl}/webhook/set/${inst.instanceName}`, {
+                const webhookRes = await fetch(`${evolutionUrl}/webhook/set/${inst.instanceName}`, {
                     method: 'POST',
                     headers: { 'apikey': apiKey, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        enabled: true,
-                        url: `${backendUrl}/api/whatsapp/webhook`,
-                        webhook_by_events: false,
-                        events: [
-                            'MESSAGES_UPSERT', 'MESSAGES_UPDATE',
-                            'CONNECTION_UPDATE', 'QRCODE_UPDATED'
-                        ]
+                        webhook: {
+                            enabled: true,
+                            url: `${backendUrl}/api/whatsapp/webhook`,
+                            webhookByEvents: false,
+                            events: [
+                                'MESSAGES_UPSERT', 'MESSAGES_UPDATE',
+                                'CONNECTION_UPDATE', 'QRCODE_UPDATED'
+                            ]
+                        }
                     })
                 });
+                const webhookData = await webhookRes.json();
+                console.log(`[WA Seed] Webhook configurado para ${inst.instanceName}:`, webhookData);
             }
         } catch (e) {
             console.warn('[WA Seed] Erro ao configurar webhooks:', e.message);
