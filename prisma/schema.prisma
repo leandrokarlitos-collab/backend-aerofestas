@@ -344,6 +344,10 @@ model WhatsAppConversation {
   lastMessagePreview String?
   unreadCount        Int      @default(0)
   isArchived         Boolean  @default(false)
+  isMuted            Boolean  @default(false)
+  mutedUntil         DateTime?
+  isGroup            Boolean  @default(false)
+  groupMetadata      String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

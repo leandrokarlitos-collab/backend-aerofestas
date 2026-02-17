@@ -13,6 +13,9 @@ const RATE_LIMIT_WINDOW = 60000; // 1 minuto
 // Presença em memória { 'instanceName:remoteJid': { status, updatedAt } }
 const presenceStore = {};
 
+// Status/Stories em memória { 'instanceName': [{ id, participant, message, timestamp }] }
+const statusStore = {};
+
 function checkRateLimit(instanceName) {
     const now = Date.now();
     if (!rateLimits[instanceName]) {
@@ -150,10 +153,28 @@ router.post('/webhook', async (req, res) => {
             const key = data.key;
             if (!key || !key.remoteJid) return;
 
-            // Ignora mensagens de grupos e status
-            if (key.remoteJid.includes('@g.us') || key.remoteJid === 'status@broadcast') return;
+            // Captura status para o store em memória
+            if (key.remoteJid === 'status@broadcast') {
+                const statusKey = instanceName;
+                if (!statusStore[statusKey]) statusStore[statusKey] = [];
+                statusStore[statusKey].unshift({
+                    id: key.id,
+                    fromMe: key.fromMe || false,
+                    participant: data.participant || key.participant || null,
+                    pushName: data.pushName || null,
+                    message: data.message,
+                    messageType: detectMessageType(data.message),
+                    mediaUrl: extractMediaInfo(data.message).mediaUrl || null,
+                    content: extractMessageText(data.message),
+                    timestamp: data.messageTimestamp ? new Date(parseInt(data.messageTimestamp) * 1000) : new Date()
+                });
+                // Mantém apenas últimos 200 status
+                if (statusStore[statusKey].length > 200) statusStore[statusKey] = statusStore[statusKey].slice(0, 200);
+                return;
+            }
 
             const remoteJid = key.remoteJid;
+            const isGroup = remoteJid.includes('@g.us');
             const fromMe = key.fromMe || false;
             const messageId = key.id;
             const pushName = data.pushName || null;
@@ -167,8 +188,11 @@ router.post('/webhook', async (req, res) => {
             const displayContent = messageText || `[${messageType}]`;
             const mediaInfo = extractMediaInfo(data.message);
 
-            // Extrai número do telefone
-            const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
+            // Extrai número do telefone ou ID do grupo
+            const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+
+            // Para grupos, pega o nome do grupo via metadata se disponível
+            const groupContactName = isGroup ? (data.groupMetadata?.subject || pushName || phoneNumber) : pushName;
 
             // Upsert da conversa
             const conversation = await prisma.whatsAppConversation.upsert({
@@ -178,16 +202,17 @@ router.post('/webhook', async (req, res) => {
                 create: {
                     remoteJid,
                     phoneNumber,
-                    contactName: pushName,
+                    contactName: groupContactName,
                     instanceId: instance.id,
+                    isGroup,
                     lastMessageAt: timestamp,
                     lastMessagePreview: displayContent.substring(0, 200),
                     unreadCount: fromMe ? 0 : 1
                 },
                 update: {
-                    contactName: pushName || undefined,
+                    contactName: isGroup ? undefined : (pushName || undefined),
                     lastMessageAt: timestamp,
-                    lastMessagePreview: displayContent.substring(0, 200),
+                    lastMessagePreview: isGroup && pushName ? `${pushName}: ${displayContent}`.substring(0, 200) : displayContent.substring(0, 200),
                     unreadCount: fromMe ? undefined : { increment: 1 }
                 }
             });
@@ -213,8 +238,8 @@ router.post('/webhook', async (req, res) => {
                 if (e.code !== 'P2002') throw e;
             }
 
-            // Auto-match de cliente (apenas para mensagens recebidas)
-            if (!fromMe && !conversation.clientId) {
+            // Auto-match de cliente (apenas para mensagens recebidas, não grupos)
+            if (!fromMe && !isGroup && !conversation.clientId) {
                 const normalizedPhone = normalizePhone(phoneNumber);
                 const last10 = normalizedPhone.slice(-10);
 
@@ -593,7 +618,7 @@ router.post('/instances/:name/disconnect', isAdmin, async (req, res) => {
 // GET /api/whatsapp/conversations
 router.get('/conversations', authenticate, async (req, res) => {
     try {
-        const { instance, search, page = 1, limit = 50, clientId } = req.query;
+        const { instance, search, page = 1, limit = 50, clientId, archived, groups } = req.query;
 
         const where = {};
 
@@ -604,6 +629,20 @@ router.get('/conversations', authenticate, async (req, res) => {
 
         if (clientId) {
             where.clientId = parseFloat(clientId);
+        }
+
+        // Filtro por arquivados
+        if (archived === 'true') {
+            where.isArchived = true;
+        } else if (archived !== 'all') {
+            where.isArchived = false;
+        }
+
+        // Filtro por grupos
+        if (groups === 'true') {
+            where.isGroup = true;
+        } else if (groups === 'false') {
+            where.isGroup = false;
         }
 
         if (search) {
@@ -689,8 +728,9 @@ router.post('/send', authenticate, async (req, res) => {
         });
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        // Envia via Evolution API
-        const number = remoteJid.replace('@s.whatsapp.net', '');
+        // Envia via Evolution API (para grupos, usa o JID completo)
+        const isGroupJid = remoteJid.includes('@g.us');
+        const number = isGroupJid ? remoteJid : remoteJid.replace('@s.whatsapp.net', '');
         const evoRes = await fetch(`${instance.evolutionUrl}/message/sendText/${instanceName}`, {
             method: 'POST',
             headers: {
@@ -784,7 +824,8 @@ router.post('/send-media', authenticate, async (req, res) => {
         const instance = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        const number = remoteJid.replace('@s.whatsapp.net', '');
+        const isGroupJid = remoteJid.includes('@g.us');
+        const number = isGroupJid ? remoteJid : remoteJid.replace('@s.whatsapp.net', '');
         let evoRes, evoData;
 
         if (mediaType === 'audio') {
@@ -1177,6 +1218,635 @@ router.get('/unread-count', authenticate, async (req, res) => {
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: 'Erro ao contar não-lidas' });
+    }
+});
+
+// ===================================================================
+// SYNC DE HISTÓRICO (CRÍTICO — busca mensagens da Evolution API)
+// ===================================================================
+
+// Função auxiliar para buscar instância com credenciais
+async function getInstanceWithCreds(instanceName) {
+    const instance = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+    if (!instance) return null;
+    return instance;
+}
+
+// POST /api/whatsapp/sync-conversation/:conversationId — Sync sob demanda
+router.post('/sync-conversation/:conversationId', authenticate, async (req, res) => {
+    try {
+        const conv = await prisma.whatsAppConversation.findUnique({
+            where: { id: req.params.conversationId },
+            include: { instance: true }
+        });
+        if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+
+        const instance = conv.instance;
+        const remoteJid = conv.remoteJid;
+
+        // Busca mensagens na Evolution API
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/findMessages/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                where: { key: { remoteJid } },
+                limit: 200
+            })
+        });
+
+        if (!evoRes.ok) {
+            const err = await evoRes.json().catch(() => ({}));
+            return res.status(502).json({ error: 'Erro ao buscar histórico', details: err });
+        }
+
+        const evoMessages = await evoRes.json();
+        const msgs = Array.isArray(evoMessages) ? evoMessages : evoMessages.messages || [];
+        let synced = 0;
+
+        for (const msg of msgs) {
+            const key = msg.key;
+            if (!key || !key.id) continue;
+
+            const messageText = extractMessageText(msg.message);
+            const messageType = detectMessageType(msg.message);
+            const mediaInfo = extractMediaInfo(msg.message);
+            const timestamp = msg.messageTimestamp
+                ? new Date(parseInt(msg.messageTimestamp) * 1000)
+                : new Date();
+            const displayContent = messageText || `[${messageType}]`;
+
+            try {
+                await prisma.whatsAppMessage.create({
+                    data: {
+                        id: key.id,
+                        conversationId: conv.id,
+                        fromMe: key.fromMe || false,
+                        content: displayContent,
+                        messageType,
+                        mediaUrl: mediaInfo.mediaUrl || null,
+                        mediaName: mediaInfo.mediaName || null,
+                        mediaMimetype: mediaInfo.mediaMimetype || null,
+                        timestamp,
+                        status: key.fromMe ? 'sent' : 'received'
+                    }
+                });
+                synced++;
+            } catch (e) {
+                if (e.code !== 'P2002') console.warn('[Sync] Erro ao salvar msg:', e.message);
+            }
+        }
+
+        res.json({ success: true, synced, total: msgs.length });
+    } catch (error) {
+        console.error('Erro ao sincronizar conversa:', error);
+        res.status(500).json({ error: 'Erro ao sincronizar' });
+    }
+});
+
+// POST /api/whatsapp/sync-history/:instanceName — Sync completo de todas as conversas
+router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        // Busca todas as conversas desta instância
+        const conversations = await prisma.whatsAppConversation.findMany({
+            where: { instanceId: instance.id }
+        });
+
+        let totalSynced = 0;
+        const errors = [];
+
+        for (const conv of conversations) {
+            try {
+                const evoRes = await fetch(`${instance.evolutionUrl}/chat/findMessages/${instance.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        where: { key: { remoteJid: conv.remoteJid } },
+                        limit: 100
+                    })
+                });
+
+                if (!evoRes.ok) continue;
+
+                const evoMessages = await evoRes.json();
+                const msgs = Array.isArray(evoMessages) ? evoMessages : evoMessages.messages || [];
+
+                for (const msg of msgs) {
+                    const key = msg.key;
+                    if (!key || !key.id) continue;
+
+                    const messageText = extractMessageText(msg.message);
+                    const messageType = detectMessageType(msg.message);
+                    const mediaInfo = extractMediaInfo(msg.message);
+                    const timestamp = msg.messageTimestamp
+                        ? new Date(parseInt(msg.messageTimestamp) * 1000)
+                        : new Date();
+                    const displayContent = messageText || `[${messageType}]`;
+
+                    try {
+                        await prisma.whatsAppMessage.create({
+                            data: {
+                                id: key.id,
+                                conversationId: conv.id,
+                                fromMe: key.fromMe || false,
+                                content: displayContent,
+                                messageType,
+                                mediaUrl: mediaInfo.mediaUrl || null,
+                                mediaName: mediaInfo.mediaName || null,
+                                mediaMimetype: mediaInfo.mediaMimetype || null,
+                                timestamp,
+                                status: key.fromMe ? 'sent' : 'received'
+                            }
+                        });
+                        totalSynced++;
+                    } catch (e) {
+                        if (e.code !== 'P2002') errors.push(e.message);
+                    }
+                }
+            } catch (e) {
+                errors.push(`${conv.remoteJid}: ${e.message}`);
+            }
+        }
+
+        // Também tenta buscar chats que ainda não existem no banco
+        try {
+            const evoRes = await fetch(`${instance.evolutionUrl}/chat/findChats/${instance.instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            if (evoRes.ok) {
+                const chats = await evoRes.json();
+                const chatList = Array.isArray(chats) ? chats : chats.chats || [];
+
+                for (const chat of chatList) {
+                    const remoteJid = chat.id || chat.remoteJid;
+                    if (!remoteJid) continue;
+                    // Pula status broadcast
+                    if (remoteJid === 'status@broadcast') continue;
+
+                    const isGroup = remoteJid.includes('@g.us');
+                    const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+
+                    // Verifica se já existe
+                    const existing = await prisma.whatsAppConversation.findUnique({
+                        where: { remoteJid_instanceId: { remoteJid, instanceId: instance.id } }
+                    });
+
+                    if (!existing) {
+                        await prisma.whatsAppConversation.create({
+                            data: {
+                                remoteJid,
+                                phoneNumber,
+                                contactName: chat.name || chat.pushName || null,
+                                instanceId: instance.id,
+                                isGroup,
+                                lastMessageAt: chat.lastMessageAt ? new Date(chat.lastMessageAt) : null,
+                                lastMessagePreview: chat.lastMessage || null
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[Sync History] Erro ao buscar chats:', e.message);
+        }
+
+        res.json({ success: true, synced: totalSynced, conversations: conversations.length, errors: errors.slice(0, 10) });
+    } catch (error) {
+        console.error('Erro ao sincronizar histórico:', error);
+        res.status(500).json({ error: 'Erro ao sincronizar histórico' });
+    }
+});
+
+// ===================================================================
+// CONTATOS
+// ===================================================================
+
+// GET /api/whatsapp/contacts/:instanceName — Lista contatos via Evolution API
+router.get('/contacts/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+
+        if (!evoRes.ok) {
+            const err = await evoRes.json().catch(() => ({}));
+            return res.status(502).json({ error: 'Erro ao buscar contatos', details: err });
+        }
+
+        const contacts = await evoRes.json();
+        const contactList = Array.isArray(contacts) ? contacts : contacts.contacts || [];
+
+        // Normaliza e filtra contatos válidos
+        const result = contactList
+            .filter(c => c.id && !c.id.includes('@g.us') && c.id !== 'status@broadcast')
+            .map(c => ({
+                remoteJid: c.id,
+                phoneNumber: c.id.replace('@s.whatsapp.net', ''),
+                name: c.pushName || c.name || c.verifiedName || c.id.replace('@s.whatsapp.net', ''),
+                profilePicUrl: c.profilePictureUrl || null
+            }));
+
+        res.json(result);
+    } catch (error) {
+        console.error('Erro ao buscar contatos:', error);
+        res.status(500).json({ error: 'Erro ao buscar contatos' });
+    }
+});
+
+// POST /api/whatsapp/send-contact — Envia contato (vCard)
+router.post('/send-contact', authenticate, async (req, res) => {
+    try {
+        let { instanceName, remoteJid, conversationId, contact } = req.body;
+        // contact: { fullName, phoneNumber, wuid? }
+
+        if (conversationId && (!remoteJid || !instanceName)) {
+            const conv = await prisma.whatsAppConversation.findUnique({
+                where: { id: conversationId },
+                include: { instance: true }
+            });
+            if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+            remoteJid = conv.remoteJid;
+            instanceName = instanceName || conv.instance.instanceName;
+        }
+
+        if (!instanceName || !remoteJid || !contact) {
+            return res.status(400).json({ error: 'instanceName, remoteJid e contact são obrigatórios' });
+        }
+
+        if (!checkRateLimit(instanceName)) {
+            return res.status(429).json({ error: 'Limite de envio atingido.' });
+        }
+
+        const instance = await getInstanceWithCreds(instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const number = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+        const contactPhone = contact.phoneNumber || contact.phone;
+        const contactName = contact.fullName || contact.name;
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/message/sendContact/${instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                number,
+                contact: [{
+                    fullName: contactName,
+                    wuid: contactPhone.replace(/\D/g, ''),
+                    phoneNumber: contactPhone,
+                    organization: contact.organization || '',
+                    email: contact.email || '',
+                    url: contact.url || ''
+                }]
+            })
+        });
+
+        const evoData = await evoRes.json();
+        if (!evoRes.ok) {
+            return res.status(502).json({ error: 'Erro ao enviar contato', details: evoData });
+        }
+
+        const sentMessageId = evoData.key?.id || `sent-${Date.now()}`;
+
+        const conversation = await prisma.whatsAppConversation.upsert({
+            where: { remoteJid_instanceId: { remoteJid, instanceId: instance.id } },
+            create: { remoteJid, phoneNumber: number, instanceId: instance.id, lastMessageAt: new Date(), lastMessagePreview: `📇 ${contactName}` },
+            update: { lastMessageAt: new Date(), lastMessagePreview: `📇 ${contactName}` }
+        });
+
+        const savedMessage = await prisma.whatsAppMessage.create({
+            data: {
+                id: sentMessageId,
+                conversationId: conversation.id,
+                fromMe: true,
+                content: `📇 ${contactName}`,
+                messageType: 'contact',
+                timestamp: new Date(),
+                status: 'sent'
+            }
+        });
+
+        res.json(savedMessage);
+    } catch (error) {
+        console.error('Erro ao enviar contato:', error);
+        res.status(500).json({ error: 'Erro ao enviar contato' });
+    }
+});
+
+// ===================================================================
+// GRUPOS
+// ===================================================================
+
+// GET /api/whatsapp/groups/:instanceName — Lista todos os grupos
+router.get('/groups/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/group/fetchAllGroups/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ getParticipants: false })
+        });
+
+        if (!evoRes.ok) {
+            const err = await evoRes.json().catch(() => ({}));
+            return res.status(502).json({ error: 'Erro ao buscar grupos', details: err });
+        }
+
+        const groups = await evoRes.json();
+        const groupList = Array.isArray(groups) ? groups : groups.groups || [];
+
+        res.json(groupList.map(g => ({
+            id: g.id,
+            subject: g.subject || g.name || 'Grupo',
+            owner: g.owner || null,
+            size: g.size || g.participants?.length || 0,
+            profilePicUrl: g.profilePicUrl || g.pictureUrl || null,
+            creation: g.creation || null,
+            desc: g.desc || null
+        })));
+    } catch (error) {
+        console.error('Erro ao buscar grupos:', error);
+        res.status(500).json({ error: 'Erro ao buscar grupos' });
+    }
+});
+
+// GET /api/whatsapp/groups/:instanceName/:groupJid — Detalhes de um grupo
+router.get('/groups/:instanceName/:groupJid', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/group/findGroupByJid/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jid: req.params.groupJid })
+        });
+
+        if (!evoRes.ok) {
+            const err = await evoRes.json().catch(() => ({}));
+            return res.status(502).json({ error: 'Erro ao buscar grupo', details: err });
+        }
+
+        const group = await evoRes.json();
+        res.json(group);
+    } catch (error) {
+        console.error('Erro ao buscar grupo:', error);
+        res.status(500).json({ error: 'Erro ao buscar grupo' });
+    }
+});
+
+// ===================================================================
+// ARQUIVAR / SILENCIAR
+// ===================================================================
+
+// PUT /api/whatsapp/conversations/:id/archive — Arquiva/desarquiva conversa
+router.put('/conversations/:id/archive', authenticate, async (req, res) => {
+    try {
+        const { archive } = req.body; // true or false
+        const conv = await prisma.whatsAppConversation.update({
+            where: { id: req.params.id },
+            data: { isArchived: archive !== false }
+        });
+
+        // Tenta arquivar na Evolution API também
+        try {
+            const instance = await prisma.whatsAppInstance.findUnique({ where: { id: conv.instanceId } });
+            if (instance) {
+                // Busca última mensagem para o payload
+                const lastMsg = await prisma.whatsAppMessage.findFirst({
+                    where: { conversationId: conv.id },
+                    orderBy: { timestamp: 'desc' }
+                });
+
+                await fetch(`${instance.evolutionUrl}/chat/archiveChat/${instance.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat: conv.remoteJid,
+                        archive: archive !== false,
+                        lastMessage: lastMsg ? {
+                            remoteJid: conv.remoteJid,
+                            fromMe: lastMsg.fromMe,
+                            id: lastMsg.id
+                        } : undefined
+                    })
+                });
+            }
+        } catch (e) {
+            console.warn('[Archive] Erro ao arquivar na Evolution API:', e.message);
+        }
+
+        res.json(conv);
+    } catch (error) {
+        console.error('Erro ao arquivar:', error);
+        res.status(500).json({ error: 'Erro ao arquivar' });
+    }
+});
+
+// PUT /api/whatsapp/conversations/:id/mute — Silencia/dessilencia conversa
+router.put('/conversations/:id/mute', authenticate, async (req, res) => {
+    try {
+        const { mute, duration } = req.body; // mute: bool, duration: '8h'|'1w'|'forever'|null
+
+        let mutedUntil = null;
+        if (mute && duration) {
+            const now = new Date();
+            if (duration === '8h') mutedUntil = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+            else if (duration === '1w') mutedUntil = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            // 'forever' = null mutedUntil but isMuted = true
+        }
+
+        const conv = await prisma.whatsAppConversation.update({
+            where: { id: req.params.id },
+            data: {
+                isMuted: mute !== false,
+                mutedUntil
+            }
+        });
+
+        res.json(conv);
+    } catch (error) {
+        console.error('Erro ao silenciar:', error);
+        res.status(500).json({ error: 'Erro ao silenciar' });
+    }
+});
+
+// ===================================================================
+// PERFIL DO WHATSAPP
+// ===================================================================
+
+// GET /api/whatsapp/profile/:instanceName — Busca perfil da instância
+router.get('/profile/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        // Tenta buscar perfil via fetchProfile
+        try {
+            const evoRes = await fetch(`${instance.evolutionUrl}/chat/fetchProfile/${instance.instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ number: instance.phoneNumber || '' })
+            });
+            if (evoRes.ok) {
+                const profile = await evoRes.json();
+                return res.json({
+                    name: profile.name || profile.pushName || instance.displayName,
+                    status: profile.status || profile.about || '',
+                    profilePicUrl: profile.profilePictureUrl || profile.picture || null,
+                    phoneNumber: instance.phoneNumber
+                });
+            }
+        } catch (e) { /* fallback below */ }
+
+        // Fallback: retorna dados do banco
+        res.json({
+            name: instance.displayName,
+            status: '',
+            profilePicUrl: null,
+            phoneNumber: instance.phoneNumber
+        });
+    } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
+        res.status(500).json({ error: 'Erro ao buscar perfil' });
+    }
+});
+
+// PUT /api/whatsapp/profile/:instanceName — Edita perfil
+router.put('/profile/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const { name, status, profilePic } = req.body;
+        const results = {};
+
+        // Atualiza nome
+        if (name) {
+            try {
+                const evoRes = await fetch(`${instance.evolutionUrl}/chat/updateProfileName/${instance.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                results.name = evoRes.ok;
+                if (evoRes.ok) {
+                    await prisma.whatsAppInstance.update({
+                        where: { instanceName: instance.instanceName },
+                        data: { displayName: name }
+                    });
+                }
+            } catch (e) { results.name = false; }
+        }
+
+        // Atualiza recado/about
+        if (status !== undefined) {
+            try {
+                const evoRes = await fetch(`${instance.evolutionUrl}/chat/updateProfileStatus/${instance.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                results.status = evoRes.ok;
+            } catch (e) { results.status = false; }
+        }
+
+        // Atualiza foto de perfil
+        if (profilePic) {
+            try {
+                const evoRes = await fetch(`${instance.evolutionUrl}/chat/updateProfilePicture/${instance.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ picture: profilePic })
+                });
+                results.profilePic = evoRes.ok;
+            } catch (e) { results.profilePic = false; }
+        }
+
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        res.status(500).json({ error: 'Erro ao atualizar perfil' });
+    }
+});
+
+// ===================================================================
+// STATUS / STORIES
+// ===================================================================
+
+// GET /api/whatsapp/status/:instanceName — Busca status dos contatos
+router.get('/status/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        // Tenta buscar via Evolution API
+        try {
+            const evoRes = await fetch(`${instance.evolutionUrl}/chat/findStatusMessage/${instance.instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (evoRes.ok) {
+                const statuses = await evoRes.json();
+                return res.json(Array.isArray(statuses) ? statuses : statuses.messages || []);
+            }
+        } catch (e) { /* fallback */ }
+
+        // Fallback: retorna do store em memória
+        res.json(statusStore[req.params.instanceName] || []);
+    } catch (error) {
+        console.error('Erro ao buscar status:', error);
+        res.status(500).json({ error: 'Erro ao buscar status' });
+    }
+});
+
+// POST /api/whatsapp/status/:instanceName — Posta status
+router.post('/status/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const { type, content, caption, backgroundColor, font, media, statusJidList } = req.body;
+        // type: 'text' | 'image' | 'video' | 'audio'
+
+        const body = {
+            type: type || 'text',
+            content: content || '',
+            allContacts: !statusJidList,
+            statusJidList: statusJidList || undefined
+        };
+        if (caption) body.caption = caption;
+        if (backgroundColor) body.backgroundColor = backgroundColor;
+        if (font) body.font = font;
+        if (media) body.media = media;
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/message/sendStatus/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const evoData = await evoRes.json();
+        if (!evoRes.ok) {
+            return res.status(502).json({ error: 'Erro ao postar status', details: evoData });
+        }
+
+        res.json({ success: true, data: evoData });
+    } catch (error) {
+        console.error('Erro ao postar status:', error);
+        res.status(500).json({ error: 'Erro ao postar status' });
     }
 });
 
