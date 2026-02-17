@@ -275,29 +275,37 @@ router.post('/webhook', async (req, res) => {
         // --- MESSAGES_UPDATE (status: delivered, read) ---
         if (event === 'messages.update' || event === 'messages_update') {
             const updates = Array.isArray(data) ? data : [data];
+            console.log(`[WA Status] Recebido ${updates.length} atualizações de status`);
             for (const update of updates) {
-                // v2.3.6 formato: { keyId, status, messageId }
-                // v1 formato: { key: { id }, update: { status } }
+                // v2.3.6 formato: { keyId, status, remoteJid, fromMe, ... }
+                // v1 formato: { key: { id, remoteJid, fromMe }, update: { status } }
                 const msgId = update.keyId || update.key?.id;
-                const rawStatus = update.status || update.update?.status;
-                if (!rawStatus) continue;
+                const rawStatus = update.status ?? update.update?.status;
+
+                console.log(`[WA Status] msgId=${msgId}, rawStatus=${rawStatus}, raw:`, JSON.stringify(update).substring(0, 300));
+
+                if (rawStatus === undefined || rawStatus === null) continue;
 
                 let statusStr = 'sent';
-                if (rawStatus === 2 || rawStatus === 'SERVER_ACK') statusStr = 'sent';
-                if (rawStatus === 3 || rawStatus === 'DELIVERY_ACK') statusStr = 'delivered';
-                if (rawStatus === 4 || rawStatus === 'READ') statusStr = 'read';
-                if (rawStatus === 5 || rawStatus === 'PLAYED') statusStr = 'read';
+                const rs = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : rawStatus;
+                if (rs === 1 || rs === 'PENDING') statusStr = 'sent';
+                else if (rs === 2 || rs === 'SERVER_ACK') statusStr = 'sent';
+                else if (rs === 3 || rs === 'DELIVERY_ACK') statusStr = 'delivered';
+                else if (rs === 4 || rs === 'READ') statusStr = 'read';
+                else if (rs === 5 || rs === 'PLAYED') statusStr = 'read';
 
                 if (msgId) {
-                    // Tenta atualizar pela keyId (ID WhatsApp = id na nossa tabela)
-                    await prisma.whatsAppMessage.update({
-                        where: { id: msgId },
-                        data: { status: statusStr }
-                    }).catch(() => {});
+                    try {
+                        await prisma.whatsAppMessage.update({
+                            where: { id: msgId },
+                            data: { status: statusStr }
+                        });
+                        console.log(`[WA Status] Atualizado ${msgId} → ${statusStr}`);
+                    } catch (e) {
+                        // Mensagem pode não existir no banco (ex: mensagem antiga)
+                        console.warn(`[WA Status] Msg ${msgId} não encontrada no banco`);
+                    }
                 }
-
-                // v2.3.6 também envia messageId (ID interno Prisma do Evolution)
-                // Não usamos, mas o keyId já é suficiente
             }
         }
 
@@ -763,7 +771,8 @@ router.post('/send-media', authenticate, async (req, res) => {
                 fromMe: true,
                 content: displayContent,
                 messageType: mediaType,
-                mediaUrl: typeof media === 'string' && media.startsWith('http') ? media : null,
+                mediaUrl: typeof media === 'string' && media.startsWith('http') ? media
+                    : (typeof media === 'string' ? `data:${mimetype || 'application/octet-stream'};base64,${media}` : null),
                 mediaName: fileName || null,
                 mediaMimetype: mimetype || null,
                 timestamp: new Date(),

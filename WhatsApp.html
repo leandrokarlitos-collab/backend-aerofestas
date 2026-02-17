@@ -133,10 +133,10 @@
         /* Attach menu */
         .attach-menu {
             display: none;
-            position: absolute; bottom: 100%; left: 0; margin-bottom: 8px;
+            position: fixed;
             background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             padding: 8px; grid-template-columns: repeat(3, 1fr); gap: 4px;
-            min-width: 200px; z-index: 100;
+            min-width: 200px; z-index: 10000;
         }
         .attach-menu.open { display: grid !important; }
         .attach-menu-item {
@@ -152,9 +152,10 @@
 
         /* Shortcuts popup */
         .shortcuts-popup {
-            position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 4px;
+            position: fixed;
             background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-            max-height: 200px; overflow-y: auto; z-index: 100;
+            max-height: 200px; overflow-y: auto; z-index: 10000;
+            width: 300px;
         }
         .shortcut-item {
             padding: 10px 14px; cursor: pointer; transition: background 0.1s;
@@ -290,33 +291,34 @@
                 <div id="input-bar" class="hidden p-3 border-t border-gray-200/50 bg-white/50">
                     <!-- Shortcuts popup (shown when typing /) -->
                     <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
-                    <!-- Attach menu -->
-                    <div id="attach-menu" class="attach-menu">
-                        <div class="attach-menu-item" data-action="image">
-                            <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
-                            <span>Imagem</span>
-                        </div>
-                        <div class="attach-menu-item" data-action="video">
-                            <div class="icon-circle bg-red-500"><i class="fas fa-video"></i></div>
-                            <span>Vídeo</span>
-                        </div>
-                        <div class="attach-menu-item" data-action="document">
-                            <div class="icon-circle bg-blue-500"><i class="fas fa-file"></i></div>
-                            <span>Documento</span>
-                        </div>
-                        <div class="attach-menu-item" data-action="catalog">
-                            <div class="icon-circle bg-green-600"><i class="fas fa-store"></i></div>
-                            <span>Catálogo</span>
-                        </div>
-                        <div class="attach-menu-item" data-action="shortcuts-manage">
-                            <div class="icon-circle bg-amber-500"><i class="fas fa-bolt"></i></div>
-                            <span>Atalhos</span>
-                        </div>
-                    </div>
                     <div class="relative flex items-end gap-2">
-                        <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
-                            <i class="fas fa-paperclip text-lg"></i>
-                        </button>
+                        <div class="relative">
+                            <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
+                                <i class="fas fa-paperclip text-lg"></i>
+                            </button>
+                            <div id="attach-menu" class="attach-menu">
+                                <div class="attach-menu-item" data-action="image">
+                                    <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
+                                    <span>Imagem</span>
+                                </div>
+                                <div class="attach-menu-item" data-action="video">
+                                    <div class="icon-circle bg-red-500"><i class="fas fa-video"></i></div>
+                                    <span>Vídeo</span>
+                                </div>
+                                <div class="attach-menu-item" data-action="document">
+                                    <div class="icon-circle bg-blue-500"><i class="fas fa-file"></i></div>
+                                    <span>Documento</span>
+                                </div>
+                                <div class="attach-menu-item" data-action="catalog">
+                                    <div class="icon-circle bg-green-600"><i class="fas fa-store"></i></div>
+                                    <span>Catálogo</span>
+                                </div>
+                                <div class="attach-menu-item" data-action="shortcuts-manage">
+                                    <div class="icon-circle bg-amber-500"><i class="fas fa-bolt"></i></div>
+                                    <span>Atalhos</span>
+                                </div>
+                            </div>
+                        </div>
                         <textarea id="message-input" rows="1" placeholder="Digite uma mensagem ou / para atalhos..."
                             class="form-input flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 max-h-32"
                             style="field-sizing: content;"></textarea>
@@ -977,6 +979,10 @@
         document.getElementById('attach-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             const menu = document.getElementById('attach-menu');
+            const btn = document.getElementById('attach-btn');
+            const rect = btn.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
             menu.classList.toggle('open');
         });
         document.addEventListener('click', () => {
@@ -1070,6 +1076,8 @@
             );
 
             if (result) {
+                // Guardar mídia localmente para preview imediato
+                if (!result.mediaUrl) result.mediaUrl = `data:${mimetype};base64,${base64}`;
                 const idx = messages.findIndex(m => m.id === tempMsg.id);
                 if (idx >= 0) messages[idx] = result;
                 renderMessages(true);
@@ -1158,6 +1166,8 @@
                 );
 
                 if (result) {
+                    // Guardar o áudio localmente para poder reproduzir
+                    if (!result.mediaUrl) result.mediaUrl = `data:audio/webm;base64,${base64}`;
                     const idx = messages.findIndex(m => m.id === tempMsg.id);
                     if (idx >= 0) messages[idx] = result;
                     renderMessages(true);
@@ -1193,10 +1203,32 @@
             }
             const query = value.slice(1).toLowerCase();
             const filtered = shortcuts.filter(s => s.command.startsWith(query));
+
+            if (filtered.length === 0 && query === '') {
+                // Posicionar e mostrar dica
+                const input = document.getElementById('message-input');
+                const inputRect = input.getBoundingClientRect();
+                popup.style.left = inputRect.left + 'px';
+                popup.style.bottom = (window.innerHeight - inputRect.top + 4) + 'px';
+                popup.style.width = inputRect.width + 'px';
+                popup.style.setProperty('display', 'block', 'important');
+                popup.innerHTML = `<div class="p-3 text-center text-gray-400 text-xs">
+                    <p>Nenhum atalho configurado.</p>
+                    <p class="mt-1">Use o menu <i class="fas fa-paperclip"></i> → <i class="fas fa-bolt"></i> Atalhos para criar.</p>
+                </div>`;
+                return;
+            }
             if (filtered.length === 0) {
                 popup.style.setProperty('display', 'none', 'important');
                 return;
             }
+
+            // Posicionar o popup acima do textarea
+            const input = document.getElementById('message-input');
+            const inputRect = input.getBoundingClientRect();
+            popup.style.left = inputRect.left + 'px';
+            popup.style.bottom = (window.innerHeight - inputRect.top + 4) + 'px';
+            popup.style.width = inputRect.width + 'px';
 
             popup.style.setProperty('display', 'block', 'important');
             popup.innerHTML = filtered.map(s => `
@@ -1507,19 +1539,31 @@
                 if (currentConversationId && messagesPage === 1) {
                     const freshMsgs = await api.getMessages(currentConversationId, 1);
                     const newMsgs = freshMsgs.reverse();
-                    // Check if there are new messages
                     if (newMsgs.length > 0 && messages.length > 0) {
                         const lastKnown = messages[messages.length - 1];
                         const hasNew = newMsgs.some(m => m.id !== lastKnown.id && new Date(m.timestamp) > new Date(lastKnown.timestamp));
-                        if (hasNew) {
+                        // Check status changes (delivered, read)
+                        const hasStatusChange = messages.some(m => {
+                            const fresh = newMsgs.find(f => f.id === m.id);
+                            return fresh && fresh.status !== m.status;
+                        });
+                        if (hasNew || hasStatusChange) {
+                            // Preserve locally-stored mediaUrl for sent media
+                            for (const nm of newMsgs) {
+                                if (!nm.mediaUrl) {
+                                    const existing = messages.find(m => m.id === nm.id);
+                                    if (existing?.mediaUrl) nm.mediaUrl = existing.mediaUrl;
+                                }
+                            }
                             messages = newMsgs;
-                            renderMessages(true);
-                            // Mark as read since user is viewing
-                            const conv = conversations.find(c => c.id === currentConversationId);
-                            if (conv?.unreadCount > 0) {
-                                await api.markRead(currentConversationId);
-                                conv.unreadCount = 0;
-                                renderConversationList();
+                            renderMessages(hasNew); // scroll only if new msg
+                            if (hasNew) {
+                                const conv = conversations.find(c => c.id === currentConversationId);
+                                if (conv?.unreadCount > 0) {
+                                    await api.markRead(currentConversationId);
+                                    conv.unreadCount = 0;
+                                    renderConversationList();
+                                }
                             }
                         }
                     } else if (messages.length === 0 && newMsgs.length > 0) {
