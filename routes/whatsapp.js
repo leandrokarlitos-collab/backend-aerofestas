@@ -956,6 +956,92 @@ router.delete('/shortcuts/:id', authenticate, async (req, res) => {
 });
 
 // ===================================================================
+// FOTO DE PERFIL DO CONTATO
+// ===================================================================
+
+// GET /api/whatsapp/profile-pic/:instanceName/:number — Busca foto de perfil
+router.get('/profile-pic/:instanceName/:number', authenticate, async (req, res) => {
+    try {
+        const instance = await prisma.whatsAppInstance.findUnique({
+            where: { instanceName: req.params.instanceName }
+        });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/fetchProfilePictureUrl/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ number: req.params.number })
+        });
+
+        if (!evoRes.ok) {
+            return res.json({ profilePicUrl: null });
+        }
+
+        const data = await evoRes.json();
+        res.json({ profilePicUrl: data.profilePictureUrl || data.url || data.picture || null });
+    } catch (error) {
+        console.error('Erro ao buscar foto de perfil:', error);
+        res.json({ profilePicUrl: null });
+    }
+});
+
+// ===================================================================
+// DOWNLOAD DE MÍDIA (para áudios recebidos sem URL)
+// ===================================================================
+
+// POST /api/whatsapp/download-media — Baixa mídia via getBase64FromMediaMessage
+router.post('/download-media', authenticate, async (req, res) => {
+    try {
+        const { instanceName, messageId, conversationId } = req.body;
+
+        // Buscar a mensagem e instância
+        const message = await prisma.whatsAppMessage.findUnique({
+            where: { id: messageId },
+            include: { conversation: { include: { instance: true } } }
+        });
+
+        if (!message) return res.status(404).json({ error: 'Mensagem não encontrada' });
+
+        const instance = message.conversation.instance;
+
+        // Chamar Evolution API para obter a mídia em base64
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/getBase64FromMediaMessage/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: { key: { id: messageId } },
+                convertToMp4: false
+            })
+        });
+
+        if (!evoRes.ok) {
+            const err = await evoRes.json().catch(() => ({}));
+            console.error('Erro Evolution API download-media:', err);
+            return res.status(502).json({ error: 'Erro ao baixar mídia', details: err });
+        }
+
+        const data = await evoRes.json();
+        const base64 = data.base64 || data.mediaUrl || null;
+        const mimetype = data.mimetype || data.mediatype || message.mediaMimetype || 'audio/ogg';
+
+        // Se obteve o base64, salvar a URL como data URI na mensagem
+        if (base64) {
+            const mediaUrl = base64.startsWith('data:') ? base64 : `data:${mimetype};base64,${base64}`;
+            await prisma.whatsAppMessage.update({
+                where: { id: messageId },
+                data: { mediaUrl }
+            });
+            return res.json({ mediaUrl, mimetype });
+        }
+
+        res.json({ mediaUrl: null });
+    } catch (error) {
+        console.error('Erro ao baixar mídia:', error);
+        res.status(500).json({ error: 'Erro ao baixar mídia' });
+    }
+});
+
+// ===================================================================
 // MARCAR COMO LIDA / VINCULAR CLIENTE
 // ===================================================================
 

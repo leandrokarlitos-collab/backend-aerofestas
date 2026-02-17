@@ -132,12 +132,13 @@
 
         /* Attach menu */
         .attach-menu {
+            display: none;
             position: absolute; bottom: 100%; left: 0; margin-bottom: 8px;
             background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             padding: 8px; grid-template-columns: repeat(3, 1fr); gap: 4px;
             min-width: 200px; z-index: 100;
         }
-        .attach-menu.open { display: grid; }
+        .attach-menu.open { display: grid !important; }
         .attach-menu-item {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
             padding: 10px 8px; border-radius: 12px; cursor: pointer; transition: background 0.15s;
@@ -254,7 +255,7 @@
                         <button id="back-to-list-btn" class="lg:hidden text-gray-500 hover:text-gray-700 p-1">
                             <i class="fas fa-arrow-left text-lg"></i>
                         </button>
-                        <div class="w-10 h-10 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white font-bold" id="chat-avatar">
+                        <div class="w-10 h-10 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white font-bold overflow-hidden" id="chat-avatar">
                             <i class="fab fa-whatsapp"></i>
                         </div>
                         <div>
@@ -290,7 +291,7 @@
                     <!-- Shortcuts popup (shown when typing /) -->
                     <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
                     <!-- Attach menu -->
-                    <div id="attach-menu" class="attach-menu" style="display:none !important;">
+                    <div id="attach-menu" class="attach-menu">
                         <div class="attach-menu-item" data-action="image">
                             <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
                             <span>Imagem</span>
@@ -534,11 +535,23 @@
             },
             getQR: async (name) => {
                 try { const r = await fetch(`${BASE}/instances/${name}/qr`, { headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            getProfilePic: async (instanceName, number) => {
+                try { const r = await fetch(`${BASE}/profile-pic/${instanceName}/${number}`, { headers: headers() }); return r.ok ? await r.json() : { profilePicUrl: null }; } catch(e) { return { profilePicUrl: null }; }
+            },
+            downloadMedia: async (messageId) => {
+                try {
+                    const r = await fetch(`${BASE}/download-media`, { method: 'POST', headers: headers(), body: JSON.stringify({ messageId }) });
+                    return r.ok ? await r.json() : { mediaUrl: null };
+                } catch(e) { return { mediaUrl: null }; }
             }
         };
 
         // --- SHORTCUTS STATE ---
         let shortcuts = [];
+
+        // --- PROFILE PIC CACHE ---
+        const profilePicCache = {}; // { phoneNumber: url | null }
 
         // --- HELPERS ---
         function escapeHtml(str) {
@@ -658,10 +671,11 @@
                 const crmIcon = conv.clientId ? '<i class="fas fa-link text-indigo-400 text-[10px]" title="Vinculado ao CRM"></i>' : '';
                 const preview = conv.lastMessagePreview || '';
                 const time = formatRelative(conv.lastMessageAt);
+                const cachedPic = profilePicCache[conv.phoneNumber];
 
                 div.innerHTML = `
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                        ${initials}
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden" data-phone="${conv.phoneNumber}">
+                        ${cachedPic ? `<img src="${cachedPic}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">` : initials}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-center">
@@ -678,6 +692,28 @@
                 div.addEventListener('click', () => openConversation(conv));
                 listEl.appendChild(div);
             });
+
+            // Carregar fotos de perfil assincronamente
+            loadProfilePics(filtered);
+        }
+
+        async function loadProfilePics(conversations) {
+            for (const conv of conversations) {
+                if (profilePicCache[conv.phoneNumber] !== undefined) continue; // já carregou (ou falhou)
+                profilePicCache[conv.phoneNumber] = null; // marca como "carregando"
+                try {
+                    const data = await api.getProfilePic(currentInstance, conv.phoneNumber);
+                    if (data.profilePicUrl) {
+                        profilePicCache[conv.phoneNumber] = data.profilePicUrl;
+                        // Atualizar o avatar na lista
+                        const avatarEl = document.querySelector(`[data-phone="${conv.phoneNumber}"]`);
+                        if (avatarEl) {
+                            const initials = getInitials(conv.contactName || conv.phoneNumber);
+                            avatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+                        }
+                    }
+                } catch (e) { /* silenciar */ }
+            }
         }
 
         // --- OPEN CONVERSATION ---
@@ -691,7 +727,21 @@
             // Update header
             document.getElementById('chat-contact-name').textContent = conv.contactName || conv.phoneNumber;
             document.getElementById('chat-contact-phone').textContent = conv.phoneNumber;
-            document.getElementById('chat-avatar').textContent = getInitials(conv.contactName || conv.phoneNumber);
+            const chatAvatarEl = document.getElementById('chat-avatar');
+            const initials = getInitials(conv.contactName || conv.phoneNumber);
+            const pic = profilePicCache[conv.phoneNumber];
+            if (pic) {
+                chatAvatarEl.innerHTML = `<img src="${pic}" class="w-full h-full object-cover rounded-full" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+            } else {
+                chatAvatarEl.textContent = initials;
+                // Tentar carregar foto de perfil
+                api.getProfilePic(currentInstance, conv.phoneNumber).then(data => {
+                    if (data.profilePicUrl) {
+                        profilePicCache[conv.phoneNumber] = data.profilePicUrl;
+                        chatAvatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover rounded-full" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+                    }
+                });
+            }
 
             // CRM link
             const crmBtn = document.getElementById('link-crm-btn');
@@ -755,8 +805,21 @@
             if (type === 'video' && url) {
                 return `<div class="media-bubble"><video src="${escapeHtml(url)}" controls preload="metadata" style="max-height:300px;"></video></div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
             }
-            if (type === 'audio' && url) {
-                return `<div class="media-bubble"><audio src="${escapeHtml(url)}" controls preload="metadata"></audio></div>`;
+            if (type === 'audio') {
+                if (url) {
+                    return `<div class="media-bubble" style="min-width:220px;"><audio src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;max-width:300px;"></audio></div>`;
+                }
+                // Sem URL: mostra botão para carregar áudio
+                return `<div class="media-bubble" style="min-width:220px;" id="audio-${escapeHtml(msg.id)}">
+                    <div class="flex items-center gap-2 cursor-pointer text-green-600 hover:text-green-700" onclick="loadAudioMedia('${escapeHtml(msg.id)}')">
+                        <i class="fas fa-play-circle text-2xl"></i>
+                        <div>
+                            <p class="text-sm font-medium">Áudio</p>
+                            <p class="text-[10px] text-gray-400">Toque para ouvir</p>
+                        </div>
+                        <i class="fas fa-download text-xs text-gray-400 ml-auto"></i>
+                    </div>
+                </div>`;
             }
             if (type === 'document' && url) {
                 const name = msg.mediaName || 'Documento';
@@ -765,6 +828,27 @@
             // Fallback: sem URL, apenas indicador
             const icon = type === 'image' ? 'image' : type === 'audio' ? 'microphone' : type === 'video' ? 'video' : type === 'sticker' ? 'note-sticky' : 'file';
             return `<p class="text-gray-400 italic text-xs"><i class="fas fa-${icon} mr-1"></i>${escapeHtml(msg.content)}</p>`;
+        }
+
+        // Carrega áudio sob demanda via Evolution API
+        async function loadAudioMedia(messageId) {
+            const container = document.getElementById(`audio-${messageId}`);
+            if (!container) return;
+            container.innerHTML = `<div class="flex items-center gap-2 text-gray-400"><i class="fas fa-spinner fa-spin"></i> <span class="text-xs">Carregando áudio...</span></div>`;
+
+            try {
+                const data = await api.downloadMedia(messageId);
+                if (data.mediaUrl) {
+                    container.innerHTML = `<audio src="${data.mediaUrl}" controls preload="auto" autoplay style="width:100%;max-width:300px;"></audio>`;
+                    // Atualiza na lista local para não precisar baixar de novo
+                    const msg = messages.find(m => m.id === messageId);
+                    if (msg) msg.mediaUrl = data.mediaUrl;
+                } else {
+                    container.innerHTML = `<p class="text-red-400 text-xs"><i class="fas fa-exclamation-circle mr-1"></i>Não foi possível carregar o áudio</p>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<p class="text-red-400 text-xs"><i class="fas fa-exclamation-circle mr-1"></i>Erro ao carregar áudio</p>`;
+            }
         }
 
         function renderMessages(scrollToBottom = true) {
@@ -893,19 +977,11 @@
         document.getElementById('attach-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             const menu = document.getElementById('attach-menu');
-            const isOpen = menu.classList.contains('open');
-            if (isOpen) {
-                menu.classList.remove('open');
-                menu.style.display = 'none';
-            } else {
-                menu.style.display = '';
-                menu.classList.add('open');
-            }
+            menu.classList.toggle('open');
         });
         document.addEventListener('click', () => {
             const menu = document.getElementById('attach-menu');
             menu.classList.remove('open');
-            menu.style.display = 'none';
         });
 
         document.querySelectorAll('.attach-menu-item').forEach(item => {
@@ -913,7 +989,6 @@
                 e.stopPropagation();
                 const menu = document.getElementById('attach-menu');
                 menu.classList.remove('open');
-                menu.style.display = 'none';
                 const action = item.dataset.action;
                 if (action === 'image') document.getElementById('file-input-image').click();
                 else if (action === 'video') document.getElementById('file-input-video').click();
