@@ -134,9 +134,10 @@
         .attach-menu {
             position: absolute; bottom: 100%; left: 0; margin-bottom: 8px;
             background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            padding: 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+            padding: 8px; grid-template-columns: repeat(3, 1fr); gap: 4px;
             min-width: 200px; z-index: 100;
         }
+        .attach-menu.open { display: grid; }
         .attach-menu-item {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
             padding: 10px 8px; border-radius: 12px; cursor: pointer; transition: background 0.15s;
@@ -287,9 +288,9 @@
                 <!-- Input Bar -->
                 <div id="input-bar" class="hidden p-3 border-t border-gray-200/50 bg-white/50">
                     <!-- Shortcuts popup (shown when typing /) -->
-                    <div id="shortcuts-popup" class="shortcuts-popup" style="display:none;"></div>
+                    <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
                     <!-- Attach menu -->
-                    <div id="attach-menu" class="attach-menu" style="display:none;">
+                    <div id="attach-menu" class="attach-menu" style="display:none !important;">
                         <div class="attach-menu-item" data-action="image">
                             <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
                             <span>Imagem</span>
@@ -326,7 +327,7 @@
                         </button>
                     </div>
                     <!-- Recording UI (hidden by default) -->
-                    <div id="recording-bar" class="flex items-center gap-3 py-2" style="display:none;">
+                    <div id="recording-bar" class="items-center gap-3 py-2" style="display:none !important;">
                         <button id="cancel-recording" class="text-red-500 hover:text-red-700 w-10 h-10 flex items-center justify-center"><i class="fas fa-trash"></i></button>
                         <div class="recording-indicator flex-1"><i class="fas fa-circle text-xs"></i> <span id="recording-time">0:00</span> — Gravando...</div>
                         <button id="send-recording" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-paper-plane text-sm"></i></button>
@@ -892,16 +893,27 @@
         document.getElementById('attach-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             const menu = document.getElementById('attach-menu');
-            menu.style.display = menu.style.display === 'none' ? 'grid' : 'none';
+            const isOpen = menu.classList.contains('open');
+            if (isOpen) {
+                menu.classList.remove('open');
+                menu.style.display = 'none';
+            } else {
+                menu.style.display = '';
+                menu.classList.add('open');
+            }
         });
         document.addEventListener('click', () => {
-            document.getElementById('attach-menu').style.display = 'none';
+            const menu = document.getElementById('attach-menu');
+            menu.classList.remove('open');
+            menu.style.display = 'none';
         });
 
         document.querySelectorAll('.attach-menu-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
-                document.getElementById('attach-menu').style.display = 'none';
+                const menu = document.getElementById('attach-menu');
+                menu.classList.remove('open');
+                menu.style.display = 'none';
                 const action = item.dataset.action;
                 if (action === 'image') document.getElementById('file-input-image').click();
                 else if (action === 'video') document.getElementById('file-input-video').click();
@@ -1026,8 +1038,8 @@
                 mediaRecorder.start();
 
                 // Show recording UI
-                document.querySelector('#input-bar .relative').style.display = 'none';
-                document.getElementById('recording-bar').style.display = 'flex';
+                document.querySelector('#input-bar .relative').style.setProperty('display', 'none', 'important');
+                document.getElementById('recording-bar').style.setProperty('display', 'flex', 'important');
                 recordingSeconds = 0;
                 document.getElementById('recording-time').textContent = '0:00';
                 recordingTimer = setInterval(() => {
@@ -1085,8 +1097,8 @@
 
         function stopRecordingUI() {
             clearInterval(recordingTimer);
-            document.querySelector('#input-bar .relative').style.display = 'flex';
-            document.getElementById('recording-bar').style.display = 'none';
+            document.querySelector('#input-bar .relative').style.setProperty('display', 'flex', 'important');
+            document.getElementById('recording-bar').style.setProperty('display', 'none', 'important');
         }
 
         function blobToBase64(blob) {
@@ -1101,17 +1113,17 @@
         function handleShortcutPopup(value) {
             const popup = document.getElementById('shortcuts-popup');
             if (!value.startsWith('/') || value.includes(' ')) {
-                popup.style.display = 'none';
+                popup.style.setProperty('display', 'none', 'important');
                 return;
             }
             const query = value.slice(1).toLowerCase();
             const filtered = shortcuts.filter(s => s.command.startsWith(query));
             if (filtered.length === 0) {
-                popup.style.display = 'none';
+                popup.style.setProperty('display', 'none', 'important');
                 return;
             }
 
-            popup.style.display = 'block';
+            popup.style.setProperty('display', 'block', 'important');
             popup.innerHTML = filtered.map(s => `
                 <div class="shortcut-item" data-command="${escapeHtml(s.command)}">
                     <div class="flex items-center justify-between">
@@ -1130,7 +1142,7 @@
                         document.getElementById('message-input').value = shortcut.content;
                         toggleSendAudioBtn();
                     }
-                    popup.style.display = 'none';
+                    popup.style.setProperty('display', 'none', 'important');
                 });
             });
         }
