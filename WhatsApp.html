@@ -245,6 +245,7 @@
                         <div>
                             <h3 id="chat-contact-name" class="font-semibold text-gray-900 text-sm"></h3>
                             <p id="chat-contact-phone" class="text-xs text-gray-500"></p>
+                            <p id="chat-presence" class="text-[11px] text-green-600 font-medium hidden"></p>
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -276,9 +277,14 @@
                         <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
                             <i class="fas fa-paperclip text-lg"></i>
                         </button>
-                        <textarea id="message-input" rows="1" placeholder="Digite uma mensagem ou / para atalhos..."
-                            class="form-input flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 max-h-32"
-                            style="field-sizing: content;"></textarea>
+                        <div class="flex-1 relative">
+                            <textarea id="message-input" rows="1" placeholder="Digite uma mensagem ou / para atalhos..."
+                                class="form-input w-full resize-none text-sm rounded-2xl pl-4 pr-10 py-2.5 max-h-32"
+                                style="field-sizing: content;"></textarea>
+                            <button type="button" class="emoji-trigger absolute right-2 bottom-2 text-gray-400 hover:text-amber-500 transition" data-target="message-input" title="Emojis">
+                                <i class="far fa-smile text-lg"></i>
+                            </button>
+                        </div>
                         <button id="send-btn" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="display:none;">
                             <i class="fas fa-paper-plane text-sm"></i>
                         </button>
@@ -312,6 +318,14 @@
                 <div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando catálogo...</p></div>
             </div>
         </div>
+    </div>
+
+    <!-- Emoji Picker (fixed, outside overflow containers) -->
+    <div id="emoji-picker" style="display:none; position:fixed; background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.18); z-index:99999; width:280px; max-height:320px; overflow:hidden; flex-direction:column;">
+        <div style="padding:8px 10px; border-bottom:1px solid #eee;">
+            <input type="text" id="emoji-search" placeholder="Buscar emoji..." style="width:100%; border:1px solid #e5e7eb; border-radius:20px; padding:6px 12px; font-size:0.8rem; outline:none;">
+        </div>
+        <div id="emoji-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; padding:8px; overflow-y:auto; max-height:260px; font-size:1.4rem; text-align:center;"></div>
     </div>
 
     <!-- Shortcuts popup (fixed, outside overflow containers) -->
@@ -387,13 +401,30 @@
         <div class="bg-white p-5 rounded-2xl max-w-md w-full">
             <div id="media-preview-content" class="mb-3 flex justify-center max-h-[50vh] overflow-hidden rounded-xl bg-gray-100">
             </div>
-            <input type="text" id="media-caption" class="form-input w-full text-sm mb-3" placeholder="Legenda (opcional)">
+            <div class="relative mb-3">
+                <input type="text" id="media-caption" class="form-input w-full text-sm pr-10" placeholder="Legenda (opcional)">
+                <button type="button" class="emoji-trigger absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition" data-target="media-caption" title="Emojis">
+                    <i class="far fa-smile text-lg"></i>
+                </button>
+            </div>
             <p class="text-xs text-gray-400 mb-3" id="media-file-info"></p>
             <div class="flex gap-2">
                 <button id="confirm-send-media" class="flex-1 shiny-btn py-2.5 rounded-xl text-sm font-bold"><i class="fas fa-paper-plane mr-1"></i> Enviar</button>
                 <button id="cancel-send-media" class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200">Cancelar</button>
             </div>
         </div>
+    </div>
+
+    <!-- PDF Viewer Modal -->
+    <div id="pdf-modal" class="modal-hidden fixed inset-0 bg-black/80 z-[30000] flex flex-col">
+        <div class="flex items-center justify-between p-3 bg-gray-900/90">
+            <h3 class="text-white text-sm font-semibold truncate flex-1" id="pdf-title"><i class="fas fa-file-pdf text-red-400 mr-2"></i>PDF</h3>
+            <div class="flex gap-2">
+                <button onclick="window.open(document.getElementById('pdf-frame').src,'_blank')" class="text-gray-300 hover:text-white px-3 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 transition"><i class="fas fa-external-link-alt mr-1"></i>Nova aba</button>
+                <button onclick="document.getElementById('pdf-modal').classList.add('modal-hidden')" class="text-gray-300 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <iframe id="pdf-frame" class="flex-1 w-full bg-white" style="border:none;"></iframe>
     </div>
 
     <!-- QR Code Modal -->
@@ -532,6 +563,9 @@
                     const r = await fetch(`${BASE}/download-media`, { method: 'POST', headers: headers(), body: JSON.stringify({ messageId }) });
                     return r.ok ? await r.json() : { mediaUrl: null };
                 } catch(e) { return { mediaUrl: null }; }
+            },
+            getPresence: async (instanceName, remoteJid) => {
+                try { const r = await fetch(`${BASE}/presence/${instanceName}/${encodeURIComponent(remoteJid)}`, { headers: headers() }); return r.ok ? await r.json() : { presence: null }; } catch(e) { return { presence: null }; }
             }
         };
 
@@ -811,6 +845,20 @@
             }
             if (type === 'document' && url) {
                 const name = msg.mediaName || 'Documento';
+                const isPdf = (msg.mediaMimetype || '').includes('pdf') || name.toLowerCase().endsWith('.pdf');
+                if (isPdf) {
+                    // PDF: botão para abrir viewer inline
+                    return `<div style="min-width:220px;">
+                        <div class="flex items-center gap-2 p-2 bg-white/50 rounded-lg">
+                            <i class="fas fa-file-pdf text-red-500 text-lg"></i>
+                            <div class="min-w-0 flex-1"><p class="text-sm font-medium truncate">${escapeHtml(name)}</p><p class="text-[10px] text-gray-400">PDF</p></div>
+                        </div>
+                        <div class="flex gap-1 mt-1">
+                            <button class="flex-1 text-[11px] bg-red-50 text-red-600 py-1.5 rounded-lg font-semibold hover:bg-red-100 transition" onclick="openPdfViewer('${escapeHtml(url)}','${escapeHtml(name)}')"><i class="fas fa-eye mr-1"></i>Visualizar</button>
+                            <button class="flex-1 text-[11px] bg-gray-50 text-gray-600 py-1.5 rounded-lg font-semibold hover:bg-gray-100 transition" onclick="window.open('${escapeHtml(url)}','_blank')"><i class="fas fa-external-link-alt mr-1"></i>Abrir</button>
+                        </div>
+                    </div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
+                }
                 return `<div class="flex items-center gap-2 p-2 bg-white/50 rounded-lg cursor-pointer" onclick="window.open('${escapeHtml(url)}','_blank')"><i class="fas fa-file-alt text-blue-500 text-lg"></i><div class="min-w-0"><p class="text-sm font-medium truncate">${escapeHtml(name)}</p><p class="text-[10px] text-gray-400">${msg.mediaMimetype || 'documento'}</p></div><i class="fas fa-download text-gray-400 text-xs ml-auto"></i></div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
             }
             // Fallback: sem URL, apenas indicador
@@ -1574,6 +1622,28 @@
                 instances = await api.getInstances();
                 updateConnectionStatus();
             }, 5000);
+
+            // Presence polling (mais rápido - 2s)
+            setInterval(async () => {
+                if (!currentConversation) return;
+                try {
+                    const data = await api.getPresence(currentInstance, currentConversation.remoteJid);
+                    const el = document.getElementById('chat-presence');
+                    const phone = document.getElementById('chat-contact-phone');
+                    if (data.presence === 'composing' || data.presence === 'typing') {
+                        el.textContent = 'digitando...';
+                        el.classList.remove('hidden');
+                        phone.classList.add('hidden');
+                    } else if (data.presence === 'recording') {
+                        el.textContent = 'gravando áudio...';
+                        el.classList.remove('hidden');
+                        phone.classList.add('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                        phone.classList.remove('hidden');
+                    }
+                } catch(e) {}
+            }, 2000);
         }
 
         // --- INIT ---
@@ -1602,6 +1672,94 @@
 
             document.title = `WhatsApp - ${currentInstance === 'aero-festas' ? 'Aero Festas' : 'ABC Festas'}`;
         }
+
+        // --- PDF VIEWER ---
+        function openPdfViewer(url, name) {
+            document.getElementById('pdf-title').innerHTML = `<i class="fas fa-file-pdf text-red-400 mr-2"></i>${escapeHtml(name || 'PDF')}`;
+            document.getElementById('pdf-frame').src = url;
+            document.getElementById('pdf-modal').classList.remove('modal-hidden');
+        }
+
+        // --- EMOJI PICKER ---
+        const EMOJIS = {
+            'Rostos': '😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗😚😙🥲😋😛😜🤪😝🤑🤗🤭🤫🤔🫡🤐🤨😐😑😶🫥😏😒🙄😬😮‍💨🤥🫨😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶🥴😵😵‍💫🤯🤠🥳🥸😎🤓🧐😕🫤😟🙁☹️😮😯😲😳🥺🥹😦😧😨😰😥😢😭😱😖😣😞😓😩😫🥱😤😡😠🤬',
+            'Gestos': '👋🤚🖐✋🖖🫱🫲🫳🫴👌🤌🤏✌️🤞🫰🤟🤘🤙👈👉👆🖕👇☝️🫵👍👎✊👊🤛🤜👏🙌🫶👐🤲🤝🙏',
+            'Pessoas': '💪🦾🦿🦵🦶👂🦻👃🧠🫀🫁🦷🦴👀👁👅👄🫦💋👶🧒👦👧🧑👱👨👩🧑‍🦱🧑‍🦰🧑‍🦳🧑‍🦲',
+            'Objetos': '⌚📱📲💻⌨️🖥🖨🖱🖲💾💿📀🎥🎞📞☎️📟📠📺📻🎙🎚🎛🧭⏱⏲⏰🕰⌛⏳📡🔋🪫🔌💡🔦🕯🧯🛢💸💵💴💶💷🪙💰💳💎',
+            'Natureza': '🌸💐🌷🌹🥀🌺🌻🌼🌱🌲🌳🌴🌵🌾🍀☘️🍃🍂🍁🍄🐚🌍🌎🌏🌑🌒🌓🌔🌕🌖🌗🌘🌙🌚🌛🌜☀️🌝🌞⭐🌟🌠☁️⛅⛈🌤🌥🌦🌧🌨🌩🌪🌫🌬🌀🌈🌂☂️☔⛱⚡❄️☃️⛄🔥💧🌊',
+            'Comida': '🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶🫑🌽🥕🫒🧄🧅🥔🍠🫘🥜🌰🍞🥐🥖🫓🥨🥯🥞🧇🧀🍖🍗🥩🥓🍔🍟🍕🌭🥪🌮🌯🫔🥙🧆🥚🍳🥘🍲🫕🥣🥗🍿🧈🧂🥫🍱🍘🍙🍚🍛🍜🍝🍠🍢🍣🍤🍥🥮🍡🥟🥠🥡',
+            'Atividades': '⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪀🏓🏸🏒🏑🥍🏏🪃🥅⛳🪁🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸🥌🎿⛷🏂🏋️🤸🤺⛹️🤾🏌️🏇🧘🏄🏊🤽🚣🧗🚵🚴🏆🥇🥈🥉🏅🎖🏵🎗🎫🎟🎪🤹🎭🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🎸🪕🎻🪗🎲♟🎯🎳🎮🎰🧩',
+            'Viagem': '🚗🚕🚙🚌🚎🏎🚓🚑🚒🚐🛻🚚🚛🚜🏍🛵🚲🛴🛹🛼🚏🛣🛤🛞⛽🚨🚥🚦🛑🚧⚓🛟⛵🛶🚤🛳⛴🛥🚢✈🛩🛫🛬🪂💺🚁🚟🚠🚡🛰🚀🛸🏠🏡🏢🏣🏤🏥🏦🏨🏩🏪🏫🏬🏭🏯🏰💒🗼🗽⛪🕌🛕🕍⛩🕋⛲⛺🌁🌃🏙🌄🌅🌆🌇🌉♨️🎠🛝🎡🎢💈🎪',
+            'Símbolos': '❤️🧡💛💚💙💜🖤🤍🤎💔❤️‍🔥❤️‍🩹❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉☸️✡️🔯🕎☯️☦️🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚛️🉑☢️☣️📴📳🈶🈚🈸🈺🈷✴️🆚💮🉐㊙️㊗️🈴🈵🈹🈲🅰🅱🆎🆑🅾🆘❌⭕🛑⛔📛🚫💯💢♨️🚷🚯🚳🚱🔞📵🚭❗❕❓❔‼️⁉️🔅🔆〽️⚠️🚸🔱⚜️🔰♻️✅🈯💹❇️✳️❎🌐💠Ⓜ️🌀💤🏧🚾♿🅿🛗🈳🈂🛂🛃🛄🛅🚹🚺🚼⚧🚻🚮🎦📶🈁🔣ℹ🔤🔡🔠🆖🆗🆙🆒🆕🆓0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣🔟🔢#️⃣*️⃣⏏▶⏸⏯⏹⏺⏭⏮⏩⏪⏫⏬◀🔼🔽➡️⬅️⬆️⬇️↗️↘️↙️↖️↕️↔️↩️↪️⤴️⤵️🔀🔁🔂🔄🔃🎵🎶➕➖➗✖️🟰♾💲💱™️©️®️👁‍🗨🔚🔙🔛🔝🔜〰️➰➿✔️☑️🔘🔴🟠🟡🟢🔵🟣⚫⚪🟤🔺🔻🔸🔹🔶🔷🔳🔲▪️▫️◾◽◼◻🟥🟧🟨🟩🟦🟪⬛⬜🔈🔇🔉🔊🔔🔕📣📢👁‍🗨💬💭🗯♠️♣️♥️♦️🃏🎴🀄🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛🕜🕝🕞🕟🕠🕡🕢🕣🕤🕥🕦🕧'
+        };
+        let emojiTarget = null;
+        const emojiPicker = document.getElementById('emoji-picker');
+        const emojiGrid = document.getElementById('emoji-grid');
+        const emojiSearch = document.getElementById('emoji-search');
+
+        function renderEmojiGrid(filter = '') {
+            let html = '';
+            for (const [cat, emojis] of Object.entries(EMOJIS)) {
+                const arr = [...emojis].filter(e => e.trim());
+                // Agrupa chars em emojis (alguns são multi-char)
+                const emojiList = emojis.match(/\p{Emoji_Presentation}(\u200d\p{Emoji_Presentation})*/gu) || [];
+                const filtered = filter ? emojiList.filter(e => e.includes(filter)) : emojiList;
+                if (filtered.length === 0) continue;
+                html += `<div style="grid-column:1/-1; font-size:0.65rem; color:#9ca3af; font-weight:700; padding:4px 2px; text-transform:uppercase;">${cat}</div>`;
+                filtered.forEach(e => {
+                    html += `<div class="emoji-cell" style="cursor:pointer; padding:4px; border-radius:8px; line-height:1; transition:background 0.1s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">${e}</div>`;
+                });
+            }
+            emojiGrid.innerHTML = html;
+        }
+
+        function openEmojiPicker(triggerBtn) {
+            emojiTarget = document.getElementById(triggerBtn.dataset.target);
+            const rect = triggerBtn.getBoundingClientRect();
+            emojiPicker.style.display = 'flex';
+            emojiPicker.style.left = Math.min(rect.right - 280, window.innerWidth - 290) + 'px';
+            emojiPicker.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+            emojiSearch.value = '';
+            renderEmojiGrid();
+        }
+
+        function closeEmojiPicker() {
+            emojiPicker.style.display = 'none';
+            emojiTarget = null;
+        }
+
+        // Event delegation for emoji triggers
+        document.addEventListener('click', (e) => {
+            const trigger = e.target.closest('.emoji-trigger');
+            if (trigger) {
+                e.stopPropagation();
+                if (emojiPicker.style.display === 'flex') closeEmojiPicker();
+                else openEmojiPicker(trigger);
+                return;
+            }
+            if (!e.target.closest('#emoji-picker')) closeEmojiPicker();
+        });
+
+        emojiGrid.addEventListener('click', (e) => {
+            const cell = e.target.closest('.emoji-cell');
+            if (cell && emojiTarget) {
+                const emoji = cell.textContent;
+                // Insert emoji at cursor or at end
+                if (emojiTarget.selectionStart !== undefined) {
+                    const start = emojiTarget.selectionStart;
+                    const end = emojiTarget.selectionEnd;
+                    emojiTarget.value = emojiTarget.value.substring(0, start) + emoji + emojiTarget.value.substring(end);
+                    emojiTarget.selectionStart = emojiTarget.selectionEnd = start + emoji.length;
+                } else {
+                    emojiTarget.value += emoji;
+                }
+                emojiTarget.focus();
+                emojiTarget.dispatchEvent(new Event('input'));
+            }
+        });
+
+        emojiSearch.addEventListener('input', () => renderEmojiGrid(emojiSearch.value));
+        emojiPicker.addEventListener('click', (e) => e.stopPropagation());
 
         init();
     </script>

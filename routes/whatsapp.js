@@ -10,6 +10,9 @@ const rateLimits = {};
 const RATE_LIMIT_MAX = 30; // msgs por minuto
 const RATE_LIMIT_WINDOW = 60000; // 1 minuto
 
+// Presença em memória { 'instanceName:remoteJid': { status, updatedAt } }
+const presenceStore = {};
+
 function checkRateLimit(instanceName) {
     const now = Date.now();
     if (!rateLimits[instanceName]) {
@@ -319,6 +322,20 @@ router.post('/webhook', async (req, res) => {
             }
         }
 
+        // --- PRESENCE_UPDATE (typing, recording, available, unavailable) ---
+        if (event === 'presence.update' || event === 'presence_update') {
+            const remoteJid = data.id || data.remoteJid || data.participant;
+            const presence = data.presences?.[remoteJid]?.lastKnownPresence
+                          || data.lastKnownPresence
+                          || data.presence
+                          || data.status;
+            if (remoteJid && presence) {
+                const key = `${instanceName}:${remoteJid}`;
+                presenceStore[key] = { status: presence, updatedAt: Date.now() };
+                console.log(`[WA Presence] ${key} → ${presence}`);
+            }
+        }
+
     } catch (error) {
         console.error('[WA Webhook] Erro ao processar:', error);
     }
@@ -448,7 +465,8 @@ router.post('/instances/seed', isAdmin, async (req, res) => {
                             webhookByEvents: false,
                             events: [
                                 'MESSAGES_UPSERT', 'MESSAGES_UPDATE',
-                                'CONNECTION_UPDATE', 'QRCODE_UPDATED'
+                                'CONNECTION_UPDATE', 'QRCODE_UPDATED',
+                                'PRESENCE_UPDATE'
                             ]
                         }
                     })
@@ -464,6 +482,38 @@ router.post('/instances/seed', isAdmin, async (req, res) => {
     } catch (error) {
         console.error('Erro no seed:', error);
         res.status(500).json({ error: 'Erro ao criar instâncias' });
+    }
+});
+
+// POST /api/whatsapp/instances/update-webhooks — Atualiza webhooks de todas as instâncias (admin)
+router.post('/instances/update-webhooks', isAdmin, async (req, res) => {
+    try {
+        const instances = await prisma.whatsAppInstance.findMany();
+        const backendUrl = process.env.BACKEND_URL || 'https://backend-aerofestas-production.up.railway.app';
+        const results = [];
+        for (const inst of instances) {
+            try {
+                const evoRes = await fetch(`${inst.evolutionUrl}/webhook/set/${inst.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': inst.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        webhook: {
+                            enabled: true,
+                            url: `${backendUrl}/api/whatsapp/webhook`,
+                            webhookByEvents: false,
+                            events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'PRESENCE_UPDATE']
+                        }
+                    })
+                });
+                const data = await evoRes.json();
+                results.push({ instance: inst.instanceName, success: evoRes.ok, data });
+            } catch (e) {
+                results.push({ instance: inst.instanceName, success: false, error: e.message });
+            }
+        }
+        res.json({ success: true, results });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar webhooks' });
     }
 });
 
@@ -972,6 +1022,21 @@ router.delete('/shortcuts/:id', authenticate, async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Erro ao remover atalho' });
     }
+});
+
+// ===================================================================
+// PRESENÇA (TYPING / RECORDING)
+// ===================================================================
+
+// GET /api/whatsapp/presence/:instanceName/:remoteJid — Consulta presença
+router.get('/presence/:instanceName/:remoteJid', authenticate, (req, res) => {
+    const key = `${req.params.instanceName}:${req.params.remoteJid}`;
+    const entry = presenceStore[key];
+    // Presença expira em 15 segundos (se não houver update, considerar idle)
+    if (entry && (Date.now() - entry.updatedAt) < 15000) {
+        return res.json({ presence: entry.status });
+    }
+    res.json({ presence: null });
 });
 
 // ===================================================================
