@@ -1164,10 +1164,11 @@
                 return `<div class="media-bubble"><video src="${escapeHtml(url)}" controls preload="metadata" style="max-height:300px;"></video></div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
             }
             if (type === 'audio') {
-                if (url) {
+                // Se for data URI (áudio enviado por nós, armazenado localmente), toca direto
+                if (url && url.startsWith('data:')) {
                     return `<div class="media-bubble" style="min-width:220px;"><audio src="${escapeHtml(url)}" controls preload="metadata" style="width:100%;max-width:300px;"></audio></div>`;
                 }
-                // Sem URL: mostra botão para carregar áudio
+                // Para URLs CDN do WhatsApp (expiram) ou sem URL: sempre baixar sob demanda
                 return `<div class="media-bubble" style="min-width:220px;" id="audio-${escapeHtml(msg.id)}">
                     <div class="flex items-center gap-2 cursor-pointer text-green-600 hover:text-green-700" onclick="loadAudioMedia('${escapeHtml(msg.id)}')">
                         <i class="fas fa-play-circle text-2xl"></i>
@@ -2113,20 +2114,45 @@
                 container.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">Nenhum contato encontrado</p>';
                 return;
             }
-            container.innerHTML = contacts.map(c => `
-                <div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition" data-jid="${escapeHtml(c.remoteJid)}" data-name="${escapeHtml(c.name)}" data-phone="${escapeHtml(c.phoneNumber)}">
-                    <div class="w-10 h-10 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">${escapeHtml((c.name || '?')[0].toUpperCase())}</div>
+            container.innerHTML = contacts.map(c => {
+                const initials = escapeHtml((c.name || '?')[0].toUpperCase());
+                const cachedPic = profilePicCache[c.phoneNumber];
+                const avatarContent = cachedPic
+                    ? `<img src="${cachedPic}" class="w-full h-full object-cover rounded-full" onerror="this.remove();this.parentElement.textContent='${initials}'">`
+                    : initials;
+                return `<div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition" data-jid="${escapeHtml(c.remoteJid)}" data-name="${escapeHtml(c.name)}" data-phone="${escapeHtml(c.phoneNumber)}">
+                    <div class="w-10 h-10 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden" data-contact-phone="${escapeHtml(c.phoneNumber)}">${avatarContent}</div>
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-medium truncate">${escapeHtml(c.name)}</p>
                         <p class="text-xs text-gray-400">${escapeHtml(c.phoneNumber)}</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
             container.querySelectorAll('[data-jid]').forEach(el => {
                 el.addEventListener('click', () => {
                     onClick({ remoteJid: el.dataset.jid, name: el.dataset.name, phoneNumber: el.dataset.phone });
                 });
             });
+            // Carregar fotos de perfil dos contatos que ainda não estão no cache
+            loadContactProfilePics(contacts, containerId);
+        }
+
+        async function loadContactProfilePics(contacts, containerId) {
+            for (const c of contacts) {
+                if (profilePicCache[c.phoneNumber] !== undefined) continue;
+                profilePicCache[c.phoneNumber] = null; // marca como carregando
+                try {
+                    const data = await api.getProfilePic(currentInstance, c.phoneNumber);
+                    if (data.profilePicUrl) {
+                        profilePicCache[c.phoneNumber] = data.profilePicUrl;
+                        const avatarEl = document.querySelector(`#${containerId} [data-contact-phone="${c.phoneNumber}"]`);
+                        if (avatarEl) {
+                            const initials = (c.name || '?')[0].toUpperCase();
+                            avatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover rounded-full" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+                        }
+                    }
+                } catch (e) { /* silenciar */ }
+            }
         }
 
         async function startConversationWith(contact) {

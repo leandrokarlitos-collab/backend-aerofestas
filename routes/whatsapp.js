@@ -37,6 +37,13 @@ function normalizePhone(raw) {
     return digits;
 }
 
+// Normaliza remoteJid: remove sufixo de dispositivo (ex: :0) antes do @
+// 5511999999999:0@s.whatsapp.net → 5511999999999@s.whatsapp.net
+function normalizeRemoteJid(jid) {
+    if (!jid) return jid;
+    return jid.replace(/:\d+@/, '@');
+}
+
 // Extrai texto da mensagem do webhook (vários formatos possíveis)
 function extractMessageText(message) {
     if (!message) return null;
@@ -153,6 +160,9 @@ router.post('/webhook', async (req, res) => {
             const key = data.key;
             if (!key || !key.remoteJid) return;
 
+            // Normaliza JID antes de qualquer operação
+            key.remoteJid = normalizeRemoteJid(key.remoteJid);
+
             // Captura status para o store em memória
             if (key.remoteJid === 'status@broadcast') {
                 const statusKey = instanceName;
@@ -173,7 +183,7 @@ router.post('/webhook', async (req, res) => {
                 return;
             }
 
-            const remoteJid = key.remoteJid;
+            const remoteJid = normalizeRemoteJid(key.remoteJid);
             const isGroup = remoteJid.includes('@g.us');
             const fromMe = key.fromMe || false;
             const messageId = key.id;
