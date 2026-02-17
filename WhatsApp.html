@@ -130,25 +130,8 @@
         #qr-modal.hidden { display: none; }
         .modal-hidden { display: none !important; }
 
-        /* Attach menu */
-        .attach-menu {
-            display: none;
-            position: fixed;
-            background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            padding: 8px; grid-template-columns: repeat(3, 1fr); gap: 4px;
-            min-width: 200px; z-index: 10000;
-        }
-        .attach-menu.open { display: grid !important; }
-        .attach-menu-item {
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            padding: 10px 8px; border-radius: 12px; cursor: pointer; transition: background 0.15s;
-            font-size: 0.7rem; color: #6b7280; font-weight: 600;
-        }
-        .attach-menu-item:hover { background: #f3f4f6; }
-        .attach-menu-item .icon-circle {
-            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; color: white; font-size: 1rem;
-        }
+        /* Attach menu item hover */
+        .attach-menu-item:hover { background: #f3f4f6 !important; }
 
         /* Shortcuts popup */
         .shortcuts-popup {
@@ -335,26 +318,28 @@
     <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
 
     <!-- Attach Menu (fixed, outside overflow containers) -->
-    <div id="attach-menu" class="attach-menu">
-        <div class="attach-menu-item" data-action="image">
-            <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
-            <span>Imagem</span>
-        </div>
-        <div class="attach-menu-item" data-action="video">
-            <div class="icon-circle bg-red-500"><i class="fas fa-video"></i></div>
-            <span>Vídeo</span>
-        </div>
-        <div class="attach-menu-item" data-action="document">
-            <div class="icon-circle bg-blue-500"><i class="fas fa-file"></i></div>
-            <span>Documento</span>
-        </div>
-        <div class="attach-menu-item" data-action="catalog">
-            <div class="icon-circle bg-green-600"><i class="fas fa-store"></i></div>
-            <span>Catálogo</span>
-        </div>
-        <div class="attach-menu-item" data-action="shortcuts-manage">
-            <div class="icon-circle bg-amber-500"><i class="fas fa-bolt"></i></div>
-            <span>Atalhos</span>
+    <div id="attach-menu" style="display:none; position:fixed; background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.15); padding:12px; z-index:99999;">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+            <div class="attach-menu-item" data-action="image" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#a855f7;"><i class="fas fa-image"></i></div>
+                <span>Imagem</span>
+            </div>
+            <div class="attach-menu-item" data-action="video" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#ef4444;"><i class="fas fa-video"></i></div>
+                <span>Vídeo</span>
+            </div>
+            <div class="attach-menu-item" data-action="document" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#3b82f6;"><i class="fas fa-file"></i></div>
+                <span>Documento</span>
+            </div>
+            <div class="attach-menu-item" data-action="catalog" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#16a34a;"><i class="fas fa-store"></i></div>
+                <span>Catálogo</span>
+            </div>
+            <div class="attach-menu-item" data-action="shortcuts-manage" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#f59e0b;"><i class="fas fa-bolt"></i></div>
+                <span>Atalhos</span>
+            </div>
         </div>
     </div>
 
@@ -876,6 +861,7 @@
 
                 const time = formatTime(msg.timestamp);
                 const statusIcon = msg.fromMe ? (
+                    msg.status === 'played' ? '<i class="fas fa-check-double text-blue-400"></i> <span class="text-[9px] text-blue-400 font-medium">Reproduzido</span>' :
                     msg.status === 'read' ? '<i class="fas fa-check-double text-blue-400"></i>' :
                     msg.status === 'delivered' ? '<i class="fas fa-check-double text-gray-400"></i>' :
                     '<i class="fas fa-check text-gray-400"></i>'
@@ -977,25 +963,33 @@
         });
 
         // --- ATTACH MENU ---
-        document.getElementById('attach-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const menu = document.getElementById('attach-menu');
+        const attachMenu = document.getElementById('attach-menu');
+        function openAttachMenu() {
             const btn = document.getElementById('attach-btn');
             const rect = btn.getBoundingClientRect();
-            menu.style.left = rect.left + 'px';
-            menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-            menu.classList.toggle('open');
+            attachMenu.style.left = rect.left + 'px';
+            attachMenu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+            attachMenu.style.display = 'block';
+        }
+        function closeAttachMenu() {
+            attachMenu.style.display = 'none';
+        }
+
+        document.getElementById('attach-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (attachMenu.style.display === 'block') {
+                closeAttachMenu();
+            } else {
+                openAttachMenu();
+            }
         });
-        document.addEventListener('click', () => {
-            const menu = document.getElementById('attach-menu');
-            menu.classList.remove('open');
-        });
+        document.addEventListener('click', () => closeAttachMenu());
+        attachMenu.addEventListener('click', (e) => e.stopPropagation());
 
         document.querySelectorAll('.attach-menu-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const menu = document.getElementById('attach-menu');
-                menu.classList.remove('open');
+                closeAttachMenu();
                 const action = item.dataset.action;
                 if (action === 'image') document.getElementById('file-input-image').click();
                 else if (action === 'video') document.getElementById('file-input-video').click();

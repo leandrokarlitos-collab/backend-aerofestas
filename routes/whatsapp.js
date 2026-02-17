@@ -301,7 +301,7 @@ router.post('/webhook', async (req, res) => {
                 else if (rs === 2 || rs === 'SERVER_ACK') statusStr = 'sent';
                 else if (rs === 3 || rs === 'DELIVERY_ACK' || rs === 'DELIVERED') statusStr = 'delivered';
                 else if (rs === 4 || rs === 'READ') statusStr = 'read';
-                else if (rs === 5 || rs === 'PLAYED') statusStr = 'read';
+                else if (rs === 5 || rs === 'PLAYED') statusStr = 'played';
 
                 if (msgId) {
                     try {
