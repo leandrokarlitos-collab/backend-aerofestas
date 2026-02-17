@@ -1565,14 +1565,24 @@ router.get('/groups/:instanceName', authenticate, async (req, res) => {
         const instance = await getInstanceWithCreds(req.params.instanceName);
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        const evoRes = await fetch(`${instance.evolutionUrl}/group/fetchAllGroups/${instance.instanceName}`, {
+        // Tenta POST (padrão v2.x), fallback para GET (algumas versões)
+        let evoRes = await fetch(`${instance.evolutionUrl}/group/fetchAllGroups/${instance.instanceName}`, {
             method: 'POST',
             headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
             body: JSON.stringify({ getParticipants: false })
         });
 
+        // Fallback: tenta GET se POST falhou
+        if (!evoRes.ok) {
+            evoRes = await fetch(`${instance.evolutionUrl}/group/fetchAllGroups/${instance.instanceName}?getParticipants=false`, {
+                method: 'GET',
+                headers: { 'apikey': instance.apiKey }
+            });
+        }
+
         if (!evoRes.ok) {
             const err = await evoRes.json().catch(() => ({}));
+            console.error(`[WA Groups] Erro ao buscar grupos (${evoRes.status}):`, err);
             return res.status(502).json({ error: 'Erro ao buscar grupos', details: err });
         }
 
@@ -1860,6 +1870,86 @@ router.post('/status/:instanceName', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Erro ao postar status:', error);
         res.status(500).json({ error: 'Erro ao postar status' });
+    }
+});
+
+// ===================================================================
+// MERGE DE CONVERSAS DUPLICADAS (JID com sufixo de dispositivo)
+// ===================================================================
+
+// POST /api/whatsapp/merge-duplicates — Mescla conversas com JID :0 para JID normalizado (admin)
+router.post('/merge-duplicates', isAdmin, async (req, res) => {
+    try {
+        const instances = await prisma.whatsAppInstance.findMany();
+        let merged = 0;
+        let deleted = 0;
+        const log = [];
+
+        for (const instance of instances) {
+            // Busca todas as conversas com sufixo de dispositivo no JID (ex: :0@)
+            const duplicates = await prisma.whatsAppConversation.findMany({
+                where: {
+                    instanceId: instance.id,
+                    remoteJid: { contains: ':' }
+                }
+            });
+
+            for (const dup of duplicates) {
+                // Normaliza o JID (remove sufixo :0)
+                const normalJid = dup.remoteJid.replace(/:\d+@/, '@');
+                if (normalJid === dup.remoteJid) continue; // sem mudança
+
+                // Busca a conversa normalizada (se existir)
+                const normalConv = await prisma.whatsAppConversation.findUnique({
+                    where: { remoteJid_instanceId: { remoteJid: normalJid, instanceId: instance.id } }
+                });
+
+                if (normalConv) {
+                    // Move mensagens do duplicado para a conversa normal
+                    const moved = await prisma.whatsAppMessage.updateMany({
+                        where: { conversationId: dup.id },
+                        data: { conversationId: normalConv.id }
+                    });
+
+                    // Atualiza lastMessageAt e preview na conversa normal
+                    const lastMsg = await prisma.whatsAppMessage.findFirst({
+                        where: { conversationId: normalConv.id },
+                        orderBy: { timestamp: 'desc' }
+                    });
+                    if (lastMsg) {
+                        await prisma.whatsAppConversation.update({
+                            where: { id: normalConv.id },
+                            data: {
+                                lastMessageAt: lastMsg.timestamp,
+                                lastMessagePreview: lastMsg.content?.substring(0, 200) || dup.lastMessagePreview
+                            }
+                        });
+                    }
+
+                    // Remove a conversa duplicada
+                    await prisma.whatsAppConversation.delete({ where: { id: dup.id } });
+                    merged += moved.count;
+                    deleted++;
+                    log.push(`Merged ${dup.remoteJid} → ${normalJid} (${moved.count} msgs)`);
+                } else {
+                    // Não existe conversa normalizada: só renomeia o JID
+                    await prisma.whatsAppConversation.update({
+                        where: { id: dup.id },
+                        data: {
+                            remoteJid: normalJid,
+                            phoneNumber: normalJid.replace(/@s\.whatsapp\.net|@g\.us/g, '')
+                        }
+                    });
+                    log.push(`Renamed ${dup.remoteJid} → ${normalJid}`);
+                    merged++;
+                }
+            }
+        }
+
+        res.json({ success: true, merged, deleted, log });
+    } catch (error) {
+        console.error('Erro ao mesclar duplicatas:', error);
+        res.status(500).json({ error: 'Erro ao mesclar duplicatas' });
     }
 });
 

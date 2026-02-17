@@ -354,6 +354,10 @@
                             <i class="fas fa-history text-gray-400 w-5 text-center"></i>
                             <span class="text-sm font-medium">Sincronizar histórico</span>
                         </button>
+                        <button onclick="mergeDuplicates()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-compress-alt text-gray-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Corrigir conversas duplicadas</span>
+                        </button>
                         <button id="connect-btn" class="hidden w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
                             <i class="fas fa-qrcode text-green-500 w-5 text-center"></i>
                             <span class="text-sm font-medium text-green-600">Conectar WhatsApp</span>
@@ -835,7 +839,12 @@
                 try { const r = await fetch(`${BASE}/send-contact`, { method: 'POST', headers: headers(), body: JSON.stringify(data) }); return r.ok ? await r.json() : null; } catch(e) { return null; }
             },
             getGroups: async (instanceName) => {
-                try { const r = await fetch(`${BASE}/groups/${instanceName}`, { headers: headers() }); return r.ok ? await r.json() : []; } catch(e) { return []; }
+                try {
+                    const r = await fetch(`${BASE}/groups/${instanceName}`, { headers: headers() });
+                    if (r.ok) return await r.json();
+                    const err = await r.json().catch(() => ({}));
+                    throw new Error(err.error || `Erro ${r.status}`);
+                } catch(e) { throw e; }
             },
             getConversationsFiltered: async (instance, opts = {}) => {
                 try {
@@ -2205,9 +2214,15 @@
         async function loadGroups() {
             const panel = document.getElementById('groups-panel');
             panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><p class="text-sm">Carregando grupos...</p></div>';
-            const groups = await api.getGroups(currentInstance);
-            if (groups.length === 0) {
-                panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-users text-3xl text-gray-300 mb-2"></i><p class="text-sm">Nenhum grupo encontrado</p></div>';
+            let groups;
+            try {
+                groups = await api.getGroups(currentInstance);
+            } catch(e) {
+                panel.innerHTML = `<div class="text-center py-8 text-red-400"><i class="fas fa-exclamation-circle text-3xl text-red-300 mb-2"></i><p class="text-sm font-medium">Erro ao carregar grupos</p><p class="text-xs text-gray-400 mt-1">${escapeHtml(e.message)}</p></div>`;
+                return;
+            }
+            if (!groups || groups.length === 0) {
+                panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-users text-3xl text-gray-300 mb-2"></i><p class="text-sm">Nenhum grupo encontrado</p><p class="text-xs text-gray-400 mt-1">Verifique se o WhatsApp está conectado</p></div>';
                 return;
             }
             panel.innerHTML = groups.map(g => `
@@ -2381,6 +2396,25 @@
             loadMyProfile();
         };
 
+        // --- MERGE DUPLICATES ---
+        window.mergeDuplicates = async function() {
+            if (!confirm('Isso vai mesclar conversas duplicadas (causadas por sufixo de dispositivo no JID). Continuar?')) return;
+            showToast('Corrigindo conversas duplicadas...', 'info');
+            try {
+                const r = await fetch(`${BASE}/merge-duplicates`, { method: 'POST', headers: headers() });
+                const data = await r.json();
+                if (r.ok) {
+                    showToast(`Concluído: ${data.merged} mensagens movidas, ${data.deleted} conversas removidas`, 'success');
+                    await loadConversations();
+                    renderConversationList();
+                } else {
+                    showToast(data.error || 'Erro ao mesclar', 'error');
+                }
+            } catch(e) {
+                showToast('Erro ao mesclar conversas', 'error');
+            }
+        };
+
         // --- DISCONNECT ---
         window.disconnectInstance = async function() {
             if (!confirm('Deseja realmente desconectar o WhatsApp?')) return;
@@ -2394,12 +2428,20 @@
         async function loadStatusList() {
             const panel = document.getElementById('status-panel');
             panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><p class="text-sm">Carregando status...</p></div>';
-            statusCache = await api.getStatus(currentInstance);
+            try {
+                statusCache = await api.getStatus(currentInstance);
+            } catch(e) {
+                statusCache = [];
+            }
             if (statusCache.length === 0) {
                 panel.innerHTML = `
                     <div class="p-3">
                         <button onclick="document.getElementById('post-status-modal').classList.remove('modal-hidden')" class="w-full shiny-btn py-2.5 rounded-xl text-sm font-bold mb-4"><i class="fas fa-plus mr-1"></i>Postar Status</button>
-                        <p class="text-center text-gray-400 text-sm">Nenhum status recente</p>
+                        <div class="text-center text-gray-400 text-sm py-4">
+                            <i class="fas fa-circle-notch text-3xl text-gray-300 mb-3"></i>
+                            <p>Nenhum status recente</p>
+                            <p class="text-xs mt-1 text-gray-400">Os status aparecerão aqui quando seus contatos postarem atualizações</p>
+                        </div>
                     </div>`;
                 return;
             }
@@ -2486,15 +2528,25 @@
         // --- SYNC HISTORY ---
         async function syncCurrentConversation() {
             if (!currentConversation?.id) return;
-            document.getElementById('sync-banner').innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sincronizando...';
-            const result = await api.syncConversation(currentConversation.id);
-            if (result && result.synced > 0) {
-                showToast(`${result.synced} mensagens sincronizadas`, 'success');
-                await loadMessages();
-            } else {
-                showToast('Nenhuma mensagem nova encontrada', 'info');
+            const syncBanner = document.getElementById('sync-banner');
+            syncBanner.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sincronizando histórico...';
+            try {
+                const result = await api.syncConversation(currentConversation.id);
+                if (result && result.synced > 0) {
+                    showToast(`${result.synced} mensagens sincronizadas`, 'success');
+                    await loadMessages();
+                    syncBanner.classList.add('hidden');
+                } else if (result && result.total === 0) {
+                    syncBanner.innerHTML = '<i class="fas fa-info-circle mr-1"></i> Nenhum histórico disponível na Evolution API. Mensagens aparecerão em tempo real.';
+                    setTimeout(() => syncBanner.classList.add('hidden'), 4000);
+                } else {
+                    syncBanner.classList.add('hidden');
+                    showToast('Nenhuma mensagem nova encontrada', 'info');
+                }
+            } catch(e) {
+                syncBanner.innerHTML = '<i class="fas fa-exclamation-circle mr-1 text-red-500"></i> Erro ao sincronizar. Tente novamente.';
+                setTimeout(() => syncBanner.classList.add('hidden'), 3000);
             }
-            document.getElementById('sync-banner').classList.add('hidden');
         }
         window.syncCurrentConversation = syncCurrentConversation;
 
