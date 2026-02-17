@@ -1010,7 +1010,7 @@
             handleShortcutPopup(this.value);
         });
 
-        // --- ATTACH MENU --- v1.2.7
+        // --- ATTACH MENU ---
         const attachMenu = document.getElementById('attach-menu');
         let attachMenuOpen = false;
         function openAttachMenu() {
@@ -1018,7 +1018,6 @@
             const rect = btn.getBoundingClientRect();
             attachMenu.style.cssText = `display:block; position:fixed; background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.15); padding:12px; z-index:99999; left:${rect.left}px; bottom:${window.innerHeight - rect.top + 8}px;`;
             attachMenuOpen = true;
-            console.log('[CLIP] Menu aberto', rect.left, rect.top);
         }
         function closeAttachMenu() {
             attachMenu.style.display = 'none';
@@ -1027,7 +1026,6 @@
 
         document.getElementById('attach-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log('[CLIP] Botão clicado, aberto?', attachMenuOpen);
             if (attachMenuOpen) {
                 closeAttachMenu();
             } else {
