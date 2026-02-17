@@ -289,36 +289,10 @@
 
                 <!-- Input Bar -->
                 <div id="input-bar" class="hidden p-3 border-t border-gray-200/50 bg-white/50">
-                    <!-- Shortcuts popup (shown when typing /) -->
-                    <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
                     <div class="relative flex items-end gap-2">
-                        <div class="relative">
-                            <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
-                                <i class="fas fa-paperclip text-lg"></i>
-                            </button>
-                            <div id="attach-menu" class="attach-menu">
-                                <div class="attach-menu-item" data-action="image">
-                                    <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
-                                    <span>Imagem</span>
-                                </div>
-                                <div class="attach-menu-item" data-action="video">
-                                    <div class="icon-circle bg-red-500"><i class="fas fa-video"></i></div>
-                                    <span>Vídeo</span>
-                                </div>
-                                <div class="attach-menu-item" data-action="document">
-                                    <div class="icon-circle bg-blue-500"><i class="fas fa-file"></i></div>
-                                    <span>Documento</span>
-                                </div>
-                                <div class="attach-menu-item" data-action="catalog">
-                                    <div class="icon-circle bg-green-600"><i class="fas fa-store"></i></div>
-                                    <span>Catálogo</span>
-                                </div>
-                                <div class="attach-menu-item" data-action="shortcuts-manage">
-                                    <div class="icon-circle bg-amber-500"><i class="fas fa-bolt"></i></div>
-                                    <span>Atalhos</span>
-                                </div>
-                            </div>
-                        </div>
+                        <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
+                            <i class="fas fa-paperclip text-lg"></i>
+                        </button>
                         <textarea id="message-input" rows="1" placeholder="Digite uma mensagem ou / para atalhos..."
                             class="form-input flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 max-h-32"
                             style="field-sizing: content;"></textarea>
@@ -354,6 +328,33 @@
             <div id="catalog-content" class="flex-1 overflow-y-auto">
                 <div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando catálogo...</p></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts popup (fixed, outside overflow containers) -->
+    <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
+
+    <!-- Attach Menu (fixed, outside overflow containers) -->
+    <div id="attach-menu" class="attach-menu">
+        <div class="attach-menu-item" data-action="image">
+            <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
+            <span>Imagem</span>
+        </div>
+        <div class="attach-menu-item" data-action="video">
+            <div class="icon-circle bg-red-500"><i class="fas fa-video"></i></div>
+            <span>Vídeo</span>
+        </div>
+        <div class="attach-menu-item" data-action="document">
+            <div class="icon-circle bg-blue-500"><i class="fas fa-file"></i></div>
+            <span>Documento</span>
+        </div>
+        <div class="attach-menu-item" data-action="catalog">
+            <div class="icon-circle bg-green-600"><i class="fas fa-store"></i></div>
+            <span>Catálogo</span>
+        </div>
+        <div class="attach-menu-item" data-action="shortcuts-manage">
+            <div class="icon-circle bg-amber-500"><i class="fas fa-bolt"></i></div>
+            <span>Atalhos</span>
         </div>
     </div>
 

@@ -274,23 +274,32 @@ router.post('/webhook', async (req, res) => {
 
         // --- MESSAGES_UPDATE (status: delivered, read) ---
         if (event === 'messages.update' || event === 'messages_update') {
-            const updates = Array.isArray(data) ? data : [data];
-            console.log(`[WA Status] Recebido ${updates.length} atualizações de status`);
-            for (const update of updates) {
-                // v2.3.6 formato: { keyId, status, remoteJid, fromMe, ... }
-                // v1 formato: { key: { id, remoteJid, fromMe }, update: { status } }
-                const msgId = update.keyId || update.key?.id;
-                const rawStatus = update.status ?? update.update?.status;
+            // data pode ser: array de updates, objeto único, ou { messages: [...] }
+            let updates = [];
+            if (Array.isArray(data)) updates = data;
+            else if (data.messages && Array.isArray(data.messages)) updates = data.messages;
+            else if (data.keyId || data.key || data.status !== undefined) updates = [data];
+            else updates = [data];
 
-                console.log(`[WA Status] msgId=${msgId}, rawStatus=${rawStatus}, raw:`, JSON.stringify(update).substring(0, 300));
+            console.log(`[WA Status] Recebido ${updates.length} atualizações. Raw:`, JSON.stringify(data).substring(0, 500));
+
+            for (const update of updates) {
+                // Formatos possíveis:
+                // v2.3.6: { keyId, remoteJid, fromMe, status, instanceId }
+                // v2.x:   { key: { id, remoteJid, fromMe }, update: { status } }
+                // baileys: { key: { id }, update: { status } }
+                const msgId = update.keyId || update.key?.id || update.id;
+                const rawStatus = update.status ?? update.update?.status ?? update.ack;
+
+                console.log(`[WA Status] msgId=${msgId}, rawStatus=${rawStatus}, type=${typeof rawStatus}`);
 
                 if (rawStatus === undefined || rawStatus === null) continue;
 
                 let statusStr = 'sent';
-                const rs = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : rawStatus;
-                if (rs === 1 || rs === 'PENDING') statusStr = 'sent';
+                const rs = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : Number(rawStatus);
+                if (rs === 0 || rs === 1 || rs === 'PENDING' || rs === 'ERROR') statusStr = 'sent';
                 else if (rs === 2 || rs === 'SERVER_ACK') statusStr = 'sent';
-                else if (rs === 3 || rs === 'DELIVERY_ACK') statusStr = 'delivered';
+                else if (rs === 3 || rs === 'DELIVERY_ACK' || rs === 'DELIVERED') statusStr = 'delivered';
                 else if (rs === 4 || rs === 'READ') statusStr = 'read';
                 else if (rs === 5 || rs === 'PLAYED') statusStr = 'read';
 
@@ -300,9 +309,8 @@ router.post('/webhook', async (req, res) => {
                             where: { id: msgId },
                             data: { status: statusStr }
                         });
-                        console.log(`[WA Status] Atualizado ${msgId} → ${statusStr}`);
+                        console.log(`[WA Status] OK: ${msgId} → ${statusStr}`);
                     } catch (e) {
-                        // Mensagem pode não existir no banco (ex: mensagem antiga)
                         console.warn(`[WA Status] Msg ${msgId} não encontrada no banco`);
                     }
                 }
