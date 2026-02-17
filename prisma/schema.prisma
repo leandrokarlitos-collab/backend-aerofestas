@@ -327,6 +327,7 @@ model WhatsAppInstance {
   updatedAt     DateTime @updatedAt
 
   conversations WhatsAppConversation[]
+  shortcuts     WhatsAppShortcut[]
 }
 
 model WhatsAppConversation {
@@ -361,9 +362,24 @@ model WhatsAppMessage {
   content         String
   messageType     String   @default("text")
   mediaUrl        String?
+  mediaName       String?
+  mediaMimetype   String?
   timestamp       DateTime
   status          String   @default("sent")
   createdAt       DateTime @default(now())
 
   @@index([conversationId, timestamp])
+}
+
+model WhatsAppShortcut {
+  id          String   @id @default(uuid())
+  command     String   @unique
+  title       String
+  content     String
+  mediaUrl    String?
+  mediaType   String?
+  instanceId  String?
+  instance    WhatsAppInstance? @relation(fields: [instanceId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

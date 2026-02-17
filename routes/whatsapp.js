@@ -39,6 +39,7 @@ function extractMessageText(message) {
     if (message.imageMessage?.caption) return message.imageMessage.caption;
     if (message.videoMessage?.caption) return message.videoMessage.caption;
     if (message.documentMessage?.caption) return message.documentMessage.caption;
+    if (message.documentMessage?.title) return message.documentMessage.title;
     return null;
 }
 
@@ -53,6 +54,19 @@ function detectMessageType(message) {
     if (message.locationMessage) return 'location';
     if (message.contactMessage) return 'contact';
     return 'text';
+}
+
+// Extrai informações de mídia da mensagem
+function extractMediaInfo(message) {
+    if (!message) return {};
+    const mediaMsg = message.imageMessage || message.videoMessage || message.audioMessage ||
+                     message.pttMessage || message.documentMessage || message.stickerMessage;
+    if (!mediaMsg) return {};
+    return {
+        mediaUrl: mediaMsg.url || null,
+        mediaName: mediaMsg.fileName || mediaMsg.title || null,
+        mediaMimetype: mediaMsg.mimetype || null
+    };
 }
 
 // Envia push notification para todos os usuários inscritos
@@ -148,6 +162,7 @@ router.post('/webhook', async (req, res) => {
 
             // Conteúdo para exibição (se não tem texto, mostra o tipo)
             const displayContent = messageText || `[${messageType}]`;
+            const mediaInfo = extractMediaInfo(data.message);
 
             // Extrai número do telefone
             const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
@@ -183,6 +198,9 @@ router.post('/webhook', async (req, res) => {
                         fromMe,
                         content: displayContent,
                         messageType,
+                        mediaUrl: mediaInfo.mediaUrl || null,
+                        mediaName: mediaInfo.mediaName || null,
+                        mediaMimetype: mediaInfo.mediaMimetype || null,
                         timestamp,
                         status: fromMe ? 'sent' : 'received'
                     }
@@ -664,6 +682,276 @@ router.post('/send', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Erro ao enviar mensagem:', error);
         res.status(500).json({ error: 'Erro ao enviar mensagem' });
+    }
+});
+
+// ===================================================================
+// ENVIO DE MÍDIA (imagem, vídeo, áudio, documento)
+// ===================================================================
+
+// POST /api/whatsapp/send-media
+router.post('/send-media', authenticate, async (req, res) => {
+    try {
+        let { instanceName, remoteJid, conversationId, mediaType, media, caption, fileName, mimetype } = req.body;
+
+        // Resolve conversa se necessário
+        if (conversationId && (!remoteJid || !instanceName)) {
+            const conv = await prisma.whatsAppConversation.findUnique({
+                where: { id: conversationId },
+                include: { instance: true }
+            });
+            if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+            remoteJid = conv.remoteJid;
+            instanceName = instanceName || conv.instance.instanceName;
+        }
+
+        if (!instanceName || !remoteJid || !media || !mediaType) {
+            return res.status(400).json({ error: 'instanceName, remoteJid, media e mediaType são obrigatórios' });
+        }
+
+        if (!checkRateLimit(instanceName)) {
+            return res.status(429).json({ error: 'Limite de envio atingido. Aguarde 1 minuto.' });
+        }
+
+        const instance = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const number = remoteJid.replace('@s.whatsapp.net', '');
+        let evoRes, evoData;
+
+        if (mediaType === 'audio') {
+            // Áudio usa endpoint dedicado (sendWhatsAppAudio) para aparecer como nota de voz
+            evoRes = await fetch(`${instance.evolutionUrl}/message/sendWhatsAppAudio/${instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ number, audio: media, delay: 1200, encoding: true })
+            });
+        } else {
+            // Imagem, vídeo e documento usam sendMedia
+            const body = { number, mediatype: mediaType, media, delay: 1200 };
+            if (caption) body.caption = caption;
+            if (fileName) body.fileName = fileName;
+            if (mimetype) body.mimetype = mimetype;
+            evoRes = await fetch(`${instance.evolutionUrl}/message/sendMedia/${instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+        }
+
+        evoData = await evoRes.json();
+
+        if (!evoRes.ok) {
+            console.error('Erro Evolution API send-media:', evoData);
+            return res.status(502).json({ error: 'Erro ao enviar mídia', details: evoData });
+        }
+
+        const sentMessageId = evoData.key?.id || `sent-${Date.now()}`;
+        const displayContent = caption || `[${mediaType}]`;
+
+        // Upsert conversa
+        const conversation = await prisma.whatsAppConversation.upsert({
+            where: { remoteJid_instanceId: { remoteJid, instanceId: instance.id } },
+            create: { remoteJid, phoneNumber: number, instanceId: instance.id, lastMessageAt: new Date(), lastMessagePreview: displayContent.substring(0, 200) },
+            update: { lastMessageAt: new Date(), lastMessagePreview: displayContent.substring(0, 200) }
+        });
+
+        const savedMessage = await prisma.whatsAppMessage.create({
+            data: {
+                id: sentMessageId,
+                conversationId: conversation.id,
+                fromMe: true,
+                content: displayContent,
+                messageType: mediaType,
+                mediaUrl: typeof media === 'string' && media.startsWith('http') ? media : null,
+                mediaName: fileName || null,
+                mediaMimetype: mimetype || null,
+                timestamp: new Date(),
+                status: 'sent'
+            }
+        });
+
+        res.json(savedMessage);
+    } catch (error) {
+        console.error('Erro ao enviar mídia:', error);
+        res.status(500).json({ error: 'Erro ao enviar mídia' });
+    }
+});
+
+// ===================================================================
+// CATÁLOGO DO WHATSAPP BUSINESS
+// ===================================================================
+
+// GET /api/whatsapp/catalog/:instanceName — Busca catálogo da conta Business
+router.get('/catalog/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await prisma.whatsAppInstance.findUnique({ where: { instanceName: req.params.instanceName } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/fetchCatalog/${instance.instanceName}`, {
+            headers: { 'apikey': instance.apiKey }
+        });
+
+        if (!evoRes.ok) {
+            const err = await evoRes.json().catch(() => ({}));
+            return res.status(502).json({ error: 'Erro ao buscar catálogo', details: err });
+        }
+
+        const catalog = await evoRes.json();
+        res.json(catalog);
+    } catch (error) {
+        console.error('Erro ao buscar catálogo:', error);
+        res.status(500).json({ error: 'Erro ao buscar catálogo' });
+    }
+});
+
+// POST /api/whatsapp/send-catalog — Envia produto do catálogo como mensagem
+router.post('/send-catalog', authenticate, async (req, res) => {
+    try {
+        let { instanceName, remoteJid, conversationId, productId, productName, productUrl, productImage, caption } = req.body;
+
+        if (conversationId && (!remoteJid || !instanceName)) {
+            const conv = await prisma.whatsAppConversation.findUnique({
+                where: { id: conversationId },
+                include: { instance: true }
+            });
+            if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+            remoteJid = conv.remoteJid;
+            instanceName = instanceName || conv.instance.instanceName;
+        }
+
+        if (!instanceName || !remoteJid) {
+            return res.status(400).json({ error: 'instanceName e remoteJid são obrigatórios' });
+        }
+
+        if (!checkRateLimit(instanceName)) {
+            return res.status(429).json({ error: 'Limite de envio atingido. Aguarde 1 minuto.' });
+        }
+
+        const instance = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const number = remoteJid.replace('@s.whatsapp.net', '');
+
+        // Envia produto como imagem com caption descritivo
+        let evoRes;
+        if (productImage) {
+            const body = {
+                number,
+                mediatype: 'image',
+                media: productImage,
+                caption: caption || `📦 *${productName || 'Produto'}*\n${productUrl || ''}`,
+                delay: 1200
+            };
+            evoRes = await fetch(`${instance.evolutionUrl}/message/sendMedia/${instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+        } else {
+            // Sem imagem, envia como texto formatado
+            const text = `📦 *${productName || 'Produto'}*\n${caption || ''}\n${productUrl || ''}`.trim();
+            evoRes = await fetch(`${instance.evolutionUrl}/message/sendText/${instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ number, text, delay: 1200 })
+            });
+        }
+
+        const evoData = await evoRes.json();
+        if (!evoRes.ok) {
+            return res.status(502).json({ error: 'Erro ao enviar catálogo', details: evoData });
+        }
+
+        const sentMessageId = evoData.key?.id || `sent-${Date.now()}`;
+        const displayContent = `📦 ${productName || 'Catálogo'}`;
+
+        const conversation = await prisma.whatsAppConversation.upsert({
+            where: { remoteJid_instanceId: { remoteJid, instanceId: instance.id } },
+            create: { remoteJid, phoneNumber: number, instanceId: instance.id, lastMessageAt: new Date(), lastMessagePreview: displayContent.substring(0, 200) },
+            update: { lastMessageAt: new Date(), lastMessagePreview: displayContent.substring(0, 200) }
+        });
+
+        const savedMessage = await prisma.whatsAppMessage.create({
+            data: {
+                id: sentMessageId,
+                conversationId: conversation.id,
+                fromMe: true,
+                content: displayContent,
+                messageType: productImage ? 'image' : 'text',
+                mediaUrl: productImage || null,
+                timestamp: new Date(),
+                status: 'sent'
+            }
+        });
+
+        res.json(savedMessage);
+    } catch (error) {
+        console.error('Erro ao enviar catálogo:', error);
+        res.status(500).json({ error: 'Erro ao enviar catálogo' });
+    }
+});
+
+// ===================================================================
+// ATALHOS / RESPOSTAS RÁPIDAS
+// ===================================================================
+
+// GET /api/whatsapp/shortcuts — Lista todos os atalhos
+router.get('/shortcuts', authenticate, async (req, res) => {
+    try {
+        const shortcuts = await prisma.whatsAppShortcut.findMany({
+            orderBy: { command: 'asc' }
+        });
+        res.json(shortcuts);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao listar atalhos' });
+    }
+});
+
+// POST /api/whatsapp/shortcuts — Cria atalho
+router.post('/shortcuts', authenticate, async (req, res) => {
+    try {
+        const { command, title, content, mediaUrl, mediaType, instanceId } = req.body;
+        if (!command || !title || !content) {
+            return res.status(400).json({ error: 'command, title e content são obrigatórios' });
+        }
+        // Normaliza comando: remove / inicial se houver, lowercase
+        const cmd = command.replace(/^\//, '').toLowerCase().trim();
+        const shortcut = await prisma.whatsAppShortcut.create({
+            data: { command: cmd, title, content, mediaUrl: mediaUrl || null, mediaType: mediaType || null, instanceId: instanceId || null }
+        });
+        res.json(shortcut);
+    } catch (error) {
+        if (error.code === 'P2002') return res.status(409).json({ error: 'Atalho já existe com esse comando' });
+        res.status(500).json({ error: 'Erro ao criar atalho' });
+    }
+});
+
+// PUT /api/whatsapp/shortcuts/:id — Atualiza atalho
+router.put('/shortcuts/:id', authenticate, async (req, res) => {
+    try {
+        const { command, title, content, mediaUrl, mediaType } = req.body;
+        const data = {};
+        if (command) data.command = command.replace(/^\//, '').toLowerCase().trim();
+        if (title) data.title = title;
+        if (content) data.content = content;
+        if (mediaUrl !== undefined) data.mediaUrl = mediaUrl || null;
+        if (mediaType !== undefined) data.mediaType = mediaType || null;
+        const shortcut = await prisma.whatsAppShortcut.update({ where: { id: req.params.id }, data });
+        res.json(shortcut);
+    } catch (error) {
+        if (error.code === 'P2002') return res.status(409).json({ error: 'Comando já existe' });
+        res.status(500).json({ error: 'Erro ao atualizar atalho' });
+    }
+});
+
+// DELETE /api/whatsapp/shortcuts/:id — Remove atalho
+router.delete('/shortcuts/:id', authenticate, async (req, res) => {
+    try {
+        await prisma.whatsAppShortcut.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao remover atalho' });
     }
 });
 

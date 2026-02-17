@@ -128,6 +128,58 @@
 
         /* QR Modal */
         #qr-modal.hidden { display: none; }
+        .modal-hidden { display: none; }
+
+        /* Attach menu */
+        .attach-menu {
+            position: absolute; bottom: 100%; left: 0; margin-bottom: 8px;
+            background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            padding: 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+            min-width: 200px; z-index: 100;
+        }
+        .attach-menu-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 10px 8px; border-radius: 12px; cursor: pointer; transition: background 0.15s;
+            font-size: 0.7rem; color: #6b7280; font-weight: 600;
+        }
+        .attach-menu-item:hover { background: #f3f4f6; }
+        .attach-menu-item .icon-circle {
+            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; color: white; font-size: 1rem;
+        }
+
+        /* Shortcuts popup */
+        .shortcuts-popup {
+            position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 4px;
+            background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            max-height: 200px; overflow-y: auto; z-index: 100;
+        }
+        .shortcut-item {
+            padding: 10px 14px; cursor: pointer; transition: background 0.1s;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .shortcut-item:hover { background: #f0fdf4; }
+        .shortcut-item:last-child { border-bottom: none; }
+
+        /* Audio recording */
+        .recording-indicator {
+            display: flex; align-items: center; gap: 8px; color: #ef4444; font-size: 0.85rem;
+            animation: recording-pulse 1.2s infinite;
+        }
+        @keyframes recording-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* Media preview in messages */
+        .media-bubble img, .media-bubble video { max-width: 100%; border-radius: 8px; cursor: pointer; }
+        .media-bubble audio { width: 100%; max-width: 280px; }
+
+        /* Catalog grid */
+        .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+        .catalog-item {
+            background: white; border-radius: 12px; overflow: hidden; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .catalog-item:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        .catalog-item img { width: 100%; height: 120px; object-fit: cover; }
     </style>
 </head>
 
@@ -234,17 +286,124 @@
 
                 <!-- Input Bar -->
                 <div id="input-bar" class="hidden p-3 border-t border-gray-200/50 bg-white/50">
-                    <div class="flex items-end gap-2">
-                        <textarea id="message-input" rows="1" placeholder="Digite uma mensagem..."
+                    <!-- Shortcuts popup (shown when typing /) -->
+                    <div id="shortcuts-popup" class="shortcuts-popup" style="display:none;"></div>
+                    <!-- Attach menu -->
+                    <div id="attach-menu" class="attach-menu" style="display:none;">
+                        <div class="attach-menu-item" data-action="image">
+                            <div class="icon-circle bg-purple-500"><i class="fas fa-image"></i></div>
+                            <span>Imagem</span>
+                        </div>
+                        <div class="attach-menu-item" data-action="video">
+                            <div class="icon-circle bg-red-500"><i class="fas fa-video"></i></div>
+                            <span>Vídeo</span>
+                        </div>
+                        <div class="attach-menu-item" data-action="document">
+                            <div class="icon-circle bg-blue-500"><i class="fas fa-file"></i></div>
+                            <span>Documento</span>
+                        </div>
+                        <div class="attach-menu-item" data-action="catalog">
+                            <div class="icon-circle bg-green-600"><i class="fas fa-store"></i></div>
+                            <span>Catálogo</span>
+                        </div>
+                        <div class="attach-menu-item" data-action="shortcuts-manage">
+                            <div class="icon-circle bg-amber-500"><i class="fas fa-bolt"></i></div>
+                            <span>Atalhos</span>
+                        </div>
+                    </div>
+                    <div class="relative flex items-end gap-2">
+                        <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
+                            <i class="fas fa-paperclip text-lg"></i>
+                        </button>
+                        <textarea id="message-input" rows="1" placeholder="Digite uma mensagem ou / para atalhos..."
                             class="form-input flex-1 resize-none text-sm rounded-2xl px-4 py-2.5 max-h-32"
                             style="field-sizing: content;"></textarea>
-                        <button id="send-btn" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" disabled>
+                        <button id="send-btn" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="display:none;">
                             <i class="fas fa-paper-plane text-sm"></i>
                         </button>
+                        <button id="audio-btn" class="text-gray-400 hover:text-[var(--wa-green)] w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-green-50 transition" title="Gravar áudio">
+                            <i class="fas fa-microphone text-lg"></i>
+                        </button>
                     </div>
+                    <!-- Recording UI (hidden by default) -->
+                    <div id="recording-bar" class="flex items-center gap-3 py-2" style="display:none;">
+                        <button id="cancel-recording" class="text-red-500 hover:text-red-700 w-10 h-10 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                        <div class="recording-indicator flex-1"><i class="fas fa-circle text-xs"></i> <span id="recording-time">0:00</span> — Gravando...</div>
+                        <button id="send-recording" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-paper-plane text-sm"></i></button>
+                    </div>
+                    <!-- Hidden file inputs -->
+                    <input type="file" id="file-input-image" accept="image/*" class="hidden">
+                    <input type="file" id="file-input-video" accept="video/*" class="hidden">
+                    <input type="file" id="file-input-document" accept="*/*" class="hidden">
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Catalog Modal -->
+    <div id="catalog-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="glassmorphism p-6 rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col" style="background: rgba(255,255,255,0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-store text-green-600 mr-2"></i>Catálogo</h3>
+                <button id="close-catalog-modal" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div id="catalog-content" class="flex-1 overflow-y-auto">
+                <div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando catálogo...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts Manager Modal -->
+    <div id="shortcuts-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="glassmorphism p-6 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col" style="background: rgba(255,255,255,0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-bolt text-amber-500 mr-2"></i>Atalhos Rápidos</h3>
+                <button id="close-shortcuts-modal" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <button id="add-shortcut-btn" class="w-full mb-3 py-2 px-4 bg-amber-50 text-amber-700 rounded-xl text-sm font-semibold hover:bg-amber-100 transition">
+                <i class="fas fa-plus mr-1"></i> Novo Atalho
+            </button>
+            <div id="shortcuts-list" class="flex-1 overflow-y-auto space-y-2">
+                <p class="text-center text-gray-400 text-sm py-4">Nenhum atalho configurado</p>
+            </div>
+            <!-- Add/Edit form (hidden) -->
+            <div id="shortcut-form" class="border-t border-gray-200 pt-3 mt-3" style="display:none;">
+                <h4 class="text-sm font-bold mb-2" id="shortcut-form-title">Novo Atalho</h4>
+                <input type="hidden" id="shortcut-edit-id">
+                <div class="space-y-2">
+                    <div>
+                        <label class="text-xs text-gray-500">Comando (ex: futebol)</label>
+                        <input type="text" id="shortcut-cmd" class="form-input w-full text-sm" placeholder="futebol">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Título</label>
+                        <input type="text" id="shortcut-title" class="form-input w-full text-sm" placeholder="Pacote Futebol">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Mensagem</label>
+                        <textarea id="shortcut-content" rows="3" class="form-input w-full text-sm resize-none" placeholder="Olá! Temos o pacote futebol..."></textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="save-shortcut" class="flex-1 shiny-btn py-2 rounded-lg text-sm font-bold">Salvar</button>
+                        <button id="cancel-shortcut" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-200">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Preview Modal (before sending) -->
+    <div id="media-preview-modal" class="modal-hidden fixed inset-0 bg-black/80 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-md w-full">
+            <div id="media-preview-content" class="mb-3 flex justify-center max-h-[50vh] overflow-hidden rounded-xl bg-gray-100">
+            </div>
+            <input type="text" id="media-caption" class="form-input w-full text-sm mb-3" placeholder="Legenda (opcional)">
+            <p class="text-xs text-gray-400 mb-3" id="media-file-info"></p>
+            <div class="flex gap-2">
+                <button id="confirm-send-media" class="flex-1 shiny-btn py-2.5 rounded-xl text-sm font-bold"><i class="fas fa-paper-plane mr-1"></i> Enviar</button>
+                <button id="cancel-send-media" class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200">Cancelar</button>
+            </div>
+        </div>
     </div>
 
     <!-- QR Code Modal -->
@@ -333,6 +492,36 @@
                     return r.ok ? await r.json() : null;
                 } catch(e) { return null; }
             },
+            sendMedia: async (instanceName, remoteJid, mediaType, media, caption, fileName, mimetype) => {
+                try {
+                    const r = await fetch(`${BASE}/send-media`, {
+                        method: 'POST', headers: headers(),
+                        body: JSON.stringify({ instanceName, remoteJid, mediaType, media, caption, fileName, mimetype })
+                    });
+                    return r.ok ? await r.json() : null;
+                } catch(e) { return null; }
+            },
+            getCatalog: async (instanceName) => {
+                try { const r = await fetch(`${BASE}/catalog/${instanceName}`, { headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            sendCatalog: async (data) => {
+                try {
+                    const r = await fetch(`${BASE}/send-catalog`, { method: 'POST', headers: headers(), body: JSON.stringify(data) });
+                    return r.ok ? await r.json() : null;
+                } catch(e) { return null; }
+            },
+            getShortcuts: async () => {
+                try { const r = await fetch(`${BASE}/shortcuts`, { headers: headers() }); return r.ok ? await r.json() : []; } catch(e) { return []; }
+            },
+            createShortcut: async (data) => {
+                try { const r = await fetch(`${BASE}/shortcuts`, { method: 'POST', headers: headers(), body: JSON.stringify(data) }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            updateShortcut: async (id, data) => {
+                try { const r = await fetch(`${BASE}/shortcuts/${id}`, { method: 'PUT', headers: headers(), body: JSON.stringify(data) }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            deleteShortcut: async (id) => {
+                try { const r = await fetch(`${BASE}/shortcuts/${id}`, { method: 'DELETE', headers: headers() }); return r.ok; } catch(e) { return false; }
+            },
             markRead: async (convId) => {
                 try { await fetch(`${BASE}/conversations/${convId}/read`, { method: 'PUT', headers: headers() }); } catch(e) {}
             },
@@ -346,6 +535,9 @@
                 try { const r = await fetch(`${BASE}/instances/${name}/qr`, { headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
             }
         };
+
+        // --- SHORTCUTS STATE ---
+        let shortcuts = [];
 
         // --- HELPERS ---
         function escapeHtml(str) {
@@ -551,6 +743,29 @@
         }
 
         // --- RENDER MESSAGES ---
+        function renderMediaContent(msg) {
+            const url = msg.mediaUrl;
+            const type = msg.messageType;
+            const caption = msg.content && !msg.content.startsWith('[') ? msg.content : '';
+
+            if (type === 'image' && url) {
+                return `<div class="media-bubble"><img src="${escapeHtml(url)}" alt="imagem" loading="lazy" onclick="window.open('${escapeHtml(url)}','_blank')"></div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
+            }
+            if (type === 'video' && url) {
+                return `<div class="media-bubble"><video src="${escapeHtml(url)}" controls preload="metadata" style="max-height:300px;"></video></div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
+            }
+            if (type === 'audio' && url) {
+                return `<div class="media-bubble"><audio src="${escapeHtml(url)}" controls preload="metadata"></audio></div>`;
+            }
+            if (type === 'document' && url) {
+                const name = msg.mediaName || 'Documento';
+                return `<div class="flex items-center gap-2 p-2 bg-white/50 rounded-lg cursor-pointer" onclick="window.open('${escapeHtml(url)}','_blank')"><i class="fas fa-file-alt text-blue-500 text-lg"></i><div class="min-w-0"><p class="text-sm font-medium truncate">${escapeHtml(name)}</p><p class="text-[10px] text-gray-400">${msg.mediaMimetype || 'documento'}</p></div><i class="fas fa-download text-gray-400 text-xs ml-auto"></i></div>${caption ? `<p class="whitespace-pre-wrap break-words text-sm mt-1">${escapeHtml(caption)}</p>` : ''}`;
+            }
+            // Fallback: sem URL, apenas indicador
+            const icon = type === 'image' ? 'image' : type === 'audio' ? 'microphone' : type === 'video' ? 'video' : type === 'sticker' ? 'note-sticky' : 'file';
+            return `<p class="text-gray-400 italic text-xs"><i class="fas fa-${icon} mr-1"></i>${escapeHtml(msg.content)}</p>`;
+        }
+
         function renderMessages(scrollToBottom = true) {
             const area = document.getElementById('messages-area');
             area.innerHTML = '';
@@ -578,9 +793,9 @@
                     '<i class="fas fa-check text-gray-400"></i>'
                 ) : '';
 
-                const isMedia = msg.messageType !== 'text' && msg.content.startsWith('[');
+                const isMedia = msg.messageType !== 'text';
                 const contentHtml = isMedia
-                    ? `<p class="text-gray-400 italic text-xs"><i class="fas fa-${msg.messageType === 'image' ? 'image' : msg.messageType === 'audio' ? 'microphone' : msg.messageType === 'video' ? 'video' : 'file'} mr-1"></i>${escapeHtml(msg.content)}</p>`
+                    ? renderMediaContent(msg)
                     : `<p class="whitespace-pre-wrap break-words text-sm">${escapeHtml(msg.content)}</p>`;
 
                 bubble.innerHTML = `
@@ -624,7 +839,7 @@
 
             input.value = '';
             input.style.height = 'auto';
-            document.getElementById('send-btn').disabled = true;
+            toggleSendAudioBtn();
 
             // Optimistic UI
             const tempMsg = {
@@ -651,6 +866,16 @@
             }
         }
 
+        // Toggle between send button and audio button
+        function toggleSendAudioBtn() {
+            const input = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-btn');
+            const audioBtn = document.getElementById('audio-btn');
+            const hasText = input.value.trim().length > 0;
+            sendBtn.style.display = hasText ? 'flex' : 'none';
+            audioBtn.style.display = hasText ? 'none' : 'flex';
+        }
+
         document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('message-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -659,7 +884,421 @@
             }
         });
         document.getElementById('message-input').addEventListener('input', function() {
-            document.getElementById('send-btn').disabled = !this.value.trim();
+            toggleSendAudioBtn();
+            handleShortcutPopup(this.value);
+        });
+
+        // --- ATTACH MENU ---
+        document.getElementById('attach-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const menu = document.getElementById('attach-menu');
+            menu.style.display = menu.style.display === 'none' ? 'grid' : 'none';
+        });
+        document.addEventListener('click', () => {
+            document.getElementById('attach-menu').style.display = 'none';
+        });
+
+        document.querySelectorAll('.attach-menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('attach-menu').style.display = 'none';
+                const action = item.dataset.action;
+                if (action === 'image') document.getElementById('file-input-image').click();
+                else if (action === 'video') document.getElementById('file-input-video').click();
+                else if (action === 'document') document.getElementById('file-input-document').click();
+                else if (action === 'catalog') openCatalogModal();
+                else if (action === 'shortcuts-manage') openShortcutsModal();
+            });
+        });
+
+        // --- FILE INPUT HANDLERS ---
+        let pendingMedia = null;
+
+        function handleFileSelect(e, mediaType) {
+            const file = e.target.files[0];
+            if (!file) return;
+            e.target.value = '';
+
+            const maxSize = 16 * 1024 * 1024; // 16MB
+            if (file.size > maxSize) {
+                showToast('Arquivo muito grande (máx 16MB)', true);
+                return;
+            }
+
+            pendingMedia = { file, mediaType, fileName: file.name, mimetype: file.type };
+
+            // Show preview modal
+            const preview = document.getElementById('media-preview-content');
+            const info = document.getElementById('media-file-info');
+            const caption = document.getElementById('media-caption');
+            caption.value = '';
+            info.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
+
+            if (mediaType === 'image') {
+                const url = URL.createObjectURL(file);
+                preview.innerHTML = `<img src="${url}" style="max-height:50vh; object-fit:contain; border-radius:12px;">`;
+            } else if (mediaType === 'video') {
+                const url = URL.createObjectURL(file);
+                preview.innerHTML = `<video src="${url}" controls style="max-height:50vh; border-radius:12px;"></video>`;
+            } else {
+                const icon = file.type.includes('pdf') ? 'fa-file-pdf text-red-500' : 'fa-file-alt text-blue-500';
+                preview.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><i class="fas ${icon} text-5xl mb-3"></i><p class="text-sm text-gray-600">${escapeHtml(file.name)}</p></div>`;
+            }
+
+            document.getElementById('media-preview-modal').classList.remove('modal-hidden');
+        }
+
+        document.getElementById('file-input-image').addEventListener('change', (e) => handleFileSelect(e, 'image'));
+        document.getElementById('file-input-video').addEventListener('change', (e) => handleFileSelect(e, 'video'));
+        document.getElementById('file-input-document').addEventListener('change', (e) => handleFileSelect(e, 'document'));
+
+        document.getElementById('cancel-send-media').addEventListener('click', () => {
+            document.getElementById('media-preview-modal').classList.add('modal-hidden');
+            pendingMedia = null;
+        });
+
+        document.getElementById('confirm-send-media').addEventListener('click', async () => {
+            if (!pendingMedia || !currentConversation) return;
+            document.getElementById('media-preview-modal').classList.add('modal-hidden');
+
+            const caption = document.getElementById('media-caption').value.trim();
+            const { file, mediaType, fileName, mimetype } = pendingMedia;
+            pendingMedia = null;
+
+            // Optimistic UI
+            const tempMsg = {
+                id: 'temp-' + Date.now(), fromMe: true,
+                content: caption || `[${mediaType}]`,
+                timestamp: new Date().toISOString(), messageType: mediaType, status: 'sending'
+            };
+            messages.push(tempMsg);
+            renderMessages(true);
+
+            // Convert file to base64
+            const base64 = await fileToBase64(file);
+
+            const result = await api.sendMedia(
+                currentInstance, currentConversation.remoteJid,
+                mediaType, base64, caption || undefined, fileName, mimetype
+            );
+
+            if (result) {
+                const idx = messages.findIndex(m => m.id === tempMsg.id);
+                if (idx >= 0) messages[idx] = result;
+                renderMessages(true);
+                showToast('Mídia enviada!');
+            } else {
+                messages = messages.filter(m => m.id !== tempMsg.id);
+                renderMessages(true);
+                showToast('Erro ao enviar mídia', true);
+            }
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    // Remove o prefixo data:xxx;base64, — Evolution API quer raw base64
+                    const result = reader.result.split(',')[1];
+                    resolve(result);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- AUDIO RECORDING ---
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingTimer = null;
+        let recordingSeconds = 0;
+
+        document.getElementById('audio-btn').addEventListener('click', startRecording);
+
+        async function startRecording() {
+            if (!currentConversation) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); };
+                mediaRecorder.start();
+
+                // Show recording UI
+                document.querySelector('#input-bar .relative').style.display = 'none';
+                document.getElementById('recording-bar').style.display = 'flex';
+                recordingSeconds = 0;
+                document.getElementById('recording-time').textContent = '0:00';
+                recordingTimer = setInterval(() => {
+                    recordingSeconds++;
+                    const m = Math.floor(recordingSeconds / 60);
+                    const s = (recordingSeconds % 60).toString().padStart(2, '0');
+                    document.getElementById('recording-time').textContent = `${m}:${s}`;
+                }, 1000);
+            } catch (err) {
+                showToast('Não foi possível acessar o microfone', true);
+            }
+        }
+
+        document.getElementById('cancel-recording').addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            stopRecordingUI();
+        });
+
+        document.getElementById('send-recording').addEventListener('click', async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+
+            mediaRecorder.onstop = async () => {
+                mediaRecorder.stream?.getTracks().forEach(t => t.stop());
+                stopRecordingUI();
+
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const base64 = await blobToBase64(blob);
+
+                // Optimistic UI
+                const tempMsg = {
+                    id: 'temp-' + Date.now(), fromMe: true,
+                    content: '[audio]', timestamp: new Date().toISOString(),
+                    messageType: 'audio', status: 'sending'
+                };
+                messages.push(tempMsg);
+                renderMessages(true);
+
+                const result = await api.sendMedia(
+                    currentInstance, currentConversation.remoteJid,
+                    'audio', base64, undefined, 'audio.ogg', 'audio/ogg'
+                );
+
+                if (result) {
+                    const idx = messages.findIndex(m => m.id === tempMsg.id);
+                    if (idx >= 0) messages[idx] = result;
+                    renderMessages(true);
+                } else {
+                    messages = messages.filter(m => m.id !== tempMsg.id);
+                    renderMessages(true);
+                    showToast('Erro ao enviar áudio', true);
+                }
+            };
+            mediaRecorder.stop();
+        });
+
+        function stopRecordingUI() {
+            clearInterval(recordingTimer);
+            document.querySelector('#input-bar .relative').style.display = 'flex';
+            document.getElementById('recording-bar').style.display = 'none';
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // --- SHORTCUTS POPUP (when typing /) ---
+        function handleShortcutPopup(value) {
+            const popup = document.getElementById('shortcuts-popup');
+            if (!value.startsWith('/') || value.includes(' ')) {
+                popup.style.display = 'none';
+                return;
+            }
+            const query = value.slice(1).toLowerCase();
+            const filtered = shortcuts.filter(s => s.command.startsWith(query));
+            if (filtered.length === 0) {
+                popup.style.display = 'none';
+                return;
+            }
+
+            popup.style.display = 'block';
+            popup.innerHTML = filtered.map(s => `
+                <div class="shortcut-item" data-command="${escapeHtml(s.command)}">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold text-green-700">/${escapeHtml(s.command)}</span>
+                        <span class="text-xs text-gray-400">${escapeHtml(s.title)}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 truncate mt-0.5">${escapeHtml(s.content.substring(0, 80))}</p>
+                </div>
+            `).join('');
+
+            popup.querySelectorAll('.shortcut-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const cmd = item.dataset.command;
+                    const shortcut = shortcuts.find(s => s.command === cmd);
+                    if (shortcut) {
+                        document.getElementById('message-input').value = shortcut.content;
+                        toggleSendAudioBtn();
+                    }
+                    popup.style.display = 'none';
+                });
+            });
+        }
+
+        // --- CATALOG MODAL ---
+        async function openCatalogModal() {
+            if (!currentConversation) { showToast('Selecione uma conversa primeiro', true); return; }
+            document.getElementById('catalog-modal').classList.remove('modal-hidden');
+            const content = document.getElementById('catalog-content');
+            content.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando catálogo...</p></div>';
+
+            const catalog = await api.getCatalog(currentInstance);
+            if (!catalog || (Array.isArray(catalog) && catalog.length === 0)) {
+                content.innerHTML = '<div class="text-center py-8"><i class="fas fa-store text-4xl text-gray-300 mb-3"></i><p class="text-gray-500 text-sm">Nenhum produto no catálogo.</p><p class="text-gray-400 text-xs mt-1">Configure o catálogo no WhatsApp Business do celular.</p></div>';
+                return;
+            }
+
+            const products = Array.isArray(catalog) ? catalog : (catalog.products || catalog.data || [catalog]);
+            if (products.length === 0) {
+                content.innerHTML = '<div class="text-center py-8"><i class="fas fa-store text-4xl text-gray-300 mb-3"></i><p class="text-gray-500 text-sm">Nenhum produto encontrado.</p></div>';
+                return;
+            }
+
+            content.innerHTML = `<div class="catalog-grid">${products.map((p, i) => {
+                const name = p.name || p.title || `Produto ${i+1}`;
+                const img = p.imageUrl || p.image || p.thumbnailUrl || '';
+                const price = p.price ? `R$ ${(p.price / 100).toFixed(2)}` : '';
+                return `<div class="catalog-item" data-idx="${i}">
+                    ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy">` : '<div class="h-[120px] bg-gray-100 flex items-center justify-center"><i class="fas fa-image text-2xl text-gray-300"></i></div>'}
+                    <div class="p-2">
+                        <p class="text-xs font-semibold truncate">${escapeHtml(name)}</p>
+                        ${price ? `<p class="text-xs text-green-600 font-bold">${price}</p>` : ''}
+                    </div>
+                </div>`;
+            }).join('')}</div>`;
+
+            content.querySelectorAll('.catalog-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    const idx = parseInt(item.dataset.idx);
+                    const p = products[idx];
+                    document.getElementById('catalog-modal').classList.add('modal-hidden');
+
+                    const tempMsg = {
+                        id: 'temp-' + Date.now(), fromMe: true,
+                        content: `📦 ${p.name || 'Produto'}`,
+                        timestamp: new Date().toISOString(), messageType: 'text', status: 'sending'
+                    };
+                    messages.push(tempMsg);
+                    renderMessages(true);
+
+                    const result = await api.sendCatalog({
+                        instanceName: currentInstance,
+                        remoteJid: currentConversation.remoteJid,
+                        productName: p.name || p.title,
+                        productImage: p.imageUrl || p.image || p.thumbnailUrl,
+                        productUrl: p.url || '',
+                        caption: p.description || ''
+                    });
+
+                    if (result) {
+                        const idx2 = messages.findIndex(m => m.id === tempMsg.id);
+                        if (idx2 >= 0) messages[idx2] = result;
+                        renderMessages(true);
+                        showToast('Produto enviado!');
+                    } else {
+                        messages = messages.filter(m => m.id !== tempMsg.id);
+                        renderMessages(true);
+                        showToast('Erro ao enviar produto', true);
+                    }
+                });
+            });
+        }
+
+        document.getElementById('close-catalog-modal').addEventListener('click', () => {
+            document.getElementById('catalog-modal').classList.add('modal-hidden');
+        });
+
+        // --- SHORTCUTS MANAGER MODAL ---
+        async function openShortcutsModal() {
+            document.getElementById('shortcuts-modal').classList.remove('modal-hidden');
+            document.getElementById('shortcut-form').style.display = 'none';
+            await loadShortcuts();
+            renderShortcutsList();
+        }
+
+        async function loadShortcuts() {
+            shortcuts = await api.getShortcuts();
+        }
+
+        function renderShortcutsList() {
+            const list = document.getElementById('shortcuts-list');
+            if (shortcuts.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Nenhum atalho configurado</p>';
+                return;
+            }
+            list.innerHTML = shortcuts.map(s => `
+                <div class="bg-gray-50 rounded-xl p-3 flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-green-700">/${escapeHtml(s.command)}</span>
+                            <span class="text-xs text-gray-400">${escapeHtml(s.title)}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1 line-clamp-2">${escapeHtml(s.content.substring(0, 100))}</p>
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button class="text-blue-500 hover:text-blue-700 p-1" onclick="editShortcut('${s.id}')"><i class="fas fa-pen text-xs"></i></button>
+                        <button class="text-red-400 hover:text-red-600 p-1" onclick="deleteShortcut('${s.id}')"><i class="fas fa-trash text-xs"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Expose to global scope for onclick
+        window.editShortcut = function(id) {
+            const s = shortcuts.find(x => x.id === id);
+            if (!s) return;
+            document.getElementById('shortcut-edit-id').value = id;
+            document.getElementById('shortcut-cmd').value = s.command;
+            document.getElementById('shortcut-title').value = s.title;
+            document.getElementById('shortcut-content').value = s.content;
+            document.getElementById('shortcut-form-title').textContent = 'Editar Atalho';
+            document.getElementById('shortcut-form').style.display = 'block';
+        };
+
+        window.deleteShortcut = async function(id) {
+            if (!confirm('Remover este atalho?')) return;
+            const ok = await api.deleteShortcut(id);
+            if (ok) { await loadShortcuts(); renderShortcutsList(); showToast('Atalho removido'); }
+            else showToast('Erro ao remover', true);
+        };
+
+        document.getElementById('close-shortcuts-modal').addEventListener('click', () => {
+            document.getElementById('shortcuts-modal').classList.add('modal-hidden');
+        });
+
+        document.getElementById('add-shortcut-btn').addEventListener('click', () => {
+            document.getElementById('shortcut-edit-id').value = '';
+            document.getElementById('shortcut-cmd').value = '';
+            document.getElementById('shortcut-title').value = '';
+            document.getElementById('shortcut-content').value = '';
+            document.getElementById('shortcut-form-title').textContent = 'Novo Atalho';
+            document.getElementById('shortcut-form').style.display = 'block';
+        });
+
+        document.getElementById('cancel-shortcut').addEventListener('click', () => {
+            document.getElementById('shortcut-form').style.display = 'none';
+        });
+
+        document.getElementById('save-shortcut').addEventListener('click', async () => {
+            const id = document.getElementById('shortcut-edit-id').value;
+            const data = {
+                command: document.getElementById('shortcut-cmd').value.trim(),
+                title: document.getElementById('shortcut-title').value.trim(),
+                content: document.getElementById('shortcut-content').value.trim()
+            };
+            if (!data.command || !data.title || !data.content) {
+                showToast('Preencha todos os campos', true);
+                return;
+            }
+            const result = id ? await api.updateShortcut(id, data) : await api.createShortcut(data);
+            if (result) {
+                await loadShortcuts();
+                renderShortcutsList();
+                document.getElementById('shortcut-form').style.display = 'none';
+                showToast(id ? 'Atalho atualizado' : 'Atalho criado');
+            } else {
+                showToast('Erro ao salvar atalho', true);
+            }
         });
 
         // --- BACK BUTTON (mobile) ---
@@ -811,6 +1450,7 @@
         // --- INIT ---
         async function init() {
             instances = await api.getInstances();
+            shortcuts = await api.getShortcuts();
 
             // Set active tab based on URL
             document.querySelectorAll('.instance-tab').forEach(tab => {
