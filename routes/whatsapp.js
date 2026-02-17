@@ -296,12 +296,14 @@ router.post('/webhook', async (req, res) => {
                 if (rawStatus === undefined || rawStatus === null) continue;
 
                 let statusStr = 'sent';
-                const rs = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : Number(rawStatus);
-                if (rs === 0 || rs === 1 || rs === 'PENDING' || rs === 'ERROR') statusStr = 'sent';
-                else if (rs === 2 || rs === 'SERVER_ACK') statusStr = 'sent';
-                else if (rs === 3 || rs === 'DELIVERY_ACK' || rs === 'DELIVERED') statusStr = 'delivered';
-                else if (rs === 4 || rs === 'READ') statusStr = 'read';
-                else if (rs === 5 || rs === 'PLAYED') statusStr = 'played';
+                // rawStatus pode ser número (2,3,4,5) ou string ("SERVER_ACK","DELIVERY_ACK","READ","PLAYED")
+                const rsNum = Number(rawStatus);
+                const rsStr = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : '';
+                if (rsNum === 3 || rsStr === 'DELIVERY_ACK' || rsStr === 'DELIVERED') statusStr = 'delivered';
+                else if (rsNum === 4 || rsStr === 'READ') statusStr = 'read';
+                else if (rsNum === 5 || rsStr === 'PLAYED') statusStr = 'played';
+                else if (rsNum === 2 || rsStr === 'SERVER_ACK') statusStr = 'sent';
+                // default stays 'sent'
 
                 if (msgId) {
                     try {

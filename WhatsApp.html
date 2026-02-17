@@ -962,22 +962,25 @@
             handleShortcutPopup(this.value);
         });
 
-        // --- ATTACH MENU ---
+        // --- ATTACH MENU --- v1.2.7
         const attachMenu = document.getElementById('attach-menu');
+        let attachMenuOpen = false;
         function openAttachMenu() {
             const btn = document.getElementById('attach-btn');
             const rect = btn.getBoundingClientRect();
-            attachMenu.style.left = rect.left + 'px';
-            attachMenu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-            attachMenu.style.display = 'block';
+            attachMenu.style.cssText = `display:block; position:fixed; background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.15); padding:12px; z-index:99999; left:${rect.left}px; bottom:${window.innerHeight - rect.top + 8}px;`;
+            attachMenuOpen = true;
+            console.log('[CLIP] Menu aberto', rect.left, rect.top);
         }
         function closeAttachMenu() {
             attachMenu.style.display = 'none';
+            attachMenuOpen = false;
         }
 
         document.getElementById('attach-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            if (attachMenu.style.display === 'block') {
+            console.log('[CLIP] Botão clicado, aberto?', attachMenuOpen);
+            if (attachMenuOpen) {
                 closeAttachMenu();
             } else {
                 openAttachMenu();
