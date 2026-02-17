@@ -363,6 +363,7 @@ model WhatsAppMessage {
   conversationId  String
   conversation    WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   fromMe          Boolean
+  pushName        String?
   content         String
   messageType     String   @default("text")
   mediaUrl        String?

@@ -1135,6 +1135,7 @@
 
         // --- LOAD MESSAGES ---
         async function loadMessages() {
+            if (!currentConversationId) { messages = []; renderMessages(true); return; }
             const data = await api.getMessages(currentConversationId, messagesPage);
             if (data.length < 50) hasMoreMessages = false;
 
@@ -1321,6 +1322,12 @@
                 const idx = messages.findIndex(m => m.id === tempMsg.id);
                 if (idx >= 0) messages[idx] = result;
                 renderMessages(true);
+                // If new conversation (no ID yet), refresh to get the conversation ID
+                if (!currentConversationId) {
+                    await loadConversations();
+                    const conv = conversations.find(c => c.remoteJid === currentConversation.remoteJid);
+                    if (conv) { currentConversationId = conv.id; currentConversation = conv; }
+                }
             } else {
                 showToast('Erro ao enviar mensagem', true);
                 messages = messages.filter(m => m.id !== tempMsg.id);
@@ -2352,6 +2359,7 @@
         window.disconnectInstance = async function() {
             if (!confirm('Deseja realmente desconectar o WhatsApp?')) return;
             await api.disconnect(currentInstance);
+            instances = await api.getInstances();
             showToast('WhatsApp desconectado', 'success');
             updateConnectionStatus();
         };
@@ -2480,13 +2488,16 @@
 
         // --- TOAST HELPER ---
         function showToast(message, type = 'success') {
+            // Backward compatibility: showToast('msg', true) → error
+            if (type === true) type = 'error';
+            else if (type === false) type = 'success';
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toast-icon');
             const msg = document.getElementById('toast-message');
             msg.textContent = message;
-            icon.className = type === 'success' ? 'fas fa-check-circle text-green-500 text-lg' :
-                type === 'error' ? 'fas fa-exclamation-circle text-red-500 text-lg' :
-                'fas fa-info-circle text-blue-500 text-lg';
+            icon.className = type === 'error' ? 'fas fa-exclamation-circle text-red-500 text-lg' :
+                type === 'info' ? 'fas fa-info-circle text-blue-500 text-lg' :
+                'fas fa-check-circle text-green-500 text-lg';
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
