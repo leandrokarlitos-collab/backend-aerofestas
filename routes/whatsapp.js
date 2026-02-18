@@ -117,6 +117,17 @@ router.get('/webhook/debug', authenticate, async (req, res) => {
     res.json(webhookDebugLog);
 });
 
+// Webhook global da Evolution API (URLs separadas por evento) — redireciona para o handler principal
+router.post('/webhook/:eventName', async (req, res, next) => {
+    // Evolution API envia para /webhook/messages-update, /webhook/messages-upsert, etc.
+    // Injeta o eventName no body para que o handler principal consiga processar
+    if (!req.body.event) {
+        const eventName = req.params.eventName.replace(/-/g, '.'); // messages-update → messages.update
+        req.body.event = eventName;
+    }
+    next(); // passa para o próximo handler que é o router.post('/webhook')
+});
+
 router.post('/webhook', async (req, res) => {
     // Responde rápido para não travar o Evolution API
     res.status(200).json({ status: 'received' });
@@ -756,12 +767,7 @@ router.get('/conversations/:id/messages', authenticate, async (req, res) => {
             mediaName: true,
             mediaMimetype: true,
             timestamp: true,
-            status: true,
-            quotedMessageId: true,
-            quotedContent: true,
-            latitude: true,
-            longitude: true,
-            locationName: true
+            status: true
         };
 
         // Modo "polling incremental": busca apenas msgs após um timestamp
