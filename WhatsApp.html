@@ -2004,57 +2004,40 @@
                 await loadConversations();
                 await updateUnreadBadges();
 
-                // Refresh current conversation — polling incremental (só msgs novas)
+                // Refresh current conversation messages
                 if (currentConversationId && messagesPage === 1) {
-                    if (messages.length > 0) {
-                        // Busca apenas mensagens após a última conhecida (muito mais leve)
+                    const freshMsgs = await api.getMessages(currentConversationId, 1);
+                    const newMsgs = freshMsgs.reverse();
+                    if (newMsgs.length > 0 && messages.length > 0) {
                         const lastKnown = messages[messages.length - 1];
-                        const newMsgs = await api.getNewMessages(currentConversationId, lastKnown.timestamp);
-                        if (newMsgs.length > 0) {
-                            // Preserva mediaUrl local para msgs enviadas
+                        const hasNew = newMsgs.some(m => m.id !== lastKnown.id && new Date(m.timestamp) > new Date(lastKnown.timestamp));
+                        // Check status changes (delivered, read)
+                        const hasStatusChange = messages.some(m => {
+                            const fresh = newMsgs.find(f => f.id === m.id);
+                            return fresh && fresh.status !== m.status;
+                        });
+                        if (hasNew || hasStatusChange) {
+                            // Preserve locally-stored mediaUrl for sent media
                             for (const nm of newMsgs) {
                                 if (!nm.mediaUrl) {
                                     const existing = messages.find(m => m.id === nm.id);
                                     if (existing?.mediaUrl) nm.mediaUrl = existing.mediaUrl;
                                 }
                             }
-                            messages = [...messages, ...newMsgs];
-                            renderMessages(true); // scroll para baixo
-                            // markRead fire-and-forget
-                            const conv = conversations.find(c => c.id === currentConversationId);
-                            if (conv?.unreadCount > 0) {
-                                api.markRead(currentConversationId);
-                                conv.unreadCount = 0;
-                                renderConversationList();
-                            }
-                        } else {
-                            // Sem msgs novas — checa status changes a cada 3 ciclos (15s)
-                            // para não sobrecarregar com re-fetch completo a cada 5s
-                            if (!window._statusPollCount) window._statusPollCount = 0;
-                            window._statusPollCount++;
-                            if (window._statusPollCount % 3 === 0) {
-                                const freshMsgs = await api.getMessages(currentConversationId, 1);
-                                const hasStatusChange = messages.some(m => {
-                                    const fresh = freshMsgs.find(f => f.id === m.id);
-                                    return fresh && fresh.status !== m.status;
-                                });
-                                if (hasStatusChange) {
-                                    // Mescla status atualizado sem perder mediaUrl local
-                                    for (const fm of freshMsgs) {
-                                        const local = messages.find(m => m.id === fm.id);
-                                        if (local) { local.status = fm.status; }
-                                    }
-                                    renderMessages(false);
+                            messages = newMsgs;
+                            renderMessages(hasNew); // scroll only if new msg
+                            if (hasNew) {
+                                const conv = conversations.find(c => c.id === currentConversationId);
+                                if (conv?.unreadCount > 0) {
+                                    api.markRead(currentConversationId);
+                                    conv.unreadCount = 0;
+                                    renderConversationList();
                                 }
                             }
                         }
-                    } else {
-                        // Sem mensagens locais ainda — busca completa
-                        const freshMsgs = await api.getMessages(currentConversationId, 1);
-                        if (freshMsgs.length > 0) {
-                            messages = freshMsgs.reverse();
-                            renderMessages(true);
-                        }
+                    } else if (messages.length === 0 && newMsgs.length > 0) {
+                        messages = newMsgs;
+                        renderMessages(true);
                     }
                 }
 
