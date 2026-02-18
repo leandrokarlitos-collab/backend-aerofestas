@@ -970,6 +970,10 @@
                     updateConnectionStatus();
                     // Atualiza URL sem recarregar
                     history.replaceState(null, '', `WhatsApp.html?instance=${currentInstance}`);
+                    // Sync nomes de contatos em background
+                    api.syncContacts(currentInstance).then(r => {
+                        if (r?.updated > 0) loadConversations();
+                    });
                 });
             });
         }
@@ -1022,9 +1026,11 @@
             const listEl = document.getElementById('conversation-list');
             const search = document.getElementById('search-conversations').value.toLowerCase().trim();
 
-            let filtered = conversations;
+            // FILTRAR: grupos ficam SOMENTE no painel de grupos, não na lista de chats
+            let filtered = conversations.filter(c => !c.isGroup);
+
             if (search) {
-                filtered = conversations.filter(c =>
+                filtered = filtered.filter(c =>
                     (c.contactName || '').toLowerCase().includes(search) ||
                     c.phoneNumber.includes(search.replace(/\D/g, ''))
                 );
@@ -1069,14 +1075,14 @@
                 const groupIcon = conv.isGroup ? '<i class="fas fa-users text-teal-400 text-[10px] mr-0.5" title="Grupo"></i>' : '';
                 const preview = conv.lastMessagePreview || '';
                 const time = formatRelative(conv.lastMessageAt);
-                const cachedPic = profilePicCache[conv.phoneNumber];
-                // Status ring: check if this contact has status posted
+                // cachedPic: só mostra se tem URL real (não vazia)
+                const cachedPic = profilePicCache[conv.phoneNumber] || '';
                 const hasStatus = statusCache.some(s => (s.participant || '').includes(conv.phoneNumber.replace(/\D/g, '')));
                 const statusRingClass = hasStatus ? 'status-ring' : '';
 
                 div.innerHTML = `
-                    <div class="w-10 h-10 rounded-full ${conv.isGroup ? 'bg-teal-500' : 'bg-gradient-to-br from-green-400 to-emerald-600'} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden ${statusRingClass}" data-phone="${conv.phoneNumber}">
-                        ${conv.isGroup ? '<i class="fas fa-users text-xs"></i>' : (cachedPic ? `<img src="${cachedPic}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">` : initials)}
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden ${statusRingClass}" data-phone="${conv.phoneNumber}">
+                        ${cachedPic ? `<img src="${cachedPic}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">` : initials}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-center">
@@ -1098,22 +1104,30 @@
             loadProfilePics(filtered);
         }
 
-        async function loadProfilePics(conversations) {
-            for (const conv of conversations) {
-                if (profilePicCache[conv.phoneNumber] !== undefined) continue; // já carregou (ou falhou)
-                profilePicCache[conv.phoneNumber] = null; // marca como "carregando"
-                try {
-                    const data = await api.getProfilePic(currentInstance, conv.phoneNumber);
-                    if (data.profilePicUrl) {
-                        profilePicCache[conv.phoneNumber] = data.profilePicUrl;
-                        // Atualizar o avatar na lista
-                        const avatarEl = document.querySelector(`[data-phone="${conv.phoneNumber}"]`);
-                        if (avatarEl) {
-                            const initials = getInitials(conv.contactName || conv.phoneNumber);
-                            avatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+        let _loadingPics = false;
+        async function loadProfilePics(convList) {
+            if (_loadingPics) return; // evita múltiplas execuções simultâneas
+            _loadingPics = true;
+            try {
+                // Filtra só os que ainda não foram tentados (não tem nenhuma entrada no cache)
+                const pending = convList.filter(c => c.phoneNumber && !(c.phoneNumber in profilePicCache));
+                for (const conv of pending) {
+                    profilePicCache[conv.phoneNumber] = ''; // string vazia = tentando carregar
+                    try {
+                        const data = await api.getProfilePic(currentInstance, conv.phoneNumber);
+                        if (data?.profilePicUrl) {
+                            profilePicCache[conv.phoneNumber] = data.profilePicUrl;
+                            // Atualiza avatar no DOM se ainda existir
+                            const avatarEl = document.querySelector(`[data-phone="${CSS.escape(conv.phoneNumber)}"]`);
+                            if (avatarEl) {
+                                const initials = getInitials(conv.contactName || conv.phoneNumber);
+                                avatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+                            }
                         }
-                    }
-                } catch (e) { /* silenciar */ }
+                    } catch (e) { /* silenciar — mantém '' no cache = não retenta */ }
+                }
+            } finally {
+                _loadingPics = false;
             }
         }
 
@@ -2430,13 +2444,6 @@
                         </div>
                         <span class="text-[10px] text-gray-500">WhatsApp</span>
                     </button>
-                    ${!isGroup && phone ? `
-                    <button onclick="window.open('tel:+${phone}','_self')" class="flex flex-col items-center gap-1.5 group">
-                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-100 transition">
-                            <i class="fas fa-phone text-xl"></i>
-                        </div>
-                        <span class="text-[10px] text-gray-500">Ligar</span>
-                    </button>` : ''}
                     ${currentConversation.clientId ? `
                     <a href="Sistema de CRM.html?clientId=${currentConversation.clientId}" class="flex flex-col items-center gap-1.5 group">
                         <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition">
@@ -2858,6 +2865,14 @@
             await updateUnreadBadges();
             showChatWelcome();
             startPolling();
+
+            // Sync automático de nomes dos contatos (background, não bloqueia UI)
+            api.syncContacts(currentInstance).then(r => {
+                if (r?.updated > 0) {
+                    console.log(`[Init] ${r.updated} nomes de contatos atualizados`);
+                    loadConversations(); // recarrega com nomes novos
+                }
+            });
 
             // On desktop, show both panels; on mobile, hide chat panel
             if (window.innerWidth >= 1024) {

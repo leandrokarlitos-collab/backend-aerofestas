@@ -307,6 +307,66 @@ app.get('/api/admin/companies', async (req, res) => {
     const companies = await prisma.company.findMany({ orderBy: { name: 'asc' } });
     res.json(companies);
 });
+
+// --- ROTA DE BRINQUEDOS (CRIAR/ATUALIZAR) ---
+app.post('/api/admin/toys', async (req, res) => {
+    const { id, name, quantity } = req.body;
+    const toyId = id ? parseFloat(id) : Date.now();
+
+    try {
+        const toy = await prisma.toy.upsert({
+            where: { id: toyId },
+            update: { name, quantity: parseInt(quantity) },
+            create: { id: toyId, name, quantity: parseInt(quantity) }
+        });
+        res.json({ success: true, data: toy });
+    } catch (error) {
+        console.error('Erro ao salvar brinquedo:', error);
+        res.status(500).json({ error: "Erro ao salvar brinquedo" });
+    }
+});
+
+// --- ROTA DE BRINQUEDOS (DELETAR) ---
+app.delete('/api/admin/toys/:id', async (req, res) => {
+    const id = parseFloat(req.params.id);
+    try {
+        await prisma.toy.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao deletar brinquedo:', error);
+        res.status(500).json({ error: "Erro ao deletar brinquedo" });
+    }
+});
+
+// --- ROTA DE EMPRESAS (CRIAR/ATUALIZAR) ---
+app.post('/api/admin/companies', async (req, res) => {
+    const { id, ...data } = req.body;
+    const companyId = id ? parseFloat(id) : Date.now();
+
+    try {
+        const company = await prisma.company.upsert({
+            where: { id: companyId },
+            update: data,
+            create: { id: companyId, ...data }
+        });
+        res.json({ success: true, data: company });
+    } catch (error) {
+        console.error('Erro ao salvar empresa:', error);
+        res.status(500).json({ error: "Erro ao salvar empresa" });
+    }
+});
+
+// --- ROTA DE EMPRESAS (DELETAR) ---
+app.delete('/api/admin/companies/:id', async (req, res) => {
+    const id = parseFloat(req.params.id);
+    try {
+        await prisma.company.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao deletar empresa:', error);
+        res.status(500).json({ error: "Erro ao deletar empresa" });
+    }
+});
 app.get('/api/admin/events-full', async (req, res) => {
     const events = await prisma.event.findMany({
         include: {
@@ -543,6 +603,131 @@ setTimeout(() => runBackup('startup'), 120000);
 
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.redirect('/login.html'));
+
+// === AUTO-SYNC: contatos + histórico de todas as instâncias ===
+async function autoSyncAll() {
+    console.log('[AutoSync] Iniciando sync automático de contatos e histórico...');
+    try {
+        const instances = await prisma.whatsAppInstance.findMany({
+            where: { status: 'connected' }
+        });
+
+        for (const inst of instances) {
+            try {
+                // 1. Sync de contatos (nomes)
+                let contactsRes = await fetch(`${inst.evolutionUrl}/chat/findContacts/${inst.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': inst.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ where: {} })
+                });
+                if (contactsRes.ok) {
+                    const contactsData = await contactsRes.json();
+                    const contacts = Array.isArray(contactsData) ? contactsData
+                        : Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
+                    let updated = 0;
+                    for (const contact of contacts) {
+                        const remoteJid = contact.id || contact.remoteJid;
+                        if (!remoteJid || !remoteJid.includes('@s.whatsapp.net')) continue;
+                        const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
+                        if (!savedName) continue;
+                        const r = await prisma.whatsAppConversation.updateMany({
+                            where: { remoteJid, instanceId: inst.id },
+                            data: { contactName: savedName }
+                        });
+                        if (r.count > 0) updated++;
+                    }
+                    console.log(`[AutoSync] ${inst.instanceName}: ${updated} nomes de contatos atualizados`);
+                }
+
+                // 2. Sync de grupos (nomes)
+                let groupsRes = await fetch(`${inst.evolutionUrl}/chat/fetchAllGroups/${inst.instanceName}?getParticipants=false`, {
+                    headers: { 'apikey': inst.apiKey }
+                });
+                if (groupsRes.ok) {
+                    const groups = await groupsRes.json();
+                    const groupList = Array.isArray(groups) ? groups : groups?.groups || [];
+                    let gUpdated = 0;
+                    for (const group of groupList) {
+                        if (!group.id) continue;
+                        const groupName = group.subject || group.name || null;
+                        if (!groupName) continue;
+                        const r = await prisma.whatsAppConversation.updateMany({
+                            where: { remoteJid: group.id, instanceId: inst.id },
+                            data: { contactName: groupName }
+                        });
+                        if (r.count > 0) gUpdated++;
+                    }
+                    console.log(`[AutoSync] ${inst.instanceName}: ${gUpdated} nomes de grupos atualizados`);
+                }
+
+                // 3. Sync de chats (cria conversas que ainda não existem no banco)
+                let chatsRes = await fetch(`${inst.evolutionUrl}/chat/findChats/${inst.instanceName}`, {
+                    method: 'POST',
+                    headers: { 'apikey': inst.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (chatsRes.ok) {
+                    const chatsData = await chatsRes.json();
+                    const chats = Array.isArray(chatsData) ? chatsData : chatsData?.chats || [];
+                    let created = 0;
+                    for (const chat of chats) {
+                        let remoteJid = chat.id || chat.remoteJid;
+                        if (!remoteJid || !remoteJid.includes('@')) continue;
+                        if (remoteJid.includes('@lid')) continue;
+                        remoteJid = remoteJid.replace(/:\d+@/, '@');
+                        const isGroup = remoteJid.includes('@g.us');
+                        const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+
+                        let lastPreview = null;
+                        if (chat.lastMessage) {
+                            if (typeof chat.lastMessage === 'string') {
+                                lastPreview = chat.lastMessage.substring(0, 200);
+                            } else if (typeof chat.lastMessage === 'object') {
+                                const msg = chat.lastMessage;
+                                const text = msg.message?.conversation
+                                    || msg.message?.extendedTextMessage?.text
+                                    || msg.message?.imageMessage?.caption
+                                    || msg.message?.videoMessage?.caption
+                                    || msg.messageType || null;
+                                lastPreview = text ? String(text).substring(0, 200) : null;
+                            }
+                        }
+
+                        try {
+                            const existing = await prisma.whatsAppConversation.findUnique({
+                                where: { remoteJid_instanceId: { remoteJid, instanceId: inst.id } }
+                            });
+                            if (!existing) {
+                                await prisma.whatsAppConversation.create({
+                                    data: {
+                                        remoteJid,
+                                        phoneNumber,
+                                        contactName: chat.name || chat.pushName || null,
+                                        instanceId: inst.id,
+                                        isGroup,
+                                        lastMessageAt: chat.lastMessageAt ? new Date(chat.lastMessageAt) : null,
+                                        lastMessagePreview: lastPreview
+                                    }
+                                });
+                                created++;
+                            }
+                        } catch(e) { /* duplicado ou outro erro não crítico */ }
+                    }
+                    if (created > 0) console.log(`[AutoSync] ${inst.instanceName}: ${created} novas conversas criadas`);
+                }
+            } catch (instErr) {
+                console.warn(`[AutoSync] Erro ao sincronizar ${inst.instanceName}:`, instErr.message);
+            }
+        }
+        console.log('[AutoSync] Sync concluído');
+    } catch (err) {
+        console.error('[AutoSync] Erro geral:', err.message);
+    }
+}
+
+// Roda 30s após startup e depois a cada 15 minutos
+setTimeout(autoSyncAll, 30000);
+setInterval(autoSyncAll, 15 * 60 * 1000);
 
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
