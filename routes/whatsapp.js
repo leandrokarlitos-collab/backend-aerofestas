@@ -271,27 +271,30 @@ router.post('/webhook', async (req, res) => {
                 }
             });
 
-            // Cria a mensagem (ignora duplicata)
-            try {
-                await prisma.whatsAppMessage.create({
-                    data: {
-                        id: messageId,
-                        conversationId: conversation.id,
-                        fromMe,
-                        pushName: pushName || null,
-                        content: displayContent,
-                        messageType,
-                        mediaUrl: mediaInfo.mediaUrl || null,
-                        mediaName: mediaInfo.mediaName || null,
-                        mediaMimetype: mediaInfo.mediaMimetype || null,
-                        timestamp,
-                        status: fromMe ? 'sent' : 'received'
-                    }
-                });
-            } catch (e) {
-                // P2002 = unique constraint violation (msg duplicada)
-                if (e.code !== 'P2002') throw e;
-            }
+            // Cria ou atualiza a mensagem (evita erros de duplicata)
+            await prisma.whatsAppMessage.upsert({
+                where: { id: messageId },
+                create: {
+                    id: messageId,
+                    conversationId: conversation.id,
+                    fromMe,
+                    pushName: pushName || null,
+                    content: displayContent,
+                    messageType,
+                    mediaUrl: mediaInfo.mediaUrl || null,
+                    mediaName: mediaInfo.mediaName || null,
+                    mediaMimetype: mediaInfo.mediaMimetype || null,
+                    timestamp,
+                    status: fromMe ? 'sent' : 'received'
+                },
+                update: {
+                    content: displayContent,
+                    status: fromMe ? 'sent' : 'received',
+                    mediaUrl: mediaInfo.mediaUrl || undefined,
+                    mediaName: mediaInfo.mediaName || undefined,
+                    mediaMimetype: mediaInfo.mediaMimetype || undefined
+                }
+            });
 
             // Auto-match de cliente (apenas para mensagens recebidas, não grupos)
             if (!fromMe && !isGroup && !conversation.clientId) {
@@ -1504,6 +1507,8 @@ router.post('/sync-conversation/:conversationId', authenticate, async (req, res)
                 total = msgs.length;
                 console.log(`[Sync] ${remoteJid}: Evolution API retornou ${total} msgs`);
 
+                // Monta batch de mensagens para inserção em massa (skipDuplicates evita erros de PK)
+                const batch = [];
                 for (const msg of msgs) {
                     const key = msg.key;
                     if (!key || !key.id) continue;
@@ -1516,26 +1521,28 @@ router.post('/sync-conversation/:conversationId', authenticate, async (req, res)
                         : new Date();
                     const displayContent = messageText || `[${messageType}]`;
 
-                    try {
-                        await prisma.whatsAppMessage.create({
-                            data: {
-                                id: key.id,
-                                conversationId: conv.id,
-                                fromMe: key.fromMe || false,
-                                pushName: msg.pushName || null,
-                                content: displayContent,
-                                messageType,
-                                mediaUrl: mediaInfo.mediaUrl || null,
-                                mediaName: mediaInfo.mediaName || null,
-                                mediaMimetype: mediaInfo.mediaMimetype || null,
-                                timestamp,
-                                status: key.fromMe ? 'sent' : 'received'
-                            }
-                        });
-                        synced++;
-                    } catch (e) {
-                        if (e.code !== 'P2002') console.warn('[Sync] Erro ao salvar msg:', e.message);
-                    }
+                    batch.push({
+                        id: key.id,
+                        conversationId: conv.id,
+                        fromMe: key.fromMe || false,
+                        pushName: msg.pushName || null,
+                        content: displayContent,
+                        messageType,
+                        mediaUrl: mediaInfo.mediaUrl || null,
+                        mediaName: mediaInfo.mediaName || null,
+                        mediaMimetype: mediaInfo.mediaMimetype || null,
+                        timestamp,
+                        status: key.fromMe ? 'sent' : 'received'
+                    });
+                }
+
+                if (batch.length > 0) {
+                    const result = await prisma.whatsAppMessage.createMany({
+                        data: batch,
+                        skipDuplicates: true
+                    });
+                    synced = result.count;
+                    console.log(`[Sync] ${remoteJid}: ${synced} novas msgs salvas (${batch.length - synced} já existiam)`);
                 }
             } else {
                 const err = await evoRes.text().catch(() => '');
@@ -1689,6 +1696,8 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
                     msgs = [];
                 }
 
+                // Monta batch para inserção em massa
+                const batch = [];
                 for (const msg of msgs) {
                     const key = msg.key;
                     if (!key || !key.id) continue;
@@ -1701,26 +1710,27 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
                         : new Date();
                     const displayContent = messageText || `[${messageType}]`;
 
-                    try {
-                        await prisma.whatsAppMessage.create({
-                            data: {
-                                id: key.id,
-                                conversationId: conv.id,
-                                fromMe: key.fromMe || false,
-                                pushName: msg.pushName || null,
-                                content: displayContent,
-                                messageType,
-                                mediaUrl: mediaInfo.mediaUrl || null,
-                                mediaName: mediaInfo.mediaName || null,
-                                mediaMimetype: mediaInfo.mediaMimetype || null,
-                                timestamp,
-                                status: key.fromMe ? 'sent' : 'received'
-                            }
-                        });
-                        totalSynced++;
-                    } catch (e) {
-                        if (e.code !== 'P2002') errors.push(e.message);
-                    }
+                    batch.push({
+                        id: key.id,
+                        conversationId: conv.id,
+                        fromMe: key.fromMe || false,
+                        pushName: msg.pushName || null,
+                        content: displayContent,
+                        messageType,
+                        mediaUrl: mediaInfo.mediaUrl || null,
+                        mediaName: mediaInfo.mediaName || null,
+                        mediaMimetype: mediaInfo.mediaMimetype || null,
+                        timestamp,
+                        status: key.fromMe ? 'sent' : 'received'
+                    });
+                }
+
+                if (batch.length > 0) {
+                    const result = await prisma.whatsAppMessage.createMany({
+                        data: batch,
+                        skipDuplicates: true
+                    });
+                    totalSynced += result.count;
                 }
             } catch (e) {
                 errors.push(`${conv.remoteJid}: ${e.message}`);
