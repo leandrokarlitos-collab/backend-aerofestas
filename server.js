@@ -307,66 +307,6 @@ app.get('/api/admin/companies', async (req, res) => {
     const companies = await prisma.company.findMany({ orderBy: { name: 'asc' } });
     res.json(companies);
 });
-
-// --- ROTA DE BRINQUEDOS (CRIAR/ATUALIZAR) ---
-app.post('/api/admin/toys', async (req, res) => {
-    const { id, name, quantity } = req.body;
-    const toyId = id ? parseFloat(id) : Date.now();
-
-    try {
-        const toy = await prisma.toy.upsert({
-            where: { id: toyId },
-            update: { name, quantity: parseInt(quantity) },
-            create: { id: toyId, name, quantity: parseInt(quantity) }
-        });
-        res.json({ success: true, data: toy });
-    } catch (error) {
-        console.error('Erro ao salvar brinquedo:', error);
-        res.status(500).json({ error: "Erro ao salvar brinquedo" });
-    }
-});
-
-// --- ROTA DE BRINQUEDOS (DELETAR) ---
-app.delete('/api/admin/toys/:id', async (req, res) => {
-    const id = parseFloat(req.params.id);
-    try {
-        await prisma.toy.delete({ where: { id } });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao deletar brinquedo:', error);
-        res.status(500).json({ error: "Erro ao deletar brinquedo" });
-    }
-});
-
-// --- ROTA DE EMPRESAS (CRIAR/ATUALIZAR) ---
-app.post('/api/admin/companies', async (req, res) => {
-    const { id, ...data } = req.body;
-    const companyId = id ? parseFloat(id) : Date.now();
-
-    try {
-        const company = await prisma.company.upsert({
-            where: { id: companyId },
-            update: data,
-            create: { id: companyId, ...data }
-        });
-        res.json({ success: true, data: company });
-    } catch (error) {
-        console.error('Erro ao salvar empresa:', error);
-        res.status(500).json({ error: "Erro ao salvar empresa" });
-    }
-});
-
-// --- ROTA DE EMPRESAS (DELETAR) ---
-app.delete('/api/admin/companies/:id', async (req, res) => {
-    const id = parseFloat(req.params.id);
-    try {
-        await prisma.company.delete({ where: { id } });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao deletar empresa:', error);
-        res.status(500).json({ error: "Erro ao deletar empresa" });
-    }
-});
 app.get('/api/admin/events-full', async (req, res) => {
     const events = await prisma.event.findMany({
         include: {
@@ -711,7 +651,7 @@ async function autoSyncAll() {
                                 });
                                 created++;
                             }
-                        } catch(e) { /* duplicado ou outro erro não crítico */ }
+                        } catch (e) { /* duplicado ou outro erro não crítico */ }
                     }
                     if (created > 0) console.log(`[AutoSync] ${inst.instanceName}: ${created} novas conversas criadas`);
                 }

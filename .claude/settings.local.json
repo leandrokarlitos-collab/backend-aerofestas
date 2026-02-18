@@ -35,7 +35,11 @@
       "WebFetch(domain:docs.evoapicloud.com)",
       "Bash(firebase deploy:*)",
       "Bash(xargs:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(node -e:*)"
     ]
   }
 }
