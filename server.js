@@ -3,8 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const nodemailer = require('nodemailer');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('./prisma/client');
 
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');

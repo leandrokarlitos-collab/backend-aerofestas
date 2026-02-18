@@ -1,10 +1,9 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs'); 
 const nodemailer = require('nodemailer');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo-super-secreto-aero';
 // Ajuste para o seu domínio real do Firebase ou Localhost
