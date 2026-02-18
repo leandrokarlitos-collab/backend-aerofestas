@@ -308,6 +308,11 @@
                             <i class="fas fa-search text-xs"></i>
                         </span>
                     </div>
+                    <div class="flex gap-1 mt-2">
+                        <button id="filter-unread-btn" onclick="toggleUnreadFilter()" class="flex-1 text-xs py-1.5 px-3 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition font-medium flex items-center justify-center gap-1">
+                            <i class="fas fa-envelope text-[10px]"></i> Não lidas
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Archived bar -->
@@ -747,6 +752,7 @@
         let pollInterval = null;
         let instances = [];
         let userData = null;
+        let filterUnreadOnly = false;
 
         try { userData = JSON.parse(localStorage.getItem('userData')); } catch(e) {}
 
@@ -774,8 +780,8 @@
                         method: 'POST', headers: headers(),
                         body: JSON.stringify({ instanceName, remoteJid, text })
                     });
-                    return r.ok ? await r.json() : null;
-                } catch(e) { return null; }
+                    return await r.json(); // Retorna sempre (erro ou sucesso)
+                } catch(e) { return { error: e.message }; }
             },
             sendMedia: async (instanceName, remoteJid, mediaType, media, caption, fileName, mimetype) => {
                 try {
@@ -879,6 +885,24 @@
             },
             disconnect: async (name) => {
                 try { const r = await fetch(`${BASE}/instances/${name}/disconnect`, { method: 'POST', headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            ensureConversation: async (instanceName, remoteJid, contactName, isGroup) => {
+                try { const r = await fetch(`${BASE}/ensure-conversation`, { method: 'POST', headers: headers(), body: JSON.stringify({ instanceName, remoteJid, contactName, isGroup }) }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            getGroupDetails: async (instanceName, groupJid) => {
+                try { const r = await fetch(`${BASE}/groups/${instanceName}/${encodeURIComponent(groupJid)}`, { headers: headers() }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            updateGroupSubject: async (instanceName, groupJid, subject) => {
+                try { const r = await fetch(`${BASE}/groups/${instanceName}/${encodeURIComponent(groupJid)}/subject`, { method: 'PUT', headers: headers(), body: JSON.stringify({ subject }) }); return r.ok; } catch(e) { return false; }
+            },
+            updateGroupDescription: async (instanceName, groupJid, description) => {
+                try { const r = await fetch(`${BASE}/groups/${instanceName}/${encodeURIComponent(groupJid)}/description`, { method: 'PUT', headers: headers(), body: JSON.stringify({ description }) }); return r.ok; } catch(e) { return false; }
+            },
+            updateGroupParticipants: async (instanceName, groupJid, action, participants) => {
+                try { const r = await fetch(`${BASE}/groups/${instanceName}/${encodeURIComponent(groupJid)}/participants`, { method: 'POST', headers: headers(), body: JSON.stringify({ action, participants }) }); return r.ok ? await r.json() : null; } catch(e) { return null; }
+            },
+            leaveGroup: async (instanceName, groupJid) => {
+                try { const r = await fetch(`${BASE}/groups/${instanceName}/${encodeURIComponent(groupJid)}/leave`, { method: 'POST', headers: headers() }); return r.ok; } catch(e) { return false; }
             }
         };
 
@@ -969,6 +993,18 @@
         }
 
         // --- RENDER: CONVERSATION LIST ---
+        window.toggleUnreadFilter = function() {
+            filterUnreadOnly = !filterUnreadOnly;
+            const btn = document.getElementById('filter-unread-btn');
+            if (btn) {
+                btn.classList.toggle('bg-green-100', filterUnreadOnly);
+                btn.classList.toggle('text-green-700', filterUnreadOnly);
+                btn.classList.toggle('bg-gray-100', !filterUnreadOnly);
+                btn.classList.toggle('text-gray-500', !filterUnreadOnly);
+            }
+            renderConversationList();
+        };
+
         function renderConversationList() {
             const listEl = document.getElementById('conversation-list');
             const search = document.getElementById('search-conversations').value.toLowerCase().trim();
@@ -979,6 +1015,9 @@
                     (c.contactName || '').toLowerCase().includes(search) ||
                     c.phoneNumber.includes(search.replace(/\D/g, ''))
                 );
+            }
+            if (filterUnreadOnly) {
+                filtered = filtered.filter(c => c.unreadCount > 0);
             }
 
             // Update archived count
@@ -1123,11 +1162,13 @@
             // Load messages
             await loadMessages();
 
-            // Show sync banner if no messages and conversation has an ID
+            // Auto-sync se sem mensagens
             const syncBanner = document.getElementById('sync-banner');
             if (messages.length === 0 && conv.id) {
                 syncBanner.classList.remove('hidden');
-                syncBanner.innerHTML = '<i class="fas fa-sync-alt mr-1"></i> Sem histórico. Toque para sincronizar mensagens.';
+                syncBanner.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Buscando histórico...';
+                // Sincronizar automaticamente
+                syncCurrentConversation();
             } else {
                 syncBanner.classList.add('hidden');
             }
@@ -1328,7 +1369,7 @@
             renderMessages(true);
 
             const result = await api.send(currentInstance, currentConversation.remoteJid, text);
-            if (result) {
+            if (result && !result.error) {
                 const idx = messages.findIndex(m => m.id === tempMsg.id);
                 if (idx >= 0) messages[idx] = result;
                 renderMessages(true);
@@ -1339,7 +1380,8 @@
                     if (conv) { currentConversationId = conv.id; currentConversation = conv; }
                 }
             } else {
-                showToast('Erro ao enviar mensagem', true);
+                const errMsg = result?.error || result?.details?.message || 'Erro ao enviar mensagem';
+                showToast(errMsg, 'error');
                 messages = messages.filter(m => m.id !== tempMsg.id);
                 renderMessages(true);
                 input.value = text;
@@ -1932,6 +1974,13 @@
         // --- LOAD CONVERSATIONS ---
         async function loadConversations() {
             const all = await api.getConversations(currentInstance);
+            // Ordenar: com lastMessageAt DESC, null por último
+            all.sort((a, b) => {
+                if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+                if (!a.lastMessageAt) return 1;
+                if (!b.lastMessageAt) return -1;
+                return new Date(b.lastMessageAt) - new Date(a.lastMessageAt);
+            });
             if (showingArchived) {
                 conversations = all.filter(c => c.isArchived);
             } else {
@@ -2211,6 +2260,8 @@
         }
 
         // --- GROUPS ---
+        const groupPicCache = {}; // { jid: url | null }
+
         async function loadGroups() {
             const panel = document.getElementById('groups-panel');
             panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><p class="text-sm">Carregando grupos...</p></div>';
@@ -2225,25 +2276,47 @@
                 panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-users text-3xl text-gray-300 mb-2"></i><p class="text-sm">Nenhum grupo encontrado</p><p class="text-xs text-gray-400 mt-1">Verifique se o WhatsApp está conectado</p></div>';
                 return;
             }
-            panel.innerHTML = groups.map(g => `
-                <div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition conv-item" data-group-jid="${escapeHtml(g.id)}">
-                    <div class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white text-sm flex-shrink-0">
-                        <i class="fas fa-users text-xs"></i>
+            panel.innerHTML = groups.map(g => {
+                const pic = groupPicCache[g.id];
+                const avatarHtml = pic
+                    ? `<img src="${escapeHtml(pic)}" class="w-full h-full object-cover" data-group-jid-pic="${escapeHtml(g.id)}">`
+                    : `<i class="fas fa-users text-xs" data-group-jid-pic="${escapeHtml(g.id)}"></i>`;
+                return `
+                <div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 transition conv-item" data-group-jid="${escapeHtml(g.id)}" data-group-name="${escapeHtml(g.subject)}">
+                    <div class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white text-sm flex-shrink-0 overflow-hidden" data-group-avatar="${escapeHtml(g.id)}">
+                        ${avatarHtml}
                     </div>
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-medium truncate">${escapeHtml(g.subject)}</p>
                         <p class="text-xs text-gray-400">${g.size} participantes</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
+
+            // Carregar fotos dos grupos assíncronamente
+            for (const g of groups) {
+                if (groupPicCache[g.id] !== undefined) continue;
+                groupPicCache[g.id] = g.profilePicUrl || null;
+                if (g.profilePicUrl) {
+                    const avatarEl = panel.querySelector(`[data-group-avatar="${CSS.escape(g.id)}"]`);
+                    if (avatarEl) avatarEl.innerHTML = `<img src="${escapeHtml(g.profilePicUrl)}" class="w-full h-full object-cover">`;
+                }
+            }
+
             panel.querySelectorAll('[data-group-jid]').forEach(el => {
                 el.addEventListener('click', async () => {
                     const groupJid = el.dataset.groupJid;
-                    // Find existing conversation or create temp
+                    const groupName = el.dataset.groupName || 'Grupo';
+                    // Garantir que conversa existe no banco
                     let conv = conversations.find(c => c.remoteJid === groupJid);
                     if (!conv) {
-                        const name = el.querySelector('.text-sm.font-medium')?.textContent || 'Grupo';
-                        conv = { id: null, remoteJid: groupJid, phoneNumber: groupJid.replace('@g.us', ''), contactName: name, isGroup: true, unreadCount: 0 };
+                        const saved = await api.ensureConversation(currentInstance, groupJid, groupName, true);
+                        if (saved) {
+                            conv = { ...saved, contactName: saved.contactName || groupName };
+                            conversations.unshift(conv);
+                        } else {
+                            conv = { id: null, remoteJid: groupJid, phoneNumber: groupJid.replace('@g.us', ''), contactName: groupName, isGroup: true, unreadCount: 0 };
+                        }
                     }
                     openConversation(conv);
                 });
@@ -2313,23 +2386,26 @@
         }
 
         // --- CONTACT DETAILS ---
-        window.openContactDetails = function() {
+        window.openContactDetails = async function() {
             if (!currentConversation) return;
             const panel = document.getElementById('contact-details-panel');
             const content = document.getElementById('contact-details-content');
             const phone = currentConversation.phoneNumber || currentConversation.remoteJid?.replace(/@.*/, '');
             const name = currentConversation.contactName || phone;
-            const picUrl = profilePicCache[phone];
+            const picUrl = profilePicCache[phone] || groupPicCache[currentConversation.remoteJid];
             const isGroup = currentConversation.isGroup;
 
-            content.innerHTML = `
+            // Cabeçalho do painel
+            const headerHtml = `
                 <div class="text-center mb-4">
                     <div class="w-24 h-24 rounded-full ${isGroup ? 'bg-teal-500' : 'bg-[var(--wa-green)]'} mx-auto mb-3 flex items-center justify-center text-white text-3xl font-bold overflow-hidden">
                         ${picUrl ? `<img src="${escapeHtml(picUrl)}" class="w-full h-full object-cover">` : (isGroup ? '<i class="fas fa-users text-2xl"></i>' : escapeHtml(name[0]?.toUpperCase() || '?'))}
                     </div>
                     <h3 class="font-bold text-lg">${escapeHtml(name)}</h3>
                     <p class="text-sm text-gray-500">${isGroup ? 'Grupo' : escapeHtml(phone)}</p>
-                </div>
+                </div>`;
+
+            const commonActionsHtml = `
                 <div class="space-y-1">
                     ${currentConversation.clientId ? `<a href="Sistema de CRM.html?client=${currentConversation.clientId}" class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition"><i class="fas fa-users text-indigo-500 w-5 text-center"></i><span class="text-sm">Ver no CRM</span></a>` : ''}
                     <button onclick="toggleMuteChat(); closeContactDetails();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
@@ -2340,9 +2416,128 @@
                         <i class="fas fa-archive text-gray-400 w-5 text-center"></i>
                         <span class="text-sm">${currentConversation.isArchived ? 'Desarquivar' : 'Arquivar conversa'}</span>
                     </button>
-                </div>
-            `;
+                </div>`;
+
+            if (!isGroup) {
+                content.innerHTML = headerHtml + commonActionsHtml;
+                panel.classList.add('open');
+                return;
+            }
+
+            // Grupo: mostrar spinner enquanto carrega detalhes
+            content.innerHTML = headerHtml + `<div class="text-center py-4 text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i> Carregando detalhes...</div>` + commonActionsHtml;
             panel.classList.add('open');
+
+            // Carregar detalhes do grupo (com participantes)
+            const groupJid = currentConversation.remoteJid;
+            const details = await api.getGroupDetails(currentInstance, groupJid);
+
+            let participantsHtml = '';
+            if (details && details.participants && details.participants.length > 0) {
+                const adminJids = new Set(details.participants.filter(p => p.admin).map(p => p.id));
+                participantsHtml = `
+                    <div class="mt-3">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 mb-2">${details.participants.length} participantes</p>
+                        <div class="space-y-0.5 max-h-64 overflow-y-auto">
+                            ${details.participants.map(p => {
+                                const pPhone = p.id.replace(/@.*/, '');
+                                const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';
+                                const isSuperAdmin = p.admin === 'superadmin';
+                                return `
+                                <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 group" data-participant-jid="${escapeHtml(p.id)}">
+                                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs font-bold flex-shrink-0">
+                                        ${pPhone.slice(-2)}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-medium truncate">${escapeHtml(p.pushName || pPhone)}</p>
+                                        <p class="text-[10px] text-gray-400">${escapeHtml(pPhone)}</p>
+                                    </div>
+                                    ${isAdmin ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${isSuperAdmin ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}">${isSuperAdmin ? 'Dono' : 'Admin'}</span>` : ''}
+                                    <div class="hidden group-hover:flex gap-1">
+                                        ${!isAdmin ? `<button onclick="groupParticipantAction('promote','${escapeHtml(p.id)}')" class="text-[10px] text-teal-600 hover:underline" title="Promover a admin">+Admin</button>` : ''}
+                                        ${isAdmin && !isSuperAdmin ? `<button onclick="groupParticipantAction('demote','${escapeHtml(p.id)}')" class="text-[10px] text-orange-600 hover:underline" title="Remover admin">-Admin</button>` : ''}
+                                        <button onclick="groupParticipantAction('remove','${escapeHtml(p.id)}')" class="text-[10px] text-red-500 hover:underline" title="Remover do grupo">Remover</button>
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            const descHtml = details?.desc ? `
+                <div class="mt-2 p-3 bg-gray-50 rounded-xl">
+                    <p class="text-xs font-semibold text-gray-500 mb-1">Descrição</p>
+                    <p class="text-xs text-gray-700">${escapeHtml(details.desc)}</p>
+                </div>` : '';
+
+            const groupActionsHtml = `
+                <div class="mt-3 space-y-1">
+                    <button onclick="editGroupSubject()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                        <i class="fas fa-pencil-alt text-gray-400 w-5 text-center"></i>
+                        <span class="text-sm">Editar nome do grupo</span>
+                    </button>
+                    <button onclick="editGroupDescription()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                        <i class="fas fa-align-left text-gray-400 w-5 text-center"></i>
+                        <span class="text-sm">Editar descrição</span>
+                    </button>
+                    <button onclick="confirmLeaveGroup()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition text-left text-red-500">
+                        <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                        <span class="text-sm">Sair do grupo</span>
+                    </button>
+                </div>`;
+
+            content.innerHTML = headerHtml + descHtml + participantsHtml + commonActionsHtml + groupActionsHtml;
+        };
+
+        // Ações de participantes do grupo
+        window.groupParticipantAction = async function(action, participantJid) {
+            if (!currentConversation?.remoteJid) return;
+            const labels = { promote: 'promover a admin', demote: 'remover admin de', remove: 'remover do grupo' };
+            if (!confirm(`Deseja ${labels[action]} este participante?`)) return;
+            const result = await api.updateGroupParticipants(currentInstance, currentConversation.remoteJid, action, [participantJid]);
+            if (result) {
+                showToast('Participante atualizado', 'success');
+                openContactDetails(); // Recarrega painel
+            } else {
+                showToast('Erro ao atualizar participante', 'error');
+            }
+        };
+
+        window.editGroupSubject = async function() {
+            const current = currentConversation?.contactName || '';
+            const newName = prompt('Novo nome do grupo:', current);
+            if (!newName || newName === current) return;
+            const ok = await api.updateGroupSubject(currentInstance, currentConversation.remoteJid, newName);
+            if (ok) {
+                showToast('Nome do grupo atualizado', 'success');
+                currentConversation.contactName = newName;
+                document.getElementById('chat-contact-name').textContent = newName;
+                await loadConversations();
+            } else {
+                showToast('Erro ao atualizar nome', 'error');
+            }
+        };
+
+        window.editGroupDescription = async function() {
+            const newDesc = prompt('Nova descrição do grupo:');
+            if (newDesc === null) return;
+            const ok = await api.updateGroupDescription(currentInstance, currentConversation.remoteJid, newDesc);
+            showToast(ok ? 'Descrição atualizada' : 'Erro ao atualizar descrição', ok ? 'success' : 'error');
+        };
+
+        window.confirmLeaveGroup = async function() {
+            if (!confirm('Tem certeza que deseja sair deste grupo?')) return;
+            const ok = await api.leaveGroup(currentInstance, currentConversation.remoteJid);
+            if (ok) {
+                showToast('Saiu do grupo', 'success');
+                closeContactDetails();
+                currentConversationId = null;
+                currentConversation = null;
+                showChatWelcome();
+                await loadConversations();
+            } else {
+                showToast('Erro ao sair do grupo', 'error');
+            }
         };
         window.closeContactDetails = function() {
             document.getElementById('contact-details-panel').classList.remove('open');
@@ -2532,16 +2727,19 @@
             syncBanner.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sincronizando histórico...';
             try {
                 const result = await api.syncConversation(currentConversation.id);
-                if (result && result.synced > 0) {
+                if (result && result.alreadyInDb) {
+                    // Mensagens já estão no banco (chegaram via webhook), só carregar
+                    await loadMessages();
+                    syncBanner.classList.add('hidden');
+                } else if (result && result.synced > 0) {
                     showToast(`${result.synced} mensagens sincronizadas`, 'success');
                     await loadMessages();
                     syncBanner.classList.add('hidden');
-                } else if (result && result.total === 0) {
-                    syncBanner.innerHTML = '<i class="fas fa-info-circle mr-1"></i> Nenhum histórico disponível na Evolution API. Mensagens aparecerão em tempo real.';
+                } else if (result && result.total === 0 && result.dbCount === 0) {
+                    syncBanner.innerHTML = '<i class="fas fa-info-circle mr-1"></i> Nenhum histórico disponível. Mensagens aparecerão em tempo real.';
                     setTimeout(() => syncBanner.classList.add('hidden'), 4000);
                 } else {
                     syncBanner.classList.add('hidden');
-                    showToast('Nenhuma mensagem nova encontrada', 'info');
                 }
             } catch(e) {
                 syncBanner.innerHTML = '<i class="fas fa-exclamation-circle mr-1 text-red-500"></i> Erro ao sincronizar. Tente novamente.';

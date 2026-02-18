@@ -1314,61 +1314,96 @@ router.post('/sync-conversation/:conversationId', authenticate, async (req, res)
 
         const instance = conv.instance;
         const remoteJid = conv.remoteJid;
+        let synced = 0;
+        let total = 0;
 
-        // Busca mensagens na Evolution API
-        const evoRes = await fetch(`${instance.evolutionUrl}/chat/findMessages/${instance.instanceName}`, {
-            method: 'POST',
-            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                where: { key: { remoteJid } },
-                limit: 200
-            })
-        });
+        // 1. Tenta buscar mensagens na Evolution API
+        try {
+            const evoRes = await fetch(`${instance.evolutionUrl}/chat/findMessages/${instance.instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    where: { key: { remoteJid } },
+                    limit: 200
+                })
+            });
 
-        if (!evoRes.ok) {
-            const err = await evoRes.json().catch(() => ({}));
-            return res.status(502).json({ error: 'Erro ao buscar histórico', details: err });
+            if (evoRes.ok) {
+                const evoMessages = await evoRes.json();
+                const msgs = Array.isArray(evoMessages) ? evoMessages : evoMessages.messages || [];
+                total = msgs.length;
+                console.log(`[Sync] ${remoteJid}: Evolution API retornou ${total} msgs`);
+
+                for (const msg of msgs) {
+                    const key = msg.key;
+                    if (!key || !key.id) continue;
+
+                    const messageText = extractMessageText(msg.message);
+                    const messageType = detectMessageType(msg.message);
+                    const mediaInfo = extractMediaInfo(msg.message);
+                    const timestamp = msg.messageTimestamp
+                        ? new Date(parseInt(msg.messageTimestamp) * 1000)
+                        : new Date();
+                    const displayContent = messageText || `[${messageType}]`;
+
+                    try {
+                        await prisma.whatsAppMessage.create({
+                            data: {
+                                id: key.id,
+                                conversationId: conv.id,
+                                fromMe: key.fromMe || false,
+                                pushName: msg.pushName || null,
+                                content: displayContent,
+                                messageType,
+                                mediaUrl: mediaInfo.mediaUrl || null,
+                                mediaName: mediaInfo.mediaName || null,
+                                mediaMimetype: mediaInfo.mediaMimetype || null,
+                                timestamp,
+                                status: key.fromMe ? 'sent' : 'received'
+                            }
+                        });
+                        synced++;
+                    } catch (e) {
+                        if (e.code !== 'P2002') console.warn('[Sync] Erro ao salvar msg:', e.message);
+                    }
+                }
+            } else {
+                const err = await evoRes.text().catch(() => '');
+                console.warn(`[Sync] Evolution API retornou ${evoRes.status} para ${remoteJid}:`, err.substring(0, 200));
+            }
+        } catch (evoErr) {
+            console.warn(`[Sync] Erro ao chamar Evolution API para ${remoteJid}:`, evoErr.message);
         }
 
-        const evoMessages = await evoRes.json();
-        const msgs = Array.isArray(evoMessages) ? evoMessages : evoMessages.messages || [];
-        let synced = 0;
+        // 2. Conta quantas mensagens existem no banco para esta conversa
+        const dbCount = await prisma.whatsAppMessage.count({
+            where: { conversationId: conv.id }
+        });
 
-        for (const msg of msgs) {
-            const key = msg.key;
-            if (!key || !key.id) continue;
+        // 3. Se a Evolution API não tem mais histórico mas o banco já tem, retorna o que tem
+        if (total === 0 && dbCount > 0) {
+            console.log(`[Sync] ${remoteJid}: Evolution API sem histórico, mas banco tem ${dbCount} msgs`);
+            return res.json({ success: true, synced: 0, total: 0, dbCount, alreadyInDb: true });
+        }
 
-            const messageText = extractMessageText(msg.message);
-            const messageType = detectMessageType(msg.message);
-            const mediaInfo = extractMediaInfo(msg.message);
-            const timestamp = msg.messageTimestamp
-                ? new Date(parseInt(msg.messageTimestamp) * 1000)
-                : new Date();
-            const displayContent = messageText || `[${messageType}]`;
-
-            try {
-                await prisma.whatsAppMessage.create({
+        // 4. Atualiza lastMessageAt da conversa se sincronizou
+        if (synced > 0) {
+            const lastMsg = await prisma.whatsAppMessage.findFirst({
+                where: { conversationId: conv.id },
+                orderBy: { timestamp: 'desc' }
+            });
+            if (lastMsg) {
+                await prisma.whatsAppConversation.update({
+                    where: { id: conv.id },
                     data: {
-                        id: key.id,
-                        conversationId: conv.id,
-                        fromMe: key.fromMe || false,
-                        pushName: msg.pushName || null,
-                        content: displayContent,
-                        messageType,
-                        mediaUrl: mediaInfo.mediaUrl || null,
-                        mediaName: mediaInfo.mediaName || null,
-                        mediaMimetype: mediaInfo.mediaMimetype || null,
-                        timestamp,
-                        status: key.fromMe ? 'sent' : 'received'
+                        lastMessageAt: lastMsg.timestamp,
+                        lastMessagePreview: lastMsg.content?.substring(0, 200)
                     }
                 });
-                synced++;
-            } catch (e) {
-                if (e.code !== 'P2002') console.warn('[Sync] Erro ao salvar msg:', e.message);
             }
         }
 
-        res.json({ success: true, synced, total: msgs.length });
+        res.json({ success: true, synced, total, dbCount });
     } catch (error) {
         console.error('Erro ao sincronizar conversa:', error);
         res.status(500).json({ error: 'Erro ao sincronizar' });
