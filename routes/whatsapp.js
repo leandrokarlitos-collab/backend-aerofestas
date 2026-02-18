@@ -743,14 +743,61 @@ router.post('/ensure-conversation', authenticate, async (req, res) => {
 // GET /api/whatsapp/conversations/:id/messages
 router.get('/conversations/:id/messages', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 50 } = req.query;
+        const { page = 1, limit = 80, since } = req.query;
+
+        const select = {
+            id: true,
+            conversationId: true,
+            fromMe: true,
+            pushName: true,
+            content: true,
+            messageType: true,
+            mediaUrl: true,
+            mediaName: true,
+            mediaMimetype: true,
+            timestamp: true,
+            status: true,
+            quotedMessageId: true,
+            quotedContent: true,
+            latitude: true,
+            longitude: true,
+            locationName: true
+        };
+
+        // Modo "polling incremental": busca apenas msgs após um timestamp
+        // Muito mais leve que buscar page=1 inteiro a cada 5s
+        if (since) {
+            const sinceDate = new Date(since);
+            if (!isNaN(sinceDate.getTime())) {
+                const messages = await prisma.whatsAppMessage.findMany({
+                    where: {
+                        conversationId: req.params.id,
+                        timestamp: { gt: sinceDate }
+                    },
+                    orderBy: { timestamp: 'asc' },
+                    take: 50,
+                    select
+                });
+                return res.json(messages);
+            }
+        }
+
+        // Modo normal: paginação
+        const take = Math.min(parseInt(limit) || 80, 200);
+        const skip = (Math.max(parseInt(page) || 1, 1) - 1) * take;
 
         const messages = await prisma.whatsAppMessage.findMany({
             where: { conversationId: req.params.id },
             orderBy: { timestamp: 'desc' },
-            take: parseInt(limit),
-            skip: (parseInt(page) - 1) * parseInt(limit)
+            take,
+            skip,
+            select
         });
+
+        // Cache-Control para páginas antigas
+        if (skip > 0) {
+            res.setHeader('Cache-Control', 'private, max-age=60');
+        }
 
         res.json(messages);
     } catch (error) {
