@@ -232,8 +232,21 @@ router.post('/webhook', async (req, res) => {
             // Extrai número do telefone ou ID do grupo
             const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
 
-            // Para grupos, pega o nome do grupo via metadata se disponível
-            const groupContactName = isGroup ? (data.groupMetadata?.subject || pushName || phoneNumber) : pushName;
+            // Nome para criar a conversa:
+            // - Grupo: subject do metadata > pushName > número
+            // - Contato: só usa pushName na criação; contacts.upsert vai sobrescrever
+            //   com o nome salvo na agenda (notify) que tem prioridade maior
+            const createName = isGroup
+                ? (data.groupMetadata?.subject || pushName || phoneNumber)
+                : (pushName || null);
+
+            // No update de conversa existente:
+            // - Grupo: atualiza se tem novo subject
+            // - Contato: NÃO sobrescreve com pushName — preserva o nome da agenda
+            //   que foi salvo pelo contacts.upsert (tem prioridade maior)
+            const updateName = isGroup
+                ? (data.groupMetadata?.subject || undefined)
+                : undefined; // nunca sobrescreve nome de contato via mensagem
 
             // Upsert da conversa
             const conversation = await prisma.whatsAppConversation.upsert({
@@ -243,7 +256,7 @@ router.post('/webhook', async (req, res) => {
                 create: {
                     remoteJid,
                     phoneNumber,
-                    contactName: groupContactName,
+                    contactName: createName,
                     instanceId: instance.id,
                     isGroup,
                     lastMessageAt: timestamp,
@@ -251,7 +264,7 @@ router.post('/webhook', async (req, res) => {
                     unreadCount: fromMe ? 0 : 1
                 },
                 update: {
-                    contactName: isGroup ? undefined : (pushName || undefined),
+                    contactName: updateName,
                     lastMessageAt: timestamp,
                     lastMessagePreview: isGroup && pushName ? `${pushName}: ${displayContent}`.substring(0, 200) : displayContent.substring(0, 200),
                     unreadCount: fromMe ? undefined : { increment: 1 }
@@ -403,6 +416,87 @@ router.post('/webhook', async (req, res) => {
             }
         }
 
+        // --- CONTACTS_UPSERT — nome salvo na agenda do usuário ---
+        // Este é o evento mais importante para nomes: traz o nome que o dono
+        // do número salvou na agenda do WhatsApp ("notify" / "verifiedName")
+        if (event === 'contacts.upsert' || event === 'contacts_upsert') {
+            const contacts = Array.isArray(data) ? data : [data];
+            for (const contact of contacts) {
+                const remoteJid = contact.id;
+                if (!remoteJid || !remoteJid.includes('@s.whatsapp.net')) continue;
+
+                // Prioridade: notify (nome da agenda) > verifiedName > pushName
+                const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
+                if (!savedName) continue;
+
+                try {
+                    await prisma.whatsAppConversation.updateMany({
+                        where: { remoteJid, instanceId: instance.id },
+                        data: { contactName: savedName }
+                    });
+                    console.log(`[WA Contacts] ${remoteJid} → "${savedName}"`);
+                } catch (e) {
+                    // conversa pode não existir ainda — não é erro crítico
+                }
+            }
+        }
+
+        // --- CHATS_UPSERT — atualiza nome e metadados de conversas ---
+        if (event === 'chats.upsert' || event === 'chats_upsert') {
+            const chats = Array.isArray(data) ? data : [data];
+            for (const chat of chats) {
+                const remoteJid = chat.id || chat.remoteJid;
+                if (!remoteJid || !remoteJid.includes('@')) continue;
+
+                const chatName = chat.name || chat.subject || chat.pushName || null;
+                if (!chatName) continue;
+
+                try {
+                    await prisma.whatsAppConversation.updateMany({
+                        where: { remoteJid: normalizeRemoteJid(remoteJid), instanceId: instance.id },
+                        data: { contactName: chatName }
+                    });
+                } catch (e) { /* não crítico */ }
+            }
+        }
+
+        // --- GROUPS_UPSERT — nome e metadados de grupos ---
+        if (event === 'groups.upsert' || event === 'groups_upsert' || event === 'group.upsert') {
+            const groups = Array.isArray(data) ? data : [data];
+            for (const group of groups) {
+                const remoteJid = group.id;
+                if (!remoteJid || !remoteJid.includes('@g.us')) continue;
+
+                const groupName = group.subject || group.name || null;
+                if (!groupName) continue;
+
+                try {
+                    await prisma.whatsAppConversation.updateMany({
+                        where: { remoteJid, instanceId: instance.id },
+                        data: { contactName: groupName }
+                    });
+                    console.log(`[WA Groups] ${remoteJid} → "${groupName}"`);
+                } catch (e) { /* não crítico */ }
+            }
+        }
+
+        // --- GROUPS_UPDATE — nome do grupo alterado ---
+        if (event === 'groups.update' || event === 'groups_update') {
+            const groups = Array.isArray(data) ? data : [data];
+            for (const group of groups) {
+                const remoteJid = group.id;
+                if (!remoteJid) continue;
+                const groupName = group.subject || group.name || null;
+                if (!groupName) continue;
+                try {
+                    await prisma.whatsAppConversation.updateMany({
+                        where: { remoteJid, instanceId: instance.id },
+                        data: { contactName: groupName }
+                    });
+                } catch (e) { /* não crítico */ }
+            }
+        }
+
     } catch (error) {
         console.error('[WA Webhook] Erro ao processar:', error);
     }
@@ -533,7 +627,9 @@ router.post('/instances/seed', isAdmin, async (req, res) => {
                             events: [
                                 'MESSAGES_UPSERT', 'MESSAGES_UPDATE',
                                 'CONNECTION_UPDATE', 'QRCODE_UPDATED',
-                                'PRESENCE_UPDATE'
+                                'PRESENCE_UPDATE',
+                                'CONTACTS_UPSERT', 'CHATS_UPSERT',
+                                'GROUPS_UPSERT', 'GROUPS_UPDATE'
                             ]
                         }
                     })
@@ -568,7 +664,7 @@ router.post('/instances/update-webhooks', isAdmin, async (req, res) => {
                             enabled: true,
                             url: `${backendUrl}/api/whatsapp/webhook`,
                             webhookByEvents: false,
-                            events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'PRESENCE_UPDATE']
+                            events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'PRESENCE_UPDATE', 'CONTACTS_UPSERT', 'CHATS_UPSERT', 'GROUPS_UPSERT', 'GROUPS_UPDATE']
                         }
                     })
                 });
@@ -1481,6 +1577,72 @@ router.post('/sync-conversation/:conversationId', authenticate, async (req, res)
     } catch (error) {
         console.error('Erro ao sincronizar conversa:', error);
         res.status(500).json({ error: 'Erro ao sincronizar' });
+    }
+});
+
+// POST /api/whatsapp/sync-contacts/:instanceName
+// Busca lista de contatos da Evolution API e atualiza nomes no banco
+// Útil para popular nomes de conversas que chegaram sem nome (só número)
+router.post('/sync-contacts/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        // Busca contatos da Evolution API
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/fetchAllGroups/${instance.instanceName}?getParticipants=false`, {
+            headers: { 'apikey': instance.apiKey }
+        });
+
+        // Busca contatos (endpoint pode variar)
+        let contactsRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ where: {} })
+        });
+
+        let updated = 0;
+        if (contactsRes.ok) {
+            const contactsData = await contactsRes.json();
+            const contacts = Array.isArray(contactsData) ? contactsData
+                : Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
+
+            for (const contact of contacts) {
+                const remoteJid = contact.id || contact.remoteJid;
+                if (!remoteJid || !remoteJid.includes('@s.whatsapp.net')) continue;
+
+                // Prioridade: notify (nome salvo na agenda) > verifiedName > pushName
+                const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
+                if (!savedName) continue;
+
+                const result = await prisma.whatsAppConversation.updateMany({
+                    where: { remoteJid, instanceId: instance.id },
+                    data: { contactName: savedName }
+                });
+                if (result.count > 0) updated++;
+            }
+        }
+
+        // Busca grupos e atualiza nomes
+        if (evoRes.ok) {
+            const groups = await evoRes.json();
+            const groupList = Array.isArray(groups) ? groups : groups?.groups || [];
+            for (const group of groupList) {
+                const remoteJid = group.id;
+                if (!remoteJid) continue;
+                const groupName = group.subject || group.name || null;
+                if (!groupName) continue;
+                const result = await prisma.whatsAppConversation.updateMany({
+                    where: { remoteJid, instanceId: instance.id },
+                    data: { contactName: groupName }
+                });
+                if (result.count > 0) updated++;
+            }
+        }
+
+        res.json({ success: true, updated });
+    } catch (error) {
+        console.error('Erro ao sincronizar contatos:', error);
+        res.status(500).json({ error: 'Erro ao sincronizar contatos' });
     }
 });
 
