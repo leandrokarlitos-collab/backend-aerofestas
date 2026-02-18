@@ -163,23 +163,44 @@ router.post('/webhook', async (req, res) => {
             // Normaliza JID antes de qualquer operação
             key.remoteJid = normalizeRemoteJid(key.remoteJid);
 
-            // Captura status para o store em memória
+            // Captura status — salvar no banco E no store em memória
             if (key.remoteJid === 'status@broadcast') {
                 const statusKey = instanceName;
                 if (!statusStore[statusKey]) statusStore[statusKey] = [];
-                statusStore[statusKey].unshift({
+                const statusTimestamp = data.messageTimestamp ? new Date(parseInt(data.messageTimestamp) * 1000) : new Date();
+                const statusEntry = {
                     id: key.id,
                     fromMe: key.fromMe || false,
                     participant: data.participant || key.participant || null,
                     pushName: data.pushName || null,
-                    message: data.message,
                     messageType: detectMessageType(data.message),
                     mediaUrl: extractMediaInfo(data.message).mediaUrl || null,
                     content: extractMessageText(data.message),
-                    timestamp: data.messageTimestamp ? new Date(parseInt(data.messageTimestamp) * 1000) : new Date()
-                });
+                    timestamp: statusTimestamp
+                };
+                statusStore[statusKey].unshift(statusEntry);
                 // Mantém apenas últimos 200 status
                 if (statusStore[statusKey].length > 200) statusStore[statusKey] = statusStore[statusKey].slice(0, 200);
+                // Persiste no banco (best-effort)
+                try {
+                    const inst = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+                    if (inst) {
+                        await prisma.whatsAppStatus.upsert({
+                            where: { id: key.id },
+                            create: {
+                                id: key.id,
+                                instanceId: inst.id,
+                                participant: statusEntry.participant,
+                                pushName: statusEntry.pushName,
+                                messageType: statusEntry.messageType,
+                                content: statusEntry.content,
+                                mediaUrl: statusEntry.mediaUrl,
+                                timestamp: statusTimestamp
+                            },
+                            update: {}
+                        });
+                    }
+                } catch(e) { /* não crítico */ }
                 return;
             }
 
@@ -679,6 +700,39 @@ router.get('/conversations', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Erro ao listar conversas:', error);
         res.status(500).json({ error: 'Erro ao listar conversas' });
+    }
+});
+
+// POST /api/whatsapp/ensure-conversation — Garante que conversa existe no banco (usado ao abrir grupos)
+router.post('/ensure-conversation', authenticate, async (req, res) => {
+    try {
+        const { instanceName, remoteJid, contactName, isGroup } = req.body;
+        if (!instanceName || !remoteJid) return res.status(400).json({ error: 'instanceName e remoteJid obrigatórios' });
+
+        const instance = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        const normalized = normalizeRemoteJid(remoteJid);
+        const phoneNumber = normalized.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+
+        const conv = await prisma.whatsAppConversation.upsert({
+            where: { remoteJid_instanceId: { remoteJid: normalized, instanceId: instance.id } },
+            create: {
+                remoteJid: normalized,
+                phoneNumber,
+                contactName: contactName || null,
+                instanceId: instance.id,
+                isGroup: isGroup || normalized.includes('@g.us')
+            },
+            update: {
+                contactName: contactName || undefined
+            }
+        });
+
+        res.json(conv);
+    } catch (error) {
+        console.error('Erro ao garantir conversa:', error);
+        res.status(500).json({ error: 'Erro ao garantir conversa' });
     }
 });
 
@@ -1659,6 +1713,83 @@ router.get('/groups/:instanceName/:groupJid', authenticate, async (req, res) => 
     }
 });
 
+// PUT /api/whatsapp/groups/:instanceName/:groupJid/subject — Atualiza nome do grupo
+router.put('/groups/:instanceName/:groupJid/subject', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+        const { subject } = req.body;
+        const evoRes = await fetch(`${instance.evolutionUrl}/group/updateGroupSubject/${instance.instanceName}`, {
+            method: 'PUT',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupJid: req.params.groupJid, subject })
+        });
+        const data = await evoRes.json().catch(() => ({}));
+        if (!evoRes.ok) return res.status(502).json({ error: 'Erro ao atualizar nome', details: data });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar nome do grupo' });
+    }
+});
+
+// PUT /api/whatsapp/groups/:instanceName/:groupJid/description — Atualiza descrição
+router.put('/groups/:instanceName/:groupJid/description', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+        const { description } = req.body;
+        const evoRes = await fetch(`${instance.evolutionUrl}/group/updateGroupDescription/${instance.instanceName}`, {
+            method: 'PUT',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupJid: req.params.groupJid, description })
+        });
+        const data = await evoRes.json().catch(() => ({}));
+        if (!evoRes.ok) return res.status(502).json({ error: 'Erro ao atualizar descrição', details: data });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar descrição do grupo' });
+    }
+});
+
+// POST /api/whatsapp/groups/:instanceName/:groupJid/participants — Adiciona/remove/promove/rebaixa participantes
+router.post('/groups/:instanceName/:groupJid/participants', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+        // action: 'add' | 'remove' | 'promote' | 'demote'
+        const { action, participants } = req.body;
+        if (!action || !participants) return res.status(400).json({ error: 'action e participants obrigatórios' });
+        const evoRes = await fetch(`${instance.evolutionUrl}/group/updateParticipant/${instance.instanceName}`, {
+            method: 'PUT',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupJid: req.params.groupJid, action, participants })
+        });
+        const data = await evoRes.json().catch(() => ({}));
+        if (!evoRes.ok) return res.status(502).json({ error: 'Erro ao atualizar participantes', details: data });
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar participantes' });
+    }
+});
+
+// POST /api/whatsapp/groups/:instanceName/:groupJid/leave — Sair do grupo
+router.post('/groups/:instanceName/:groupJid/leave', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+        const evoRes = await fetch(`${instance.evolutionUrl}/group/leaveGroup/${instance.instanceName}`, {
+            method: 'DELETE',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupJid: req.params.groupJid })
+        });
+        const data = await evoRes.json().catch(() => ({}));
+        if (!evoRes.ok) return res.status(502).json({ error: 'Erro ao sair do grupo', details: data });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao sair do grupo' });
+    }
+});
+
 // ===================================================================
 // ARQUIVAR / SILENCIAR
 // ===================================================================
@@ -1844,7 +1975,25 @@ router.get('/status/:instanceName', authenticate, async (req, res) => {
         const instance = await getInstanceWithCreds(req.params.instanceName);
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        // Tenta buscar via Evolution API
+        // 1. Busca do banco (últimas 24h)
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const dbStatuses = await prisma.whatsAppStatus.findMany({
+            where: { instanceId: instance.id, timestamp: { gte: since } },
+            orderBy: { timestamp: 'desc' },
+            take: 200
+        });
+
+        if (dbStatuses.length > 0) {
+            return res.json(dbStatuses);
+        }
+
+        // 2. Fallback: store em memória (se reiniciou e ainda tem dados)
+        const memStatuses = statusStore[req.params.instanceName] || [];
+        if (memStatuses.length > 0) {
+            return res.json(memStatuses);
+        }
+
+        // 3. Tenta buscar via Evolution API como último recurso
         try {
             const evoRes = await fetch(`${instance.evolutionUrl}/chat/findStatusMessage/${instance.instanceName}`, {
                 method: 'POST',
@@ -1855,10 +2004,9 @@ router.get('/status/:instanceName', authenticate, async (req, res) => {
                 const statuses = await evoRes.json();
                 return res.json(Array.isArray(statuses) ? statuses : statuses.messages || []);
             }
-        } catch (e) { /* fallback */ }
+        } catch (e) { /* sem status */ }
 
-        // Fallback: retorna do store em memória
-        res.json(statusStore[req.params.instanceName] || []);
+        res.json([]);
     } catch (error) {
         console.error('Erro ao buscar status:', error);
         res.status(500).json({ error: 'Erro ao buscar status' });

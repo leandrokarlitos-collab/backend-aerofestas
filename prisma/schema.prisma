@@ -388,3 +388,17 @@ model WhatsAppShortcut {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model WhatsAppStatus {
+  id          String   @id
+  instanceId  String
+  participant String?
+  pushName    String?
+  messageType String   @default("text")
+  content     String?
+  mediaUrl    String?
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([instanceId, timestamp])
+}
