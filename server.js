@@ -669,6 +669,57 @@ async function autoSyncAll() {
 setTimeout(autoSyncAll, 30000);
 setInterval(autoSyncAll, 15 * 60 * 1000);
 
+// === LIMPEZA AUTOMÁTICA: remove mensagens com mais de 30 dias ===
+async function purgeOldMessages() {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+        const result = await prisma.whatsAppMessage.deleteMany({
+            where: { timestamp: { lt: cutoffDate } }
+        });
+
+        if (result.count > 0) {
+            console.log(`[Purge] ${result.count} mensagens com mais de 30 dias removidas`);
+        }
+
+        // Remove status com mais de 7 dias (stories são efêmeros)
+        const statusResult = await prisma.whatsAppStatus.deleteMany({
+            where: { timestamp: { lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+        });
+        if (statusResult.count > 0) {
+            console.log(`[Purge] ${statusResult.count} status com mais de 7 dias removidos`);
+        }
+    } catch (err) {
+        console.error('[Purge] Erro:', err.message);
+    }
+}
+
+// Roda 1 vez por dia (a cada 24h), primeira execução 5 min após startup
+setTimeout(purgeOldMessages, 5 * 60 * 1000);
+setInterval(purgeOldMessages, 24 * 60 * 60 * 1000);
+
+// === CRON: limpeza de mensagens de grupo que possam ter sido salvas antes ===
+// Roda uma vez no startup para limpar dados antigos de grupo
+setTimeout(async () => {
+    try {
+        const groupConvs = await prisma.whatsAppConversation.findMany({
+            where: { isGroup: true },
+            select: { id: true }
+        });
+        if (groupConvs.length > 0) {
+            const result = await prisma.whatsAppMessage.deleteMany({
+                where: { conversationId: { in: groupConvs.map(c => c.id) } }
+            });
+            if (result.count > 0) {
+                console.log(`[Cleanup] ${result.count} mensagens de grupo removidas do banco`);
+            }
+        }
+    } catch (err) {
+        console.error('[Cleanup] Erro ao limpar msgs de grupo:', err.message);
+    }
+}, 60000); // 1 min após startup
+
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

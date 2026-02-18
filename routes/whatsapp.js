@@ -216,6 +216,39 @@ router.post('/webhook', async (req, res) => {
 
             const remoteJid = normalizeRemoteJid(key.remoteJid);
             const isGroup = remoteJid.includes('@g.us');
+
+            // Grupos: não salva mensagens no banco (economia de espaço)
+            // Apenas atualiza metadados da conversa (nome, último preview)
+            if (isGroup) {
+                const pushName = data.pushName || null;
+                const messageText = extractMessageText(data.message);
+                const messageType = detectMessageType(data.message);
+                const timestamp = data.messageTimestamp
+                    ? new Date(parseInt(data.messageTimestamp) * 1000)
+                    : new Date();
+                const displayContent = messageText || `[${messageType}]`;
+                const phoneNumber = remoteJid.replace(/@g\.us/g, '');
+
+                await prisma.whatsAppConversation.upsert({
+                    where: { remoteJid_instanceId: { remoteJid, instanceId: instance.id } },
+                    create: {
+                        remoteJid,
+                        phoneNumber,
+                        contactName: data.groupMetadata?.subject || pushName || phoneNumber,
+                        instanceId: instance.id,
+                        isGroup: true,
+                        lastMessageAt: timestamp,
+                        lastMessagePreview: pushName ? `${pushName}: ${displayContent}`.substring(0, 200) : displayContent.substring(0, 200)
+                    },
+                    update: {
+                        contactName: data.groupMetadata?.subject || undefined,
+                        lastMessageAt: timestamp,
+                        lastMessagePreview: pushName ? `${pushName}: ${displayContent}`.substring(0, 200) : displayContent.substring(0, 200)
+                    }
+                });
+                return; // Não salva a mensagem de grupo no banco
+            }
+
             const fromMe = key.fromMe || false;
             const messageId = key.id;
             const pushName = data.pushName || null;
@@ -229,26 +262,10 @@ router.post('/webhook', async (req, res) => {
             const displayContent = messageText || `[${messageType}]`;
             const mediaInfo = extractMediaInfo(data.message);
 
-            // Extrai número do telefone ou ID do grupo
-            const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+            // Extrai número do telefone
+            const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net/g, '');
 
-            // Nome para criar a conversa:
-            // - Grupo: subject do metadata > pushName > número
-            // - Contato: só usa pushName na criação; contacts.upsert vai sobrescrever
-            //   com o nome salvo na agenda (notify) que tem prioridade maior
-            const createName = isGroup
-                ? (data.groupMetadata?.subject || pushName || phoneNumber)
-                : (pushName || null);
-
-            // No update de conversa existente:
-            // - Grupo: atualiza se tem novo subject
-            // - Contato: NÃO sobrescreve com pushName — preserva o nome da agenda
-            //   que foi salvo pelo contacts.upsert (tem prioridade maior)
-            const updateName = isGroup
-                ? (data.groupMetadata?.subject || undefined)
-                : undefined; // nunca sobrescreve nome de contato via mensagem
-
-            // Upsert da conversa
+            // Upsert da conversa (apenas contatos individuais — grupos já tratados acima)
             const conversation = await prisma.whatsAppConversation.upsert({
                 where: {
                     remoteJid_instanceId: { remoteJid, instanceId: instance.id }
@@ -256,17 +273,16 @@ router.post('/webhook', async (req, res) => {
                 create: {
                     remoteJid,
                     phoneNumber,
-                    contactName: createName,
+                    contactName: pushName || null,
                     instanceId: instance.id,
-                    isGroup,
+                    isGroup: false,
                     lastMessageAt: timestamp,
                     lastMessagePreview: displayContent.substring(0, 200),
                     unreadCount: fromMe ? 0 : 1
                 },
                 update: {
-                    contactName: updateName,
                     lastMessageAt: timestamp,
-                    lastMessagePreview: isGroup && pushName ? `${pushName}: ${displayContent}`.substring(0, 200) : displayContent.substring(0, 200),
+                    lastMessagePreview: displayContent.substring(0, 200),
                     unreadCount: fromMe ? undefined : { increment: 1 }
                 }
             });
@@ -910,6 +926,79 @@ router.get('/conversations/:id/messages', authenticate, async (req, res) => {
     }
 });
 
+// GET /api/whatsapp/conversations/:id/messages/older?before=timestamp
+// Busca mensagens mais antigas da Evolution API (para scroll pra cima)
+// Não salva no banco — retorna direto para exibição temporária
+router.get('/conversations/:id/messages/older', authenticate, async (req, res) => {
+    try {
+        const { before, limit = 30 } = req.query;
+        const conv = await prisma.whatsAppConversation.findUnique({
+            where: { id: req.params.id },
+            include: { instance: true }
+        });
+        if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+
+        const instance = conv.instance;
+
+        // Busca na Evolution API com filtro de timestamp
+        const evoBody = {
+            where: { key: { remoteJid: conv.remoteJid } },
+            limit: Math.min(parseInt(limit) || 30, 100)
+        };
+
+        const evoRes = await fetch(`${instance.evolutionUrl}/chat/findMessages/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify(evoBody)
+        });
+
+        if (!evoRes.ok) {
+            return res.json([]); // sem histórico adicional
+        }
+
+        const evoMessages = await evoRes.json();
+        let msgs = [];
+        if (Array.isArray(evoMessages)) msgs = evoMessages;
+        else if (Array.isArray(evoMessages?.messages)) msgs = evoMessages.messages;
+        else if (Array.isArray(evoMessages?.messages?.records)) msgs = evoMessages.messages.records;
+        else if (Array.isArray(evoMessages?.data)) msgs = evoMessages.data;
+        else if (Array.isArray(evoMessages?.records)) msgs = evoMessages.records;
+
+        // Converte para formato compatível com o frontend
+        const beforeTimestamp = before ? new Date(before).getTime() / 1000 : Infinity;
+        const formatted = msgs
+            .filter(msg => {
+                const ts = parseInt(msg.messageTimestamp || 0);
+                return ts < beforeTimestamp;
+            })
+            .map(msg => {
+                const key = msg.key;
+                if (!key || !key.id) return null;
+                return {
+                    id: key.id,
+                    conversationId: conv.id,
+                    fromMe: key.fromMe || false,
+                    pushName: msg.pushName || null,
+                    content: extractMessageText(msg.message) || `[${detectMessageType(msg.message)}]`,
+                    messageType: detectMessageType(msg.message),
+                    mediaUrl: extractMediaInfo(msg.message).mediaUrl || null,
+                    mediaName: extractMediaInfo(msg.message).mediaName || null,
+                    mediaMimetype: extractMediaInfo(msg.message).mediaMimetype || null,
+                    timestamp: msg.messageTimestamp ? new Date(parseInt(msg.messageTimestamp) * 1000).toISOString() : new Date().toISOString(),
+                    status: key.fromMe ? 'sent' : 'received'
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, Math.min(parseInt(limit) || 30, 100));
+
+        res.json(formatted);
+    } catch (error) {
+        console.error('Erro ao buscar mensagens antigas:', error);
+        res.status(500).json({ error: 'Erro ao buscar histórico' });
+    }
+});
+
 // ===================================================================
 // ENVIO DE MENSAGENS
 // ===================================================================
@@ -1475,7 +1564,7 @@ router.post('/sync-conversation/:conversationId', authenticate, async (req, res)
                 headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     where: { key: { remoteJid } },
-                    limit: 200
+                    limit: 50
                 })
             });
 
@@ -1660,8 +1749,9 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
         // Busca todas as conversas desta instância
+        // Busca apenas conversas individuais (não grupos — economia de espaço)
         const conversations = await prisma.whatsAppConversation.findMany({
-            where: { instanceId: instance.id }
+            where: { instanceId: instance.id, isGroup: false }
         });
 
         let totalSynced = 0;
@@ -1674,7 +1764,7 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
                     headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         where: { key: { remoteJid: conv.remoteJid } },
-                        limit: 100
+                        limit: 50
                     })
                 });
 
@@ -2422,6 +2512,121 @@ router.post('/merge-duplicates', isAdmin, async (req, res) => {
     } catch (error) {
         console.error('Erro ao mesclar duplicatas:', error);
         res.status(500).json({ error: 'Erro ao mesclar duplicatas' });
+    }
+});
+
+// ===================================================================
+// LIMPEZA E MANUTENÇÃO DO BANCO
+// ===================================================================
+
+// DELETE /api/whatsapp/cleanup/:instanceName — Remove TODOS os dados de uma instância
+// Útil para trocar de conta: limpa conversas, mensagens e a instância em si
+router.delete('/cleanup/:instanceName', authenticate, isAdmin, async (req, res) => {
+    try {
+        const instance = await prisma.whatsAppInstance.findUnique({
+            where: { instanceName: req.params.instanceName }
+        });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        // 1. Deleta todas as mensagens de todas as conversas desta instância
+        const conversations = await prisma.whatsAppConversation.findMany({
+            where: { instanceId: instance.id },
+            select: { id: true }
+        });
+        const convIds = conversations.map(c => c.id);
+
+        let deletedMessages = 0;
+        if (convIds.length > 0) {
+            const result = await prisma.whatsAppMessage.deleteMany({
+                where: { conversationId: { in: convIds } }
+            });
+            deletedMessages = result.count;
+        }
+
+        // 2. Deleta todos os status desta instância
+        const deletedStatus = await prisma.whatsAppStatus.deleteMany({
+            where: { instanceId: instance.id }
+        });
+
+        // 3. Deleta atalhos desta instância
+        const deletedShortcuts = await prisma.whatsAppShortcut.deleteMany({
+            where: { instanceId: instance.id }
+        });
+
+        // 4. Deleta todas as conversas desta instância
+        const deletedConversations = await prisma.whatsAppConversation.deleteMany({
+            where: { instanceId: instance.id }
+        });
+
+        // 5. Deleta a instância em si
+        await prisma.whatsAppInstance.delete({
+            where: { id: instance.id }
+        });
+
+        console.log(`[Cleanup] Instância ${req.params.instanceName} removida: ${deletedMessages} msgs, ${deletedConversations.count} conversas, ${deletedStatus.count} status`);
+
+        res.json({
+            success: true,
+            deleted: {
+                messages: deletedMessages,
+                conversations: deletedConversations.count,
+                status: deletedStatus.count,
+                shortcuts: deletedShortcuts.count,
+                instance: 1
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao limpar instância:', error);
+        res.status(500).json({ error: 'Erro ao limpar instância' });
+    }
+});
+
+// DELETE /api/whatsapp/cleanup-all — Remove TODOS os dados de WhatsApp (reset completo)
+router.delete('/cleanup-all', authenticate, isAdmin, async (req, res) => {
+    try {
+        const deletedMessages = await prisma.whatsAppMessage.deleteMany({});
+        const deletedStatus = await prisma.whatsAppStatus.deleteMany({});
+        const deletedShortcuts = await prisma.whatsAppShortcut.deleteMany({});
+        const deletedConversations = await prisma.whatsAppConversation.deleteMany({});
+        const deletedInstances = await prisma.whatsAppInstance.deleteMany({});
+
+        console.log(`[Cleanup] Reset completo: ${deletedMessages.count} msgs, ${deletedConversations.count} conversas, ${deletedInstances.count} instâncias`);
+
+        res.json({
+            success: true,
+            deleted: {
+                messages: deletedMessages.count,
+                conversations: deletedConversations.count,
+                status: deletedStatus.count,
+                shortcuts: deletedShortcuts.count,
+                instances: deletedInstances.count
+            }
+        });
+    } catch (error) {
+        console.error('Erro no cleanup-all:', error);
+        res.status(500).json({ error: 'Erro ao limpar dados' });
+    }
+});
+
+// DELETE /api/whatsapp/purge-old-messages — Remove mensagens com mais de N dias
+// Query param: ?days=30 (padrão: 30)
+router.delete('/purge-old-messages', authenticate, isAdmin, async (req, res) => {
+    try {
+        const days = parseInt(req.query.days) || 30;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        const result = await prisma.whatsAppMessage.deleteMany({
+            where: {
+                timestamp: { lt: cutoffDate }
+            }
+        });
+
+        console.log(`[Purge] ${result.count} mensagens com mais de ${days} dias removidas`);
+        res.json({ success: true, deleted: result.count, olderThan: cutoffDate.toISOString() });
+    } catch (error) {
+        console.error('Erro ao purgar mensagens antigas:', error);
+        res.status(500).json({ error: 'Erro ao purgar mensagens' });
     }
 });
 
