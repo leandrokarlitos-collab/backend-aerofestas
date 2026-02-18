@@ -1330,7 +1330,29 @@ router.post('/sync-conversation/:conversationId', authenticate, async (req, res)
 
             if (evoRes.ok) {
                 const evoMessages = await evoRes.json();
-                const msgs = Array.isArray(evoMessages) ? evoMessages : evoMessages.messages || [];
+                // Log da estrutura bruta para debug (primeiros 500 chars)
+                console.log(`[Sync] ${remoteJid}: raw response keys=`, Object.keys(evoMessages || {}), 'isArray=', Array.isArray(evoMessages));
+
+                // Evolution API v2 pode retornar várias estruturas:
+                // - Array direto: [...]
+                // - { messages: [...] }
+                // - { messages: { records: [...] } }
+                // - { data: [...] }
+                let msgs = [];
+                if (Array.isArray(evoMessages)) {
+                    msgs = evoMessages;
+                } else if (Array.isArray(evoMessages?.messages)) {
+                    msgs = evoMessages.messages;
+                } else if (Array.isArray(evoMessages?.messages?.records)) {
+                    msgs = evoMessages.messages.records;
+                } else if (Array.isArray(evoMessages?.data)) {
+                    msgs = evoMessages.data;
+                } else if (Array.isArray(evoMessages?.records)) {
+                    msgs = evoMessages.records;
+                } else {
+                    console.warn(`[Sync] ${remoteJid}: formato desconhecido da Evolution API:`, JSON.stringify(evoMessages).substring(0, 300));
+                    msgs = [];
+                }
                 total = msgs.length;
                 console.log(`[Sync] ${remoteJid}: Evolution API retornou ${total} msgs`);
 
@@ -1438,7 +1460,20 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
                 if (!evoRes.ok) continue;
 
                 const evoMessages = await evoRes.json();
-                const msgs = Array.isArray(evoMessages) ? evoMessages : evoMessages.messages || [];
+                let msgs = [];
+                if (Array.isArray(evoMessages)) {
+                    msgs = evoMessages;
+                } else if (Array.isArray(evoMessages?.messages)) {
+                    msgs = evoMessages.messages;
+                } else if (Array.isArray(evoMessages?.messages?.records)) {
+                    msgs = evoMessages.messages.records;
+                } else if (Array.isArray(evoMessages?.data)) {
+                    msgs = evoMessages.data;
+                } else if (Array.isArray(evoMessages?.records)) {
+                    msgs = evoMessages.records;
+                } else {
+                    msgs = [];
+                }
 
                 for (const msg of msgs) {
                     const key = msg.key;
