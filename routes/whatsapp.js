@@ -1103,10 +1103,16 @@ router.get('/profile-pic/:instanceName/:number', authenticate, async (req, res) 
         });
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
+        // Valida número: Evolution API exige string numérica
+        const number = req.params.number;
+        if (!number || !/^\d+$/.test(number)) {
+            return res.json({ profilePicUrl: null });
+        }
+
         const evoRes = await fetch(`${instance.evolutionUrl}/chat/fetchProfilePictureUrl/${instance.instanceName}`, {
             method: 'POST',
             headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ number: req.params.number })
+            body: JSON.stringify({ number })
         });
 
         if (!evoRes.ok) {
@@ -1396,13 +1402,37 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
                 const chatList = Array.isArray(chats) ? chats : chats.chats || [];
 
                 for (const chat of chatList) {
-                    const remoteJid = chat.id || chat.remoteJid;
+                    let remoteJid = chat.id || chat.remoteJid;
                     if (!remoteJid) continue;
                     // Pula status broadcast
                     if (remoteJid === 'status@broadcast') continue;
+                    // Pula JIDs com @lid (endereçamento LID do Meta Business/Itaú)
+                    if (remoteJid.includes('@lid')) continue;
+                    // Normaliza JID (remove sufixo :0 de dispositivo)
+                    remoteJid = normalizeRemoteJid(remoteJid);
+                    // Pula JIDs sem domínio @s.whatsapp.net ou @g.us (IDs internos inválidos)
+                    if (!remoteJid.includes('@')) continue;
 
                     const isGroup = remoteJid.includes('@g.us');
                     const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
+
+                    // Extrai texto do lastMessagePreview (pode ser Object ou String)
+                    let lastPreview = null;
+                    if (chat.lastMessage) {
+                        if (typeof chat.lastMessage === 'string') {
+                            lastPreview = chat.lastMessage.substring(0, 200);
+                        } else if (typeof chat.lastMessage === 'object') {
+                            // Tenta extrair texto do objeto de mensagem
+                            const msg = chat.lastMessage;
+                            const text = msg.message?.conversation
+                                || msg.message?.extendedTextMessage?.text
+                                || msg.message?.imageMessage?.caption
+                                || msg.message?.videoMessage?.caption
+                                || msg.messageType
+                                || null;
+                            lastPreview = text ? String(text).substring(0, 200) : null;
+                        }
+                    }
 
                     // Verifica se já existe
                     const existing = await prisma.whatsAppConversation.findUnique({
@@ -1418,7 +1448,7 @@ router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
                                 instanceId: instance.id,
                                 isGroup,
                                 lastMessageAt: chat.lastMessageAt ? new Date(chat.lastMessageAt) : null,
-                                lastMessagePreview: chat.lastMessage || null
+                                lastMessagePreview: lastPreview
                             }
                         });
                     }
