@@ -72,6 +72,9 @@
             background: var(--wa-light-green); border-radius: 12px 0 12px 12px; max-width: 75%;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
+        /* Botão encaminhar — só aparece no hover da bolha */
+        .forward-btn { pointer-events: none; }
+        .group:hover .forward-btn { pointer-events: auto; }
 
         /* Conversation item */
         .conv-item { transition: background 0.15s ease; }
@@ -389,7 +392,19 @@
                             <button onclick="closeNewConvPanel()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-arrow-left"></i></button>
                             <h3 class="font-bold text-sm">Nova conversa</h3>
                         </div>
-                        <input type="text" id="search-contacts" placeholder="Buscar contato..." class="form-input w-full pl-9 pr-4 py-2 rounded-xl text-sm">
+                        <input type="text" id="search-contacts" placeholder="Buscar contato ou digitar número..." class="form-input w-full pl-9 pr-4 py-2 rounded-xl text-sm">
+                        <!-- Botão aparece ao digitar um número -->
+                        <div id="new-conv-number-btn" class="hidden mt-2">
+                            <button id="start-conv-number" class="w-full flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition text-left">
+                                <div class="w-9 h-9 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white flex-shrink-0">
+                                    <i class="fas fa-phone text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-800">Iniciar conversa</p>
+                                    <p class="text-xs text-gray-500" id="new-conv-number-display"></p>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                     <div id="contacts-list" class="divide-y divide-gray-100"></div>
                 </div>
@@ -652,6 +667,22 @@
             </div>
             <input type="text" id="search-contacts-send" placeholder="Buscar contato..." class="form-input w-full text-sm mb-3">
             <div id="contacts-send-list" class="flex-1 overflow-y-auto divide-y divide-gray-100"></div>
+        </div>
+    </div>
+
+    <!-- Forward Message Modal -->
+    <div id="forward-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-sm w-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold"><i class="fas fa-share text-green-500 mr-2"></i>Encaminhar para</h3>
+                <button onclick="closeForwardModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <!-- Preview da mensagem -->
+            <div id="forward-preview" class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 text-sm text-gray-600 max-h-20 overflow-hidden line-clamp-3"></div>
+            <!-- Busca -->
+            <input type="text" id="forward-search" placeholder="Buscar conversa..." class="form-input w-full text-sm mb-3" oninput="filterForwardList(this.value)">
+            <!-- Lista de conversas -->
+            <div id="forward-conv-list" class="flex-1 overflow-y-auto divide-y divide-gray-100 min-h-0"></div>
         </div>
     </div>
 
@@ -984,6 +1015,10 @@
                     updateConnectionStatus();
                     // Atualiza URL sem recarregar
                     history.replaceState(null, '', `WhatsApp.html?instance=${currentInstance}`);
+                    // Sync contatos ao trocar de instância (background)
+                    api.syncContacts(currentInstance).then(r => {
+                        if (r?.created > 0 || r?.updated > 0) loadConversations();
+                    }).catch(() => {});
                 });
             });
         }
@@ -1334,7 +1369,8 @@
                 }
 
                 const bubble = document.createElement('div');
-                bubble.className = `p-2.5 ${msg.fromMe ? 'bubble-sent ml-auto' : 'bubble-received mr-auto'}`;
+                bubble.className = `relative group p-2.5 ${msg.fromMe ? 'bubble-sent ml-auto' : 'bubble-received mr-auto'}`;
+                bubble.dataset.msgId = msg.id;
 
                 const time = formatTime(msg.timestamp);
                 const statusIcon = msg.fromMe ? (
@@ -1353,6 +1389,8 @@
                 const isGroup = currentConversation?.isGroup;
                 const senderName = (isGroup && !msg.fromMe && msg.pushName) ? `<p class="text-[11px] font-semibold text-teal-600 mb-0.5">${escapeHtml(msg.pushName)}</p>` : '';
 
+                // Botão de encaminhar (aparece no hover)
+                const fwdBtnSide = msg.fromMe ? 'right-full mr-1' : 'left-full ml-1';
                 bubble.innerHTML = `
                     ${senderName}
                     ${contentHtml}
@@ -1360,7 +1398,18 @@
                         <span class="text-[10px] text-gray-400">${time}</span>
                         <span class="text-[10px]">${statusIcon}</span>
                     </div>
+                    <button class="forward-btn absolute top-1/2 -translate-y-1/2 ${fwdBtnSide} opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-gray-200 rounded-full w-7 h-7 flex items-center justify-center shadow-sm hover:bg-green-50 hover:border-green-300 text-gray-400 hover:text-green-600" title="Encaminhar" onclick="openForwardModal('${escapeHtml(msg.id)}')">
+                        <i class="fas fa-share text-[11px]"></i>
+                    </button>
                 `;
+
+                // Long-press para mobile
+                let longPressTimer;
+                bubble.addEventListener('touchstart', () => {
+                    longPressTimer = setTimeout(() => openForwardModal(msg.id), 600);
+                }, { passive: true });
+                bubble.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                bubble.addEventListener('touchmove', () => clearTimeout(longPressTimer));
 
                 area.appendChild(bubble);
             });
@@ -2288,9 +2337,37 @@
                 startConversationWith(contact);
             });
 
-            document.getElementById('search-contacts').addEventListener('input', (e) => {
-                const q = e.target.value.toLowerCase();
-                const filtered = contactsCache.filter(c => c.name.toLowerCase().includes(q) || c.phoneNumber.includes(q));
+            const searchInput = document.getElementById('search-contacts');
+            const numberBtn = document.getElementById('new-conv-number-btn');
+            const numberDisplay = document.getElementById('new-conv-number-display');
+            const startBtn = document.getElementById('start-conv-number');
+
+            searchInput.addEventListener('input', (e) => {
+                const q = e.target.value.trim();
+                const qLower = q.toLowerCase();
+                const digits = q.replace(/\D/g, '');
+
+                // Mostra botão de número se digitou pelo menos 8 dígitos
+                if (digits.length >= 8) {
+                    // Normaliza: adiciona 55 se não tiver código de país
+                    const normalized = digits.startsWith('55') && digits.length >= 12
+                        ? digits
+                        : digits.length <= 11 ? '55' + digits : digits;
+                    const jid = `${normalized}@s.whatsapp.net`;
+                    numberDisplay.textContent = `+${normalized}`;
+                    numberBtn.classList.remove('hidden');
+                    startBtn.onclick = () => {
+                        closeNewConvPanel();
+                        startConversationWith({ remoteJid: jid, name: normalized, phoneNumber: normalized });
+                    };
+                } else {
+                    numberBtn.classList.add('hidden');
+                }
+
+                // Filtra lista de contatos
+                const filtered = contactsCache.filter(c =>
+                    c.name.toLowerCase().includes(qLower) || c.phoneNumber.includes(digits)
+                );
                 renderContactsList(filtered, 'contacts-list', (contact) => {
                     closeNewConvPanel();
                     startConversationWith(contact);
@@ -2920,13 +2997,16 @@
         window.syncCurrentConversation = syncCurrentConversation;
 
         window.syncAllContacts = async function() {
-            showToast('Atualizando nomes dos contatos...', 'info');
+            showToast('Sincronizando contatos da agenda...', 'info');
             const result = await api.syncContacts(currentInstance);
             if (result) {
-                showToast(`${result.updated} nomes atualizados`, 'success');
+                const parts = [];
+                if (result.created > 0) parts.push(`${result.created} novos`);
+                if (result.updated > 0) parts.push(`${result.updated} atualizados`);
+                showToast(parts.length ? `Contatos: ${parts.join(', ')}` : 'Contatos já atualizados', 'success');
                 await loadConversations();
             } else {
-                showToast('Erro ao atualizar contatos', 'error');
+                showToast('Erro ao sincronizar contatos', 'error');
             }
         };
 
@@ -2960,6 +3040,110 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
+        // --- ENCAMINHAR MENSAGEM ---
+        let forwardMsgId = null;
+
+        window.openForwardModal = function(msgId) {
+            forwardMsgId = msgId;
+            const msg = messages.find(m => m.id === msgId);
+            if (!msg) return;
+
+            // Preview do conteúdo
+            const preview = document.getElementById('forward-preview');
+            const isMedia = msg.messageType !== 'text';
+            const mediaIcon = { image: '🖼️', video: '🎥', audio: '🎵', document: '📄', sticker: '😊' };
+            if (isMedia) {
+                const icon = mediaIcon[msg.messageType] || '📎';
+                preview.textContent = `${icon} ${msg.mediaName || msg.content || msg.messageType}`;
+            } else {
+                preview.textContent = msg.content;
+            }
+
+            // Preenche lista de conversas (sem a atual)
+            document.getElementById('forward-search').value = '';
+            renderForwardList('');
+            document.getElementById('forward-modal').classList.remove('modal-hidden');
+            setTimeout(() => document.getElementById('forward-search').focus(), 100);
+        };
+
+        window.closeForwardModal = function() {
+            document.getElementById('forward-modal').classList.add('modal-hidden');
+            forwardMsgId = null;
+        };
+
+        window.filterForwardList = function(q) {
+            renderForwardList(q.toLowerCase());
+        };
+
+        function renderForwardList(query) {
+            const list = document.getElementById('forward-conv-list');
+            const filtered = conversations.filter(c =>
+                c.id !== currentConversationId &&
+                (
+                    (c.contactName || '').toLowerCase().includes(query) ||
+                    c.phoneNumber.includes(query.replace(/\D/g, ''))
+                )
+            ).slice(0, 50);
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-400 text-sm py-6">Nenhuma conversa encontrada</p>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(c => {
+                const name = c.contactName || c.phoneNumber;
+                const initials = escapeHtml((name)[0]?.toUpperCase() || '?');
+                const preview = c.lastMessagePreview ? escapeHtml(c.lastMessagePreview.substring(0, 35)) : '';
+                return `<div class="flex items-center gap-3 p-3 cursor-pointer hover:bg-green-50 transition" onclick="executeForward('${escapeHtml(c.id)}','${escapeHtml(c.remoteJid)}','${escapeHtml(name)}')">
+                    <div class="w-9 h-9 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">${initials}</div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium truncate">${escapeHtml(name)}</p>
+                        ${preview ? `<p class="text-xs text-gray-400 truncate">${preview}</p>` : ''}
+                    </div>
+                    <i class="fas fa-share text-green-400 text-sm flex-shrink-0"></i>
+                </div>`;
+            }).join('');
+        }
+
+        window.executeForward = async function(convId, remoteJid, convName) {
+            const msg = messages.find(m => m.id === forwardMsgId);
+            if (!msg) return;
+
+            closeForwardModal();
+            showToast(`Encaminhando para ${convName}...`, 'info');
+
+            try {
+                let result;
+                if (msg.messageType === 'text') {
+                    result = await api.send(currentInstance, remoteJid, msg.content);
+                } else if (msg.mediaUrl && ['image', 'video', 'document', 'audio'].includes(msg.messageType)) {
+                    result = await api.sendMedia(
+                        currentInstance,
+                        remoteJid,
+                        msg.messageType,
+                        msg.mediaUrl,
+                        msg.content && !msg.content.startsWith('[') ? msg.content : '',
+                        msg.mediaName || '',
+                        msg.mediaMimetype || ''
+                    );
+                } else {
+                    // Fallback: encaminha como texto
+                    const fallback = msg.mediaName
+                        ? `[${msg.messageType.toUpperCase()}] ${msg.mediaName}`
+                        : msg.content;
+                    result = await api.send(currentInstance, remoteJid, fallback);
+                }
+
+                if (result && !result.error) {
+                    showToast(`Encaminhado para ${convName}`, 'success');
+                } else {
+                    showToast('Erro ao encaminhar mensagem', 'error');
+                }
+            } catch (e) {
+                showToast('Erro ao encaminhar mensagem', 'error');
+            }
+        };
+
         // --- INIT ---
         async function init() {
             instances = await api.getInstances();
@@ -2976,6 +3160,18 @@
             await updateUnreadBadges();
             showChatWelcome();
             startPolling();
+
+            // Sync de contatos em background (não bloqueia a UI)
+            // Atualiza nomes a partir da agenda do WhatsApp e cria conversas para novos contatos
+            api.syncContacts(currentInstance).then(r => {
+                if (r?.created > 0 || r?.updated > 0) {
+                    const msg = [];
+                    if (r.created > 0) msg.push(`${r.created} novos`);
+                    if (r.updated > 0) msg.push(`${r.updated} atualizados`);
+                    console.log(`[Init] Contatos sincronizados: ${msg.join(', ')}`);
+                    loadConversations(); // recarrega lista com nomes novos
+                }
+            }).catch(() => {}); // silencioso se falhar
 
             // On desktop, show both panels; on mobile, hide chat panel
             if (window.innerWidth >= 1024) {

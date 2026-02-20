@@ -352,7 +352,7 @@ router.post('/webhook', async (req, res) => {
                 sendPushToAll(
                     `WhatsApp ${instance.displayName}: ${senderName}`,
                     displayContent.substring(0, 100),
-                    `/WhatsApp.html?instance=${instanceName}`
+                    `/WhatsApp.html?instance=${instanceName}&conversation=${conversation.id}`
                 );
             }
         }
@@ -373,6 +373,44 @@ router.post('/webhook', async (req, res) => {
                 }
             });
             console.log(`[WA] Instância ${instanceName}: ${status}`);
+
+            // Auto-sync de contatos ao conectar (background, não bloqueia o webhook)
+            if (status === 'connected') {
+                setImmediate(async () => {
+                    try {
+                        const inst = await prisma.whatsAppInstance.findUnique({ where: { instanceName } });
+                        if (!inst) return;
+                        const contactsRes = await fetch(`${inst.evolutionUrl}/chat/findContacts/${instanceName}`, {
+                            method: 'POST',
+                            headers: { 'apikey': inst.apiKey, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ where: {} })
+                        });
+                        if (!contactsRes.ok) return;
+                        const contactsData = await contactsRes.json();
+                        const contacts = Array.isArray(contactsData) ? contactsData
+                            : Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
+
+                        let synced = 0;
+                        for (const contact of contacts) {
+                            const rawJid = contact.id || contact.remoteJid;
+                            if (!rawJid || !rawJid.includes('@s.whatsapp.net')) continue;
+                            const remoteJid = normalizeRemoteJid(rawJid);
+                            const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
+                            if (!savedName) continue;
+                            const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
+                            await prisma.whatsAppConversation.upsert({
+                                where: { remoteJid_instanceId: { remoteJid, instanceId: inst.id } },
+                                create: { remoteJid, phoneNumber, contactName: savedName, instanceId: inst.id, isGroup: false },
+                                update: { contactName: savedName }
+                            });
+                            synced++;
+                        }
+                        console.log(`[WA Auto-Sync] ${instanceName}: ${synced} contatos sincronizados ao conectar`);
+                    } catch (e) {
+                        console.warn(`[WA Auto-Sync] Erro ao sincronizar contatos:`, e.message);
+                    }
+                });
+            }
         }
 
         // --- MESSAGES_UPDATE (status: delivered, read) ---
@@ -1809,43 +1847,61 @@ router.post('/sync-contacts/:instanceName', authenticate, async (req, res) => {
         const instance = await getInstanceWithCreds(req.params.instanceName);
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        // Busca contatos da Evolution API
-        const evoRes = await fetch(`${instance.evolutionUrl}/chat/fetchAllGroups/${instance.instanceName}?getParticipants=false`, {
-            headers: { 'apikey': instance.apiKey }
-        });
+        let updated = 0;
+        let created = 0;
 
-        // Busca contatos (endpoint pode variar)
-        let contactsRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
+        // Busca contatos individuais da Evolution API
+        const contactsRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
             method: 'POST',
             headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
             body: JSON.stringify({ where: {} })
         });
 
-        let updated = 0;
         if (contactsRes.ok) {
             const contactsData = await contactsRes.json();
             const contacts = Array.isArray(contactsData) ? contactsData
                 : Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
 
             for (const contact of contacts) {
-                const remoteJid = contact.id || contact.remoteJid;
-                if (!remoteJid || !remoteJid.includes('@s.whatsapp.net')) continue;
+                const rawJid = contact.id || contact.remoteJid;
+                if (!rawJid || !rawJid.includes('@s.whatsapp.net')) continue;
+                const remoteJid = normalizeRemoteJid(rawJid);
 
                 // Prioridade: notify (nome salvo na agenda) > verifiedName > pushName
                 const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
                 if (!savedName) continue;
 
-                const result = await prisma.whatsAppConversation.updateMany({
-                    where: { remoteJid, instanceId: instance.id },
-                    data: { contactName: savedName }
+                const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
+
+                // Upsert: atualiza se existe, cria se não existe
+                const upsertResult = await prisma.whatsAppConversation.upsert({
+                    where: { remoteJid_instanceId: { remoteJid, instanceId: instance.id } },
+                    create: {
+                        remoteJid,
+                        phoneNumber,
+                        contactName: savedName,
+                        instanceId: instance.id,
+                        isGroup: false
+                    },
+                    update: {
+                        contactName: savedName
+                    }
                 });
-                if (result.count > 0) updated++;
+
+                // Detecta se foi criado ou atualizado pelo updatedAt vs createdAt
+                const wasCreated = upsertResult.createdAt.getTime() === upsertResult.updatedAt.getTime();
+                if (wasCreated) created++;
+                else updated++;
             }
         }
 
-        // Busca grupos e atualiza nomes
-        if (evoRes.ok) {
-            const groups = await evoRes.json();
+        // Busca grupos e atualiza nomes (só atualiza — não cria grupos sem histórico)
+        const groupsRes = await fetch(`${instance.evolutionUrl}/chat/fetchAllGroups/${instance.instanceName}?getParticipants=false`, {
+            headers: { 'apikey': instance.apiKey }
+        });
+
+        if (groupsRes.ok) {
+            const groups = await groupsRes.json();
             const groupList = Array.isArray(groups) ? groups : groups?.groups || [];
             for (const group of groupList) {
                 const remoteJid = group.id;
@@ -1860,7 +1916,8 @@ router.post('/sync-contacts/:instanceName', authenticate, async (req, res) => {
             }
         }
 
-        res.json({ success: true, updated });
+        console.log(`[Sync Contacts] ${instance.instanceName}: ${created} criados, ${updated} atualizados`);
+        res.json({ success: true, updated, created });
     } catch (error) {
         console.error('Erro ao sincronizar contatos:', error);
         res.status(500).json({ error: 'Erro ao sincronizar contatos' });
@@ -2038,29 +2095,64 @@ router.get('/contacts/:instanceName', authenticate, async (req, res) => {
         const instance = await getInstanceWithCreds(req.params.instanceName);
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        const evoRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
-            method: 'POST',
-            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+        // Fonte primária: conversas individuais já salvas no banco
+        // Elas têm remoteJid válido (55xx@s.whatsapp.net) e nome correto
+        const dbConvs = await prisma.whatsAppConversation.findMany({
+            where: { instanceId: instance.id, isGroup: false },
+            orderBy: [
+                { contactName: 'asc' }
+            ],
+            select: {
+                remoteJid: true,
+                phoneNumber: true,
+                contactName: true,
+                profilePicUrl: true
+            }
         });
 
-        if (!evoRes.ok) {
-            const err = await evoRes.json().catch(() => ({}));
-            return res.status(502).json({ error: 'Erro ao buscar contatos', details: err });
+        // Monta mapa de JIDs já conhecidos
+        const knownJids = new Set(dbConvs.map(c => c.remoteJid));
+
+        // Fonte secundária: Evolution API (para contatos que ainda não têm conversa)
+        let evoContacts = [];
+        try {
+            const evoRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
+                method: 'POST',
+                headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (evoRes.ok) {
+                const raw = await evoRes.json();
+                const list = Array.isArray(raw) ? raw : raw.contacts || [];
+                evoContacts = list
+                    .filter(c =>
+                        c.id &&
+                        c.id.includes('@s.whatsapp.net') && // JID real de WhatsApp
+                        !c.id.includes('@g.us') &&
+                        c.id !== 'status@broadcast' &&
+                        !knownJids.has(c.id) // não duplica com o banco
+                    )
+                    .map(c => ({
+                        remoteJid: c.id,
+                        phoneNumber: c.id.replace('@s.whatsapp.net', ''),
+                        name: c.pushName || c.name || c.verifiedName || c.id.replace('@s.whatsapp.net', ''),
+                        profilePicUrl: c.profilePictureUrl || null
+                    }));
+            }
+        } catch (e) {
+            console.warn('[Contacts] Erro ao buscar da Evolution API (não crítico):', e.message);
         }
 
-        const contacts = await evoRes.json();
-        const contactList = Array.isArray(contacts) ? contacts : contacts.contacts || [];
-
-        // Normaliza e filtra contatos válidos
-        const result = contactList
-            .filter(c => c.id && !c.id.includes('@g.us') && c.id !== 'status@broadcast')
-            .map(c => ({
-                remoteJid: c.id,
-                phoneNumber: c.id.replace('@s.whatsapp.net', ''),
-                name: c.pushName || c.name || c.verifiedName || c.id.replace('@s.whatsapp.net', ''),
-                profilePicUrl: c.profilePictureUrl || null
-            }));
+        // Combina: banco (com nomes) + Evolution API (novos contatos sem conversa)
+        const result = [
+            ...dbConvs.map(c => ({
+                remoteJid: c.remoteJid,
+                phoneNumber: c.phoneNumber,
+                name: c.contactName || c.phoneNumber,
+                profilePicUrl: c.profilePicUrl || null
+            })),
+            ...evoContacts
+        ];
 
         res.json(result);
     } catch (error) {
