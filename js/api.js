@@ -699,6 +699,19 @@ export const api = {
         } catch (e) { return false; }
     },
 
+    pollWhatsApp: async (instance, since, conversationId) => {
+        try {
+            const token = getToken();
+            const params = new URLSearchParams({ instance });
+            if (since) params.set('since', since);
+            if (conversationId) params.set('conversationId', conversationId);
+            const res = await fetch(`${BASE_URL}/whatsapp/poll?${params}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
     // --- BACKUP ---
 
     getBackupFull: async () => {

@@ -355,6 +355,7 @@ model WhatsAppConversation {
 
   @@unique([remoteJid, instanceId])
   @@index([instanceId, lastMessageAt])
+  @@index([instanceId, updatedAt])
   @@index([clientId])
 }
 

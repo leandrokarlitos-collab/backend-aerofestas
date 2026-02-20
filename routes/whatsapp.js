@@ -273,7 +273,7 @@ router.post('/webhook', async (req, res) => {
                 create: {
                     remoteJid,
                     phoneNumber,
-                    contactName: pushName || null,
+                    contactName: fromMe ? null : (pushName || null),
                     instanceId: instance.id,
                     isGroup: false,
                     lastMessageAt: timestamp,
@@ -283,7 +283,8 @@ router.post('/webhook', async (req, res) => {
                 update: {
                     lastMessageAt: timestamp,
                     lastMessagePreview: displayContent.substring(0, 200),
-                    unreadCount: fromMe ? undefined : { increment: 1 }
+                    unreadCount: fromMe ? undefined : { increment: 1 },
+                    ...(pushName && !fromMe ? { contactName: pushName } : {})
                 }
             });
 
@@ -868,7 +869,7 @@ router.post('/ensure-conversation', authenticate, async (req, res) => {
 // GET /api/whatsapp/conversations/:id/messages
 router.get('/conversations/:id/messages', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 80, since } = req.query;
+        const { page = 1, limit = 80, since, before } = req.query;
 
         const select = {
             id: true,
@@ -885,7 +886,6 @@ router.get('/conversations/:id/messages', authenticate, async (req, res) => {
         };
 
         // Modo "polling incremental": busca apenas msgs após um timestamp
-        // Muito mais leve que buscar page=1 inteiro a cada 5s
         if (since) {
             const sinceDate = new Date(since);
             if (!isNaN(sinceDate.getTime())) {
@@ -896,6 +896,23 @@ router.get('/conversations/:id/messages', authenticate, async (req, res) => {
                     },
                     orderBy: { timestamp: 'asc' },
                     take: 50,
+                    select
+                });
+                return res.json(messages);
+            }
+        }
+
+        // Modo "cursor-based": busca msgs antes de um timestamp (scroll pra cima)
+        if (before) {
+            const beforeDate = new Date(before);
+            if (!isNaN(beforeDate.getTime())) {
+                const messages = await prisma.whatsAppMessage.findMany({
+                    where: {
+                        conversationId: req.params.id,
+                        timestamp: { lt: beforeDate }
+                    },
+                    orderBy: { timestamp: 'desc' },
+                    take: Math.min(parseInt(limit) || 30, 100),
                     select
                 });
                 return res.json(messages);
@@ -928,7 +945,7 @@ router.get('/conversations/:id/messages', authenticate, async (req, res) => {
 
 // GET /api/whatsapp/conversations/:id/messages/older?before=timestamp
 // Busca mensagens mais antigas da Evolution API (para scroll pra cima)
-// Não salva no banco — retorna direto para exibição temporária
+// Salva no banco para consultas futuras
 router.get('/conversations/:id/messages/older', authenticate, async (req, res) => {
     try {
         const { before, limit = 30 } = req.query;
@@ -992,10 +1009,118 @@ router.get('/conversations/:id/messages/older', authenticate, async (req, res) =
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, Math.min(parseInt(limit) || 30, 100));
 
+        // Salva no banco para consultas futuras (não depender da Evolution API de novo)
+        if (formatted.length > 0) {
+            try {
+                const batch = formatted.map(msg => ({
+                    id: msg.id,
+                    conversationId: conv.id,
+                    fromMe: msg.fromMe,
+                    pushName: msg.pushName,
+                    content: msg.content,
+                    messageType: msg.messageType,
+                    mediaUrl: msg.mediaUrl,
+                    mediaName: msg.mediaName,
+                    mediaMimetype: msg.mediaMimetype,
+                    timestamp: new Date(msg.timestamp),
+                    status: msg.status
+                }));
+                await prisma.whatsAppMessage.createMany({
+                    data: batch,
+                    skipDuplicates: true
+                });
+            } catch (e) {
+                console.warn('[Older] Erro ao salvar no banco (não crítico):', e.message);
+            }
+        }
+
         res.json(formatted);
     } catch (error) {
         console.error('Erro ao buscar mensagens antigas:', error);
         res.status(500).json({ error: 'Erro ao buscar histórico' });
+    }
+});
+
+// ===================================================================
+// POLLING UNIFICADO
+// ===================================================================
+
+// GET /api/whatsapp/poll?instance=X&since=ISO&conversationId=Y
+// Endpoint leve que retorna apenas mudanças desde o último poll
+router.get('/poll', authenticate, async (req, res) => {
+    try {
+        const { instance, since, conversationId } = req.query;
+        const sinceDate = since ? new Date(since) : new Date(Date.now() - 30000);
+
+        const result = {
+            serverTime: new Date().toISOString(),
+            conversations: [],
+            messages: [],
+            presence: null
+        };
+
+        // 1. Conversas atualizadas desde o último poll
+        const convWhere = { updatedAt: { gt: sinceDate } };
+        if (instance) {
+            const inst = await prisma.whatsAppInstance.findUnique({
+                where: { instanceName: instance }
+            });
+            if (inst) convWhere.instanceId = inst.id;
+        }
+
+        result.conversations = await prisma.whatsAppConversation.findMany({
+            where: convWhere,
+            orderBy: { lastMessageAt: 'desc' },
+            take: 50,
+            include: {
+                instance: {
+                    select: { instanceName: true, displayName: true, companyName: true }
+                }
+            }
+        });
+
+        // 2. Mensagens novas da conversa aberta (se houver)
+        if (conversationId) {
+            result.messages = await prisma.whatsAppMessage.findMany({
+                where: {
+                    conversationId,
+                    timestamp: { gt: sinceDate }
+                },
+                orderBy: { timestamp: 'asc' },
+                take: 50,
+                select: {
+                    id: true,
+                    conversationId: true,
+                    fromMe: true,
+                    pushName: true,
+                    content: true,
+                    messageType: true,
+                    mediaUrl: true,
+                    mediaName: true,
+                    mediaMimetype: true,
+                    timestamp: true,
+                    status: true
+                }
+            });
+        }
+
+        // 3. Presence da conversa aberta
+        if (conversationId && instance) {
+            const conv = result.conversations.find(c => c.id === conversationId)
+                || await prisma.whatsAppConversation.findUnique({ where: { id: conversationId } });
+            if (conv) {
+                const key = `${instance}:${conv.remoteJid}`;
+                const entry = presenceStore[key];
+                if (entry && (Date.now() - entry.updatedAt) < 15000) {
+                    result.presence = entry.status;
+                }
+            }
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('Erro no poll:', error);
+        res.status(500).json({ error: 'Erro no poll' });
     }
 });
 
@@ -1743,7 +1868,7 @@ router.post('/sync-contacts/:instanceName', authenticate, async (req, res) => {
 });
 
 // POST /api/whatsapp/sync-history/:instanceName — Sync completo de todas as conversas
-router.post('/sync-history/:instanceName', authenticate, async (req, res) => {
+router.post('/sync-history/:instanceName', isAdmin, async (req, res) => {
     try {
         const instance = await getInstanceWithCreds(req.params.instanceName);
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });

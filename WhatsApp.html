@@ -754,6 +754,8 @@
         let isLoadingMore = false;
         let hasMoreMessages = true;
         let pollInterval = null;
+        let pollTimer = null;
+        let lastPollTime = new Date().toISOString();
         let instances = [];
         let userData = null;
         let filterUnreadOnly = false;
@@ -772,17 +774,29 @@
                     return r.ok ? await r.json() : [];
                 } catch(e) { return []; }
             },
-            getMessages: async (convId, page = 1) => {
+            getMessages: async (convId, page = 1, before = null) => {
                 try {
-                    const r = await fetch(`${BASE}/conversations/${convId}/messages?page=${page}&limit=80`, { headers: headers() });
+                    let url = `${BASE}/conversations/${convId}/messages?limit=80`;
+                    if (before) url += `&before=${encodeURIComponent(before)}`;
+                    else if (page) url += `&page=${page}`;
+                    const r = await fetch(url, { headers: headers() });
                     return r.ok ? await r.json() : [];
                 } catch(e) { return []; }
             },
-            getNewMessages: async (convId, sinceTimestamp) => {
+            getOlderMessages: async (convId, beforeTimestamp) => {
                 try {
-                    const r = await fetch(`${BASE}/conversations/${convId}/messages?since=${encodeURIComponent(sinceTimestamp)}`, { headers: headers() });
+                    const r = await fetch(`${BASE}/conversations/${convId}/messages/older?before=${encodeURIComponent(beforeTimestamp)}&limit=30`, { headers: headers() });
                     return r.ok ? await r.json() : [];
                 } catch(e) { return []; }
+            },
+            poll: async (instance, since, conversationId) => {
+                try {
+                    const params = new URLSearchParams({ instance });
+                    if (since) params.set('since', since);
+                    if (conversationId) params.set('conversationId', conversationId);
+                    const r = await fetch(`${BASE}/poll?${params}`, { headers: headers() });
+                    return r.ok ? await r.json() : null;
+                } catch(e) { return null; }
             },
             send: async (instanceName, remoteJid, text) => {
                 try {
@@ -970,10 +984,6 @@
                     updateConnectionStatus();
                     // Atualiza URL sem recarregar
                     history.replaceState(null, '', `WhatsApp.html?instance=${currentInstance}`);
-                    // Sync nomes de contatos em background
-                    api.syncContacts(currentInstance).then(r => {
-                        if (r?.updated > 0) loadConversations();
-                    });
                 });
             });
         }
@@ -1196,12 +1206,22 @@
             // Atualiza lista uma única vez
             renderConversationList();
 
-            // === 3. AUTO-SYNC em background (não bloqueia UI) ===
+            // === 3. Banner informativo quando não há mensagens ===
             if (messages.length === 0 && conv.id) {
                 syncBanner.classList.remove('hidden');
-                syncBanner.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Buscando histórico...';
-                syncCurrentConversation(); // sem await — roda em background
+                syncBanner.innerHTML = `
+                    <span class="text-gray-500 text-xs">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Nenhuma mensagem salva. Novas mensagens aparecerão automaticamente.
+                        <button onclick="syncCurrentConversation()" class="ml-2 text-green-600 font-semibold hover:underline">
+                            <i class="fas fa-download mr-0.5"></i>Buscar histórico
+                        </button>
+                    </span>
+                `;
             }
+
+            // Reset poll baseline para pegar mensagens que cheguem agora
+            lastPollTime = new Date().toISOString();
         }
 
         // --- LOAD MESSAGES ---
@@ -1357,8 +1377,48 @@
                 document.getElementById('loading-more').classList.remove('hidden');
 
                 const prevHeight = this.scrollHeight;
-                messagesPage++;
-                await loadMessages();
+                const oldestTimestamp = messages.length > 0 ? messages[0].timestamp : null;
+
+                if (oldestTimestamp) {
+                    // 1. Tenta buscar do banco (cursor-based)
+                    const dbOlder = await api.getMessages(currentConversationId, null, oldestTimestamp);
+                    const olderMsgs = (Array.isArray(dbOlder) ? dbOlder : []).reverse();
+
+                    if (olderMsgs.length > 0) {
+                        // Filtra duplicatas
+                        const existingIds = new Set(messages.map(m => m.id));
+                        const newMsgs = olderMsgs.filter(m => !existingIds.has(m.id));
+                        if (newMsgs.length > 0) {
+                            messages = [...newMsgs, ...messages];
+                            renderMessages(false);
+                        } else {
+                            // Banco retornou duplicatas — tenta Evolution API
+                            const evoOlder = await api.getOlderMessages(currentConversationId, oldestTimestamp);
+                            const evoMsgs = (Array.isArray(evoOlder) ? evoOlder : []).reverse();
+                            const newEvoMsgs = evoMsgs.filter(m => !existingIds.has(m.id));
+                            if (newEvoMsgs.length > 0) {
+                                messages = [...newEvoMsgs, ...messages];
+                                renderMessages(false);
+                            } else {
+                                hasMoreMessages = false;
+                            }
+                        }
+                    } else {
+                        // 2. Banco vazio — busca da Evolution API (salva automaticamente)
+                        const evoOlder = await api.getOlderMessages(currentConversationId, oldestTimestamp);
+                        const evoMsgs = (Array.isArray(evoOlder) ? evoOlder : []).reverse();
+                        const existingIds = new Set(messages.map(m => m.id));
+                        const newEvoMsgs = evoMsgs.filter(m => !existingIds.has(m.id));
+                        if (newEvoMsgs.length > 0) {
+                            messages = [...newEvoMsgs, ...messages];
+                            renderMessages(false);
+                        } else {
+                            hasMoreMessages = false;
+                        }
+                    }
+                } else {
+                    hasMoreMessages = false;
+                }
 
                 // Manter scroll position
                 this.scrollTop = this.scrollHeight - prevHeight;
@@ -2023,60 +2083,102 @@
             renderConversationList();
         }
 
-        // --- POLLING ---
+        // --- SMART POLLING (unificado) ---
+        let _pollCount = 0;
+        const POLL_ACTIVE = 5000;     // 5s com conversa aberta
+        const POLL_IDLE = 10000;      // 10s sem conversa
+        const POLL_BG = 30000;        // 30s aba em background
+
         function startPolling() {
-            // Polling de MENSAGENS: 3s — tempo real, prioridade máxima
-            // Roda independente do polling de conversas para não ser bloqueado
-            // por sync de histórico ou outros processos pesados
-            setInterval(async () => {
-                if (!currentConversationId || messagesPage !== 1) return;
-                const freshMsgs = await api.getMessages(currentConversationId, 1);
-                const newMsgs = freshMsgs.reverse();
-                if (newMsgs.length > 0 && messages.length > 0) {
-                    const lastKnown = messages[messages.length - 1];
-                    const hasNew = newMsgs.some(m => m.id !== lastKnown.id && new Date(m.timestamp) > new Date(lastKnown.timestamp));
-                    const hasStatusChange = messages.some(m => {
-                        const fresh = newMsgs.find(f => f.id === m.id);
-                        return fresh && fresh.status !== m.status;
-                    });
-                    if (hasNew || hasStatusChange) {
-                        for (const nm of newMsgs) {
-                            if (!nm.mediaUrl) {
-                                const existing = messages.find(m => m.id === nm.id);
-                                if (existing?.mediaUrl) nm.mediaUrl = existing.mediaUrl;
-                            }
-                        }
-                        messages = newMsgs;
-                        renderMessages(hasNew);
-                        if (hasNew) {
-                            const conv = conversations.find(c => c.id === currentConversationId);
-                            if (conv?.unreadCount > 0) {
-                                api.markRead(currentConversationId);
-                                conv.unreadCount = 0;
-                                renderConversationList();
-                            }
+            pollLoop(); // Primeiro poll imediato
+            schedulePoll();
+
+            // Ajusta intervalo com visibilidade da aba
+            document.addEventListener('visibilitychange', () => {
+                clearTimeout(pollTimer);
+                schedulePoll();
+            });
+        }
+
+        function schedulePoll() {
+            const interval = document.hidden
+                ? POLL_BG
+                : (currentConversationId ? POLL_ACTIVE : POLL_IDLE);
+            pollTimer = setTimeout(async () => {
+                await pollLoop();
+                schedulePoll();
+            }, interval);
+        }
+
+        async function pollLoop() {
+            try {
+                const data = await api.poll(currentInstance, lastPollTime, currentConversationId);
+                if (!data) return;
+
+                lastPollTime = data.serverTime;
+
+                // 1. Merge conversas atualizadas
+                if (data.conversations && data.conversations.length > 0) {
+                    for (const updated of data.conversations) {
+                        const idx = conversations.findIndex(c => c.id === updated.id);
+                        if (idx >= 0) {
+                            conversations[idx] = { ...conversations[idx], ...updated };
+                        } else {
+                            conversations.push(updated);
                         }
                     }
-                } else if (messages.length === 0 && newMsgs.length > 0) {
-                    messages = newMsgs;
-                    renderMessages(true);
+                    // Re-ordena: não-lidas primeiro, depois por lastMessageAt desc
+                    conversations.sort((a, b) => {
+                        const aU = (a.unreadCount || 0) > 0;
+                        const bU = (b.unreadCount || 0) > 0;
+                        if (aU && !bU) return -1;
+                        if (!aU && bU) return 1;
+                        if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+                        if (!a.lastMessageAt) return 1;
+                        if (!b.lastMessageAt) return -1;
+                        return new Date(b.lastMessageAt) - new Date(a.lastMessageAt);
+                    });
+                    renderConversationList();
+                    updateUnreadBadges();
                 }
-            }, 3000);
 
-            // Polling de CONVERSAS + STATUS: 5s
-            // Separado do polling de mensagens para não interferir no tempo real
-            pollInterval = setInterval(async () => {
-                await loadConversations();
-                await updateUnreadBadges();
-                instances = await api.getInstances();
-                updateConnectionStatus();
-            }, 5000);
+                // 2. Merge mensagens novas (conversa aberta)
+                if (data.messages && data.messages.length > 0 && currentConversationId) {
+                    let hasNew = false;
+                    for (const newMsg of data.messages) {
+                        const existing = messages.find(m => m.id === newMsg.id);
+                        if (existing) {
+                            // Atualiza status se mudou
+                            if (existing.status !== newMsg.status) {
+                                existing.status = newMsg.status;
+                                hasNew = true;
+                            }
+                            // Preserva mediaUrl local (download feito pelo usuário)
+                            if (existing.mediaUrl && !newMsg.mediaUrl) {
+                                newMsg.mediaUrl = existing.mediaUrl;
+                            }
+                        } else {
+                            // Mensagem realmente nova
+                            messages.push(newMsg);
+                            hasNew = true;
+                        }
+                    }
+                    if (hasNew) {
+                        messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        renderMessages(true);
 
-            // Presence polling (mais rápido - 2s)
-            setInterval(async () => {
-                if (!currentConversation) return;
-                try {
-                    const data = await api.getPresence(currentInstance, currentConversation.remoteJid);
+                        // Auto mark read
+                        const conv = conversations.find(c => c.id === currentConversationId);
+                        if (conv?.unreadCount > 0) {
+                            api.markRead(currentConversationId);
+                            conv.unreadCount = 0;
+                            renderConversationList();
+                        }
+                    }
+                }
+
+                // 3. Presence
+                if (currentConversation) {
                     const el = document.getElementById('chat-presence');
                     const phone = document.getElementById('chat-contact-phone');
                     if (data.presence === 'composing' || data.presence === 'typing') {
@@ -2091,8 +2193,17 @@
                         el.classList.add('hidden');
                         phone.classList.remove('hidden');
                     }
-                } catch(e) {}
-            }, 2000);
+                }
+
+                // 4. Refresh de instâncias a cada ~5 polls
+                _pollCount++;
+                if (_pollCount % 5 === 0) {
+                    instances = await api.getInstances();
+                    updateConnectionStatus();
+                }
+            } catch (e) {
+                console.error('[Poll] Erro:', e);
+            }
         }
 
         // --- SIDEBAR NAVIGATION ---
@@ -2865,14 +2976,6 @@
             await updateUnreadBadges();
             showChatWelcome();
             startPolling();
-
-            // Sync automático de nomes dos contatos (background, não bloqueia UI)
-            api.syncContacts(currentInstance).then(r => {
-                if (r?.updated > 0) {
-                    console.log(`[Init] ${r.updated} nomes de contatos atualizados`);
-                    loadConversations(); // recarrega com nomes novos
-                }
-            });
 
             // On desktop, show both panels; on mobile, hide chat panel
             if (window.innerWidth >= 1024) {

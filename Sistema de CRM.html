@@ -3432,6 +3432,28 @@
                                 headers: { 'Authorization': `Bearer ${token}` }
                             }).catch(() => {});
 
+                            // Inicia polling leve para novas mensagens (15s)
+                            if (window._waCrmPollTimer) clearInterval(window._waCrmPollTimer);
+                            let _lastCrmMsgId = sorted[sorted.length - 1]?.id;
+                            window._waCrmPollTimer = setInterval(async () => {
+                                if (!waCurrentConvId) return;
+                                try {
+                                    const tkn = localStorage.getItem('authToken');
+                                    const pollRes = await fetch(`${WA_API}/conversations/${waCurrentConvId}/messages?limit=20`, {
+                                        headers: { 'Authorization': `Bearer ${tkn}` }
+                                    });
+                                    if (!pollRes.ok) return;
+                                    const pollMsgs = await pollRes.json();
+                                    if (pollMsgs.length === 0) return;
+                                    const pollSorted = pollMsgs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                                    const lastId = pollSorted[pollSorted.length - 1]?.id;
+                                    if (lastId !== _lastCrmMsgId) {
+                                        _lastCrmMsgId = lastId;
+                                        openWaCrmChat(waCurrentConvId, waCurrentInstanceName);
+                                    }
+                                } catch(e) {}
+                            }, 15000);
+
                         } catch (err) {
                             console.error('Erro ao carregar mensagens:', err);
                             msgsEl.innerHTML = '<p class="text-center text-red-400 text-xs py-2">Erro de conexão</p>';
@@ -3462,12 +3484,6 @@
 
                         try {
                             const token = localStorage.getItem('authToken');
-                            // First get the conversation to know the remoteJid
-                            const convRes = await fetch(`${WA_API}/conversations/${waCurrentConvId}/messages?limit=1`, {
-                                headers: { 'Authorization': `Bearer ${token}` }
-                            });
-
-                            if (!convRes.ok) throw new Error('Erro ao buscar conversa');
 
                             const res = await fetch(`${WA_API}/send`, {
                                 method: 'POST',
