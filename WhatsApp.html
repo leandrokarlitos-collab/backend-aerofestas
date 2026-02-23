@@ -1134,8 +1134,8 @@
                 const groupIcon = conv.isGroup ? '<i class="fas fa-users text-teal-400 text-[10px] mr-0.5" title="Grupo"></i>' : '';
                 const preview = conv.lastMessagePreview || '';
                 const time = formatRelative(conv.lastMessageAt);
-                // cachedPic: só mostra se tem URL real (não vazia)
-                const cachedPic = profilePicCache[conv.phoneNumber] || '';
+                // cachedPic: prioriza cache in-memory, depois banco, depois vazio
+                const cachedPic = profilePicCache[conv.phoneNumber] || conv.profilePicUrl || '';
                 const hasStatus = statusCache.some(s => (s.participant || '').includes(conv.phoneNumber.replace(/\D/g, '')));
                 const statusRingClass = hasStatus ? 'status-ring' : '';
 
@@ -1165,25 +1165,28 @@
 
         let _loadingPics = false;
         async function loadProfilePics(convList) {
-            if (_loadingPics) return; // evita múltiplas execuções simultâneas
+            if (_loadingPics) return;
             _loadingPics = true;
             try {
-                // Filtra só os que ainda não foram tentados (não tem nenhuma entrada no cache)
-                const pending = convList.filter(c => c.phoneNumber && !(c.phoneNumber in profilePicCache));
-                for (const conv of pending) {
-                    profilePicCache[conv.phoneNumber] = ''; // string vazia = tentando carregar
-                    try {
-                        const data = await api.getProfilePic(currentInstance, conv.phoneNumber);
-                        if (data?.profilePicUrl) {
-                            profilePicCache[conv.phoneNumber] = data.profilePicUrl;
-                            // Atualiza avatar no DOM se ainda existir
-                            const avatarEl = document.querySelector(`[data-phone="${CSS.escape(conv.phoneNumber)}"]`);
-                            if (avatarEl) {
-                                const initials = getInitials(conv.contactName || conv.phoneNumber);
-                                avatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+                // Filtra: não está no cache E não tem foto salva no banco
+                const pending = convList.filter(c => c.phoneNumber && !(c.phoneNumber in profilePicCache) && !c.profilePicUrl);
+                // Processa em batches de 5 para velocidade sem sobrecarregar
+                for (let i = 0; i < pending.length; i += 5) {
+                    const batch = pending.slice(i, i + 5);
+                    await Promise.allSettled(batch.map(async conv => {
+                        profilePicCache[conv.phoneNumber] = ''; // marca como tentando
+                        try {
+                            const data = await api.getProfilePic(currentInstance, conv.phoneNumber);
+                            if (data?.profilePicUrl) {
+                                profilePicCache[conv.phoneNumber] = data.profilePicUrl;
+                                const avatarEl = document.querySelector(`[data-phone="${CSS.escape(conv.phoneNumber)}"]`);
+                                if (avatarEl) {
+                                    const initials = getInitials(conv.contactName || conv.phoneNumber);
+                                    avatarEl.innerHTML = `<img src="${data.profilePicUrl}" class="w-full h-full object-cover" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
+                                }
                             }
-                        }
-                    } catch (e) { /* silenciar — mantém '' no cache = não retenta */ }
+                        } catch (e) { /* silenciar — mantém '' no cache */ }
+                    }));
                 }
             } finally {
                 _loadingPics = false;
@@ -1203,7 +1206,7 @@
             document.getElementById('chat-contact-phone').textContent = conv.phoneNumber;
             const chatAvatarEl = document.getElementById('chat-avatar');
             const initials = getInitials(conv.contactName || conv.phoneNumber);
-            const pic = profilePicCache[conv.phoneNumber];
+            const pic = profilePicCache[conv.phoneNumber] || conv.profilePicUrl;
             if (pic) {
                 chatAvatarEl.innerHTML = `<img src="${pic}" class="w-full h-full object-cover rounded-full" onerror="this.remove();this.parentElement.textContent='${initials}'">`;
             } else {

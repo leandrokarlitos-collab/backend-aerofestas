@@ -1577,7 +1577,17 @@ router.get('/profile-pic/:instanceName/:number', authenticate, async (req, res) 
         }
 
         const data = await evoRes.json();
-        res.json({ profilePicUrl: data.profilePictureUrl || data.url || data.picture || null });
+        const profilePicUrl = data.profilePictureUrl || data.url || data.picture || null;
+
+        // Salva no banco para que próximas consultas já tenham a foto
+        if (profilePicUrl) {
+            prisma.whatsAppConversation.updateMany({
+                where: { phoneNumber: number, instanceId: instance.id },
+                data: { profilePicUrl }
+            }).catch(e => console.error('[ProfilePic] Erro ao salvar no banco:', e));
+        }
+
+        res.json({ profilePicUrl });
     } catch (error) {
         console.error('Erro ao buscar foto de perfil:', error);
         res.json({ profilePicUrl: null });
