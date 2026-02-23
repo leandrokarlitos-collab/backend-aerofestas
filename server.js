@@ -600,61 +600,10 @@ async function autoSyncAll() {
                     console.log(`[AutoSync] ${inst.instanceName}: ${gUpdated} nomes de grupos atualizados`);
                 }
 
-                // 3. Sync de chats (cria conversas que ainda não existem no banco)
-                let chatsRes = await fetch(`${inst.evolutionUrl}/chat/findChats/${inst.instanceName}`, {
-                    method: 'POST',
-                    headers: { 'apikey': inst.apiKey, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-                if (chatsRes.ok) {
-                    const chatsData = await chatsRes.json();
-                    const chats = Array.isArray(chatsData) ? chatsData : chatsData?.chats || [];
-                    let created = 0;
-                    for (const chat of chats) {
-                        let remoteJid = chat.id || chat.remoteJid;
-                        if (!remoteJid || !remoteJid.includes('@')) continue;
-                        if (remoteJid.includes('@lid')) continue;
-                        remoteJid = remoteJid.replace(/:\d+@/, '@');
-                        const isGroup = remoteJid.includes('@g.us');
-                        const phoneNumber = remoteJid.replace(/@s\.whatsapp\.net|@g\.us/g, '');
-
-                        let lastPreview = null;
-                        if (chat.lastMessage) {
-                            if (typeof chat.lastMessage === 'string') {
-                                lastPreview = chat.lastMessage.substring(0, 200);
-                            } else if (typeof chat.lastMessage === 'object') {
-                                const msg = chat.lastMessage;
-                                const text = msg.message?.conversation
-                                    || msg.message?.extendedTextMessage?.text
-                                    || msg.message?.imageMessage?.caption
-                                    || msg.message?.videoMessage?.caption
-                                    || msg.messageType || null;
-                                lastPreview = text ? String(text).substring(0, 200) : null;
-                            }
-                        }
-
-                        try {
-                            const existing = await prisma.whatsAppConversation.findUnique({
-                                where: { remoteJid_instanceId: { remoteJid, instanceId: inst.id } }
-                            });
-                            if (!existing) {
-                                await prisma.whatsAppConversation.create({
-                                    data: {
-                                        remoteJid,
-                                        phoneNumber,
-                                        contactName: chat.name || chat.pushName || null,
-                                        instanceId: inst.id,
-                                        isGroup,
-                                        lastMessageAt: chat.lastMessageAt ? new Date(chat.lastMessageAt) : null,
-                                        lastMessagePreview: lastPreview
-                                    }
-                                });
-                                created++;
-                            }
-                        } catch (e) { /* duplicado ou outro erro não crítico */ }
-                    }
-                    if (created > 0) console.log(`[AutoSync] ${inst.instanceName}: ${created} novas conversas criadas`);
-                }
+                // 3. Sync de chats — DESABILITADO
+                // Motivo: importava TODOS os chats da Evolution API (centenas de conversas antigas/inúteis)
+                // O webhook já cria conversas automaticamente quando mensagens chegam
+                // Contatos da agenda são sincronizados via sync-contacts (passos 1-2 acima)
             } catch (instErr) {
                 console.warn(`[AutoSync] Erro ao sincronizar ${inst.instanceName}:`, instErr.message);
             }
