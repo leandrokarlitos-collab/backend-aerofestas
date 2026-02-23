@@ -2825,8 +2825,71 @@ router.delete('/cleanup-all', authenticate, isAdmin, async (req, res) => {
     }
 });
 
-// DELETE /api/whatsapp/purge-old-messages — Remove mensagens com mais de N dias
-// Query param: ?days=30 (padrão: 30)
+// DELETE /api/whatsapp/conversations/bulk-old?instance=X&days=N — Deleta conversas sem atividade há N dias
+// IMPORTANTE: Rota específica ANTES da rota genérica /:id (Express avalia rotas em ordem)
+router.delete('/conversations/bulk-old', authenticate, async (req, res) => {
+    try {
+        const { instance } = req.query;
+        const days = parseInt(req.query.days) || 90;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        const where = {
+            OR: [
+                { lastMessageAt: { lt: cutoffDate } },
+                { lastMessageAt: null } // sem mensagens nenhuma
+            ]
+        };
+
+        if (instance) {
+            const inst = await prisma.whatsAppInstance.findUnique({ where: { instanceName: instance } });
+            if (inst) where.instanceId = inst.id;
+        }
+
+        // Busca IDs das conversas a deletar
+        const toDelete = await prisma.whatsAppConversation.findMany({
+            where,
+            select: { id: true }
+        });
+        const ids = toDelete.map(c => c.id);
+
+        if (ids.length === 0) return res.json({ success: true, deleted: 0 });
+
+        // Deleta mensagens e conversas em lote
+        await prisma.whatsAppMessage.deleteMany({ where: { conversationId: { in: ids } } });
+        const result = await prisma.whatsAppConversation.deleteMany({ where: { id: { in: ids } } });
+
+        console.log(`[Bulk Delete] ${result.count} conversas deletadas (inativas há +${days} dias)`);
+        res.json({ success: true, deleted: result.count });
+    } catch (error) {
+        console.error('Erro ao deletar conversas antigas:', error);
+        res.status(500).json({ error: 'Erro ao deletar conversas antigas' });
+    }
+});
+
+// DELETE /api/whatsapp/conversations/:id — Deleta uma conversa e suas mensagens
+router.delete('/conversations/:id', authenticate, async (req, res) => {
+    try {
+        const conv = await prisma.whatsAppConversation.findUnique({
+            where: { id: req.params.id }
+        });
+        if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+
+        // Deleta mensagens primeiro (FK), depois a conversa
+        const msgs = await prisma.whatsAppMessage.deleteMany({
+            where: { conversationId: req.params.id }
+        });
+        await prisma.whatsAppConversation.delete({
+            where: { id: req.params.id }
+        });
+
+        res.json({ success: true, messagesDeleted: msgs.count });
+    } catch (error) {
+        console.error('Erro ao deletar conversa:', error);
+        res.status(500).json({ error: 'Erro ao deletar conversa' });
+    }
+});
+
 router.delete('/purge-old-messages', authenticate, isAdmin, async (req, res) => {
     try {
         const days = parseInt(req.query.days) || 30;

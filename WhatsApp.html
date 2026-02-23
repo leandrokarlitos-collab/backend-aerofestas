@@ -370,6 +370,11 @@
                             <i class="fas fa-compress-alt text-gray-400 w-5 text-center"></i>
                             <span class="text-sm font-medium">Corrigir conversas duplicadas</span>
                         </button>
+                        <button onclick="cleanupOldConversations(90)" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition text-left">
+                            <i class="fas fa-broom text-red-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium text-red-600">Limpar chats antigos</span>
+                            <span class="text-xs text-gray-400 ml-auto">+90 dias</span>
+                        </button>
                         <button id="connect-btn" class="hidden w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
                             <i class="fas fa-qrcode text-green-500 w-5 text-center"></i>
                             <span class="text-sm font-medium text-green-600">Conectar WhatsApp</span>
@@ -436,6 +441,9 @@
                         </button>
                         <button id="archive-chat-btn" class="hidden text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center" title="Arquivar" onclick="toggleArchiveChat()">
                             <i class="fas fa-archive text-sm"></i>
+                        </button>
+                        <button id="delete-chat-btn" class="hidden text-gray-400 hover:text-red-500 w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center transition" title="Deletar conversa" onclick="deleteCurrentConversation()">
+                            <i class="fas fa-trash-alt text-sm"></i>
                         </button>
                     </div>
                 </div>
@@ -961,6 +969,12 @@
             },
             leaveGroup: async (instanceName, groupJid) => {
                 try { const r = await fetch(`${BASE}/groups/${instanceName}/${encodeURIComponent(groupJid)}/leave`, { method: 'POST', headers: headers() }); return r.ok; } catch(e) { return false; }
+            },
+            deleteConversation: async (id) => {
+                try { const r = await fetch(`${BASE}/conversations/${encodeURIComponent(id)}`, { method: 'DELETE', headers: headers() }); return r.ok ? await r.json() : { success: false }; } catch(e) { return { success: false }; }
+            },
+            bulkDeleteOld: async (instance, days = 90) => {
+                try { const r = await fetch(`${BASE}/conversations/bulk-old?instance=${encodeURIComponent(instance)}&days=${days}`, { method: 'DELETE', headers: headers() }); return r.ok ? await r.json() : { success: false, deleted: 0 }; } catch(e) { return { success: false, deleted: 0 }; }
             }
         };
 
@@ -2015,6 +2029,7 @@
             document.getElementById('chat-contact-phone').textContent = '';
             document.getElementById('mute-chat-btn')?.classList.add('hidden');
             document.getElementById('archive-chat-btn')?.classList.add('hidden');
+            document.getElementById('delete-chat-btn')?.classList.add('hidden');
 
             // Preserve chat-welcome before clearing
             if (welcomeEl) {
@@ -2428,16 +2443,26 @@
         }
 
         async function startConversationWith(contact) {
-            // Check if conversation already exists
+            // Check if conversation already exists in local state
             const existing = conversations.find(c => c.remoteJid === contact.remoteJid);
             if (existing) { openConversation(existing); return; }
-            // Create a temporary conversation object
-            const tempConv = {
-                id: null, remoteJid: contact.remoteJid, phoneNumber: contact.phoneNumber,
-                contactName: contact.name, instanceId: null, unreadCount: 0,
-                lastMessageAt: null, lastMessagePreview: null, isGroup: false
-            };
-            openConversation(tempConv);
+
+            // Persiste a conversa no banco imediatamente (evita desaparecer ao recarregar)
+            const persisted = await api.ensureConversation(currentInstance, contact.remoteJid, contact.name, false);
+            if (persisted) {
+                // Adiciona à lista local e abre
+                conversations.unshift(persisted);
+                renderConversationList();
+                openConversation(persisted);
+            } else {
+                // Fallback: conversa temporária (sem conexão ou erro)
+                const tempConv = {
+                    id: null, remoteJid: contact.remoteJid, phoneNumber: contact.phoneNumber,
+                    contactName: contact.name, instanceId: null, unreadCount: 0,
+                    lastMessageAt: null, lastMessagePreview: null, isGroup: false
+                };
+                openConversation(tempConv);
+            }
         }
 
         // --- SEND CONTACT ---
@@ -2588,8 +2613,14 @@
             if (!currentConversation) return;
             const muteBtn = document.getElementById('mute-chat-btn');
             const archiveBtn = document.getElementById('archive-chat-btn');
+            const deleteBtn = document.getElementById('delete-chat-btn');
             muteBtn?.classList.remove('hidden');
             archiveBtn?.classList.remove('hidden');
+            if (currentConversation.id) {
+                deleteBtn?.classList.remove('hidden');
+            } else {
+                deleteBtn?.classList.add('hidden');
+            }
             if (currentConversation.isMuted) {
                 muteBtn.innerHTML = '<i class="fas fa-bell-slash text-sm text-amber-500"></i>';
                 muteBtn.title = 'Dessilenciar';
@@ -2598,6 +2629,55 @@
                 muteBtn.title = 'Silenciar';
             }
         }
+
+        // --- DELETE CONVERSA ---
+        window.deleteCurrentConversation = async function() {
+            if (!currentConversation?.id) return;
+            const name = currentConversation.contactName || currentConversation.phoneNumber || 'esta conversa';
+            if (!confirm(`Deletar conversa com ${name}?\n\nTodas as mensagens serão removidas. Esta ação não pode ser desfeita.`)) return;
+
+            const btn = document.getElementById('delete-chat-btn');
+            if (btn) btn.disabled = true;
+
+            try {
+                const result = await api.deleteConversation(currentConversation.id);
+                if (result.success) {
+                    conversations = conversations.filter(c => c.id !== currentConversation.id);
+                    renderConversationList();
+                    currentConversationId = null;
+                    currentConversation = null;
+                    showChatWelcome();
+                    showToast('Conversa deletada', 'success');
+                } else {
+                    showToast('Erro ao deletar conversa', 'error');
+                    if (btn) btn.disabled = false;
+                }
+            } catch (e) {
+                console.error('Erro ao deletar conversa:', e);
+                showToast('Erro ao deletar conversa', 'error');
+                if (btn) btn.disabled = false;
+            }
+        };
+
+        // --- CLEANUP CHATS ANTIGOS ---
+        window.cleanupOldConversations = async function(days = 90) {
+            if (!confirm(`Deletar todas as conversas sem atividade há mais de ${days} dias?\n\nEsta ação não pode ser desfeita.`)) return;
+
+            showToast('Limpando conversas antigas...', 'info');
+            try {
+                const result = await api.bulkDeleteOld(currentInstance, days);
+                if (result.success) {
+                    showToast(`${result.deleted} conversa(s) removida(s)`, 'success');
+                    await loadConversations();
+                    renderConversationList();
+                } else {
+                    showToast('Erro ao limpar conversas', 'error');
+                }
+            } catch (e) {
+                console.error('Erro ao limpar conversas antigas:', e);
+                showToast('Erro ao limpar conversas', 'error');
+            }
+        };
 
         // --- CONTACT DETAILS (estilo WhatsApp nativo) ---
         window.openContactDetails = async function() {
