@@ -375,6 +375,10 @@
                             <span class="text-sm font-medium text-red-600">Limpar chats antigos</span>
                             <span class="text-xs text-gray-400 ml-auto">+90 dias</span>
                         </button>
+                        <button onclick="cleanupLidConversations()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition text-left">
+                            <i class="fas fa-clone text-red-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium text-red-600">Remover duplicatas @lid</span>
+                        </button>
                         <button id="connect-btn" class="hidden w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
                             <i class="fas fa-qrcode text-green-500 w-5 text-center"></i>
                             <span class="text-sm font-medium text-green-600">Conectar WhatsApp</span>
@@ -975,6 +979,9 @@
             },
             bulkDeleteOld: async (instance, days = 90) => {
                 try { const r = await fetch(`${BASE}/conversations/bulk-old?instance=${encodeURIComponent(instance)}&days=${days}`, { method: 'DELETE', headers: headers() }); return r.ok ? await r.json() : { success: false, deleted: 0 }; } catch(e) { return { success: false, deleted: 0 }; }
+            },
+            cleanupLid: async () => {
+                try { const r = await fetch(`${BASE}/conversations/cleanup-lid`, { method: 'DELETE', headers: headers() }); return r.ok ? await r.json() : { success: false, deleted: 0 }; } catch(e) { return { success: false, deleted: 0 }; }
             }
         };
 
@@ -2679,6 +2686,26 @@
             } catch (e) {
                 console.error('Erro ao limpar conversas antigas:', e);
                 showToast('Erro ao limpar conversas', 'error');
+            }
+        };
+
+        // --- CLEANUP @LID ---
+        window.cleanupLidConversations = async function() {
+            if (!confirm('Remover todas as conversas duplicadas com @lid?\n\nIsso remove conversas criadas com o formato interno do WhatsApp (Linked ID), que geram duplicatas.')) return;
+
+            showToast('Removendo duplicatas @lid...', 'info');
+            try {
+                const result = await api.cleanupLid();
+                if (result.success) {
+                    showToast(`${result.deleted} duplicata(s) removida(s)`, 'success');
+                    await loadConversations();
+                    renderConversationList();
+                } else {
+                    showToast('Erro ao remover duplicatas', 'error');
+                }
+            } catch (e) {
+                console.error('Erro ao remover duplicatas @lid:', e);
+                showToast('Erro ao remover duplicatas', 'error');
             }
         };
 

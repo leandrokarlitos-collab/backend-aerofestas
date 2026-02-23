@@ -173,6 +173,9 @@ router.post('/webhook', async (req, res) => {
             // Normaliza JID antes de qualquer operação
             key.remoteJid = normalizeRemoteJid(key.remoteJid);
 
+            // Ignora mensagens com @lid (Linked ID interno do WhatsApp — cria duplicatas)
+            if (key.remoteJid.includes('@lid')) return;
+
             // Captura status — salvar no banco E no store em memória
             if (key.remoteJid === 'status@broadcast') {
                 const statusKey = instanceName;
@@ -2832,6 +2835,31 @@ router.delete('/cleanup-all', authenticate, isAdmin, async (req, res) => {
     } catch (error) {
         console.error('Erro no cleanup-all:', error);
         res.status(500).json({ error: 'Erro ao limpar dados' });
+    }
+});
+
+// DELETE /api/whatsapp/conversations/cleanup-lid — Remove conversas duplicadas com @lid
+router.delete('/conversations/cleanup-lid', authenticate, async (req, res) => {
+    try {
+        // Busca todas as conversas com @lid no remoteJid
+        const lidConvs = await prisma.whatsAppConversation.findMany({
+            where: { remoteJid: { contains: '@lid' } },
+            select: { id: true, remoteJid: true }
+        });
+
+        if (lidConvs.length === 0) return res.json({ success: true, deleted: 0 });
+
+        const ids = lidConvs.map(c => c.id);
+
+        // Deleta mensagens e conversas
+        await prisma.whatsAppMessage.deleteMany({ where: { conversationId: { in: ids } } });
+        const result = await prisma.whatsAppConversation.deleteMany({ where: { id: { in: ids } } });
+
+        console.log(`[Cleanup LID] ${result.count} conversas @lid removidas`);
+        res.json({ success: true, deleted: result.count });
+    } catch (error) {
+        console.error('Erro ao limpar conversas @lid:', error);
+        res.status(500).json({ error: 'Erro ao limpar conversas @lid' });
     }
 });
 
