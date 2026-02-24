@@ -1937,6 +1937,57 @@ router.post('/sync-contacts/:instanceName', authenticate, async (req, res) => {
     }
 });
 
+// POST /api/whatsapp/fix-contact-names/:instanceName — Corrige nomes perdidos buscando da Evolution API
+router.post('/fix-contact-names/:instanceName', authenticate, async (req, res) => {
+    try {
+        const instance = await getInstanceWithCreds(req.params.instanceName);
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+        // Nome da conta conectada — conversas com esse nome serão corrigidas
+        const connectedName = req.body.connectedName || null;
+
+        const contactsRes = await fetch(`${instance.evolutionUrl}/chat/findContacts/${instance.instanceName}`, {
+            method: 'POST',
+            headers: { 'apikey': instance.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ where: {} })
+        });
+        if (!contactsRes.ok) return res.status(502).json({ error: 'Erro ao buscar contatos da Evolution API' });
+
+        const contactsData = await contactsRes.json();
+        const contacts = Array.isArray(contactsData) ? contactsData
+            : Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
+
+        let fixed = 0;
+        for (const contact of contacts) {
+            const rawJid = contact.id || contact.remoteJid;
+            if (!rawJid || !rawJid.includes('@s.whatsapp.net')) continue;
+            const remoteJid = normalizeRemoteJid(rawJid);
+
+            const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
+            if (!savedName) continue;
+
+            // Atualizar conversas sem nome OU com nome da conta conectada (erro comum)
+            const orConditions = [{ contactName: null }, { contactName: '' }];
+            if (connectedName) orConditions.push({ contactName: connectedName });
+
+            const r = await prisma.whatsAppConversation.updateMany({
+                where: { remoteJid, instanceId: instance.id, OR: orConditions },
+                data: { contactName: savedName }
+            });
+            if (r.count > 0) {
+                fixed++;
+                console.log(`[Fix Names] ${remoteJid} → "${savedName}"`);
+            }
+        }
+
+        console.log(`[Fix Names] ${fixed} contatos corrigidos para ${instance.instanceName}`);
+        res.json({ success: true, fixed });
+    } catch (error) {
+        console.error('Erro ao corrigir nomes:', error);
+        res.status(500).json({ error: 'Erro ao corrigir nomes dos contatos' });
+    }
+});
+
 // POST /api/whatsapp/sync-history/:instanceName — Sync completo de todas as conversas
 router.post('/sync-history/:instanceName', isAdmin, async (req, res) => {
     try {
@@ -2839,24 +2890,44 @@ router.delete('/cleanup-all', authenticate, isAdmin, async (req, res) => {
 });
 
 // DELETE /api/whatsapp/conversations/cleanup-lid — Remove conversas duplicadas com @lid
+// IMPORTANTE: Transfere nomes dos contatos para conversas reais antes de deletar
 router.delete('/conversations/cleanup-lid', authenticate, async (req, res) => {
     try {
-        // Busca todas as conversas com @lid no remoteJid
         const lidConvs = await prisma.whatsAppConversation.findMany({
             where: { remoteJid: { contains: '@lid' } },
-            select: { id: true, remoteJid: true }
+            select: { id: true, remoteJid: true, contactName: true, phoneNumber: true, instanceId: true }
         });
 
-        if (lidConvs.length === 0) return res.json({ success: true, deleted: 0 });
+        if (lidConvs.length === 0) return res.json({ success: true, deleted: 0, namesTransferred: 0 });
 
+        // Transferir nomes das conversas @lid para as conversas reais sem nome
+        let namesTransferred = 0;
+        for (const lidConv of lidConvs) {
+            if (!lidConv.contactName || !lidConv.phoneNumber) continue;
+            const realJid = lidConv.phoneNumber + '@s.whatsapp.net';
+            try {
+                const result = await prisma.whatsAppConversation.updateMany({
+                    where: {
+                        remoteJid: realJid,
+                        instanceId: lidConv.instanceId,
+                        OR: [{ contactName: null }, { contactName: '' }]
+                    },
+                    data: { contactName: lidConv.contactName }
+                });
+                if (result.count > 0) {
+                    namesTransferred++;
+                    console.log(`[Cleanup LID] Nome transferido: "${lidConv.contactName}" → ${realJid}`);
+                }
+            } catch (e) { /* conversa real pode não existir */ }
+        }
+
+        // Deletar mensagens e conversas @lid
         const ids = lidConvs.map(c => c.id);
-
-        // Deleta mensagens e conversas
         await prisma.whatsAppMessage.deleteMany({ where: { conversationId: { in: ids } } });
         const result = await prisma.whatsAppConversation.deleteMany({ where: { id: { in: ids } } });
 
-        console.log(`[Cleanup LID] ${result.count} conversas @lid removidas`);
-        res.json({ success: true, deleted: result.count });
+        console.log(`[Cleanup LID] ${result.count} conversas removidas, ${namesTransferred} nomes transferidos`);
+        res.json({ success: true, deleted: result.count, namesTransferred });
     } catch (error) {
         console.error('Erro ao limpar conversas @lid:', error);
         res.status(500).json({ error: 'Erro ao limpar conversas @lid' });

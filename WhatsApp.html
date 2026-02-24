@@ -702,6 +702,10 @@
                             <i class="fas fa-clone text-red-400 w-5 text-center"></i>
                             <span class="text-sm font-medium text-red-600">Remover duplicatas @lid</span>
                         </button>
+                        <button onclick="fixContactNames()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 transition text-left">
+                            <i class="fas fa-address-book text-blue-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium text-blue-600">Corrigir nomes dos contatos</span>
+                        </button>
                         <button id="connect-btn" class="hidden w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
                             <i class="fas fa-qrcode text-green-500 w-5 text-center"></i>
                             <span class="text-sm font-medium text-green-600">Conectar WhatsApp</span>
@@ -1305,6 +1309,9 @@
             },
             cleanupLid: async () => {
                 try { const r = await fetch(`${BASE}/conversations/cleanup-lid`, { method: 'DELETE', headers: headers() }); return r.ok ? await r.json() : { success: false, deleted: 0 }; } catch(e) { return { success: false, deleted: 0 }; }
+            },
+            fixContactNames: async (instance, connectedName) => {
+                try { const r = await fetch(`${BASE}/fix-contact-names/${encodeURIComponent(instance)}`, { method: 'POST', headers: { ...headers(), 'Content-Type': 'application/json' }, body: JSON.stringify({ connectedName }) }); return r.ok ? await r.json() : { success: false, fixed: 0 }; } catch(e) { return { success: false, fixed: 0 }; }
             }
         };
 
@@ -3029,6 +3036,29 @@
             } catch (e) {
                 console.error('Erro ao remover duplicatas @lid:', e);
                 showToast('Erro ao remover duplicatas', 'error');
+            }
+        };
+
+        // --- FIX CONTACT NAMES ---
+        window.fixContactNames = async function() {
+            if (!currentInstance) {
+                showToast('Selecione uma instância primeiro', 'error');
+                return;
+            }
+
+            showToast('Corrigindo nomes dos contatos...', 'info');
+            try {
+                const result = await api.fixContactNames(currentInstance, 'Leandro');
+                if (result.success) {
+                    showToast(`${result.fixed} nome(s) corrigido(s)`, 'success');
+                    await loadConversations();
+                    renderConversationList();
+                } else {
+                    showToast('Erro ao corrigir nomes', 'error');
+                }
+            } catch (e) {
+                console.error('Erro ao corrigir nomes:', e);
+                showToast('Erro ao corrigir nomes', 'error');
             }
         };
 
