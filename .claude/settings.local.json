@@ -40,7 +40,11 @@
       "Bash(dir:*)",
       "Bash(powershell:*)",
       "Bash(node -e:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where:*)",
+      "Bash(npx:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

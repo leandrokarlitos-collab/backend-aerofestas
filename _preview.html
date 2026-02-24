@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview WhatsApp Visual</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Core WhatsApp Greens */
+            --wa-green: #25D366;
+            --wa-dark-green: #075E54;
+            --wa-teal: #128C7E;
+            --wa-light-green: #d9fdd3;
+            --wa-bg: #efeae2;
+
+            /* Gradient endpoints */
+            --wa-gradient-start: #25D366;
+            --wa-gradient-end: #128C7E;
+            --wa-gradient: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            --wa-gradient-subtle: linear-gradient(135deg, rgba(37,211,102,0.12) 0%, rgba(18,140,126,0.08) 100%);
+
+            /* Sidebar deep tones */
+            --sidebar-bg: #111b21;
+            --sidebar-hover: rgba(255, 255, 255, 0.06);
+            --sidebar-active-glow: rgba(37, 211, 102, 0.25);
+
+            /* Glass refinements */
+            --glass-bg: rgba(255, 255, 255, 0.72);
+            --glass-bg-strong: rgba(255, 255, 255, 0.88);
+            --glass-border: rgba(255, 255, 255, 0.35);
+            --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+
+            /* Bubble colors */
+            --bubble-out-bg: #d9fdd3;
+            --bubble-in-bg: #ffffff;
+
+            /* Text hierarchy */
+            --text-primary: #111b21;
+            --text-secondary: #667781;
+            --text-tertiary: #8696a0;
+
+            /* System colors */
+            --primary: #4f46e5;
+            --secondary: #a855f7;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+
+            /* Radius tokens */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-pill: 9999px;
+
+            /* Animation timing */
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .glassmorphism {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px) saturate(200%);
+            -webkit-backdrop-filter: blur(16px) saturate(200%);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .form-input {
+            background-color: #f0f2f5; border: 1px solid transparent; color: var(--text-primary);
+            border-radius: 10px; padding: 0.5rem 0.75rem; transition: all 0.25s var(--ease-smooth);
+            font-size: 0.875rem;
+        }
+        .form-input::placeholder { color: var(--text-tertiary); }
+        .form-input:focus { outline: none; background-color: #ffffff; border-color: rgba(37, 211, 102, 0.3); box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.08); }
+
+        .shiny-btn {
+            position: relative; border: none;
+            background: var(--wa-gradient); background-size: 200% auto; color: white;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.35); transition: all 0.3s var(--ease-smooth);
+        }
+        .shiny-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5); }
+        .shiny-btn:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3); }
+        .shiny-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 10px; transition: background 0.2s; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+        #messages-area::-webkit-scrollbar { width: 4px; }
+        #messages-area::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
+        #conversation-list::-webkit-scrollbar { width: 3px; }
+        #conversation-list::-webkit-scrollbar-thumb { background: rgba(37, 211, 102, 0.2); border-radius: 10px; }
+
+        /* Chat bubbles */
+        .bubble-received {
+            background: var(--bubble-in-bg); border-radius: 0 12px 12px 12px; max-width: 75%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
+            position: relative; animation: bubble-in-left 0.25s var(--ease-spring);
+        }
+        .bubble-received::before {
+            content: ''; position: absolute; top: 0; left: -8px;
+            width: 0; height: 0;
+            border-top: 0px solid transparent; border-bottom: 10px solid transparent;
+            border-right: 8px solid var(--bubble-in-bg);
+            filter: drop-shadow(-1px 0px 1px rgba(0, 0, 0, 0.04));
+        }
+        .bubble-sent {
+            background: var(--bubble-out-bg); border-radius: 12px 0 12px 12px; max-width: 75%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(37, 211, 102, 0.05);
+            position: relative; animation: bubble-in-right 0.25s var(--ease-spring);
+        }
+        .bubble-sent::before {
+            content: ''; position: absolute; top: 0; right: -8px;
+            width: 0; height: 0;
+            border-top: 0px solid transparent; border-bottom: 10px solid transparent;
+            border-left: 8px solid var(--bubble-out-bg);
+            filter: drop-shadow(1px 0px 1px rgba(0, 0, 0, 0.04));
+        }
+        /* Botão encaminhar — só aparece no hover da bolha */
+        .forward-btn { pointer-events: none; transition: all 0.2s var(--ease-smooth) !important; }
+        .group:hover .forward-btn { pointer-events: auto; }
+
+        /* Conversation item */
+        .conv-item { transition: all 0.2s var(--ease-smooth); position: relative; border-left: 3px solid transparent; }
+        .conv-item:hover { background: rgba(37, 211, 102, 0.04); border-left-color: rgba(37, 211, 102, 0.3); }
+        .conv-item.active {
+            background: linear-gradient(90deg, rgba(37, 211, 102, 0.1) 0%, rgba(37, 211, 102, 0.03) 100%);
+            border-left: 3px solid var(--wa-green);
+        }
+        .conv-item:hover .w-10.h-10.rounded-full { box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.3); transition: box-shadow 0.2s var(--ease-smooth); }
+
+        /* Instance tabs */
+        .instance-tab {
+            padding: 0.5rem 1.25rem; border-radius: var(--radius-pill); font-weight: 600; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.3s var(--ease-spring); border: 2px solid transparent;
+            position: relative; overflow: hidden; letter-spacing: 0.02em;
+        }
+        .instance-tab.active {
+            background: var(--wa-gradient); color: white;
+            box-shadow: 0 4px 14px rgba(37,211,102,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+            transform: scale(1.02);
+        }
+        .instance-tab.active::after {
+            content: ''; position: absolute; top: -50%; left: -60%; width: 50%; height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        .instance-tab:not(.active) { background: rgba(0,0,0,0.04); color: var(--text-secondary); }
+        .instance-tab:not(.active):hover { background: rgba(37,211,102,0.08); color: var(--wa-teal); transform: scale(1.02); }
+
+        /* Unread badge */
+        .unread-badge {
+            background: var(--wa-gradient); color: white; font-size: 0.65rem; font-weight: 700;
+            min-width: 20px; height: 20px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; padding: 0 6px;
+            box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35); animation: badge-pop 0.3s var(--ease-spring);
+        }
+
+        /* Status indicator */
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; transition: all 0.3s var(--ease-smooth); }
+        .status-dot.connected { background: var(--wa-green); box-shadow: 0 0 0 2px rgba(37,211,102,0.2), 0 0 8px rgba(37,211,102,0.4); }
+        .status-dot.disconnected { background: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); }
+        .status-dot.connecting { background: #f59e0b; animation: pulse-dot 1.2s infinite; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15); }
+        @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+
+        /* Bottom nav (same as CRM) */
+        .bottom-nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 480px; height: 75px; background: rgba(255,255,255,0.6); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255,255,255,0.4); display: flex; justify-content: space-around; align-items: center; padding: 12px 10px 0 10px; z-index: 10000; border-radius: 40px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(255,255,255,0.8); transition: all 0.7s cubic-bezier(0.19,1,0.22,1); user-select: none; overflow: hidden; }
+        .bottom-nav-handle { position: absolute; top: 0; left: 0; right: 0; height: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .bottom-nav-handle::after { content: ''; width: 40px; height: 4px; background: rgba(79,70,229,0.2); border-radius: 10px; transition: all 0.5s cubic-bezier(0.19,1,0.22,1); }
+        .bottom-nav-handle i { position: absolute; font-size: 1.2rem; color: #4f46e5; opacity: 0; transform: translateY(10px); transition: all 0.5s cubic-bezier(0.19,1,0.22,1); }
+        .bottom-nav.collapsed { transform: translateX(-50%) translateY(15px); width: 80px; height: 48px; padding: 0; border-radius: 100px; background: rgba(255,255,255,0.5); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+        .bottom-nav.collapsed .nav-item { opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .bottom-nav.collapsed .bottom-nav-handle::after { opacity: 0; transform: scaleX(0); }
+        .bottom-nav.collapsed .bottom-nav-handle i { opacity: 1; transform: translateY(0); }
+        @media (min-width: 1024px) { .bottom-nav { display: none; } }
+        .nav-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; width: 55px; height: 100%; text-decoration: none; z-index: 1; transition: all 0.6s cubic-bezier(0.19,1,0.22,1); }
+        .nav-item::before { content: ''; position: absolute; top: 50%; left: 50%; width: 45px; height: 45px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; transform: translate(-50%,-50%) scale(0); opacity: 0; z-index: -1; transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 8px 16px rgba(79,70,229,0.3); }
+        .nav-item.active { color: white; transform: translateY(-8px); }
+        .nav-item.active::before { transform: translate(-50%,-60%) scale(1); opacity: 1; }
+        .nav-item i { font-size: 1.3rem; margin-bottom: 2px; }
+        .nav-item span { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
+        .nav-item.active span { opacity: 1; transform: translateY(2px); color: #4f46e5; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 8px; font-size: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+        @media (max-width: 768px) { .container { padding-bottom: 100px; } }
+
+        /* Toast */
+        #toast { position: fixed; top: 20px; right: 20px; z-index: 99999; }
+        .toast-enter { animation: toast-in-premium 0.5s var(--ease-spring) forwards; }
+
+        /* QR Modal */
+        #qr-modal.hidden { display: none; }
+        .modal-hidden { display: none !important; }
+
+        /* Attach menu item hover */
+        .attach-menu-item:hover { background: #f3f4f6 !important; }
+
+        /* Shortcuts popup */
+        .shortcuts-popup {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+            max-height: 200px; overflow-y: auto; z-index: 10000;
+            width: 300px; border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .shortcut-item {
+            padding: 10px 14px; cursor: pointer; transition: all 0.15s var(--ease-smooth);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        }
+        .shortcut-item:hover { background: var(--wa-gradient-subtle); padding-left: 18px; }
+        .shortcut-item:last-child { border-bottom: none; }
+
+        /* Audio recording */
+        .recording-indicator {
+            display: flex; align-items: center; gap: 8px; color: #ef4444; font-size: 0.85rem;
+            animation: recording-pulse 1.2s infinite;
+        }
+        @keyframes recording-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* Media preview in messages — base rules (overridden below with transitions) */
+
+        /* Catalog grid */
+        .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+        .catalog-item {
+            background: white; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all 0.3s var(--ease-spring);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+        .catalog-item:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,0.1); border-color: rgba(37, 211, 102, 0.2); }
+        .catalog-item img { width: 100%; height: 120px; object-fit: cover; }
+
+        /* Sidebar */
+        .wa-sidebar {
+            width: 56px; background: var(--sidebar-bg); display: flex; flex-direction: column;
+            align-items: center; padding: 12px 0; gap: 4px; border-radius: 16px 0 0 16px;
+            flex-shrink: 0; position: relative; overflow: hidden;
+        }
+        .wa-sidebar::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 120px;
+            background: linear-gradient(180deg, rgba(37, 211, 102, 0.08) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .wa-sidebar-btn {
+            width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center;
+            justify-content: center; color: #8696a0; cursor: pointer; transition: all 0.3s var(--ease-smooth);
+            position: relative; border: none; background: transparent; font-size: 1rem; z-index: 1;
+        }
+        .wa-sidebar-btn:hover { background: var(--sidebar-hover); color: #d1d5db; transform: scale(1.05); }
+        .wa-sidebar-btn.active {
+            background: var(--wa-gradient); color: white;
+            box-shadow: 0 4px 15px var(--sidebar-active-glow), 0 0 30px rgba(37, 211, 102, 0.15);
+            transform: scale(1.05);
+        }
+        .wa-sidebar-btn.active::after {
+            content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%);
+            width: 3px; height: 20px; background: var(--wa-green); border-radius: 0 3px 3px 0;
+        }
+        .wa-sidebar-btn .sidebar-badge {
+            position: absolute; top: 0px; right: 0px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white;
+            font-size: 0.55rem; min-width: 16px; height: 16px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-weight: 700;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4); animation: badge-pop 0.3s var(--ease-spring);
+        }
+        .wa-sidebar-spacer { flex: 1; }
+        @media (max-width: 1023px) { .wa-sidebar { display: none; } }
+
+        /* Main layout wrapper */
+        .wa-main-wrapper {
+            display: flex; height: calc(100vh - 140px); border-radius: var(--radius-lg); overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        }
+        @media (max-width: 768px) {
+            .wa-main-wrapper { height: calc(100vh - 180px); border-radius: var(--radius-md); }
+        }
+
+        /* Side panels */
+        .wa-side-panel {
+            width: 340px; flex-shrink: 0; display: flex; flex-direction: column;
+            background: rgba(255,255,255,0.75); border-right: 1px solid rgba(0,0,0,0.06);
+        }
+        @media (max-width: 1023px) {
+            .wa-side-panel { width: 100%; border-right: none; }
+            .wa-side-panel.mobile-hidden { display: none; }
+        }
+        @media (min-width: 1024px) {
+            .wa-side-panel { display: flex !important; }
+        }
+
+        /* Chat panel flex */
+        .wa-chat-panel {
+            flex: 1; display: flex; flex-direction: column; min-width: 0;
+        }
+        @media (max-width: 1023px) {
+            .wa-chat-panel.mobile-hidden { display: none; }
+        }
+
+        /* Contact details panel */
+        .wa-details-panel {
+            width: 320px; flex-shrink: 0; display: none; flex-direction: column;
+            background: rgba(255,255,255,0.9); border-left: 1px solid rgba(0,0,0,0.06);
+            overflow-y: auto;
+        }
+        .wa-details-panel.open { display: flex; animation: details-slide-in 0.3s var(--ease-smooth); }
+        @media (max-width: 1280px) {
+            .wa-details-panel.open {
+                position: fixed; right: 0; top: 0; bottom: 0; z-index: 15000;
+                width: 100%; max-width: 360px; box-shadow: -8px 0 32px rgba(0,0,0,0.12);
+                background: rgba(255,255,255,0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            }
+        }
+
+        /* Status ring on avatar */
+        .status-ring { box-shadow: 0 0 0 2px var(--wa-green); animation: status-ring-glow 2s ease-in-out infinite; }
+
+        /* Archived bar */
+        .archived-bar {
+            display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+            cursor: pointer; transition: all 0.2s var(--ease-smooth); color: var(--wa-teal); font-weight: 600; font-size: 0.85rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        }
+        .archived-bar:hover { background: var(--wa-gradient-subtle); padding-left: 20px; }
+
+        /* Muted icon in conv list */
+        .muted-icon { color: #9ca3af; font-size: 0.7rem; }
+
+        /* Messages area background */
+        #messages-area {
+            background-color: var(--wa-bg);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cg fill='%23d6cebf' fill-opacity='0.12'%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3Ccircle cx='50' cy='30' r='1'/%3E%3Ccircle cx='30' cy='60' r='1.2'/%3E%3Ccircle cx='70' cy='70' r='0.8'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 80px 80px;
+        }
+
+        /* Input bar premium */
+        #input-bar {
+            background: rgba(255, 255, 255, 0.85) !important;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+            padding: 10px 16px !important;
+        }
+        #message-input {
+            background: #f0f2f5 !important; border: 1px solid transparent !important;
+            border-radius: 24px !important; padding: 10px 40px 10px 18px !important;
+            font-size: 0.9rem !important; transition: all 0.25s var(--ease-smooth);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        #message-input:focus {
+            background: #ffffff !important; border-color: rgba(37, 211, 102, 0.3) !important;
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.08), inset 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+        }
+        #attach-btn { color: #8696a0; transition: all 0.25s var(--ease-smooth); }
+        #attach-btn:hover { color: var(--wa-teal); background: rgba(18, 140, 126, 0.08); transform: rotate(45deg); }
+        #audio-btn { transition: all 0.25s var(--ease-smooth); }
+        #audio-btn:hover { background: rgba(37, 211, 102, 0.1) !important; transform: scale(1.1); }
+
+        /* Chat header premium */
+        #chat-header {
+            background: rgba(255, 255, 255, 0.85) !important;
+            backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important; position: relative;
+        }
+        #chat-header::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(37, 211, 102, 0.3), rgba(18, 140, 126, 0.3), transparent);
+        }
+        #side-panel-title {
+            background: var(--wa-gradient); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+            font-weight: 800; font-size: 1.1rem;
+        }
+        .wa-side-panel > .p-3.border-b {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        header.glassmorphism {
+            background: rgba(255, 255, 255, 0.8) !important;
+            border-bottom: 1px solid rgba(37, 211, 102, 0.15);
+        }
+
+        /* Search input premium */
+        #search-conversations {
+            border-radius: 20px !important; background: #f0f2f5 !important;
+            border: 1px solid transparent !important; padding-left: 36px !important;
+        }
+        #search-conversations:focus {
+            background: #ffffff !important; border-color: rgba(37, 211, 102, 0.25) !important;
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.06) !important;
+        }
+
+        /* Filter unread button */
+        #filter-unread-btn {
+            transition: all 0.25s var(--ease-smooth) !important; border: 1px solid transparent;
+        }
+        #filter-unread-btn:hover {
+            border-color: rgba(37, 211, 102, 0.2) !important;
+            background: rgba(37, 211, 102, 0.06) !important; color: var(--wa-teal) !important;
+        }
+
+        /* Date separator in messages */
+        #messages-area > .text-center > span {
+            background: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
+            color: var(--text-secondary) !important; font-weight: 500;
+            padding: 4px 14px !important; letter-spacing: 0.01em;
+        }
+
+        /* Sync banner */
+        #sync-banner {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.04)) !important;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        /* Chat welcome empty state */
+        #chat-welcome { animation: empty-state-in 0.6s var(--ease-smooth); }
+        #chat-welcome i.fab.fa-whatsapp {
+            font-size: 5rem !important;
+            background: var(--wa-gradient); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+            animation: empty-icon-float 3s ease-in-out infinite; display: inline-block; opacity: 0.6;
+        }
+        #chat-welcome p.text-lg { color: var(--text-primary) !important; font-weight: 700 !important; margin-top: 16px !important; }
+        #chat-welcome p.text-sm { color: var(--text-tertiary) !important; }
+
+        /* Conversation list empty state */
+        #conversation-list > .flex.items-center.justify-center i.fab.fa-whatsapp {
+            background: var(--wa-gradient); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+            animation: empty-icon-float 3s ease-in-out infinite; display: inline-block;
+        }
+
+        /* Toast premium */
+        #toast {
+            border-radius: 14px !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5) !important; padding: 14px 18px !important;
+        }
+
+        /* Attach menu premium */
+        #attach-menu {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+            border-radius: 18px !important;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.5); padding: 14px !important;
+            animation: modal-card-in 0.25s var(--ease-spring);
+        }
+        .attach-menu-item { transition: all 0.2s var(--ease-smooth) !important; border-radius: 14px !important; }
+        .attach-menu-item:hover { background: rgba(0, 0, 0, 0.03) !important; transform: translateY(-2px); }
+        .attach-menu-item > div:first-child {
+            transition: all 0.25s var(--ease-spring); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .attach-menu-item:hover > div:first-child { transform: scale(1.1); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15); }
+
+        /* Emoji picker premium */
+        #emoji-picker {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.5) !important;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+            border-radius: 18px !important;
+        }
+
+        /* Media bubble hover */
+        .media-bubble img, .media-bubble video {
+            max-width: 100%; border-radius: 10px; cursor: pointer;
+            transition: all 0.2s var(--ease-smooth);
+        }
+        .media-bubble img:hover, .media-bubble video:hover { filter: brightness(0.95); transform: scale(1.01); }
+        .media-bubble audio { width: 100%; max-width: 280px; border-radius: 20px; }
+
+        /* Settings panel hover */
+        #settings-panel button:hover, #settings-panel a:hover {
+            transform: translateX(4px); transition: all 0.2s var(--ease-smooth);
+        }
+
+        /* Modal animations */
+        #catalog-modal:not(.modal-hidden), #shortcuts-modal:not(.modal-hidden),
+        #media-preview-modal:not(.modal-hidden), #edit-profile-modal:not(.modal-hidden),
+        #send-contact-modal:not(.modal-hidden), #forward-modal:not(.modal-hidden),
+        #mute-modal:not(.modal-hidden), #post-status-modal:not(.modal-hidden) {
+            animation: modal-backdrop-in 0.3s var(--ease-out) forwards;
+        }
+        #catalog-modal:not(.modal-hidden) > div, #shortcuts-modal:not(.modal-hidden) > div,
+        #media-preview-modal:not(.modal-hidden) > div, #edit-profile-modal:not(.modal-hidden) > div,
+        #send-contact-modal:not(.modal-hidden) > div, #forward-modal:not(.modal-hidden) > div,
+        #mute-modal:not(.modal-hidden) > div, #post-status-modal:not(.modal-hidden) > div {
+            animation: modal-card-in 0.35s var(--ease-spring) forwards;
+        }
+        #qr-modal:not(.hidden) { animation: modal-backdrop-in 0.3s var(--ease-out) forwards; }
+        #qr-modal:not(.hidden) > div { animation: modal-card-in 0.35s var(--ease-spring) forwards; }
+        #catalog-modal > div, #shortcuts-modal > div, #edit-profile-modal > div,
+        #send-contact-modal > div, #forward-modal > div, #mute-modal > div,
+        #post-status-modal > div, #media-preview-modal > div {
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* ===== KEYFRAMES ===== */
+        @keyframes bubble-in-left {
+            from { opacity: 0; transform: translateX(-12px) scale(0.95); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes bubble-in-right {
+            from { opacity: 0; transform: translateX(12px) scale(0.95); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes badge-pop {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        @keyframes modal-backdrop-in {
+            from { opacity: 0; } to { opacity: 1; }
+        }
+        @keyframes modal-card-in {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes empty-icon-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes empty-state-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes status-ring-glow {
+            0%, 100% { box-shadow: 0 0 0 2px var(--wa-green); }
+            50% { box-shadow: 0 0 0 2px var(--wa-green), 0 0 8px rgba(37, 211, 102, 0.4); }
+        }
+        @keyframes shimmer {
+            0% { left: -60%; }
+            50%, 100% { left: 120%; }
+        }
+        @keyframes details-slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes toast-in-premium {
+            from { transform: translateX(100%) translateY(-10px); opacity: 0; filter: blur(4px); }
+            to { transform: translateX(0) translateY(0); opacity: 1; filter: blur(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto p-4 md:p-6 relative z-10 max-w-7xl">
+
+        <!-- Header (compact) -->
+        <header class="lg:hidden glassmorphism p-3 rounded-xl mb-2 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fab fa-whatsapp text-[var(--wa-green)] text-xl"></i>
+                <h1 class="text-lg font-bold">WhatsApp</h1>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="status-dot disconnected" id="connection-status-dot-mobile" style="width:6px;height:6px;"></span>
+            </div>
+        </header>
+
+        <!-- Main Layout with Sidebar -->
+        <div class="wa-main-wrapper glassmorphism">
+            <!-- Sidebar -->
+            <div class="wa-sidebar">
+                <button class="wa-sidebar-btn active" data-panel="chats" title="Conversas"><i class="fas fa-comment-dots"></i></button>
+                <button class="wa-sidebar-btn" data-panel="groups" title="Grupos"><i class="fas fa-users"></i></button>
+                <button class="wa-sidebar-btn" data-panel="status" title="Status"><i class="fas fa-circle-notch"></i></button>
+                <button class="wa-sidebar-btn" data-panel="catalog" title="Catálogo"><i class="fas fa-store"></i></button>
+                <div class="wa-sidebar-spacer"></div>
+                <button class="wa-sidebar-btn" data-panel="settings" title="Configurações"><i class="fas fa-cog"></i></button>
+            </div>
+
+            <!-- Side Panel (Conversations / Groups / Status / Settings) -->
+            <div id="conversation-panel" class="wa-side-panel">
+                <!-- Side panel header -->
+                <div class="p-3 border-b border-gray-200/50">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 id="side-panel-title" class="font-bold text-gray-900">Conversas</h2>
+                        <div class="flex gap-1">
+                            <button id="new-conversation-btn" class="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 flex items-center justify-center transition" title="Nova conversa">
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+                            <button id="sync-history-btn" class="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 flex items-center justify-center transition" title="Sincronizar histórico">
+                                <i class="fas fa-sync-alt text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Instance Tabs -->
+                    <div class="flex gap-1 mb-2" id="instance-tabs">
+                        <button class="instance-tab active text-xs py-1.5 px-3" data-instance="aero-festas">
+                            Aero <span class="ml-1 text-[10px]" id="badge-aero-festas"></span>
+                        </button>
+                        <button class="instance-tab text-xs py-1.5 px-3" data-instance="abc-festas">
+                            ABC <span class="ml-1 text-[10px]" id="badge-abc-festas"></span>
+                        </button>
+                        <div class="flex items-center gap-1 ml-auto">
+                            <span class="status-dot disconnected" id="connection-status-dot" style="width:6px;height:6px;"></span>
+                            <span class="text-[10px] text-gray-400" id="connection-status-text">...</span>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="search-conversations" placeholder="Buscar conversa..."
+                            class="form-input w-full pl-9 pr-4 py-2 rounded-xl text-sm">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <i class="fas fa-search text-xs"></i>
+                        </span>
+                    </div>
+                    <div class="flex gap-1 mt-2">
+                        <button id="filter-unread-btn" onclick="toggleUnreadFilter()" class="flex-1 text-xs py-1.5 px-3 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition font-medium flex items-center justify-center gap-1">
+                            <i class="fas fa-envelope text-[10px]"></i> Não lidas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Archived bar -->
+                <div id="archived-bar" class="archived-bar hidden" onclick="toggleArchivedView()">
+                    <i class="fas fa-archive"></i>
+                    <span>Arquivados (<span id="archived-count">0</span>)</span>
+                </div>
+
+                <!-- Side panel content area -->
+                <div id="conversation-list" class="flex-1 overflow-y-auto">
+                    <div class="flex items-center justify-center h-full text-gray-400 text-sm p-4">
+                        <div class="text-center">
+                            <i class="fab fa-whatsapp text-4xl text-gray-300 mb-2"></i>
+                            <p>Carregando conversas...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Groups panel (hidden by default) -->
+                <div id="groups-panel" class="flex-1 overflow-y-auto hidden"></div>
+
+                <!-- Status panel (hidden by default) -->
+                <div id="status-panel" class="flex-1 overflow-y-auto hidden"></div>
+
+                <!-- Catalog panel (hidden by default) -->
+                <div id="catalog-side-panel" class="flex-1 overflow-y-auto hidden"></div>
+
+                <!-- Settings panel (hidden by default) -->
+                <div id="settings-panel" class="flex-1 overflow-y-auto hidden">
+                    <div class="p-4 space-y-3">
+                        <div id="profile-section" class="text-center py-4">
+                            <div class="w-20 h-20 rounded-full bg-[var(--wa-green)] mx-auto mb-3 flex items-center justify-center text-white text-2xl font-bold overflow-hidden cursor-pointer" id="my-profile-pic">
+                                <i class="fab fa-whatsapp text-3xl"></i>
+                            </div>
+                            <h3 id="my-profile-name" class="font-bold text-gray-900">...</h3>
+                            <p id="my-profile-status" class="text-xs text-gray-500 mt-1">...</p>
+                            <p id="my-profile-phone" class="text-xs text-gray-400 mt-1"></p>
+                        </div>
+                        <button onclick="openEditProfileModal()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-user-edit text-gray-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Editar perfil</span>
+                        </button>
+                        <button onclick="syncFullHistory()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-history text-gray-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Sincronizar histórico</span>
+                        </button>
+                        <button onclick="syncAllContacts()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-address-book text-gray-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Atualizar nomes dos contatos</span>
+                        </button>
+                        <button onclick="mergeDuplicates()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-compress-alt text-gray-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Corrigir conversas duplicadas</span>
+                        </button>
+                        <button onclick="cleanupOldConversations(90)" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition text-left">
+                            <i class="fas fa-broom text-red-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium text-red-600">Limpar chats antigos</span>
+                            <span class="text-xs text-gray-400 ml-auto">+90 dias</span>
+                        </button>
+                        <button onclick="cleanupLidConversations()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition text-left">
+                            <i class="fas fa-clone text-red-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium text-red-600">Remover duplicatas @lid</span>
+                        </button>
+                        <button id="connect-btn" class="hidden w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-qrcode text-green-500 w-5 text-center"></i>
+                            <span class="text-sm font-medium text-green-600">Conectar WhatsApp</span>
+                        </button>
+                        <button onclick="disconnectInstance()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition text-left text-red-500">
+                            <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                            <span class="text-sm font-medium">Desconectar</span>
+                        </button>
+                        <a href="./Dashboard.html" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition text-left">
+                            <i class="fas fa-home text-gray-400 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Voltar ao Dashboard</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- New Conversation panel (hidden by default) -->
+                <div id="new-conv-panel" class="flex-1 overflow-y-auto hidden">
+                    <div class="p-3 border-b border-gray-200/50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <button onclick="closeNewConvPanel()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-arrow-left"></i></button>
+                            <h3 class="font-bold text-sm">Nova conversa</h3>
+                        </div>
+                        <input type="text" id="search-contacts" placeholder="Buscar contato ou digitar número..." class="form-input w-full pl-9 pr-4 py-2 rounded-xl text-sm">
+                        <!-- Botão aparece ao digitar um número -->
+                        <div id="new-conv-number-btn" class="hidden mt-2">
+                            <button id="start-conv-number" class="w-full flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition text-left">
+                                <div class="w-9 h-9 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white flex-shrink-0">
+                                    <i class="fas fa-phone text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-800">Iniciar conversa</p>
+                                    <p class="text-xs text-gray-500" id="new-conv-number-display"></p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="contacts-list" class="divide-y divide-gray-100"></div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div id="chat-panel" class="wa-chat-panel mobile-hidden">
+                <!-- Chat Header -->
+                <div id="chat-header" class="p-3 border-b border-gray-200/50 flex items-center justify-between bg-white/30">
+                    <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" id="chat-header-contact" onclick="openContactDetails()">
+                        <button id="back-to-list-btn" class="lg:hidden text-gray-500 hover:text-gray-700 p-1 flex-shrink-0">
+                            <i class="fas fa-arrow-left text-lg"></i>
+                        </button>
+                        <div class="w-10 h-10 rounded-full bg-[var(--wa-green)] flex items-center justify-center text-white font-bold overflow-hidden flex-shrink-0" id="chat-avatar">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 id="chat-contact-name" class="font-semibold text-gray-900 text-sm truncate"></h3>
+                            <p id="chat-contact-phone" class="text-xs text-gray-500 truncate"></p>
+                            <p id="chat-presence" class="text-[11px] text-green-600 font-medium hidden"></p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button id="link-crm-btn" class="hidden text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-200 font-semibold transition">
+                            <i class="fas fa-users mr-1"></i> CRM
+                        </button>
+                        <button id="mute-chat-btn" class="hidden text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center" title="Silenciar" onclick="toggleMuteChat()">
+                            <i class="fas fa-bell text-sm"></i>
+                        </button>
+                        <button id="archive-chat-btn" class="hidden text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center" title="Arquivar" onclick="toggleArchiveChat()">
+                            <i class="fas fa-archive text-sm"></i>
+                        </button>
+                        <button id="delete-chat-btn" class="hidden text-gray-400 hover:text-red-500 w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center transition" title="Deletar conversa" onclick="deleteCurrentConversation()">
+                            <i class="fas fa-trash-alt text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sync banner (shown when no messages) -->
+                <div id="sync-banner" class="hidden bg-amber-50 text-amber-700 text-xs text-center py-2 px-3 cursor-pointer hover:bg-amber-100 transition" onclick="syncCurrentConversation()">
+                    <i class="fas fa-sync-alt mr-1"></i> Sem histórico. Toque para sincronizar mensagens.
+                </div>
+
+                <!-- Messages Area -->
+                <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div id="chat-welcome" class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <i class="fab fa-whatsapp text-6xl text-gray-200 mb-4"></i>
+                            <p class="text-lg font-medium">Selecione uma conversa</p>
+                            <p class="text-sm mt-1">As mensagens aparecem aqui</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading more indicator -->
+                <div id="loading-more" class="hidden text-center py-2 text-xs text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-1"></i> Carregando mais mensagens...
+                </div>
+
+                <!-- Input Bar -->
+                <div id="input-bar" class="hidden p-3 border-t border-gray-200/50 bg-white/50">
+                    <div class="relative flex items-end gap-2">
+                        <button id="attach-btn" class="text-gray-400 hover:text-gray-600 w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-gray-100 transition" title="Anexar">
+                            <i class="fas fa-paperclip text-lg"></i>
+                        </button>
+                        <div class="flex-1 relative">
+                            <textarea id="message-input" rows="1" placeholder="Digite uma mensagem ou / para atalhos..."
+                                class="form-input w-full resize-none text-sm rounded-2xl pl-4 pr-10 py-2.5 max-h-32"
+                                style="field-sizing: content;"></textarea>
+                            <button type="button" class="emoji-trigger absolute right-2 bottom-2 text-gray-400 hover:text-amber-500 transition" data-target="message-input" title="Emojis">
+                                <i class="far fa-smile text-lg"></i>
+                            </button>
+                        </div>
+                        <button id="send-btn" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="display:none;">
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                        <button id="audio-btn" class="text-gray-400 hover:text-[var(--wa-green)] w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-green-50 transition" title="Gravar áudio">
+                            <i class="fas fa-microphone text-lg"></i>
+                        </button>
+                    </div>
+                    <!-- Recording UI (hidden by default) -->
+                    <div id="recording-bar" class="items-center gap-3 py-2" style="display:none !important;">
+                        <button id="cancel-recording" class="text-red-500 hover:text-red-700 w-10 h-10 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                        <div class="recording-indicator flex-1"><i class="fas fa-circle text-xs"></i> <span id="recording-time">0:00</span> — Gravando...</div>
+                        <button id="send-recording" class="shiny-btn w-10 h-10 rounded-full flex items-center justify-center"><i class="fas fa-paper-plane text-sm"></i></button>
+                    </div>
+                    <!-- Hidden file inputs -->
+                    <input type="file" id="file-input-image" accept="image/*" class="hidden">
+                    <input type="file" id="file-input-video" accept="video/*" class="hidden">
+                    <input type="file" id="file-input-document" accept="*/*" class="hidden">
+                </div>
+            </div>
+
+            <!-- Contact Details Panel -->
+            <div id="contact-details-panel" class="wa-details-panel">
+                <div class="p-3 border-b border-gray-200/50 flex items-center gap-2">
+                    <button onclick="closeContactDetails()" class="text-gray-500 hover:text-gray-700 w-8 h-8 flex items-center justify-center"><i class="fas fa-times"></i></button>
+                    <h3 class="font-bold text-sm">Dados do contato</h3>
+                </div>
+                <div id="contact-details-content" class="p-4 overflow-y-auto flex-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Catalog Modal -->
+    <div id="catalog-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="glassmorphism p-6 rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col" style="background: rgba(255,255,255,0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-store text-green-600 mr-2"></i>Catálogo</h3>
+                <button id="close-catalog-modal" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div id="catalog-content" class="flex-1 overflow-y-auto">
+                <div class="text-center text-gray-400 py-8"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando catálogo...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker (fixed, outside overflow containers) -->
+    <div id="emoji-picker" style="display:none; position:fixed; background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.18); z-index:99999; width:280px; max-height:320px; overflow:hidden; flex-direction:column;">
+        <div style="padding:8px 10px; border-bottom:1px solid #eee;">
+            <input type="text" id="emoji-search" placeholder="Buscar emoji..." style="width:100%; border:1px solid #e5e7eb; border-radius:20px; padding:6px 12px; font-size:0.8rem; outline:none;">
+        </div>
+        <div id="emoji-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; padding:8px; overflow-y:auto; max-height:260px; font-size:1.4rem; text-align:center;"></div>
+    </div>
+
+    <!-- Shortcuts popup (fixed, outside overflow containers) -->
+    <div id="shortcuts-popup" class="shortcuts-popup" style="display:none !important;"></div>
+
+    <!-- Attach Menu (fixed, outside overflow containers) -->
+    <div id="attach-menu" style="display:none; position:fixed; background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.15); padding:12px; z-index:99999;">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+            <div class="attach-menu-item" data-action="image" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#a855f7;"><i class="fas fa-image"></i></div>
+                <span>Imagem</span>
+            </div>
+            <div class="attach-menu-item" data-action="video" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#ef4444;"><i class="fas fa-video"></i></div>
+                <span>Vídeo</span>
+            </div>
+            <div class="attach-menu-item" data-action="document" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#3b82f6;"><i class="fas fa-file"></i></div>
+                <span>Documento</span>
+            </div>
+            <div class="attach-menu-item" data-action="catalog" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#16a34a;"><i class="fas fa-store"></i></div>
+                <span>Catálogo</span>
+            </div>
+            <div class="attach-menu-item" data-action="contact" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#0ea5e9;"><i class="fas fa-address-book"></i></div>
+                <span>Contato</span>
+            </div>
+            <div class="attach-menu-item" data-action="shortcuts-manage" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 10px; border-radius:12px; cursor:pointer; font-size:0.75rem; color:#6b7280; font-weight:600;">
+                <div style="width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; background:#f59e0b;"><i class="fas fa-bolt"></i></div>
+                <span>Atalhos</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts Manager Modal -->
+    <div id="shortcuts-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="glassmorphism p-6 rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col" style="background: rgba(255,255,255,0.95);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-bolt text-amber-500 mr-2"></i>Atalhos Rápidos</h3>
+                <button id="close-shortcuts-modal" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <button id="add-shortcut-btn" class="w-full mb-3 py-2 px-4 bg-amber-50 text-amber-700 rounded-xl text-sm font-semibold hover:bg-amber-100 transition">
+                <i class="fas fa-plus mr-1"></i> Novo Atalho
+            </button>
+            <div id="shortcuts-list" class="flex-1 overflow-y-auto space-y-2">
+                <p class="text-center text-gray-400 text-sm py-4">Nenhum atalho configurado</p>
+            </div>
+            <!-- Add/Edit form (hidden) -->
+            <div id="shortcut-form" class="border-t border-gray-200 pt-3 mt-3" style="display:none;">
+                <h4 class="text-sm font-bold mb-2" id="shortcut-form-title">Novo Atalho</h4>
+                <input type="hidden" id="shortcut-edit-id">
+                <div class="space-y-2">
+                    <div>
+                        <label class="text-xs text-gray-500">Comando (ex: futebol)</label>
+                        <input type="text" id="shortcut-cmd" class="form-input w-full text-sm" placeholder="futebol">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Título</label>
+                        <input type="text" id="shortcut-title" class="form-input w-full text-sm" placeholder="Pacote Futebol">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Mensagem</label>
+                        <textarea id="shortcut-content" rows="3" class="form-input w-full text-sm resize-none" placeholder="Olá! Temos o pacote futebol..."></textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="save-shortcut" class="flex-1 shiny-btn py-2 rounded-lg text-sm font-bold">Salvar</button>
+                        <button id="cancel-shortcut" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-200">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Preview Modal (before sending) -->
+    <div id="media-preview-modal" class="modal-hidden fixed inset-0 bg-black/80 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-md w-full">
+            <div id="media-preview-content" class="mb-3 flex justify-center max-h-[50vh] overflow-hidden rounded-xl bg-gray-100">
+            </div>
+            <div class="relative mb-3">
+                <input type="text" id="media-caption" class="form-input w-full text-sm pr-10" placeholder="Legenda (opcional)">
+                <button type="button" class="emoji-trigger absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition" data-target="media-caption" title="Emojis">
+                    <i class="far fa-smile text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-gray-400 mb-3" id="media-file-info"></p>
+            <div class="flex gap-2">
+                <button id="confirm-send-media" class="flex-1 shiny-btn py-2.5 rounded-xl text-sm font-bold"><i class="fas fa-paper-plane mr-1"></i> Enviar</button>
+                <button id="cancel-send-media" class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Viewer Modal -->
+    <div id="pdf-modal" class="modal-hidden fixed inset-0 bg-black/80 z-[30000] flex flex-col">
+        <div class="flex items-center justify-between p-3 bg-gray-900/90">
+            <h3 class="text-white text-sm font-semibold truncate flex-1" id="pdf-title"><i class="fas fa-file-pdf text-red-400 mr-2"></i>PDF</h3>
+            <div class="flex gap-2">
+                <button onclick="window.open(document.getElementById('pdf-frame').src,'_blank')" class="text-gray-300 hover:text-white px-3 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 transition"><i class="fas fa-external-link-alt mr-1"></i>Nova aba</button>
+                <button onclick="document.getElementById('pdf-modal').classList.add('modal-hidden')" class="text-gray-300 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <iframe id="pdf-frame" class="flex-1 w-full bg-white" style="border:none;"></iframe>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl max-w-sm w-full">
+            <h3 class="text-lg font-bold mb-4"><i class="fas fa-user-edit text-green-600 mr-2"></i>Editar Perfil</h3>
+            <div class="text-center mb-4">
+                <div class="w-20 h-20 rounded-full bg-gray-200 mx-auto mb-2 overflow-hidden flex items-center justify-center cursor-pointer" id="edit-profile-pic-preview" onclick="document.getElementById('edit-profile-pic-input').click()">
+                    <i class="fas fa-camera text-gray-400 text-xl"></i>
+                </div>
+                <input type="file" id="edit-profile-pic-input" accept="image/*" class="hidden">
+                <p class="text-xs text-gray-400">Toque para alterar</p>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-gray-500 font-medium">Nome</label>
+                    <input type="text" id="edit-profile-name" class="form-input w-full text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium">Recado</label>
+                    <input type="text" id="edit-profile-about" class="form-input w-full text-sm" placeholder="Disponível">
+                </div>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button onclick="saveProfile()" class="flex-1 shiny-btn py-2.5 rounded-xl text-sm font-bold">Salvar</button>
+                <button onclick="document.getElementById('edit-profile-modal').classList.add('modal-hidden')" class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Contact Modal -->
+    <div id="send-contact-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-sm w-full max-h-[70vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold"><i class="fas fa-address-book text-sky-500 mr-2"></i>Enviar Contato</h3>
+                <button onclick="document.getElementById('send-contact-modal').classList.add('modal-hidden')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="search-contacts-send" placeholder="Buscar contato..." class="form-input w-full text-sm mb-3">
+            <div id="contacts-send-list" class="flex-1 overflow-y-auto divide-y divide-gray-100"></div>
+        </div>
+    </div>
+
+    <!-- Forward Message Modal -->
+    <div id="forward-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-sm w-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold"><i class="fas fa-share text-green-500 mr-2"></i>Encaminhar para</h3>
+                <button onclick="closeForwardModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <!-- Preview da mensagem -->
+            <div id="forward-preview" class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3 text-sm text-gray-600 max-h-20 overflow-hidden line-clamp-3"></div>
+            <!-- Busca -->
+            <input type="text" id="forward-search" placeholder="Buscar conversa..." class="form-input w-full text-sm mb-3" oninput="filterForwardList(this.value)">
+            <!-- Lista de conversas -->
+            <div id="forward-conv-list" class="flex-1 overflow-y-auto divide-y divide-gray-100 min-h-0"></div>
+        </div>
+    </div>
+
+    <!-- Mute Options Modal -->
+    <div id="mute-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-xs w-full">
+            <h3 class="text-sm font-bold mb-3">Silenciar notificações</h3>
+            <div class="space-y-1">
+                <button onclick="muteChat('8h')" class="w-full text-left p-3 hover:bg-gray-50 rounded-lg text-sm">8 horas</button>
+                <button onclick="muteChat('1w')" class="w-full text-left p-3 hover:bg-gray-50 rounded-lg text-sm">1 semana</button>
+                <button onclick="muteChat('forever')" class="w-full text-left p-3 hover:bg-gray-50 rounded-lg text-sm">Sempre</button>
+            </div>
+            <button onclick="document.getElementById('mute-modal').classList.add('modal-hidden')" class="w-full mt-3 p-2 text-center text-gray-500 text-sm hover:bg-gray-50 rounded-lg">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Status Viewer Modal -->
+    <div id="status-viewer-modal" class="modal-hidden fixed inset-0 bg-black z-[25000] flex flex-col">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gray-600 overflow-hidden flex items-center justify-center text-white font-bold" id="status-viewer-avatar"></div>
+                <div>
+                    <p class="text-white text-sm font-semibold" id="status-viewer-name"></p>
+                    <p class="text-gray-400 text-xs" id="status-viewer-time"></p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('status-viewer-modal').classList.add('modal-hidden')" class="text-white w-8 h-8 flex items-center justify-center"><i class="fas fa-times text-lg"></i></button>
+        </div>
+        <!-- Progress bar -->
+        <div class="px-4"><div class="h-0.5 bg-gray-700 rounded-full overflow-hidden"><div id="status-progress" class="h-full bg-white transition-all" style="width:0%;"></div></div></div>
+        <!-- Status content -->
+        <div id="status-viewer-content" class="flex-1 flex items-center justify-center p-4"></div>
+    </div>
+
+    <!-- Post Status Modal -->
+    <div id="post-status-modal" class="modal-hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-2xl max-w-sm w-full">
+            <h3 class="text-lg font-bold mb-3"><i class="fas fa-circle-notch text-green-600 mr-2"></i>Postar Status</h3>
+            <div class="space-y-3">
+                <textarea id="status-text-input" rows="4" class="form-input w-full text-sm resize-none" placeholder="Digite seu status..."></textarea>
+                <div class="flex gap-2">
+                    <button onclick="postTextStatus()" class="flex-1 shiny-btn py-2.5 rounded-xl text-sm font-bold"><i class="fas fa-paper-plane mr-1"></i>Publicar</button>
+                    <button onclick="document.getElementById('post-status-modal').classList.add('modal-hidden')" class="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="hidden fixed inset-0 bg-black/50 z-[20000] flex items-center justify-center p-4">
+        <div class="glassmorphism p-8 rounded-2xl max-w-sm w-full text-center" style="background: rgba(255,255,255,0.95);">
+            <h3 class="text-lg font-bold mb-2">
+                <i class="fab fa-whatsapp text-[var(--wa-green)] mr-2"></i>Conectar WhatsApp
+            </h3>
+            <p class="text-sm text-gray-500 mb-4" id="qr-instance-name"></p>
+            <div id="qr-container" class="mx-auto mb-4 flex items-center justify-center min-h-[264px]">
+                <div class="text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p class="text-sm">Gerando QR Code...</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500">Abra o WhatsApp no celular &gt; Dispositivos conectados &gt; Conectar dispositivo</p>
+            <button id="close-qr-modal" class="mt-4 text-gray-500 hover:text-gray-700 text-sm font-semibold">
+                <i class="fas fa-times mr-1"></i> Fechar
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed top-4 right-4 z-[99999] bg-white rounded-xl shadow-lg border border-gray-200 p-4 flex items-center gap-3 toast-enter">
+        <i id="toast-icon" class="text-lg"></i>
+        <p id="toast-message" class="text-sm"></p>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <div class="bottom-nav-handle" id="bottom-nav-handle"><i class="fas fa-chevron-up"></i></div>
+        <a href="./Dashboard.html" class="nav-item"><i class="fas fa-home"></i><span>Início</span></a>
+        <a href="./Agenda de eventos.html" class="nav-item"><i class="fas fa-calendar-alt"></i><span>Agenda</span></a>
+        <a href="./Sistema Gestão Financeira.html" class="nav-item"><i class="fas fa-wallet"></i><span>Financeiro</span></a>
+        <a href="./Sistema de CRM.html" class="nav-item"><i class="fas fa-users"></i><span>Clientes</span></a>
+        <a href="#" class="nav-item active"><i class="fab fa-whatsapp"></i><span>WhatsApp</span></a>
+    </nav>
+
+<script>
+// Populate mock data after page loads
+document.addEventListener('DOMContentLoaded', function() {
+  var chatPanel = document.getElementById('chat-panel');
+  if (chatPanel) chatPanel.classList.remove('mobile-hidden');
+
+  var title = document.getElementById('side-panel-title');
+  if (title) title.textContent = 'Conversas';
+
+  var dot = document.getElementById('connection-status-dot');
+  if (dot) { dot.classList.remove('disconnected'); dot.classList.add('connected'); }
+  var dotM = document.getElementById('connection-status-dot-mobile');
+  if (dotM) { dotM.classList.remove('disconnected'); dotM.classList.add('connected'); }
+  var st = document.getElementById('connection-status-text');
+  if (st) st.textContent = 'Conectado';
+
+  var convList = document.getElementById('conversation-list');
+  if (convList) {
+    var mockConvs = [
+      { name: 'Maria Silva', msg: 'Olá, gostaria de saber sobre o pacote de festa infantil...', time: '14:32', unread: 3, avatar: 'MS' },
+      { name: 'João Santos', msg: 'Confirmado para sábado!', time: '13:15', unread: 0, avatar: 'JS' },
+      { name: 'Ana Costa', msg: 'Quanto custa o aluguel do pula-pula?', time: '12:48', unread: 1, avatar: 'AC' },
+      { name: 'Pedro Lima', msg: 'Obrigado pelo orçamento! 👍', time: '11:20', unread: 0, avatar: 'PL' },
+      { name: 'Fernanda Oliveira', msg: 'Vocês fazem decoração temática?', time: '10:55', unread: 2, avatar: 'FO' },
+      { name: 'Carlos Mendes', msg: 'Preciso cancelar o evento de terça', time: 'Ontem', unread: 0, avatar: 'CM' },
+      { name: 'Lucia Ferreira', msg: 'Boa tarde! Quais brinquedos vocês têm?', time: 'Ontem', unread: 0, avatar: 'LF' },
+      { name: 'Roberto Alves', msg: 'Perfeito, obrigado!', time: 'Ontem', unread: 0, avatar: 'RA' },
+    ];
+    convList.innerHTML = mockConvs.map(function(c, i) {
+      return '<div class="conv-item p-3 cursor-pointer flex items-center gap-3 border-b border-gray-100/50 ' + (i === 0 ? 'active' : '') + '">' +
+        '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">' + c.avatar + '</div>' +
+        '<div class="flex-1 min-w-0">' +
+          '<div class="flex justify-between items-baseline">' +
+            '<h4 class="font-semibold text-sm text-gray-900 truncate">' + c.name + '</h4>' +
+            '<span class="text-[10px] text-gray-400 flex-shrink-0 ml-2">' + c.time + '</span>' +
+          '</div>' +
+          '<div class="flex justify-between items-center mt-0.5">' +
+            '<p class="text-xs text-gray-500 truncate">' + c.msg + '</p>' +
+            (c.unread > 0 ? '<span class="unread-badge ml-2 flex-shrink-0">' + c.unread + '</span>' : '') +
+          '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  var chatName = document.getElementById('chat-contact-name');
+  if (chatName) chatName.textContent = 'Maria Silva';
+  var chatPhone = document.getElementById('chat-contact-phone');
+  if (chatPhone) chatPhone.textContent = '+55 11 99999-1234';
+  var chatAvatar = document.getElementById('chat-avatar');
+  if (chatAvatar) chatAvatar.innerHTML = '<span class="text-sm font-bold">MS</span>';
+  var presence = document.getElementById('chat-presence');
+  if (presence) { presence.textContent = 'online'; presence.classList.remove('hidden'); }
+
+  ['mute-chat-btn','archive-chat-btn','delete-chat-btn','link-crm-btn'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (btn) btn.classList.remove('hidden');
+  });
+
+  var messagesArea = document.getElementById('messages-area');
+  if (messagesArea) {
+    var welcome = document.getElementById('chat-welcome');
+    if (welcome) welcome.style.display = 'none';
+    messagesArea.innerHTML =
+      '<div class="text-center my-3"><span class="bg-white/80 text-gray-500 text-xs px-3 py-1 rounded-full shadow-sm">Hoje</span></div>' +
+      '<div class="relative group p-2.5 bubble-received mr-auto"><p class="text-sm text-gray-800">Olá, boa tarde! 😊</p><p class="text-[10px] text-gray-400 text-right mt-1">14:28</p></div>' +
+      '<div class="relative group p-2.5 bubble-received mr-auto"><p class="text-sm text-gray-800">Gostaria de saber sobre o pacote de festa infantil para 30 crianças. Vocês têm disponibilidade para o dia 15 de março?</p><p class="text-[10px] text-gray-400 text-right mt-1">14:29</p></div>' +
+      '<div class="relative group p-2.5 bubble-sent ml-auto"><p class="text-sm text-gray-800">Boa tarde, Maria! Tudo bem? 😄</p><p class="text-[10px] text-gray-400 text-right mt-1">14:30 <i class="fas fa-check-double text-blue-500 ml-0.5"></i></p></div>' +
+      '<div class="relative group p-2.5 bubble-sent ml-auto"><p class="text-sm text-gray-800">Sim, temos disponibilidade! Nosso pacote para 30 crianças inclui:</p><p class="text-sm text-gray-800 mt-1">🎪 Pula-pula grande<br>🎨 Pintura facial<br>🍿 Pipoca e algodão doce<br>🎈 Decoração com balões</p><p class="text-sm text-gray-800 mt-1">O valor é R$ 1.200,00</p><p class="text-[10px] text-gray-400 text-right mt-1">14:31 <i class="fas fa-check-double text-blue-500 ml-0.5"></i></p></div>' +
+      '<div class="relative group p-2.5 bubble-received mr-auto"><p class="text-sm text-gray-800">Que ótimo! E vocês fazem a montagem no local?</p><p class="text-[10px] text-gray-400 text-right mt-1">14:32</p></div>';
+  }
+
+  var inputBar = document.getElementById('input-bar');
+  if (inputBar) inputBar.classList.remove('hidden');
+});
+</script>
+</body>
+</html>
