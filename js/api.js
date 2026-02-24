@@ -109,6 +109,56 @@ export const api = {
 
     // --- ESCRITAS (POST/DELETE) ---
 
+    // Salvar Brinquedo
+    salvarBrinquedo: async (brinquedo) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(brinquedo)
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) { console.error('Erro ao salvar brinquedo:', error); return null; }
+    },
+
+    // Deletar Brinquedo
+    deletarBrinquedo: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) { console.error('Erro ao deletar brinquedo:', error); return null; }
+    },
+
+    // Salvar Empresa
+    salvarEmpresa: async (empresa) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/companies`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(empresa)
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) { console.error('Erro ao salvar empresa:', error); return null; }
+    },
+
+    // Deletar Empresa
+    deletarEmpresa: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/companies/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) { console.error('Erro ao deletar empresa:', error); return null; }
+    },
+
     // Salvar Evento
     salvarEvento: async (evento) => {
         try {

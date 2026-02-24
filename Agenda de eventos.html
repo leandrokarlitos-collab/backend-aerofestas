@@ -2909,15 +2909,21 @@
                 showModal(dayEventsModal);
             };
 
-            const handleAddToy = () => {
+            const handleAddToy = async () => {
                 const name = newToyNameInput.value.trim();
                 const quantity = parseInt(newToyQuantityInput.value) || 1;
                 if (name && quantity > 0) {
-                    toys.push({ id: Date.now(), name, quantity });
-                    saveData('toys', toys);
+                    const newToy = { id: Date.now(), name, quantity };
+                    const result = await api.salvarBrinquedo(newToy);
+                    if (result && result.data) {
+                        toys.push(result.data);
+                    } else {
+                        toys.push(newToy);
+                    }
                     renderToys();
                     newToyNameInput.value = '';
                     newToyQuantityInput.value = '1';
+                    showToast('Brinquedo adicionado!');
                 }
             };
 
@@ -2971,31 +2977,31 @@
             // --- FIM DA NOVA FUNÇÃO ---
 
 
-            const handleEditToy = (toyId) => {
+            const handleEditToy = async (toyId) => {
                 const toy = toys.find(t => t.id === toyId);
                 if (!toy) return;
                 const newName = prompt("Novo nome:", toy.name);
                 if (newName && newName.trim()) {
                     toy.name = newName.trim();
-                    saveData('toys', toys);
+                    await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
                     renderAll();
                 }
             };
 
-            const handleDeleteToy = (toyId) => {
+            const handleDeleteToy = async (toyId) => {
                 if (confirm('Tem certeza que deseja excluir este brinquedo?')) {
-                    toys = toys.filter(t => t.id !== toyId);
-                    events.forEach(e => {
-                        e.toys = e.toys.filter(t => t.id !== toyId);
-                    });
-                    events = events.filter(e => e.toys.length > 0);
-                    saveData('toys', toys);
-                    saveData('events', events);
-                    renderAll();
+                    const result = await api.deletarBrinquedo(toyId);
+                    if (result && result.success) {
+                        toys = toys.filter(t => t.id !== toyId);
+                        renderAll();
+                        showToast('Brinquedo excluído!');
+                    } else {
+                        showToast('Erro ao excluir brinquedo.', true);
+                    }
                 }
             };
 
-            const handleEditToyQuantity = (toyId, newQuantity) => {
+            const handleEditToyQuantity = async (toyId, newQuantity) => {
                 if (isNaN(newQuantity) || newQuantity < 1) {
                     showToast('Quantidade inválida.', true);
                     renderToys();
@@ -3004,13 +3010,13 @@
                 const toy = toys.find(t => t.id === toyId);
                 if (toy) {
                     toy.quantity = newQuantity;
-                    saveData('toys', toys);
+                    await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
                     showToast('Quantidade atualizada!', false);
                 }
             };
 
             // --- INÍCIO DA MODIFICAÇÃO: handleAddCompany ---
-            const handleAddCompany = () => {
+            const handleAddCompany = async () => {
                 const nameInput = document.getElementById('new-company-name');
                 const cnpjInput = document.getElementById('new-company-cnpj');
                 const addressInput = document.getElementById('new-company-address');
@@ -3022,20 +3028,25 @@
                 const paymentInput = document.getElementById('new-company-payment');
 
                 if (nameInput.value.trim()) {
-                    companies.push({
+                    const newCompany = {
                         id: Date.now(),
                         name: nameInput.value.trim(),
                         cnpj: cnpjInput.value.trim(),
                         address: addressInput.value.trim(),
                         repName: repNameInput.value.trim(),
                         repDoc: repDocInput.value.trim(),
-                        // Novos dados
                         phone: phoneInput.value.trim(),
                         email: emailInput.value.trim(),
                         paymentInfo: paymentInput.value.trim()
-                    });
-                    saveData('companies', companies);
+                    };
+                    const result = await api.salvarEmpresa(newCompany);
+                    if (result && result.data) {
+                        companies.push(result.data);
+                    } else {
+                        companies.push(newCompany);
+                    }
                     renderCompanies();
+                    showToast('Empresa adicionada!');
                     // Limpar todos os campos
                     nameInput.value = '';
                     cnpjInput.value = '';
@@ -3052,7 +3063,7 @@
             // --- FIM DA MODIFICAÇÃO ---
 
             // --- INÍCIO DA MODIFICAÇÃO: handleEditCompany ---
-            const handleEditCompany = (companyId) => {
+            const handleEditCompany = async (companyId) => {
                 const company = companies.find(c => c.id === companyId);
                 if (!company) return;
 
@@ -3062,29 +3073,28 @@
                 company.name = newName.trim();
                 company.cnpj = prompt("Novo CNPJ:", company.cnpj) || "";
                 company.address = prompt("Novo Endereço:", company.address) || "";
-                // Novos campos
                 company.phone = prompt("Novo Telefone/Whatsapp:", company.phone) || "";
                 company.email = prompt("Novo E-mail:", company.email) || "";
                 company.paymentInfo = prompt("Novos Dados de Pagamento (PIX, Banco, etc.):", company.paymentInfo) || "";
-                // Campos existentes
                 company.repName = prompt("Novo Representante:", company.repName) || "";
                 company.repDoc = prompt("Novo Doc. Representante:", company.repDoc) || "";
 
-                saveData('companies', companies);
+                await api.salvarEmpresa(company);
                 renderAll();
                 showToast("Empresa atualizada!", false);
             };
             // --- FIM DA MODIFICAÇÃO ---
 
-            const handleDeleteCompany = (companyId) => {
+            const handleDeleteCompany = async (companyId) => {
                 if (confirm('Tem certeza que deseja excluir esta empresa?')) {
-                    if (events.some(e => e.yourCompanyId === companyId)) {
-                        showToast("Empresa não pode ser excluída pois está em uso.", true);
-                        return;
+                    const result = await api.deletarEmpresa(companyId);
+                    if (result && result.success) {
+                        companies = companies.filter(c => c.id !== companyId);
+                        renderCompanies();
+                        showToast('Empresa excluída!');
+                    } else {
+                        showToast("Empresa não pode ser excluída (pode estar em uso por eventos).", true);
                     }
-                    companies = companies.filter(c => c.id !== companyId);
-                    saveData('companies', companies);
-                    renderCompanies();
                 }
             };
 
