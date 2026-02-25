@@ -296,16 +296,31 @@ app.post('/api/migrar-completo', async (req, res) => {
 
 // --- ROTAS DE LEITURA ---
 app.get('/api/admin/toys', async (req, res) => {
-    const toys = await prisma.toy.findMany({ orderBy: { name: 'asc' } });
-    res.json(toys);
+    try {
+        const toys = await prisma.toy.findMany({ orderBy: { name: 'asc' } });
+        res.json(toys);
+    } catch (error) {
+        console.error('Erro ao buscar brinquedos:', error);
+        res.status(500).json({ error: 'Erro ao buscar brinquedos' });
+    }
 });
 app.get('/api/admin/clients', async (req, res) => {
-    const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
-    res.json(clients);
+    try {
+        const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
+        res.json(clients);
+    } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+        res.status(500).json({ error: 'Erro ao buscar clientes' });
+    }
 });
 app.get('/api/admin/companies', async (req, res) => {
-    const companies = await prisma.company.findMany({ orderBy: { name: 'asc' } });
-    res.json(companies);
+    try {
+        const companies = await prisma.company.findMany({ orderBy: { name: 'asc' } });
+        res.json(companies);
+    } catch (error) {
+        console.error('Erro ao buscar empresas:', error);
+        res.status(500).json({ error: 'Erro ao buscar empresas' });
+    }
 });
 
 // --- CRUD BRINQUEDOS ---
@@ -371,14 +386,19 @@ app.delete('/api/admin/companies/:id', async (req, res) => {
     }
 });
 app.get('/api/admin/events-full', async (req, res) => {
-    const events = await prisma.event.findMany({
-        include: {
-            items: { include: { toy: true } },
-            company: true
-        },
-        orderBy: { date: 'desc' }
-    });
-    res.json(events);
+    try {
+        const events = await prisma.event.findMany({
+            include: {
+                items: { include: { toy: true } },
+                company: true
+            },
+            orderBy: { date: 'desc' }
+        });
+        res.json(events);
+    } catch (error) {
+        console.error('Erro ao buscar eventos:', error);
+        res.status(500).json({ error: 'Erro ao buscar eventos' });
+    }
 });
 app.get('/api/finance/accounts', async (req, res) => {
     try {
@@ -404,13 +424,13 @@ app.post('/api/admin/events', async (req, res) => {
             toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
         })).filter(i => i.toyId !== null);
 
+        // Deleta itens antigos se for atualização
         if (evt.id) await prisma.eventItem.deleteMany({ where: { eventId: eventId } });
 
-        // Dados completos do evento
-        const data = {
-            id: eventId,
+        // Campos compartilhados (sem 'id' — Prisma v5 rejeita id no update)
+        const fields = {
             date: evt.date,
-            endDate: evt.endDate || null, // Data de término para eventos multi-dia
+            endDate: evt.endDate || null,
             clientName: evt.clientName,
             yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
             startTime: evt.startTime,
@@ -458,12 +478,12 @@ app.post('/api/admin/events', async (req, res) => {
             isBirthday: evt.isBirthday || false,
             birthdayPersonName: evt.birthdayPersonName,
             birthdayPersonDob: evt.birthdayPersonDob,
-
-            items: { create: itens }
         };
 
         const saved = await prisma.event.upsert({
-            where: { id: eventId }, update: data, create: data,
+            where: { id: eventId },
+            update: { ...fields, items: { create: itens } },
+            create: { id: eventId, ...fields, items: { create: itens } },
             include: { items: { include: { toy: true } } }
         });
         res.json({ success: true, data: saved });

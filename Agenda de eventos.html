@@ -2917,13 +2917,13 @@
                     const result = await api.salvarBrinquedo(newToy);
                     if (result && result.data) {
                         toys.push(result.data);
+                        renderToys();
+                        newToyNameInput.value = '';
+                        newToyQuantityInput.value = '1';
+                        showToast('Brinquedo adicionado!');
                     } else {
-                        toys.push(newToy);
+                        showToast('Erro ao salvar brinquedo na nuvem. Tente novamente.', true);
                     }
-                    renderToys();
-                    newToyNameInput.value = '';
-                    newToyQuantityInput.value = '1';
-                    showToast('Brinquedo adicionado!');
                 }
             };
 
@@ -2982,9 +2982,16 @@
                 if (!toy) return;
                 const newName = prompt("Novo nome:", toy.name);
                 if (newName && newName.trim()) {
+                    const oldName = toy.name;
                     toy.name = newName.trim();
-                    await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
-                    renderAll();
+                    const result = await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
+                    if (result && result.success) {
+                        renderAll();
+                        showToast('Brinquedo atualizado!');
+                    } else {
+                        toy.name = oldName; // Reverte alteração local
+                        showToast('Erro ao atualizar brinquedo na nuvem.', true);
+                    }
                 }
             };
 
@@ -3009,9 +3016,16 @@
                 }
                 const toy = toys.find(t => t.id === toyId);
                 if (toy) {
+                    const oldQuantity = toy.quantity;
                     toy.quantity = newQuantity;
-                    await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
-                    showToast('Quantidade atualizada!', false);
+                    const result = await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
+                    if (result && result.success) {
+                        showToast('Quantidade atualizada!', false);
+                    } else {
+                        toy.quantity = oldQuantity; // Reverte alteração local
+                        renderToys();
+                        showToast('Erro ao atualizar quantidade na nuvem.', true);
+                    }
                 }
             };
 
@@ -3042,11 +3056,11 @@
                     const result = await api.salvarEmpresa(newCompany);
                     if (result && result.data) {
                         companies.push(result.data);
+                        renderCompanies();
+                        showToast('Empresa adicionada!');
                     } else {
-                        companies.push(newCompany);
+                        showToast('Erro ao salvar empresa na nuvem. Tente novamente.', true);
                     }
-                    renderCompanies();
-                    showToast('Empresa adicionada!');
                     // Limpar todos os campos
                     nameInput.value = '';
                     cnpjInput.value = '';
@@ -3070,6 +3084,9 @@
                 const newName = prompt("Novo nome da empresa:", company.name);
                 if (!newName || !newName.trim()) return;
 
+                // Salva backup para reverter em caso de erro
+                const backup = { ...company };
+
                 company.name = newName.trim();
                 company.cnpj = prompt("Novo CNPJ:", company.cnpj) || "";
                 company.address = prompt("Novo Endereço:", company.address) || "";
@@ -3079,9 +3096,15 @@
                 company.repName = prompt("Novo Representante:", company.repName) || "";
                 company.repDoc = prompt("Novo Doc. Representante:", company.repDoc) || "";
 
-                await api.salvarEmpresa(company);
-                renderAll();
-                showToast("Empresa atualizada!", false);
+                const result = await api.salvarEmpresa(company);
+                if (result && result.success) {
+                    renderAll();
+                    showToast("Empresa atualizada!", false);
+                } else {
+                    // Reverte alterações locais
+                    Object.assign(company, backup);
+                    showToast("Erro ao atualizar empresa na nuvem.", true);
+                }
             };
             // --- FIM DA MODIFICAÇÃO ---
 
@@ -3371,11 +3394,15 @@
                     console.log("Enviando para API:", eventData);
                     const response = await api.salvarEvento(eventData); // Chama o api.js
 
+                    if (!response || !response.success) {
+                        throw new Error(response?.error || 'Resposta inválida do servidor');
+                    }
+
                     console.log("✅ Sucesso API:", response);
                     console.log("📦 Items retornados:", response.data?.items);
 
                     // Atualiza a lista local com o que voltou do servidor (importante para ter o ID real)
-                    const savedEvent = response.data || response; // Depende de como seu back retorna
+                    const savedEvent = response.data;
 
                     // CORRIGIDO: Usar os dados da API como estão, sem sobrescrever items
                     // A API já retorna items com a estrutura correta (item.toy.id)
@@ -3394,10 +3421,6 @@
                         events.push(eventForUI);
                     }
 
-                    // Opcional: Manter sync com localStorage apenas como backup de leitura, 
-                    // mas a fonte da verdade agora é a API.
-                    // saveData('events', events); 
-
                     // Sincroniza com CRM (mantido local por enquanto)
                     syncEventToCRM(eventForUI);
 
@@ -3407,8 +3430,8 @@
                     showToast('Evento salvo na nuvem com sucesso!', false);
 
                 } catch (error) {
-                    console.error("Erro ao salvar:", error);
-                    showToast('Erro ao salvar na nuvem. Verifique o console.', true);
+                    console.error("Erro ao salvar evento:", error);
+                    showToast('Erro ao salvar na nuvem. Verifique sua conexão e tente novamente.', true);
                 } finally {
                     saveBtn.textContent = originalText;
                     saveBtn.disabled = false;

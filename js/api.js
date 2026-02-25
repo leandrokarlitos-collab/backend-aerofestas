@@ -168,8 +168,16 @@ export const api = {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(evento)
             });
-            return res.ok ? await res.json() : null;
-        } catch (error) { throw error; }
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                console.error('Erro API ao salvar evento:', res.status, errorData);
+                return null;
+            }
+            return await res.json();
+        } catch (error) {
+            console.error('Erro de rede ao salvar evento:', error);
+            return null;
+        }
     },
 
     // Deletar Evento
