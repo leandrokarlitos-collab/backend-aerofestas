@@ -5,3 +5,6 @@ dev.db
 dev.db-journal
 
 /generated/prisma
+
+# Claude Code worktrees
+.claude/worktrees/
