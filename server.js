@@ -12,7 +12,8 @@ const historyRoutes = require('./routes/history');
 const financeRoutes = require('./routes/finance');
 const taskRoutes = require('./routes/tasks');
 const dailyPlanRoutes = require('./routes/dailyPlans');
-const whatsappRoutes = require('./routes/whatsapp');
+// [DESATIVADO] WhatsApp module desconectado - será desenvolvido em sistema paralelo
+// const whatsappRoutes = require('./routes/whatsapp');
 const { router: backupRoutes, runBackup } = require('./routes/backup');
 const cron = require('node-cron');
 const webpush = require('web-push');
@@ -527,7 +528,8 @@ app.use('/api/admin/history', historyRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/daily-plans', dailyPlanRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
+// [DESATIVADO] WhatsApp module desconectado
+// app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/backup', backupRoutes);
 
 // --- NOTIFICAÇÕES PUSH ---
@@ -627,130 +629,9 @@ setTimeout(() => runBackup('startup'), 120000);
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.redirect('/login.html'));
 
-// === AUTO-SYNC: contatos + histórico de todas as instâncias ===
-async function autoSyncAll() {
-    console.log('[AutoSync] Iniciando sync automático de contatos e histórico...');
-    try {
-        const instances = await prisma.whatsAppInstance.findMany({
-            where: { status: 'connected' }
-        });
-
-        for (const inst of instances) {
-            try {
-                // 1. Sync de contatos (nomes)
-                let contactsRes = await fetch(`${inst.evolutionUrl}/chat/findContacts/${inst.instanceName}`, {
-                    method: 'POST',
-                    headers: { 'apikey': inst.apiKey, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ where: {} })
-                });
-                if (contactsRes.ok) {
-                    const contactsData = await contactsRes.json();
-                    const contacts = Array.isArray(contactsData) ? contactsData
-                        : Array.isArray(contactsData?.contacts) ? contactsData.contacts : [];
-                    let updated = 0;
-                    for (const contact of contacts) {
-                        const remoteJid = contact.id || contact.remoteJid;
-                        if (!remoteJid || !remoteJid.includes('@s.whatsapp.net')) continue;
-                        const savedName = contact.notify || contact.verifiedName || contact.pushName || null;
-                        if (!savedName) continue;
-                        const r = await prisma.whatsAppConversation.updateMany({
-                            where: { remoteJid, instanceId: inst.id },
-                            data: { contactName: savedName }
-                        });
-                        if (r.count > 0) updated++;
-                    }
-                    console.log(`[AutoSync] ${inst.instanceName}: ${updated} nomes de contatos atualizados`);
-                }
-
-                // 2. Sync de grupos (nomes)
-                let groupsRes = await fetch(`${inst.evolutionUrl}/chat/fetchAllGroups/${inst.instanceName}?getParticipants=false`, {
-                    headers: { 'apikey': inst.apiKey }
-                });
-                if (groupsRes.ok) {
-                    const groups = await groupsRes.json();
-                    const groupList = Array.isArray(groups) ? groups : groups?.groups || [];
-                    let gUpdated = 0;
-                    for (const group of groupList) {
-                        if (!group.id) continue;
-                        const groupName = group.subject || group.name || null;
-                        if (!groupName) continue;
-                        const r = await prisma.whatsAppConversation.updateMany({
-                            where: { remoteJid: group.id, instanceId: inst.id },
-                            data: { contactName: groupName }
-                        });
-                        if (r.count > 0) gUpdated++;
-                    }
-                    console.log(`[AutoSync] ${inst.instanceName}: ${gUpdated} nomes de grupos atualizados`);
-                }
-
-                // 3. Sync de chats — DESABILITADO
-                // Motivo: importava TODOS os chats da Evolution API (centenas de conversas antigas/inúteis)
-                // O webhook já cria conversas automaticamente quando mensagens chegam
-                // Contatos da agenda são sincronizados via sync-contacts (passos 1-2 acima)
-            } catch (instErr) {
-                console.warn(`[AutoSync] Erro ao sincronizar ${inst.instanceName}:`, instErr.message);
-            }
-        }
-        console.log('[AutoSync] Sync concluído');
-    } catch (err) {
-        console.error('[AutoSync] Erro geral:', err.message);
-    }
-}
-
-// Roda 30s após startup e depois a cada 15 minutos
-setTimeout(autoSyncAll, 30000);
-setInterval(autoSyncAll, 15 * 60 * 1000);
-
-// === LIMPEZA AUTOMÁTICA: remove mensagens com mais de 30 dias ===
-async function purgeOldMessages() {
-    try {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - 30);
-
-        const result = await prisma.whatsAppMessage.deleteMany({
-            where: { timestamp: { lt: cutoffDate } }
-        });
-
-        if (result.count > 0) {
-            console.log(`[Purge] ${result.count} mensagens com mais de 30 dias removidas`);
-        }
-
-        // Remove status com mais de 7 dias (stories são efêmeros)
-        const statusResult = await prisma.whatsAppStatus.deleteMany({
-            where: { timestamp: { lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
-        });
-        if (statusResult.count > 0) {
-            console.log(`[Purge] ${statusResult.count} status com mais de 7 dias removidos`);
-        }
-    } catch (err) {
-        console.error('[Purge] Erro:', err.message);
-    }
-}
-
-// Roda 1 vez por dia (a cada 24h), primeira execução 5 min após startup
-setTimeout(purgeOldMessages, 5 * 60 * 1000);
-setInterval(purgeOldMessages, 24 * 60 * 60 * 1000);
-
-// === CRON: limpeza de mensagens de grupo que possam ter sido salvas antes ===
-// Roda uma vez no startup para limpar dados antigos de grupo
-setTimeout(async () => {
-    try {
-        const groupConvs = await prisma.whatsAppConversation.findMany({
-            where: { isGroup: true },
-            select: { id: true }
-        });
-        if (groupConvs.length > 0) {
-            const result = await prisma.whatsAppMessage.deleteMany({
-                where: { conversationId: { in: groupConvs.map(c => c.id) } }
-            });
-            if (result.count > 0) {
-                console.log(`[Cleanup] ${result.count} mensagens de grupo removidas do banco`);
-            }
-        }
-    } catch (err) {
-        console.error('[Cleanup] Erro ao limpar msgs de grupo:', err.message);
-    }
-}, 60000); // 1 min após startup
+// === [DESATIVADO] WhatsApp AutoSync, Purge e Cleanup ===
+// Módulo WhatsApp desconectado - será desenvolvido em sistema paralelo
+// AutoSync, purgeOldMessages e cleanup de grupo foram desativados
 
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
