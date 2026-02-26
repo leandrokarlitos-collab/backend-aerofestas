@@ -44,7 +44,15 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(where:*)",
       "Bash(npx:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git rm --cached -f .claude/worktrees/romantic-lamport)",
+      "Bash(git reset HEAD)",
+      "Bash(git status -u)",
+      "Bash(git checkout main)",
+      "Bash(git merge claude/romantic-lamport --no-edit)",
+      "Bash(awk 'NR>1')",
+      "Bash(node -c server.js)",
+      "WebFetch(domain:docs.railway.com)"
     ]
   }
 }
