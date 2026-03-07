@@ -411,6 +411,24 @@ export const api = {
         }
     },
 
+    alternarStatusMonitor: async (id, status) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status })
+            });
+            return res.ok;
+        } catch (e) {
+            console.error("Erro ao alterar status do monitor:", e);
+            return false;
+        }
+    },
+
     // --- DESEMPENHO ---
 
     salvarDesempenho: async (dados) => {

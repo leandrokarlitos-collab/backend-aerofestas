@@ -1296,6 +1296,10 @@
 
                 let monitores = [...(state.monitores || [])];
 
+                // --- Filtrar por status (ativo/reserva) ---
+                const statusFilter = state.monitorStatusFilter || 'ativo';
+                monitores = monitores.filter(m => (m.status || 'ativo') === statusFilter);
+
                 // --- Aplicar Filtros ---
                 const filterCNH = getById('filter-monitor-cnh')?.checked;
                 const filterPS = getById('filter-monitor-ps')?.checked;
@@ -1313,18 +1317,23 @@
                     monitores.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
                 } else if (sortType === 'recente') {
                     monitores.sort((a, b) => {
-                        // Tenta ordenar pelo ID se for string comparável ou por posição original
                         if (a.id && b.id) return b.id.localeCompare(a.id);
                         return 0;
                     });
                 }
 
-                countText.textContent = `${monitores.length} monitores encontrados`;
+                const label = statusFilter === 'reserva' ? 'monitores em reserva' : 'monitores ativos';
+                countText.textContent = `${monitores.length} ${label}`;
 
                 if (monitores.length === 0) {
-                    container.innerHTML = '<div class="col-span-full py-10 text-center text-gray-500">Nenhum monitor encontrado com estes filtros.</div>';
+                    const msg = statusFilter === 'reserva'
+                        ? 'Nenhum monitor em reserva.'
+                        : 'Nenhum monitor encontrado com estes filtros.';
+                    container.innerHTML = `<div class="col-span-full py-10 text-center text-gray-500">${msg}</div>`;
                     return;
                 }
+
+                const isReserva = statusFilter === 'reserva';
 
                 container.innerHTML = monitores.map(m => {
                     const iniciais = m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -1335,6 +1344,16 @@
                     const avatarHTML = m.fotoPerfil
                         ? `<div class="monitor-avatar overflow-hidden"><img src="${window.getCloudinaryThumbnail(m.fotoPerfil, 100, 100)}" loading="lazy" class="w-full h-full object-cover" alt="${m.nome}"></div>`
                         : `<div class="monitor-avatar">${iniciais}</div>`;
+
+                    // Preview de observações (truncado)
+                    const obsPreview = m.observacoes
+                        ? `<p class="text-[11px] text-gray-400 italic truncate mt-1" title="${m.observacoes.replace(/"/g, '&quot;')}"><i class="fa-solid fa-comment-dots mr-1"></i>${m.observacoes.length > 80 ? m.observacoes.slice(0, 80) + '...' : m.observacoes}</p>`
+                        : '';
+
+                    // Botão de mover entre ativo/reserva
+                    const moverBtn = isReserva
+                        ? `<button onclick="window.moverMonitor('${m.id}', 'ativo')" class="btn-action-small bg-emerald-50 text-emerald-600 hover:bg-emerald-100" title="Mover para Ativos"><i class="fa-solid fa-arrow-up text-sm"></i></button>`
+                        : `<button onclick="window.moverMonitor('${m.id}', 'reserva')" class="btn-action-small bg-amber-50 text-amber-600 hover:bg-amber-100" title="Mover para Reserva"><i class="fa-solid fa-arrow-down text-sm"></i></button>`;
 
                     return `
                         <div class="monitor-card p-4 rounded-2xl flex flex-col gap-4 border border-white/50 relative group cursor-pointer hover:bg-white/40 transition-all" onclick="visualizarMonitor('${m.id}')">
@@ -1347,12 +1366,14 @@
                                         ${psBadge}
                                         <span class="text-xs text-gray-500">${m.telefone || 'Sem tel'}</span>
                                     </div>
+                                    ${obsPreview}
                                 </div>
                             </div>
-                            
+
                             <div class="flex justify-between items-center pt-2 border-t border-gray-100/50">
                                 <span class="text-xs font-medium text-gray-400">ID: #${m.id ? m.id.slice(-4) : '????'}</span>
                                 <div class="flex gap-2" onclick="event.stopPropagation()">
+                                    ${moverBtn}
                                     <button onclick="window.copiarLinkMonitor('${m.id}')" class="btn-action-small bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Copiar Link de Atualização">
                                         <i class="fa-solid fa-link text-sm"></i>
                                     </button>
@@ -2139,6 +2160,7 @@
                             email: m.email,
                             endereco: m.endereco,
                             observacoes: m.observacoes,
+                            status: m.status || 'ativo',
                             cnh: m.cnh,
                             cnhCategoria: m.cnhCategoria,
                             fotoPerfil: m.fotoPerfil,
@@ -2174,11 +2196,9 @@
 
                     renderMonitorCards();
 
-                    if (countText) {
-                        countText.textContent = `${state.monitores.length} monitores carregados.`;
-                        if (monitoresCloud.length === 50) {
-                            countText.innerHTML += ` <button onclick="window.loadMonitores(${page + 1})" class="text-indigo-600 underline ml-2">Carregar mais...</button>`;
-                        }
+                    // Adiciona botão "Carregar mais" se houver mais páginas
+                    if (countText && monitoresCloud.length === 50) {
+                        countText.innerHTML += ` <button onclick="window.loadMonitores(${page + 1})" class="text-indigo-600 underline ml-2">Carregar mais...</button>`;
                     }
                 } catch (error) {
                     console.error("Erro ao carregar monitores:", error);
@@ -2186,10 +2206,44 @@
                 }
             };
 
+            // Mover monitor entre ativo e reserva
+            window.moverMonitor = async function (id, novoStatus) {
+                const labelDestino = novoStatus === 'ativo' ? 'Ativos' : 'Reserva';
+                const monitor = state.monitores.find(m => m.id === id);
+                const nome = monitor ? monitor.nome : '';
+
+                try {
+                    const ok = await window.api.alternarStatusMonitor(id, novoStatus);
+                    if (ok) {
+                        // Atualiza localmente
+                        if (monitor) monitor.status = novoStatus;
+                        renderMonitorCards();
+                        showToast(`${nome} movido para ${labelDestino}`);
+                    } else {
+                        showToast('Erro ao mover monitor', true);
+                    }
+                } catch (e) {
+                    console.error('Erro ao mover monitor:', e);
+                    showToast('Erro ao mover monitor', true);
+                }
+            };
+
+            // Estado do filtro de status dos monitores
+            state.monitorStatusFilter = 'ativo';
+
             // Event Listeners dos Novos Botões
             getById('open-monitores-modal-btn')?.addEventListener('click', async () => {
+                state.monitorStatusFilter = 'ativo';
+                const titleEl = document.querySelector('#modal-lista-monitores h2');
+                if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-users text-indigo-600"></i> Monitores Cadastrados';
                 getById('modal-lista-monitores').classList.remove('hidden');
-                // Carrega apenas se ainda não tiver carregado ou se quiser atualizar
+                await window.loadMonitores();
+            });
+            getById('open-reserva-modal-btn')?.addEventListener('click', async () => {
+                state.monitorStatusFilter = 'reserva';
+                const titleEl = document.querySelector('#modal-lista-monitores h2');
+                if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-clock-rotate-left text-amber-500"></i> Monitores Reserva';
+                getById('modal-lista-monitores').classList.remove('hidden');
                 await window.loadMonitores();
             });
             getById('open-pagamento-modal-btn')?.addEventListener('click', () => {
@@ -2712,6 +2766,7 @@
                     email: getById('monitor-email').value,
                     cpf: getById('monitor-cpf').value,
                     endereco: getById('monitor-endereco').value,
+                    status: 'ativo',
                     cnh: getById('monitor-cnh').value === 'Sim',
                     cnhCategoria: getById('monitor-cnh-categoria').value,
                     observacoes: getById('monitor-observacoes').value,
@@ -5434,7 +5489,7 @@
                             <p class="text-gray-500 mb-6 font-medium">Gerencie sua equipe e realize pagamentos de forma
                                 rápida.</p>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-5xl mx-auto">
                                 <!-- Botão 1: Ver Monitores -->
                                 <button id="open-monitores-modal-btn"
                                     class="shiny-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
@@ -5442,14 +5497,21 @@
                                     <span class="text-sm font-bold">Monitores Cadastrados</span>
                                 </button>
 
-                                <!-- Botão 2: Lançar Pagamento -->
+                                <!-- Botão 2: Monitores Reserva -->
+                                <button id="open-reserva-modal-btn"
+                                    class="bg-amber-500 text-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-amber-200">
+                                    <i class="fa-solid fa-clock-rotate-left text-3xl"></i>
+                                    <span class="text-sm font-bold">Monitores Reserva</span>
+                                </button>
+
+                                <!-- Botão 3: Lançar Pagamento -->
                                 <button id="open-pagamento-modal-btn"
                                     class="gemini-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
                                     <i class="fa-solid fa-hand-holding-dollar text-3xl"></i>
                                     <span class="text-sm font-bold">Lançar Pagamento & Avaliação</span>
                                 </button>
 
-                                <!-- Botão 3: Link de Cadastro -->
+                                <!-- Botão 4: Link de Cadastro -->
                                 <button onclick="window.copiarLinkCadastro()"
                                     class="bg-indigo-600 text-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-200">
                                     <i class="fa-solid fa-link text-3xl"></i>

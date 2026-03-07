@@ -406,10 +406,14 @@ router.post('/seed-categories', async (req, res) => {
 // GET /api/finance/monitores (Otimizado para Performance)
 router.get('/monitores', async (req, res) => {
     try {
-        const { page = 1, limit = 50 } = req.query;
+        const { page = 1, limit = 50, status } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
+        const where = {};
+        if (status) where.status = status;
+
         const monitores = await prisma.monitor.findMany({
+            where,
             select: {
                 id: true,
                 nome: true,
@@ -418,6 +422,8 @@ router.get('/monitores', async (req, res) => {
                 email: true,
                 cpf: true,
                 endereco: true,
+                observacoes: true,
+                status: true,
                 cnh: true,
                 cnhCategoria: true,
                 tamanhoCamiseta: true,
@@ -497,6 +503,7 @@ router.post('/monitores', async (req, res) => {
                 email: m.email,
                 endereco: m.endereco,
                 observacoes: m.observacoes,
+                status: m.status, // default do Prisma: "reserva"
                 cnh: m.cnh || false,
                 cnhCategoria: m.cnhCategoria,
                 fotoPerfil: m.fotoPerfil,
@@ -543,6 +550,7 @@ router.put('/monitores/:id', async (req, res) => {
                 email: m.email,
                 endereco: m.endereco,
                 observacoes: m.observacoes,
+                status: m.status,
                 cnh: m.cnh,
                 cnhCategoria: m.cnhCategoria,
                 fotoPerfil: m.fotoPerfil,
@@ -572,6 +580,25 @@ router.put('/monitores/:id', async (req, res) => {
     } catch (e) {
         console.error("Erro ao atualizar monitor:", e);
         res.status(500).json({ error: "Erro ao atualizar monitor" });
+    }
+});
+
+// PATCH /api/finance/monitores/:id/status
+router.patch('/monitores/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        if (!['ativo', 'reserva'].includes(status)) {
+            return res.status(400).json({ error: "Status inválido. Use 'ativo' ou 'reserva'." });
+        }
+        const updated = await prisma.monitor.update({
+            where: { id },
+            data: { status }
+        });
+        res.json(updated);
+    } catch (e) {
+        console.error("Erro ao alterar status do monitor:", e);
+        res.status(500).json({ error: "Erro ao alterar status" });
     }
 });
 
