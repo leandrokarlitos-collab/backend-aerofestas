@@ -1105,7 +1105,7 @@
             return null;
         }
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
         let originalButtonContent = '';
         if (buttonElement) {
@@ -2749,10 +2749,6 @@
         });
     };
 
-    initCollapsible(toggleToysHeader, toysContentWrapper, toysIcon, 'toysSectionCollapsed');
-    initCollapsible(toggleCompaniesHeader, companiesContentWrapper, companiesIcon, 'companiesSectionCollapsed');
-    
-
     // --- INÍCIO: Funções de Notificação de Aniversário ---
     const notificationsListEl = document.getElementById('notifications-list');
     const notificationsHeaderIcon = document.querySelector('.glassmorphism h2 i.fa-bell'); // Pegar o ícone
@@ -3074,6 +3070,8 @@
     initParticles();
     animateParticles();
     renderAll();
+    initCollapsible(toggleToysHeader, toysContentWrapper, toysIcon, 'toysSectionCollapsed');
+    initCollapsible(toggleCompaniesHeader, companiesContentWrapper, companiesIcon, 'companiesSectionCollapsed');
     checkBirthdayNotifications(); // <-- Chamada da nova função
     handleUrlParameters();
 });
