@@ -125,7 +125,14 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-        self.registration.showNotification(data.title, options)
+        self.registration.showNotification(data.title, options).then(() => {
+            // Notifica clientes abertos para auto-atualização
+            if (data.type) {
+                return self.clients.matchAll({ type: 'window' }).then(cls => {
+                    cls.forEach(c => c.postMessage({ type: data.type }));
+                });
+            }
+        })
     );
 });
 

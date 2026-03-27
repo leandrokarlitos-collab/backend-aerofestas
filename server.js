@@ -414,6 +414,120 @@ app.get('/api/finance/fixed-expenses', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao buscar contas fixas" }); }
 });
 
+// --- CADASTRO PÚBLICO DO EVENTO (Link para o cliente preencher dados) ---
+app.get('/api/public/events/:id', async (req, res) => {
+    try {
+        const id = parseFloat(req.params.id);
+        const event = await prisma.event.findUnique({
+            where: { id },
+            include: { items: { include: { toy: true } }, company: true }
+        });
+        if (!event) return res.status(404).json({ error: "Evento não encontrado" });
+        // Retorna apenas dados não-sensíveis para o formulário público
+        res.json({
+            id: event.id,
+            date: event.date,
+            endDate: event.endDate,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            companyName: event.company?.name || '',
+            items: event.items.map(i => ({ nome: i.toy?.nome || 'Item', quantidade: i.quantity })),
+            price: event.price,
+            // Dados já preenchidos pelo cliente (para re-edição)
+            clientType: event.clientType,
+            clientName: event.clientName,
+            clientCpf: event.clientCpf,
+            clientRg: event.clientRg,
+            clientDob: event.clientDob,
+            clientPhone: event.clientPhone,
+            clientPhoneBackup: event.clientPhoneBackup,
+            cnpj: event.cnpj,
+            companyAddress: event.companyAddress,
+            repName: event.repName,
+            repPhone: event.repPhone,
+            clientAddress: event.clientAddress,
+            cep: event.cep,
+            complemento: event.complemento,
+            referencia: event.referencia,
+            bairro: event.bairro,
+            cidade: event.cidade,
+            uf: event.uf,
+            isBirthday: event.isBirthday,
+            birthdayPersonName: event.birthdayPersonName,
+            birthdayPersonDob: event.birthdayPersonDob,
+        });
+    } catch (e) {
+        console.error("Erro ao buscar evento público:", e);
+        res.status(500).json({ error: "Erro ao buscar evento" });
+    }
+});
+
+app.put('/api/public/events/:id', async (req, res) => {
+    try {
+        const id = parseFloat(req.params.id);
+        const d = req.body;
+        // Só permite atualizar dados do cliente, endereço e aniversariante
+        const updated = await prisma.event.update({
+            where: { id },
+            data: {
+                clientType: d.clientType,
+                clientName: d.clientName,
+                clientCpf: d.clientCpf,
+                clientRg: d.clientRg,
+                clientDob: d.clientDob,
+                clientPhone: d.clientPhone,
+                clientPhoneBackup: d.clientPhoneBackup,
+                cnpj: d.cnpj,
+                companyAddress: d.companyAddress,
+                repName: d.repName,
+                repPhone: d.repPhone,
+                clientAddress: d.clientAddress,
+                contractAddress: d.contractAddress,
+                cep: d.cep,
+                complemento: d.complemento,
+                referencia: d.referencia,
+                bairro: d.bairro,
+                cidade: d.cidade,
+                uf: d.uf,
+                isBirthday: d.isBirthday || false,
+                birthdayPersonName: d.birthdayPersonName,
+                birthdayPersonDob: d.birthdayPersonDob,
+                status: 'cadastro_completo',
+            }
+        });
+
+        // Envia push notification para admins
+        try {
+            const subscriptions = await prisma.pushSubscription.findMany();
+            const payload = JSON.stringify({
+                title: 'Cadastro de Evento Preenchido!',
+                body: `${d.clientName || 'Cliente'} preencheu o cadastro do evento.`,
+                url: '/Agenda%20de%20eventos.html',
+                type: 'EVENT_CADASTRO_COMPLETO'
+            });
+            for (const sub of subscriptions) {
+                try {
+                    await webpush.sendNotification(
+                        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                        payload
+                    );
+                } catch (pushErr) {
+                    if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
+                        await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                    }
+                }
+            }
+        } catch (notifErr) {
+            console.error('Erro ao enviar notificação push:', notifErr);
+        }
+
+        res.json({ success: true, data: updated });
+    } catch (e) {
+        console.error("Erro ao atualizar evento público:", e);
+        res.status(500).json({ error: "Erro ao atualizar evento" });
+    }
+});
+
 // --- SALVAR EVENTO ---
 app.post('/api/admin/events', async (req, res) => {
     const evt = req.body;
@@ -459,6 +573,7 @@ app.post('/api/admin/events', async (req, res) => {
             contractAddress: evt.contractAddress,
             cep: evt.cep,
             complemento: evt.complemento,
+            referencia: evt.referencia,
             bairro: evt.bairro,
             cidade: evt.cidade,
             uf: evt.uf,

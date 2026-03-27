@@ -1241,6 +1241,12 @@
                                         maxlength="2">
                                 </div>
                             </div>
+                            <div>
+                                <label for="event-referencia"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Referência</label>
+                                <input type="text" id="event-referencia" class="form-input w-full px-3 py-2 rounded-md"
+                                    placeholder="Ex: Próximo ao posto Shell, em frente à escola...">
+                            </div>
                         </div>
                         <!-- FIM DA MODIFICAÇÃO -->
 
@@ -1437,6 +1443,58 @@
             </div>
             <p id="selected-day-text" class="text-gray-500 font-medium mb-4">Selecione um dia no calendário</p>
             <div id="day-events-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: Configurar Link de Cadastro -->
+    <div id="modal-link-cadastro" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[60]"
+        role="dialog" aria-modal="true">
+        <div class="modal-box glassmorphism p-6 rounded-lg shadow-xl w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
+            <!-- Etapa 1: Configuração -->
+            <div id="link-cadastro-config">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-link mr-2 text-amber-500"></i>Link de Cadastro</h2>
+                    <button id="close-link-cadastro-btn" class="text-gray-500 hover:text-gray-700 text-xl"><i class="fas fa-times"></i></button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">Defina os brinquedos e valor. O cliente preencherá o restante.</p>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data do Evento</label>
+                    <input type="text" id="link-cadastro-date" class="form-input w-full px-3 py-2 rounded-md bg-gray-100" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Brinquedos</label>
+                    <div class="grid grid-cols-12 gap-2">
+                        <select id="link-toy-select" class="form-input col-span-5 px-3 py-2 rounded-md text-sm"></select>
+                        <input type="number" id="link-toy-qty" min="1" value="1" class="form-input col-span-2 px-2 py-2 rounded-md text-sm" title="Qtd">
+                        <input type="number" id="link-toy-price" min="0" step="0.01" placeholder="R$" class="form-input col-span-3 px-2 py-2 rounded-md text-sm" title="Valor">
+                        <button type="button" id="link-add-toy-btn" class="col-span-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 text-sm font-bold">+</button>
+                    </div>
+                    <div id="link-toys-list" class="mt-3 space-y-2 max-h-32 overflow-y-auto"></div>
+                </div>
+                <div class="mb-4 p-3 bg-gray-50 rounded-md">
+                    <span class="text-sm text-gray-600">Valor Total:</span>
+                    <span id="link-total-price" class="text-lg font-bold text-emerald-600 ml-2">R$ 0,00</span>
+                </div>
+                <div class="flex gap-3">
+                    <button id="link-cadastro-cancel-btn" class="flex-1 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold">Cancelar</button>
+                    <button id="link-cadastro-generate-btn" class="flex-1 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold"><i class="fas fa-link mr-1"></i>Gerar Link</button>
+                </div>
+            </div>
+            <!-- Etapa 2: Compartilhamento -->
+            <div id="link-cadastro-share" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-check-circle mr-2 text-green-500"></i>Link Gerado!</h2>
+                    <button id="close-link-share-btn" class="text-gray-500 hover:text-gray-700 text-xl"><i class="fas fa-times"></i></button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">Envie este link para o cliente preencher os dados.</p>
+                <div class="mb-4">
+                    <input type="text" id="link-cadastro-url" class="form-input w-full px-3 py-2 rounded-md bg-gray-100 text-sm" readonly>
+                </div>
+                <div class="flex gap-3">
+                    <button id="link-copy-btn" class="flex-1 px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"><i class="fas fa-copy mr-1"></i>Copiar Link</button>
+                    <button id="link-share-btn" class="flex-1 px-4 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"><i class="fab fa-whatsapp mr-1"></i>Compartilhar</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2208,7 +2266,7 @@
                     return null;
                 }
 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
                 let originalButtonContent = '';
                 if (buttonElement) {
@@ -2477,11 +2535,20 @@
                         }
                         // --- FIM DA MODIFICAÇÃO ---
 
+                        // Badge de status do cadastro público
+                        let cadastroStatusBadge = '';
+                        if (event.status === 'pendente_cadastro') {
+                            cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-300 text-amber-700 text-xs font-semibold flex items-center gap-1.5"><i class="fas fa-hourglass-half"></i> Aguardando cadastro do cliente</div>`;
+                        } else if (event.status === 'cadastro_completo') {
+                            cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-green-50 border border-green-400 text-green-700 text-xs font-semibold flex items-center gap-1.5 animate-pulse cursor-pointer review-event-btn" data-id="${event.id}"><i class="fas fa-clipboard-check"></i> Cadastro preenchido — Revisar</div>`;
+                        }
+
                         const eventDiv = document.createElement('div');
-                        eventDiv.className = 'bg-white/50 p-3 rounded-lg border border-gray-200';
+                        eventDiv.className = event.status === 'cadastro_completo' ? 'bg-green-50/60 p-3 rounded-lg border-2 border-green-400' : 'bg-white/50 p-3 rounded-lg border border-gray-200';
                         eventDiv.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
+                            ${cadastroStatusBadge}
                             ${toysHtml}
                             <div class="mt-2 space-y-1 text-sm text-gray-500">
                                 <!-- INÍCIO DA MODIFICAÇÃO: Status de Pagamento -->
@@ -2539,11 +2606,21 @@
                 addEventBtn.onclick = () => showEventModal(dateStr);
                 dayEventsList.appendChild(addEventBtn);
 
+                const linkCadastroBtn = document.createElement('button');
+                linkCadastroBtn.innerHTML = '<i class="fas fa-link mr-2"></i>Link para cadastro de Agendamento';
+                linkCadastroBtn.className = 'mt-2 w-full px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors';
+                linkCadastroBtn.onclick = () => openLinkCadastroModal(dateStr);
+                dayEventsList.appendChild(linkCadastroBtn);
+
                 document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.delete-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.generate-message-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateMessage(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
                 // <!-- LISTENER DO BOTÃO INDIVIDUAL REMOVIDO -->
                 document.querySelectorAll('.generate-contract-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateContract(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
+                document.querySelectorAll('.review-event-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleEditEvent(parseInt(e.currentTarget.dataset.id));
+                }));
             };
 
             // INÍCIO: Funções para Modal de Filtro de Eventos
@@ -3341,6 +3418,7 @@
 
                     cep: document.getElementById('event-cep').value,
                     complemento: document.getElementById('event-complemento').value.trim(),
+                    referencia: document.getElementById('event-referencia').value.trim(),
                     bairro: document.getElementById('event-bairro').value,
                     cidade: document.getElementById('event-cidade').value,
                     uf: document.getElementById('event-uf').value,
@@ -3497,7 +3575,8 @@
                     document.getElementById('signal-amount').value = eventToEdit.signalAmount || 0;
                     document.getElementById('signal-received').checked = eventToEdit.signalReceived || false;
                     document.getElementById('event-cep').value = eventToEdit.cep || '';
-                    document.getElementById('event-complemento').value = eventToEdit.complemento || ''; // ADICIONADO
+                    document.getElementById('event-complemento').value = eventToEdit.complemento || '';
+                    document.getElementById('event-referencia').value = eventToEdit.referencia || '';
                     document.getElementById('event-bairro').value = eventToEdit.bairro || '';
                     document.getElementById('event-cidade').value = eventToEdit.cidade || '';
                     document.getElementById('event-uf').value = eventToEdit.uf || '';
@@ -3681,6 +3760,7 @@
                 const fullEventAddressOS = [event.clientAddress, event.complemento, event.bairro, event.cidade]
                     .filter(Boolean)
                     .join(', ');
+                const referenciaOS = event.referencia ? `<p><strong>Referência:</strong> ${event.referencia}</p>` : '';
                 // FIM DA MODIFICAÇÃO
 
                 let clientDetailsHtml = '';
@@ -3691,6 +3771,7 @@
                 <p><strong>Representante:</strong> ${event.repName || 'N/A'}</p>
                 <p><strong>Contato:</strong> ${event.repPhone || 'N/A'}</p>
                 <p><strong>Endereço do Evento:</strong> ${fullEventAddressOS || 'N/A'}</p>
+                ${referenciaOS}
             `;
                 } else {
                     clientDetailsHtml = `
@@ -3700,6 +3781,7 @@
                 <p><strong>CPF:</strong> ${event.clientCpf || 'N/A'}</p>
                 <p><strong>RG:</strong> ${event.clientRg || 'N/A'}</p>
                 <p><strong>Endereço:</strong> ${fullEventAddressOS || 'N/A'}</p>
+                ${referenciaOS}
             `;
                 }
                 // ** NOTA: O campo event.contractAddress NÃO é adicionado aqui de propósito,
@@ -3992,6 +4074,165 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             };
 
             // --- INÍCIO DA MODIFICAÇÃO: handleGenerateContract ---
+            // ===== LINK DE CADASTRO: Modal + Lógica =====
+            let linkCadastroToys = [];
+            let linkCadastroDateStr = '';
+
+            const openLinkCadastroModal = (dateStr) => {
+                linkCadastroDateStr = dateStr;
+                linkCadastroToys = [];
+                const [y, m, d] = dateStr.split('-');
+                document.getElementById('link-cadastro-date').value = `${d}/${m}/${y}`;
+                document.getElementById('link-cadastro-config').classList.remove('hidden');
+                document.getElementById('link-cadastro-share').classList.add('hidden');
+                renderLinkToysList();
+                updateLinkTotalPrice();
+
+                // Popula select de brinquedos
+                const sel = document.getElementById('link-toy-select');
+                sel.innerHTML = '<option value="">Selecione um brinquedo</option>';
+                toys.sort((a, b) => a.name.localeCompare(b.name)).forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.name;
+                    sel.appendChild(opt);
+                });
+
+                document.getElementById('link-toy-qty').value = 1;
+                document.getElementById('link-toy-price').value = '';
+                document.getElementById('modal-link-cadastro').classList.remove('hidden');
+            };
+
+            const renderLinkToysList = () => {
+                const list = document.getElementById('link-toys-list');
+                if (linkCadastroToys.length === 0) {
+                    list.innerHTML = '<p class="text-sm text-center text-gray-400 py-2">Nenhum brinquedo adicionado.</p>';
+                    return;
+                }
+                list.innerHTML = linkCadastroToys.map((t, i) => `
+                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded-md text-sm">
+                        <span>${t.name} (x${t.quantity}) - ${formatCurrency(t.price)}</span>
+                        <button type="button" data-idx="${i}" class="link-remove-toy text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                    </div>
+                `).join('');
+                list.querySelectorAll('.link-remove-toy').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        linkCadastroToys.splice(parseInt(btn.dataset.idx), 1);
+                        renderLinkToysList();
+                        updateLinkTotalPrice();
+                    });
+                });
+            };
+
+            const updateLinkTotalPrice = () => {
+                const total = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                document.getElementById('link-total-price').textContent = formatCurrency(total);
+            };
+
+            document.getElementById('link-add-toy-btn').addEventListener('click', () => {
+                const sel = document.getElementById('link-toy-select');
+                const toyId = parseFloat(sel.value);
+                const qty = parseInt(document.getElementById('link-toy-qty').value) || 1;
+                const price = parseFloat(document.getElementById('link-toy-price').value) || 0;
+                if (!toyId) { showToast('Selecione um brinquedo.', true); return; }
+                const toy = toys.find(t => t.id === toyId);
+                if (!toy) return;
+                const existing = linkCadastroToys.findIndex(t => t.id === toyId);
+                if (existing > -1) {
+                    linkCadastroToys[existing].quantity += qty;
+                    linkCadastroToys[existing].price = price;
+                } else {
+                    linkCadastroToys.push({ id: toyId, name: toy.name, quantity: qty, price });
+                }
+                renderLinkToysList();
+                updateLinkTotalPrice();
+                sel.value = '';
+                document.getElementById('link-toy-qty').value = 1;
+                document.getElementById('link-toy-price').value = '';
+            });
+
+            const closeLinkCadastroModal = () => {
+                document.getElementById('modal-link-cadastro').classList.add('hidden');
+            };
+            document.getElementById('close-link-cadastro-btn').addEventListener('click', closeLinkCadastroModal);
+            document.getElementById('link-cadastro-cancel-btn').addEventListener('click', closeLinkCadastroModal);
+            document.getElementById('close-link-share-btn').addEventListener('click', closeLinkCadastroModal);
+
+            document.getElementById('link-cadastro-generate-btn').addEventListener('click', async () => {
+                if (linkCadastroToys.length === 0) { showToast('Adicione ao menos um brinquedo.', true); return; }
+                const totalPrice = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                const eventId = Date.now();
+                const eventData = {
+                    id: eventId,
+                    date: linkCadastroDateStr,
+                    items: linkCadastroToys.map(t => ({ id: t.id, quantity: t.quantity, price: t.price })),
+                    price: totalPrice,
+                    subtotal: totalPrice,
+                    status: 'pendente_cadastro'
+                };
+                try {
+                    const response = await api.salvarEvento(eventData);
+                    if (!response || !response.success) throw new Error(response?.error || 'Erro ao criar evento');
+                    const savedEvent = response.data;
+                    events.push({ ...savedEvent, toys: savedEvent.items || linkCadastroToys, items: savedEvent.items || linkCadastroToys });
+                    renderAll();
+
+                    // Mostra seção de compartilhamento
+                    const url = `${window.location.origin}/cadastro-evento.html?id=${savedEvent.id}`;
+                    document.getElementById('link-cadastro-url').value = url;
+                    document.getElementById('link-cadastro-config').classList.add('hidden');
+                    document.getElementById('link-cadastro-share').classList.remove('hidden');
+                    showToast('Evento criado! Compartilhe o link com o cliente.', false);
+                } catch (err) {
+                    console.error('Erro ao gerar link:', err);
+                    showToast('Erro ao criar evento. Tente novamente.', true);
+                }
+            });
+
+            document.getElementById('link-copy-btn').addEventListener('click', () => {
+                const url = document.getElementById('link-cadastro-url').value;
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast('Link copiado!', false);
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = url;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('Link copiado!', false);
+                });
+            });
+
+            document.getElementById('link-share-btn').addEventListener('click', () => {
+                const url = document.getElementById('link-cadastro-url').value;
+                if (navigator.share) {
+                    navigator.share({ title: 'Cadastro de Evento - Aero Festas', text: 'Preencha seus dados para confirmar o evento:', url });
+                } else {
+                    window.open(`https://wa.me/?text=${encodeURIComponent('Preencha seus dados para confirmar o evento: ' + url)}`, '_blank');
+                }
+            });
+
+            // Auto-atualização via Service Worker
+            const reloadEventsFromServer = async () => {
+                try {
+                    const freshEvents = await api.getEventos();
+                    events.length = 0;
+                    freshEvents.forEach(e => events.push(e));
+                    renderAll();
+                } catch (err) { console.error('Erro ao recarregar eventos:', err); }
+            };
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', (e) => {
+                    if (e.data?.type === 'EVENT_CADASTRO_COMPLETO') {
+                        reloadEventsFromServer();
+                        showToast('Um cliente preencheu o cadastro de evento!', false);
+                    }
+                });
+            }
+            // ===== FIM LINK DE CADASTRO =====
+
             const handleGenerateContract = async (eventId, buttonElement) => {
                 const event = events.find(e => e.id === eventId);
                 if (!event) return;

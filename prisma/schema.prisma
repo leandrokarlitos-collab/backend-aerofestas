@@ -81,6 +81,7 @@ model Event {
   contractAddress  String?
   cep              String?
   complemento      String?
+  referencia       String?
   bairro           String?
   cidade           String?
   uf               String?
