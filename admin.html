@@ -86,7 +86,7 @@
                 </div>
 
                 <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Ação</label>
                             <select id="filterAction" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -94,6 +94,19 @@
                                 <option value="create">Criar</option>
                                 <option value="update">Atualizar</option>
                                 <option value="delete">Remover</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Entidade</label>
+                            <select id="filterEntityType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Todas</option>
+                                <option value="User">Usuário</option>
+                                <option value="Event">Evento</option>
+                                <option value="Transaction">Transação</option>
+                                <option value="Account">Conta</option>
+                                <option value="FixedExpense">Despesa Fixa</option>
+                                <option value="Monitor">Monitor</option>
+                                <option value="MonitorPayment">Pgto Monitor</option>
                             </select>
                         </div>
                         <div>
@@ -123,8 +136,9 @@
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário Afetado</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entidade</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alterado Por</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alterações</th>
                                 </tr>
@@ -315,6 +329,7 @@
                 // Pega filtros
                 const filters = {
                     action: document.getElementById('filterAction').value,
+                    entityType: document.getElementById('filterEntityType').value,
                     startDate: document.getElementById('filterStartDate').value,
                     endDate: document.getElementById('filterEndDate').value
                 };
@@ -325,31 +340,69 @@
 
                 tbody.innerHTML = '';
                 if (historyList.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Nenhum registro encontrado.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum registro encontrado.</td></tr>';
                 } else {
+                    const entityTypeLabels = {
+                        'User': 'Usuário',
+                        'Event': 'Evento',
+                        'Transaction': 'Transação',
+                        'Account': 'Conta',
+                        'FixedExpense': 'Despesa Fixa',
+                        'Category': 'Categoria',
+                        'Monitor': 'Monitor',
+                        'MonitorPayment': 'Pgto Monitor'
+                    };
+
+                    const entityTypeColors = {
+                        'User': 'bg-purple-100 text-purple-800',
+                        'Event': 'bg-blue-100 text-blue-800',
+                        'Transaction': 'bg-green-100 text-green-800',
+                        'Account': 'bg-yellow-100 text-yellow-800',
+                        'FixedExpense': 'bg-orange-100 text-orange-800',
+                        'Category': 'bg-gray-100 text-gray-800',
+                        'Monitor': 'bg-teal-100 text-teal-800',
+                        'MonitorPayment': 'bg-cyan-100 text-cyan-800'
+                    };
+
+                    const actionLabels = { 'CREATE': 'Criação', 'UPDATE': 'Edição', 'DELETE': 'Remoção' };
+                    const actionColors = { 'CREATE': 'bg-green-100 text-green-800', 'UPDATE': 'bg-amber-100 text-amber-800', 'DELETE': 'bg-red-100 text-red-800' };
+
                     historyList.forEach(h => {
                         const row = document.createElement('tr');
                         row.className = 'hover:bg-gray-50';
 
-                        // Formata mudanças para JSON legível ou texto
+                        // Formata mudanças para texto legível
                         let changesText = '-';
                         if (h.details) {
                             try {
                                 const details = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
-                                changesText = JSON.stringify(details).substring(0, 50) + (JSON.stringify(details).length > 50 ? '...' : '');
-                            } catch (e) { changesText = h.details; }
+                                const parts = [];
+                                for (const [key, val] of Object.entries(details)) {
+                                    if (val && typeof val === 'object' && 'old' in val && 'new' in val) {
+                                        parts.push(`${key}: ${val.old || '—'} → ${val.new || '—'}`);
+                                    }
+                                }
+                                changesText = parts.length > 0 ? parts.join('; ') : JSON.stringify(details).substring(0, 80);
+                                if (changesText.length > 80) changesText = changesText.substring(0, 77) + '...';
+                            } catch (e) { changesText = String(h.details).substring(0, 80); }
                         }
 
-                        // Tratamento melhorado para exibir nomes mesmo se o usuário foi deletado
-                        const targetName = h.targetUserInfo ? (h.targetUserInfo.email || h.targetUserInfo.name) : (h.targetUserEmail || h.targetUserId);
+                        const entityName = h.targetUserInfo ? (h.targetUserInfo.name || h.targetUserInfo.email || h.entityId) : h.entityId;
                         const changerName = h.changedByInfo ? (h.changedByInfo.name || 'Sistema') : (h.adminEmail || 'Sistema');
+                        const actionUpper = h.action ? h.action.toUpperCase() : 'N/A';
+                        const entityType = h.entityType || 'N/A';
 
                         row.innerHTML = `
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(h.timestamp).toLocaleString('pt-BR')}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">${h.action ? h.action.toUpperCase() : 'N/A'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${targetName}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${changerName}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-xs">${changesText}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${entityTypeColors[entityType] || 'bg-gray-100 text-gray-800'}">${entityTypeLabels[entityType] || entityType}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${actionColors[actionUpper] || 'bg-gray-100 text-gray-800'}">${actionLabels[actionUpper] || actionUpper}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(entityName)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(changerName)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-400 text-xs max-w-xs truncate" title="${escapeHtml(changesText)}">${escapeHtml(changesText)}</td>
                         `;
                         tbody.appendChild(row);
                     });
@@ -360,7 +413,7 @@
 
             } catch (error) {
                 console.error("Erro ao carregar histórico:", error);
-                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Erro ao carregar dados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-red-500">Erro ao carregar dados.</td></tr>';
                 container.classList.remove('hidden');
             } finally {
                 loading.classList.add('hidden');

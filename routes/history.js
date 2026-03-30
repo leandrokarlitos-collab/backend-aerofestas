@@ -1,47 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
-const fs = require('fs').promises;
-const path = require('path');
-
-const HISTORY_FILE = path.join(__dirname, '..', 'data', 'user_history.json');
-
-async function loadHistory() {
-    try {
-        const data = await fs.readFile(HISTORY_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
+const prisma = require('../prisma/client');
 
 /**
  * GET /api/admin/history
- * Listar histórico de alterações com filtros e estatísticas
+ * Listar histórico de auditoria com filtros e estatísticas
+ * Agora lê do AuditLog (Prisma) em vez de JSON file
  */
 router.get('/', isAdmin, async (req, res) => {
     try {
-        const { userId, action, startDate, endDate, limit = 100, offset = 0 } = req.query;
+        const { userId, action, entityType, startDate, endDate, limit = 100, offset = 0 } = req.query;
 
-        let history = await loadHistory();
-
-        if (userId) {
-            history = history.filter(h => h.targetUserId === userId || h.userId === userId);
-        }
-        if (action) {
-            history = history.filter(h => h.action === action);
-        }
-        if (startDate) {
-            history = history.filter(h => new Date(h.timestamp) >= new Date(startDate));
-        }
-        if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            history = history.filter(h => new Date(h.timestamp) <= end);
+        const where = {};
+        if (userId) where.userId = userId;
+        if (action) where.action = action.toUpperCase();
+        if (entityType) where.entityType = entityType;
+        if (startDate || endDate) {
+            where.createdAt = {};
+            if (startDate) where.createdAt.gte = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                where.createdAt.lte = end;
+            }
         }
 
-        // Ordena por data (mais recente primeiro)
-        history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        const [history, total] = await Promise.all([
+            prisma.auditLog.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip: parseInt(offset),
+                take: parseInt(limit)
+            }),
+            prisma.auditLog.count({ where })
+        ]);
 
         // Estatísticas
         const now = new Date();
@@ -49,41 +42,59 @@ router.get('/', isAdmin, async (req, res) => {
         const weekAgo = new Date(today);
         weekAgo.setDate(weekAgo.getDate() - 7);
 
-        const stats = {
-            total: history.length,
-            today: history.filter(h => new Date(h.timestamp) >= today).length,
-            thisWeek: history.filter(h => new Date(h.timestamp) >= weekAgo).length,
-            byAction: {
-                create: history.filter(h => h.action === 'create').length,
-                update: history.filter(h => h.action === 'update').length,
-                delete: history.filter(h => h.action === 'delete').length
-            },
-            mostActiveUsers: []
-        };
+        const [todayCount, weekCount, createCount, updateCount, deleteCount] = await Promise.all([
+            prisma.auditLog.count({ where: { ...where, createdAt: { gte: today } } }),
+            prisma.auditLog.count({ where: { ...where, createdAt: { gte: weekAgo } } }),
+            prisma.auditLog.count({ where: { ...where, action: 'CREATE' } }),
+            prisma.auditLog.count({ where: { ...where, action: 'UPDATE' } }),
+            prisma.auditLog.count({ where: { ...where, action: 'DELETE' } }),
+        ]);
 
-        // Enriquece com targetUserInfo e changedByInfo para o frontend
-        const enrichedHistory = history.slice(parseInt(offset), parseInt(offset) + parseInt(limit)).map(entry => ({
-            ...entry,
-            targetUserInfo: {
-                id: entry.targetUserId || entry.userId,
-                name: entry.targetUserName || entry.userName || 'Desconhecido',
-                email: entry.targetUserEmail || entry.userEmail || 'N/A'
-            },
-            changedByInfo: {
-                id: entry.adminId || entry.changedBy,
-                name: entry.adminName || entry.changedByName || 'Sistema',
-                email: entry.adminEmail || ''
+        // Formata para compatibilidade com o frontend existente
+        const enrichedHistory = history.map(entry => {
+            let parsedChanges = null;
+            if (entry.changes) {
+                try { parsedChanges = JSON.parse(entry.changes); } catch (e) {}
             }
-        }));
+            let parsedSnapshot = null;
+            if (entry.snapshot) {
+                try { parsedSnapshot = JSON.parse(entry.snapshot); } catch (e) {}
+            }
+
+            return {
+                id: entry.id,
+                timestamp: entry.createdAt.toISOString(),
+                action: entry.action,
+                entityType: entry.entityType,
+                entityId: entry.entityId,
+                details: parsedChanges || parsedSnapshot,
+                targetUserInfo: {
+                    id: entry.entityId,
+                    name: parsedSnapshot?.name || parsedSnapshot?.clientName || parsedSnapshot?.nome || parsedSnapshot?.description || entry.entityId,
+                    email: parsedSnapshot?.email || ''
+                },
+                changedByInfo: {
+                    id: entry.userId,
+                    name: entry.userName,
+                    email: entry.userEmail
+                }
+            };
+        });
 
         res.json({
             history: enrichedHistory,
-            stats,
+            stats: {
+                total,
+                today: todayCount,
+                thisWeek: weekCount,
+                byAction: { create: createCount, update: updateCount, delete: deleteCount },
+                mostActiveUsers: []
+            },
             pagination: {
-                total: history.length,
+                total,
                 limit: parseInt(limit),
                 offset: parseInt(offset),
-                hasMore: parseInt(offset) + parseInt(limit) < history.length
+                hasMore: parseInt(offset) + parseInt(limit) < total
             }
         });
     } catch (error) {

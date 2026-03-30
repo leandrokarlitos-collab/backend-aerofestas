@@ -792,15 +792,20 @@
                                         <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
                                         <td>
                                             <div class="flex space-x-2">
-                                                <button onclick="editarGasto('${g.id}')" 
+                                                <button onclick="editarGasto('${g.id}')"
                                                         class="text-indigo-600 hover:text-indigo-900 transition-colors"
                                                         title="Editar Gasto">
                                                     <i class="fa-solid fa-edit"></i>
                                                 </button>
-                                                <button onclick="deletarGasto('${g.id}')" 
+                                                <button onclick="deletarGasto('${g.id}')"
                                                         class="text-red-600 hover:text-red-900 transition-colors"
                                                         title="Excluir Gasto">
                                                     <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                                <button onclick="mostrarHistoricoTransacao('${g.id}')"
+                                                        class="text-gray-400 hover:text-indigo-600 transition-colors"
+                                                        title="Histórico de alterações">
+                                                    <i class="fa-solid fa-clock-rotate-left"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -3516,6 +3521,54 @@
                 if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar Gasto';
 
                 modal.classList.remove('hidden');
+            };
+
+            // ========== HISTÓRICO DE TRANSAÇÃO ==========
+            window.mostrarHistoricoTransacao = async (id) => {
+                let modal = getById('transaction-history-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'transaction-history-modal';
+                    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden';
+                    modal.innerHTML = `
+                        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[70vh] flex flex-col">
+                            <div class="flex justify-between items-center p-4 border-b">
+                                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-clock-rotate-left mr-2 text-indigo-600"></i>Histórico de Alterações</h3>
+                                <button onclick="document.getElementById('transaction-history-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                            </div>
+                            <div id="transaction-history-content" class="p-4 overflow-y-auto flex-1"></div>
+                        </div>`;
+                    document.body.appendChild(modal);
+                }
+
+                const content = getById('transaction-history-content');
+                content.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Carregando...</div>';
+                modal.classList.remove('hidden');
+
+                const history = await window.api.getEntityHistory('Transaction', id);
+                if (!history || history.length === 0) {
+                    content.innerHTML = '<div class="text-center py-6 text-gray-400">Nenhum registro de alteração encontrado.</div>';
+                    return;
+                }
+
+                content.innerHTML = history.map(h => {
+                    const date = new Date(h.createdAt).toLocaleString('pt-BR');
+                    const actionLabel = { CREATE: 'Criou', UPDATE: 'Editou', DELETE: 'Excluiu' }[h.action] || h.action;
+                    const actionColor = { CREATE: 'text-green-600', UPDATE: 'text-amber-600', DELETE: 'text-red-600' }[h.action] || 'text-gray-600';
+                    let changesHtml = '';
+                    if (h.changes) {
+                        changesHtml = '<div class="mt-1 space-y-0.5">' + Object.entries(h.changes).map(([k, v]) =>
+                            `<div class="text-xs text-gray-500"><span class="font-medium">${k}:</span> ${v.old ?? '—'} → <span class="font-medium">${v.new ?? '—'}</span></div>`
+                        ).join('') + '</div>';
+                    }
+                    return `<div class="py-3 border-b border-gray-100 last:border-0">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-800">${h.userName} <span class="${actionColor} text-xs font-semibold">${actionLabel}</span></span>
+                            <span class="text-xs text-gray-400">${date}</span>
+                        </div>
+                        ${changesHtml}
+                    </div>`;
+                }).join('');
             };
 
             // ========== FUNÇÕES GLOBAIS DE EDIÇÃO ==========

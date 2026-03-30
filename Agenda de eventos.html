@@ -1373,6 +1373,24 @@
                 </div>
                 <!-- FIM: WIZARD STEPS -->
 
+                <!-- Auditoria: Criado/Modificado por + Histórico -->
+                <div id="audit-info" class="hidden mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span id="audit-created-by"></span>
+                            <span id="audit-updated-by" class="ml-4"></span>
+                        </div>
+                        <button type="button" id="audit-history-btn" class="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                            <i class="fas fa-history"></i> Histórico
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal de Histórico do Evento -->
+                <div id="audit-history-panel" class="hidden mt-3 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-inner">
+                    <div id="audit-history-list" class="divide-y divide-gray-100 text-xs"></div>
+                </div>
+
                 <!-- MODIFICADO: Botões de Navegação -->
                 <div id="modal-navigation" class="flex justify-between space-x-4 mt-8">
                     <button type="button" id="cancel-btn"
@@ -3621,6 +3639,70 @@
                 toggleBirthdayFields(); // <!-- CHAMADA DA NOVA FUNÇÃO -->
                 renderSelectedToysInModal();
                 updateFinalPrice();
+
+                // --- AUDITORIA: Mostra info de quem criou/modificou ---
+                const auditInfo = document.getElementById('audit-info');
+                const auditHistoryPanel = document.getElementById('audit-history-panel');
+                auditHistoryPanel.classList.add('hidden');
+
+                if (eventToEdit && eventToEdit.id) {
+                    auditInfo.classList.remove('hidden');
+                    const createdByEl = document.getElementById('audit-created-by');
+                    const updatedByEl = document.getElementById('audit-updated-by');
+                    createdByEl.textContent = eventToEdit.createdBy ? `Criado por: ${eventToEdit.createdBy}` : '';
+                    updatedByEl.textContent = eventToEdit.updatedBy ? `Modificado por: ${eventToEdit.updatedBy}` : '';
+
+                    // Resolve nomes dos usuários a partir dos IDs
+                    if (eventToEdit.createdBy || eventToEdit.updatedBy) {
+                        api.getEntityHistory('Event', String(eventToEdit.id)).then(history => {
+                            if (history.length > 0) {
+                                const createEntry = history.find(h => h.action === 'CREATE');
+                                const lastUpdate = history.find(h => h.action === 'UPDATE');
+                                if (createEntry) createdByEl.textContent = `Criado por: ${createEntry.userName}`;
+                                if (lastUpdate) updatedByEl.textContent = `Modificado por: ${lastUpdate.userName}`;
+                                else if (!createEntry && history[0]) updatedByEl.textContent = `Modificado por: ${history[0].userName}`;
+                            }
+                        }).catch(() => {});
+                    }
+
+                    // Botão de histórico
+                    document.getElementById('audit-history-btn').onclick = async () => {
+                        const panel = document.getElementById('audit-history-panel');
+                        const list = document.getElementById('audit-history-list');
+
+                        if (!panel.classList.contains('hidden')) {
+                            panel.classList.add('hidden');
+                            return;
+                        }
+
+                        list.innerHTML = '<div class="p-3 text-center text-gray-400"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+                        panel.classList.remove('hidden');
+
+                        const history = await api.getEntityHistory('Event', String(eventToEdit.id));
+                        if (history.length === 0) {
+                            list.innerHTML = '<div class="p-3 text-center text-gray-400">Nenhum registro encontrado</div>';
+                            return;
+                        }
+
+                        list.innerHTML = history.map(h => {
+                            const date = new Date(h.createdAt).toLocaleString('pt-BR');
+                            const actionLabel = { CREATE: 'Criou', UPDATE: 'Editou', DELETE: 'Excluiu' }[h.action] || h.action;
+                            let changesHtml = '';
+                            if (h.changes) {
+                                changesHtml = Object.entries(h.changes).map(([k, v]) => `<span class="text-gray-400">${k}:</span> ${v.old ?? '—'} → ${v.new ?? '—'}`).join(', ');
+                            }
+                            return `<div class="px-3 py-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-gray-700">${h.userName} <span class="font-normal text-gray-400">${actionLabel}</span></span>
+                                    <span class="text-gray-400">${date}</span>
+                                </div>
+                                ${changesHtml ? `<div class="mt-1 text-gray-500">${changesHtml}</div>` : ''}
+                            </div>`;
+                        }).join('');
+                    };
+                } else {
+                    auditInfo.classList.add('hidden');
+                }
 
                 // INÍCIO: Resetar e mostrar o wizard
                 currentStep = 1;

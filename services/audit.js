@@ -1,5 +1,5 @@
 const prisma = require('../prisma/client');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 /**
  * Registra uma acao no log de auditoria.
@@ -9,7 +9,7 @@ async function logAudit({ entityType, entityId, action, user, changes, snapshot 
     try {
         await prisma.auditLog.create({
             data: {
-                id: uuidv4(),
+                id: crypto.randomUUID(),
                 entityType,
                 entityId: String(entityId),
                 action,

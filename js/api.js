@@ -825,5 +825,19 @@ export const api = {
             console.error("Erro ao executar backup:", e);
             return null;
         }
+    },
+
+    // 📋 AUDITORIA
+    getEntityHistory: async (entityType, entityId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/audit/entity/${entityType}/${entityId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error("Erro ao buscar histórico:", e);
+            return [];
+        }
     }
 };

@@ -5,6 +5,8 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const prisma = require('./prisma/client');
 
+const { authenticate } = require('./middleware/auth');
+const { logAudit, computeChanges } = require('./services/audit');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
@@ -14,6 +16,7 @@ const taskRoutes = require('./routes/tasks');
 const dailyPlanRoutes = require('./routes/dailyPlans');
 // [DESATIVADO] WhatsApp module desconectado - será desenvolvido em sistema paralelo
 // const whatsappRoutes = require('./routes/whatsapp');
+const auditRoutes = require('./routes/audit');
 const { router: backupRoutes, runBackup } = require('./routes/backup');
 const cron = require('node-cron');
 const webpush = require('web-push');
@@ -529,10 +532,17 @@ app.put('/api/public/events/:id', async (req, res) => {
 });
 
 // --- SALVAR EVENTO ---
-app.post('/api/admin/events', async (req, res) => {
+app.post('/api/admin/events', authenticate, async (req, res) => {
     const evt = req.body;
     const eventId = evt.id ? parseFloat(evt.id) : Date.now();
+    const isUpdate = !!evt.id;
     try {
+        // Busca evento existente para auditoria (se for update)
+        let existingEvent = null;
+        if (isUpdate) {
+            existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
+        }
+
         const itens = (evt.items || evt.toys || []).map(item => ({
             quantity: parseInt(item.quantity) || 1,
             price: (item.price !== undefined && item.price !== null) ? parseFloat(item.price) : (item.valor !== undefined && item.valor !== null ? parseFloat(item.valor) : 0),
@@ -540,7 +550,7 @@ app.post('/api/admin/events', async (req, res) => {
         })).filter(i => i.toyId !== null);
 
         // Deleta itens antigos se for atualização
-        if (evt.id) await prisma.eventItem.deleteMany({ where: { eventId: eventId } });
+        if (isUpdate) await prisma.eventItem.deleteMany({ where: { eventId: eventId } });
 
         // Campos compartilhados (sem 'id' — Prisma v5 rejeita id no update)
         const fields = {
@@ -594,14 +604,30 @@ app.post('/api/admin/events', async (req, res) => {
             isBirthday: evt.isBirthday || false,
             birthdayPersonName: evt.birthdayPersonName,
             birthdayPersonDob: evt.birthdayPersonDob,
+
+            // Auditoria
+            updatedBy: req.user.id,
         };
 
         const saved = await prisma.event.upsert({
             where: { id: eventId },
             update: { ...fields, items: { create: itens } },
-            create: { id: eventId, ...fields, items: { create: itens } },
+            create: { id: eventId, ...fields, createdBy: req.user.id, items: { create: itens } },
             include: { items: { include: { toy: true } } }
         });
+
+        // Log de auditoria
+        if (isUpdate && existingEvent) {
+            const changes = computeChanges(existingEvent, saved, [
+                'date', 'endDate', 'clientName', 'price', 'subtotal', 'paymentStatus',
+                'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
+                'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived'
+            ]);
+            logAudit({ entityType: 'Event', entityId: eventId, action: 'UPDATE', user: req.user, changes, snapshot: { clientName: saved.clientName, date: saved.date, price: saved.price } });
+        } else {
+            logAudit({ entityType: 'Event', entityId: eventId, action: 'CREATE', user: req.user, snapshot: { clientName: saved.clientName, date: saved.date, price: saved.price } });
+        }
+
         res.json({ success: true, data: saved });
     } catch (error) {
         console.error('Erro ao salvar evento:', error);
@@ -610,7 +636,7 @@ app.post('/api/admin/events', async (req, res) => {
 });
 
 // --- DELETAR EVENTO ---
-app.delete('/api/admin/events/:id', async (req, res) => {
+app.delete('/api/admin/events/:id', authenticate, async (req, res) => {
     const eventId = parseFloat(req.params.id);
 
     if (isNaN(eventId)) {
@@ -618,6 +644,9 @@ app.delete('/api/admin/events/:id', async (req, res) => {
     }
 
     try {
+        // Busca evento antes de deletar (snapshot para auditoria)
+        const existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
+
         // Primeiro deleta os itens associados ao evento
         await prisma.eventItem.deleteMany({
             where: { eventId: eventId }
@@ -627,6 +656,11 @@ app.delete('/api/admin/events/:id', async (req, res) => {
         await prisma.event.delete({
             where: { id: eventId }
         });
+
+        // Log de auditoria
+        if (existingEvent) {
+            logAudit({ entityType: 'Event', entityId: eventId, action: 'DELETE', user: req.user, snapshot: { clientName: existingEvent.clientName, date: existingEvent.date, price: existingEvent.price } });
+        }
 
         res.json({ success: true, message: "Evento excluído com sucesso!" });
     } catch (error) {
@@ -641,6 +675,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin/history', historyRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/audit', auditRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/daily-plans', dailyPlanRoutes);
 // [DESATIVADO] WhatsApp module desconectado

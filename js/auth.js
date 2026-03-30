@@ -232,6 +232,7 @@ export async function getHistory(filters = {}) {
         const token = getToken();
         const params = new URLSearchParams();
         if (filters.action) params.append('action', filters.action);
+        if (filters.entityType) params.append('entityType', filters.entityType);
         if (filters.startDate) params.append('startDate', filters.startDate);
         if (filters.endDate) params.append('endDate', filters.endDate);
         if (filters.userId) params.append('userId', filters.userId);
