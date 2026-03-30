@@ -1,40 +1,49 @@
 const express = require('express');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
-const prisma = require('../prisma/client');
+const fs = require('fs').promises;
+const path = require('path');
+
+const HISTORY_FILE = path.join(__dirname, '..', 'data', 'user_history.json');
+
+async function loadHistory() {
+    try {
+        const data = await fs.readFile(HISTORY_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        return [];
+    }
+}
 
 /**
  * GET /api/admin/history
- * Retorna lista de usuários com datas de criação como histórico básico
+ * Listar histórico de alterações com filtros e estatísticas
  */
 router.get('/', isAdmin, async (req, res) => {
     try {
-        const users = await prisma.user.findMany({
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                isAdmin: true,
-                emailConfirmed: true,
-                createdAt: true,
-                updatedAt: true
-            },
-            orderBy: { updatedAt: 'desc' }
-        });
+        const { userId, action, startDate, endDate, limit = 100, offset = 0 } = req.query;
 
-        const history = users.map(u => ({
-            id: u.id,
-            userId: u.id,
-            userName: u.name,
-            userEmail: u.email,
-            action: 'info',
-            timestamp: u.updatedAt || u.createdAt,
-            changes: {
-                isAdmin: u.isAdmin,
-                emailConfirmed: u.emailConfirmed
-            }
-        }));
+        let history = await loadHistory();
 
+        if (userId) {
+            history = history.filter(h => h.targetUserId === userId || h.userId === userId);
+        }
+        if (action) {
+            history = history.filter(h => h.action === action);
+        }
+        if (startDate) {
+            history = history.filter(h => new Date(h.timestamp) >= new Date(startDate));
+        }
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            history = history.filter(h => new Date(h.timestamp) <= end);
+        }
+
+        // Ordena por data (mais recente primeiro)
+        history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // Estatísticas
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const weekAgo = new Date(today);
@@ -44,14 +53,31 @@ router.get('/', isAdmin, async (req, res) => {
             total: history.length,
             today: history.filter(h => new Date(h.timestamp) >= today).length,
             thisWeek: history.filter(h => new Date(h.timestamp) >= weekAgo).length,
-            byAction: { create: history.length, update: 0, delete: 0 },
+            byAction: {
+                create: history.filter(h => h.action === 'create').length,
+                update: history.filter(h => h.action === 'update').length,
+                delete: history.filter(h => h.action === 'delete').length
+            },
             mostActiveUsers: []
         };
 
-        const { limit = 100, offset = 0 } = req.query;
+        // Enriquece com targetUserInfo e changedByInfo para o frontend
+        const enrichedHistory = history.slice(parseInt(offset), parseInt(offset) + parseInt(limit)).map(entry => ({
+            ...entry,
+            targetUserInfo: {
+                id: entry.targetUserId || entry.userId,
+                name: entry.targetUserName || entry.userName || 'Desconhecido',
+                email: entry.targetUserEmail || entry.userEmail || 'N/A'
+            },
+            changedByInfo: {
+                id: entry.adminId || entry.changedBy,
+                name: entry.adminName || entry.changedByName || 'Sistema',
+                email: entry.adminEmail || ''
+            }
+        }));
 
         res.json({
-            history: history.slice(parseInt(offset), parseInt(offset) + parseInt(limit)),
+            history: enrichedHistory,
             stats,
             pagination: {
                 total: history.length,

@@ -3,10 +3,31 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const fs = require('fs').promises;
+const path = require('path');
 const { isAdmin } = require('../middleware/auth');
 const prisma = require('../prisma/client');
 
 const FRONTEND_URL = 'https://sistema-operante-aerofestas.web.app';
+const HISTORY_FILE = path.join(__dirname, '..', 'data', 'user_history.json');
+
+async function addHistoryEntry(entry) {
+    try {
+        let history = [];
+        try {
+            const data = await fs.readFile(HISTORY_FILE, 'utf8');
+            history = JSON.parse(data);
+        } catch (e) { /* arquivo não existe ainda */ }
+        history.push({
+            id: Date.now().toString(),
+            ...entry,
+            timestamp: new Date().toISOString()
+        });
+        await fs.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
+    } catch (e) {
+        console.error('Erro ao salvar histórico:', e);
+    }
+}
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -82,6 +103,18 @@ router.post('/users', isAdmin, async (req, res) => {
             }
         });
 
+        // Registra no histórico
+        await addHistoryEntry({
+            action: 'create',
+            targetUserId: newUser.id,
+            targetUserEmail: newUser.email,
+            targetUserName: newUser.name,
+            adminId: req.user.id,
+            adminEmail: req.user.email,
+            adminName: req.user.name,
+            details: { name: newUser.name, email: newUser.email, isAdmin: newUser.isAdmin, emailConfirmed: newUser.emailConfirmed }
+        });
+
         // Se não pular confirmação, envia email
         if (!skipEmailConfirmation) {
             const confirmLink = `${FRONTEND_URL}/confirm-email.html?token=${verificationToken}`;
@@ -136,6 +169,17 @@ router.delete('/users/:id', isAdmin, async (req, res) => {
         }
 
         await prisma.user.delete({ where: { id } });
+
+        await addHistoryEntry({
+            action: 'delete',
+            targetUserId: user.id,
+            targetUserEmail: user.email,
+            targetUserName: user.name,
+            adminId: req.user.id,
+            adminEmail: req.user.email,
+            adminName: req.user.name,
+            details: { deleted: true }
+        });
 
         res.json({ message: 'Usuário removido com sucesso' });
     } catch (error) {
@@ -204,6 +248,17 @@ router.put('/users/:id', isAdmin, async (req, res) => {
                 emailConfirmed: true,
                 updatedAt: true
             }
+        });
+
+        await addHistoryEntry({
+            action: 'update',
+            targetUserId: updatedUser.id,
+            targetUserEmail: updatedUser.email,
+            targetUserName: updatedUser.name,
+            adminId: req.user.id,
+            adminEmail: req.user.email,
+            adminName: req.user.name,
+            details: updateData
         });
 
         res.json({
