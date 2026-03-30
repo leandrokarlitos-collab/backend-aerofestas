@@ -2631,6 +2631,70 @@
                 const secondaryColor = [31, 41, 55]; // Slate 800
                 const successColor = [16, 185, 129]; // Emerald 500
                 const dangerColor = [239, 68, 68]; // Red 500
+                const neutralColor = [71, 85, 105]; // Slate 600
+                const softGray = [248, 250, 252]; // Slate 50
+
+                const parseMoney = (value) => {
+                    if (typeof value === 'number') return value;
+                    if (value === null || value === undefined) return 0;
+                    return parseFloat(String(value).replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+                };
+
+                const addDivider = (y) => {
+                    doc.setDrawColor(226, 232, 240);
+                    doc.line(15, y, pageWidth - 15, y);
+                };
+
+                const drawKpiCard = ({ x, y, w, h, title, value, tone = primaryColor, subtitle = '' }) => {
+                    doc.setFillColor(255, 255, 255);
+                    doc.setDrawColor(226, 232, 240);
+                    doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+
+                    doc.setFillColor(...tone);
+                    doc.roundedRect(x, y, w, 2.8, 2, 2, 'F');
+
+                    doc.setTextColor(...neutralColor);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(9);
+                    doc.text(title, x + 3, y + 7);
+
+                    doc.setTextColor(...secondaryColor);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(13);
+                    doc.text(value, x + 3, y + 14);
+
+                    if (subtitle) {
+                        doc.setTextColor(100, 116, 139);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8);
+                        doc.text(subtitle, x + 3, y + 19.5);
+                    }
+                };
+
+                const monthLabel = (ym) => {
+                    const [y, m] = ym.split('-').map(Number);
+                    return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '');
+                };
+
+                const shiftMonth = (ym, delta) => {
+                    const [y, m] = ym.split('-').map(Number);
+                    const d = new Date(y, m - 1 + delta, 1);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                };
+
+                const getMonthRevenue = (ym) => {
+                    const ev = state.eventos.filter(e => e.data.startsWith(ym)).reduce((s, e) => s + (parseFloat(e.valor) || 0), 0);
+                    const rec = (state.receitas || []).filter(r => r.data.startsWith(ym)).reduce((s, r) => s + (parseFloat(r.valor) || 0), 0);
+                    return ev + rec;
+                };
+
+                const getMonthExpenses = (ym) => {
+                    const gastos = state.gastos.filter(g => g.data.startsWith(ym)).reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+                    const monitores = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(ym)).reduce((acc, p) => {
+                        return acc + (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    }, 0);
+                    return gastos + monitores;
+                };
 
                 // Função Auxiliar para Cabeçalho de Páginas
                 const addPageHeader = (title) => {
@@ -2643,6 +2707,71 @@
                     doc.setFontSize(8);
                     doc.text(`Período: ${state.selectedMonth} | Gerado em: ${new Date().toLocaleDateString()}`, pageWidth - 15, 16, { align: 'right' });
                     doc.setTextColor(0, 0, 0);
+                };
+
+                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
+                const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
+                const pagMonMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
+
+                const entradasEventosVal = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0);
+                const entradasAvulsasVal = receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
+                const totalReceitasVal = entradasEventosVal + entradasAvulsasVal;
+                const despesasOperacionaisVal = gastosMes.reduce((acc, g) => acc + (parseFloat(g.valor) || 0), 0);
+                const monitoresVal = pagMonMes.reduce((acc, p) => {
+                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    return acc + total;
+                }, 0);
+                const totalEntradasVal = totalReceitasVal;
+
+                const totalSalariosVal = (state.funcionarios || []).reduce((acc, f) => {
+                    const faixa = [...(state.faixasComissao || [])]
+                        .sort((a, b) => a.ateValor - b.ateValor)
+                        .find(fx => totalEntradasVal <= fx.ateValor) || { percentual: 0 };
+                    const vComissao = totalEntradasVal * (faixa?.percentual || 0);
+                    const tBruto = (parseFloat(f.salarioFixo) || 0) + (parseFloat(f.va) || 0) + (parseFloat(f.vt) || 0) + vComissao;
+                    return acc + tBruto;
+                }, 0);
+
+                const totalDespesasGeral = despesasOperacionaisVal + monitoresVal + totalSalariosVal;
+                const saldoLiquidoVal = totalReceitasVal - totalDespesasGeral;
+                const margemLiquida = totalReceitasVal > 0 ? (saldoLiquidoVal / totalReceitasVal) * 100 : 0;
+                const ticketMedioEvento = eventosMes.length > 0 ? (entradasEventosVal / eventosMes.length) : 0;
+                const metaMesVal = (typeof METAS_MENSAIS !== 'undefined' && METAS_MENSAIS[state.selectedMonth]) ? METAS_MENSAIS[state.selectedMonth] : 0;
+                const atingimentoMeta = metaMesVal > 0 ? (totalReceitasVal / metaMesVal) * 100 : 0;
+                const faltaMeta = Math.max(0, metaMesVal - totalReceitasVal);
+
+                const trendMonths = Array.from({ length: 6 }, (_, i) => shiftMonth(state.selectedMonth, i - 5));
+                const trendRows = trendMonths.map(ym => {
+                    const rev = getMonthRevenue(ym);
+                    const exp = getMonthExpenses(ym);
+                    const bal = rev - exp;
+                    return { ym, rev, exp, bal, margin: rev > 0 ? (bal / rev) * 100 : 0 };
+                });
+                const trendAvg3Revenue = trendRows.slice(-3).reduce((s, r) => s + r.rev, 0) / 3;
+                const trendAvg6Revenue = trendRows.reduce((s, r) => s + r.rev, 0) / 6;
+                const trendAvg6Balance = trendRows.reduce((s, r) => s + r.bal, 0) / 6;
+
+                const revenueByCompany = eventosMes.reduce((acc, e) => {
+                    const key = e.empresa || 'Não Informada';
+                    acc[key] = (acc[key] || 0) + (parseFloat(e.valor) || 0);
+                    return acc;
+                }, {});
+                const companyRows = Object.entries(revenueByCompany)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name, value]) => [name, formatarMoeda(value), `${totalReceitasVal > 0 ? ((value / totalReceitasVal) * 100).toFixed(1) : '0.0'}%`]);
+
+                const costDrivers = [
+                    { label: 'Gastos Operacionais', value: despesasOperacionaisVal },
+                    { label: 'Monitores', value: monitoresVal },
+                    { label: 'Folha & Comissão', value: totalSalariosVal }
+                ].sort((a, b) => b.value - a.value);
+
+                const semaforo = {
+                    receita: (metaMesVal === 0 || atingimentoMeta >= 100) ? 'verde' : (atingimentoMeta >= 85 ? 'amarelo' : 'vermelho'),
+                    margem: margemLiquida >= 20 ? 'verde' : (margemLiquida >= 10 ? 'amarelo' : 'vermelho'),
+                    caixa: saldoLiquidoVal >= 0 ? 'verde' : (saldoLiquidoVal >= -(0.1 * Math.max(totalReceitasVal, 1)) ? 'amarelo' : 'vermelho'),
+                    custo: (totalReceitasVal > 0 && (totalDespesasGeral / totalReceitasVal) <= 0.75) ? 'verde' : ((totalReceitasVal > 0 && (totalDespesasGeral / totalReceitasVal) <= 0.9) ? 'amarelo' : 'vermelho')
                 };
 
                 // --- PÁGINA 1: RESUMO EXECUTIVO ---
@@ -2659,26 +2788,79 @@
                 doc.text(`Período: ${state.selectedMonth}`, pageWidth - 15, 20, { align: 'right' });
                 doc.text(`Gerado em: ${new Date().toLocaleDateString()}`, pageWidth - 15, 28, { align: 'right' });
 
-                let currentY = 55;
+                doc.setFillColor(...softGray);
+                doc.rect(15, 47, pageWidth - 30, 26, 'F');
                 doc.setTextColor(...secondaryColor);
-                doc.setFontSize(16);
-                doc.text('Resumo Mensal', 15, currentY);
-                currentY += 10;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Leitura de Diretoria', 20, 55);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                const narrativa = `No período ${state.selectedMonth}, o resultado consolidado fechou em ${formatarMoeda(saldoLiquidoVal)}, com margem líquida de ${margemLiquida.toFixed(1)}%. O relatório destaca crescimento de receita, estrutura de custos e principais alavancas de eficiência operacional.`;
+                doc.text(doc.splitTextToSize(narrativa, pageWidth - 42), 20, 60);
 
-                const recAtualText = getById('total-receitas').textContent;
-                const despAtualText = getById('total-despesas').textContent;
-                const saldoAtualText = getById('saldo-total').textContent;
+                let currentY = 80;
+                doc.setTextColor(...secondaryColor);
+                doc.setFontSize(15);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Painel Executivo de Indicadores', 15, currentY);
+                currentY += 6;
+
+                drawKpiCard({
+                    x: 15, y: currentY, w: 87, h: 23,
+                    title: 'RECEITA CONSOLIDADA',
+                    value: formatarMoeda(totalReceitasVal),
+                    tone: successColor,
+                    subtitle: `${eventosMes.length} eventos + ${receitasMes.length} receitas avulsas`
+                });
+                drawKpiCard({
+                    x: 108, y: currentY, w: 87, h: 23,
+                    title: 'DESPESA TOTAL',
+                    value: formatarMoeda(totalDespesasGeral),
+                    tone: dangerColor,
+                    subtitle: 'Gastos, monitores e folha'
+                });
+                currentY += 28;
+
+                drawKpiCard({
+                    x: 15, y: currentY, w: 87, h: 23,
+                    title: 'SALDO LIQUIDO',
+                    value: formatarMoeda(saldoLiquidoVal),
+                    tone: saldoLiquidoVal >= 0 ? successColor : dangerColor,
+                    subtitle: saldoLiquidoVal >= 0 ? 'Operacao com excedente' : 'Operacao com déficit'
+                });
+                drawKpiCard({
+                    x: 108, y: currentY, w: 87, h: 23,
+                    title: 'MARGEM E TICKET MEDIO',
+                    value: `${margemLiquida.toFixed(1)}%`,
+                    tone: primaryColor,
+                    subtitle: `Ticket medio por evento: ${formatarMoeda(ticketMedioEvento)}`
+                });
+                currentY += 32;
+
+                addDivider(currentY);
+                currentY += 8;
+
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Composição Financeira do Período', 15, currentY);
+                currentY += 4;
 
                 doc.autoTable({
                     startY: currentY,
-                    head: [['Categoria', 'Valor']],
+                    head: [['Categoria Estratégica', 'Valor']],
                     body: [
-                        ['Total de Receitas', recAtualText],
-                        ['Total de Despesas', despAtualText],
-                        ['Saldo Líquido', saldoAtualText]
+                        ['Entradas de Eventos', formatarMoeda(entradasEventosVal)],
+                        ['Entradas Avulsas', formatarMoeda(entradasAvulsasVal)],
+                        ['Despesas Operacionais', formatarMoeda(despesasOperacionaisVal)],
+                        ['Pagamentos de Monitores', formatarMoeda(monitoresVal)],
+                        ['Folha e Comissões da Equipe', formatarMoeda(totalSalariosVal)],
+                        ['Saldo Líquido Consolidado', formatarMoeda(saldoLiquidoVal)]
                     ],
-                    theme: 'striped',
-                    headStyles: { fillColor: primaryColor },
+                    theme: 'grid',
+                    headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+                    bodyStyles: { textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.1 },
+                    alternateRowStyles: { fillColor: [249, 250, 251] },
                     columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }
                 });
 
@@ -2689,7 +2871,8 @@
                 const chart2 = document.getElementById('despesas-gerais-chart');
                 if (chart1 && chart2) {
                     doc.setFontSize(14);
-                    doc.text('Análise Visual', 15, currentY);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Análise Visual de Performance', 15, currentY);
                     currentY += 5;
                     const img1 = chart1.toDataURL('image/png');
                     const img2 = chart2.toDataURL('image/png');
@@ -2700,6 +2883,7 @@
 
                 // Insights
                 doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
                 doc.text('Insights Estratégicos', 15, currentY);
                 currentY += 8;
                 const insights = Array.from(document.querySelectorAll('#quick-insights .insight-pill'))
@@ -2715,12 +2899,186 @@
                     doc.text('Sem insights específicos para este período.', 20, currentY);
                 }
 
-                // --- PÁGINA 2: DETALHAMENTO DE ENTRADAS ---
+                // --- PÁGINA 2: METAS, SEMÁFORO E DESTAQUES ---
+                doc.addPage();
+                addPageHeader('Metas, Risco Executivo e Destaques');
+
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Metas vs. Realizado', 15, 35);
+
+                doc.autoTable({
+                    startY: 40,
+                    head: [['Indicador', 'Meta', 'Realizado', 'Variação']],
+                    body: [
+                        [
+                            'Receita Mensal',
+                            metaMesVal > 0 ? formatarMoeda(metaMesVal) : 'Não definida',
+                            formatarMoeda(totalReceitasVal),
+                            metaMesVal > 0 ? `${(atingimentoMeta - 100).toFixed(1)}%` : 'N/A'
+                        ],
+                        [
+                            'Saldo Líquido',
+                            '--',
+                            formatarMoeda(saldoLiquidoVal),
+                            `${margemLiquida.toFixed(1)}% margem`
+                        ],
+                        [
+                            'Ticket Médio por Evento',
+                            '--',
+                            formatarMoeda(ticketMedioEvento),
+                            `${eventosMes.length} eventos`
+                        ]
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
+                });
+
+                let ySemaforo = doc.lastAutoTable.finalY + 12;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...secondaryColor);
+                doc.text('Semáforo Executivo', 15, ySemaforo);
+                ySemaforo += 8;
+
+                const semaforoRows = [
+                    ['Receita x Meta', semaforo.receita, `Atingimento: ${metaMesVal > 0 ? `${atingimentoMeta.toFixed(1)}%` : 'meta não definida'}`],
+                    ['Margem Líquida', semaforo.margem, `Margem atual: ${margemLiquida.toFixed(1)}%`],
+                    ['Saúde de Caixa', semaforo.caixa, `Saldo líquido: ${formatarMoeda(saldoLiquidoVal)}`],
+                    ['Eficiência de Custos', semaforo.custo, `Despesa/Receita: ${totalReceitasVal > 0 ? ((totalDespesasGeral / totalReceitasVal) * 100).toFixed(1) : '0.0'}%`]
+                ];
+                const statusColor = { verde: [16, 185, 129], amarelo: [245, 158, 11], vermelho: [239, 68, 68] };
+
+                semaforoRows.forEach(([indicador, status, detalhe], idx) => {
+                    const y = ySemaforo + (idx * 12);
+                    doc.setFillColor(...statusColor[status]);
+                    doc.circle(20, y - 1.3, 2.2, 'F');
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...secondaryColor);
+                    doc.text(indicador, 26, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(detalhe, 88, y);
+                });
+
+                const yHighlights = ySemaforo + 55;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Highlights do Mês', 15, yHighlights);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`• Principal driver de receita: ${companyRows[0] ? companyRows[0][0] : 'Sem dados de empresa'} (${companyRows[0] ? companyRows[0][1] : 'R$ 0,00'})`, 18, yHighlights + 7);
+                doc.text(`• Maior centro de custo: ${costDrivers[0].label} (${formatarMoeda(costDrivers[0].value)})`, 18, yHighlights + 13);
+                doc.text(`• Gap para meta do mês: ${metaMesVal > 0 ? formatarMoeda(faltaMeta) : 'Meta não definida'}`, 18, yHighlights + 19);
+                doc.text(`• Benchmark interno: receita do mês em ${(trendAvg6Revenue > 0 ? ((totalReceitasVal / trendAvg6Revenue - 1) * 100) : 0).toFixed(1)}% vs média móvel 6M`, 18, yHighlights + 25);
+
+                // --- PÁGINA 3: TENDÊNCIA, BENCHMARK E PROJEÇÃO ---
+                doc.addPage();
+                addPageHeader('Tendência Financeira, Benchmark e Projeção 90 Dias');
+
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Evolução dos Últimos 6 Meses', 15, 35);
+
+                doc.autoTable({
+                    startY: 40,
+                    head: [['Mês', 'Receita', 'Despesa', 'Saldo', 'Margem']],
+                    body: trendRows.map(r => [monthLabel(r.ym), formatarMoeda(r.rev), formatarMoeda(r.exp), formatarMoeda(r.bal), `${r.margin.toFixed(1)}%`]),
+                    theme: 'grid',
+                    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } }
+                });
+
+                let yBench = doc.lastAutoTable.finalY + 10;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Benchmark Interno', 15, yBench);
+                yBench += 6;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.text(`Receita atual vs média 3M: ${(trendAvg3Revenue > 0 ? ((totalReceitasVal / trendAvg3Revenue - 1) * 100) : 0).toFixed(1)}%`, 18, yBench);
+                doc.text(`Receita atual vs média 6M: ${(trendAvg6Revenue > 0 ? ((totalReceitasVal / trendAvg6Revenue - 1) * 100) : 0).toFixed(1)}%`, 18, yBench + 6);
+                doc.text(`Saldo atual vs média 6M: ${(trendAvg6Balance !== 0 ? ((saldoLiquidoVal / trendAvg6Balance - 1) * 100) : 0).toFixed(1)}%`, 18, yBench + 12);
+
+                const cenarioConservador = { rev: totalReceitasVal * 0.9 * 3, exp: totalDespesasGeral * 0.98 * 3 };
+                const cenarioBase = { rev: totalReceitasVal * 1.0 * 3, exp: totalDespesasGeral * 1.0 * 3 };
+                const cenarioOtimista = { rev: totalReceitasVal * 1.12 * 3, exp: totalDespesasGeral * 1.02 * 3 };
+
+                doc.autoTable({
+                    startY: yBench + 20,
+                    head: [['Cenário 90 dias', 'Receita Projetada', 'Despesa Projetada', 'Saldo Projetado']],
+                    body: [
+                        ['Conservador', formatarMoeda(cenarioConservador.rev), formatarMoeda(cenarioConservador.exp), formatarMoeda(cenarioConservador.rev - cenarioConservador.exp)],
+                        ['Base', formatarMoeda(cenarioBase.rev), formatarMoeda(cenarioBase.exp), formatarMoeda(cenarioBase.rev - cenarioBase.exp)],
+                        ['Otimista', formatarMoeda(cenarioOtimista.rev), formatarMoeda(cenarioOtimista.exp), formatarMoeda(cenarioOtimista.rev - cenarioOtimista.exp)]
+                    ],
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
+                });
+
+                // --- PÁGINA 4: BREAKDOWN DE RECEITA E DRIVERS ---
+                doc.addPage();
+                addPageHeader('Breakdown por Unidade e Drivers Financeiros');
+
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Participação por Empresa', 15, 35);
+                doc.autoTable({
+                    startY: 40,
+                    head: [['Empresa', 'Receita', 'Participação']],
+                    body: companyRows.length > 0 ? companyRows : [['Sem dados no mês', 'R$ 0,00', '0%']],
+                    theme: 'grid',
+                    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } }
+                });
+
+                let yCost = doc.lastAutoTable.finalY + 10;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Top Drivers de Custo', 15, yCost);
+                yCost += 6;
+                doc.autoTable({
+                    startY: yCost,
+                    head: [['Driver', 'Valor', '% sobre Despesa']],
+                    body: costDrivers.map(d => [d.label, formatarMoeda(d.value), `${totalDespesasGeral > 0 ? ((d.value / totalDespesasGeral) * 100).toFixed(1) : '0.0'}%`]),
+                    theme: 'grid',
+                    headStyles: { fillColor: [147, 51, 234], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } }
+                });
+
+                let yReco = doc.lastAutoTable.finalY + 12;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Recomendação da Diretoria (próximo ciclo)', 15, yReco);
+                yReco += 7;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                const recomendacoes = [
+                    (metaMesVal > 0 && totalReceitasVal < metaMesVal)
+                        ? `Foco comercial imediato para recuperar ${formatarMoeda(faltaMeta)} de gap da meta mensal.`
+                        : 'Consolidar estratégia comercial atual e escalar canais com melhor conversão.',
+                    (margemLiquida < 12)
+                        ? 'Aplicar plano de eficiência de custos: renegociação de fornecedores e revisão de despesas variáveis.'
+                        : 'Preservar margem com disciplina de preço e controle de descontos por evento.',
+                    (costDrivers[0].value > (totalDespesasGeral * 0.45))
+                        ? `Mitigar concentração de custos em ${costDrivers[0].label} com teto orçamentário e acompanhamento semanal.`
+                        : 'Manter governança de custos com monitoramento quinzenal por centro de despesa.',
+                    `Preparar operação para cenário base de 90 dias com meta de saldo projetado de ${formatarMoeda(cenarioBase.rev - cenarioBase.exp)}.`
+                ];
+                recomendacoes.forEach((r, i) => doc.text(`• ${r}`, 18, yReco + (i * 6)));
+
+                // --- PÁGINA 5: DETALHAMENTO DE ENTRADAS ---
                 doc.addPage();
                 addPageHeader('Detalhamento de Entradas');
 
-                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
-                const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
                 const todasEntradas = [
                     ...eventosMes.map(e => [formatarData(e.data), 'Evento', e.contratante, formatarMoeda(e.valor)]),
                     ...receitasMes.map(r => [formatarData(r.data), 'Avulsa', r.descricao, formatarMoeda(r.valor)])
@@ -2730,15 +3088,15 @@
                     startY: 35,
                     head: [['Data', 'Tipo', 'Descrição', 'Valor']],
                     body: todasEntradas,
-                    headStyles: { fillColor: successColor },
+                    headStyles: { fillColor: successColor, textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 3: { halign: 'right' } }
                 });
 
-                // --- PÁGINA 3: DETALHAMENTO DE SAÍDAS (GASTOS) ---
+                // --- PÁGINA 6: DETALHAMENTO DE SAÍDAS (GASTOS) ---
                 doc.addPage();
                 addPageHeader('Detalhamento de Saídas: Gastos & Contas');
 
-                const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
                 const dataGastos = gastosMes.map(g => [formatarData(g.data), g.categoria, g.descricao, formatarMoeda(g.valor)])
                     .sort((a, b) => a[0].localeCompare(b[0]));
 
@@ -2746,17 +3104,17 @@
                     startY: 35,
                     head: [['Data', 'Categoria', 'Descrição', 'Valor']],
                     body: dataGastos,
-                    headStyles: { fillColor: dangerColor },
+                    headStyles: { fillColor: dangerColor, textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 3: { halign: 'right' } }
                 });
 
-                // --- PÁGINA 4: DETALHAMENTO DE SAÍDAS (MONITORES & SALÁRIOS) ---
+                // --- PÁGINA 7: DETALHAMENTO DE SAÍDAS (MONITORES & SALÁRIOS) ---
                 doc.addPage();
                 addPageHeader('Detalhamento de Saídas: Monitores & Equipe');
 
                 doc.setFontSize(12);
                 doc.text('Pagamentos de Monitores', 15, 35);
-                const pagMonMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
                 const dataMon = pagMonMes.map(p => {
                     const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
                     return [formatarData(p.data), p.nome, formatarMoeda(total)];
@@ -2766,16 +3124,14 @@
                     startY: 40,
                     head: [['Data', 'Monitor', 'Total Pago']],
                     body: dataMon,
-                    headStyles: { fillColor: [100, 116, 139] },
+                    headStyles: { fillColor: [100, 116, 139], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 2: { halign: 'right' } }
                 });
 
                 let nextY = doc.lastAutoTable.finalY + 15;
                 doc.text('Cálculo de Salários (Equipe)', 15, nextY);
                 nextY += 5;
-
-                const totalEntradasVal = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0) +
-                    receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
 
                 const dataSalarios = (state.funcionarios || []).map(f => {
                     const faixa = [...(state.faixasComissao || [])].sort((a, b) => a.ateValor - b.ateValor).find(fx => totalEntradasVal <= fx.ateValor) || { percentual: 0 };
@@ -2788,19 +3144,19 @@
                     startY: nextY,
                     head: [['Funcionário', 'Fixo', 'Comissão', 'Total Bruto']],
                     body: dataSalarios,
-                    headStyles: { fillColor: [100, 116, 139] },
+                    headStyles: { fillColor: [100, 116, 139], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
                 });
 
-                // --- PÁGINA 5: BALANÇO GERAL ---
+                // --- PÁGINA 8: BALANÇO GERAL + FECHAMENTO EXECUTIVO ---
                 doc.addPage();
                 addPageHeader('Balanço Geral Final');
 
-                const totalReceitasVal = todasEntradas.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
-                const totalGastosVal = dataGastos.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
-                const totalMonitoresVal = dataMon.reduce((acc, curr) => acc + (parseFloat(curr[2].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
-                const totalSalariosVal = dataSalarios.reduce((acc, curr) => acc + (parseFloat(curr[3].replace(/[^\d,-]/g, '').replace(',', '.')) || 0), 0);
-                const totalDespesasGeral = totalGastosVal + totalMonitoresVal + totalSalariosVal;
+                const totalGastosVal = dataGastos.reduce((acc, curr) => acc + parseMoney(curr[3]), 0);
+                const totalMonitoresVal = dataMon.reduce((acc, curr) => acc + parseMoney(curr[2]), 0);
+                const totalSalariosTabVal = dataSalarios.reduce((acc, curr) => acc + parseMoney(curr[3]), 0);
+                const totalDespesasTabVal = totalGastosVal + totalMonitoresVal + totalSalariosTabVal;
 
                 doc.autoTable({
                     startY: 35,
@@ -2809,12 +3165,23 @@
                         ['(+) Total de Entradas (Eventos/Avulsas)', formatarMoeda(totalReceitasVal)],
                         ['(-) Gastos Operacionais & Contas Fixas', formatarMoeda(totalGastosVal)],
                         ['(-) Pagamentos de Monitores', formatarMoeda(totalMonitoresVal)],
-                        ['(-) Salários & Comissões da Equipe', formatarMoeda(totalSalariosVal)],
-                        [{ content: 'BALANÇO LÍQUIDO FINAL', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }, { content: formatarMoeda(totalReceitasVal - totalDespesasGeral), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
+                        ['(-) Salários & Comissões da Equipe', formatarMoeda(totalSalariosTabVal)],
+                        [{ content: 'BALANÇO LÍQUIDO FINAL', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }, { content: formatarMoeda(totalReceitasVal - totalDespesasTabVal), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
                     ],
                     theme: 'grid',
                     headStyles: { fillColor: secondaryColor }
                 });
+
+                let yClose = doc.lastAutoTable.finalY + 14;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Fechamento Executivo', 15, yClose);
+                yClose += 7;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Resultado final do mês: ${formatarMoeda(totalReceitasVal - totalDespesasTabVal)} com margem de ${margemLiquida.toFixed(1)}%.`, 15, yClose);
+                doc.text(`Responsável pelo relatório: Sistema Financeiro Aero Festas | Versão: Premium Board v1`, 15, yClose + 6);
+                doc.text(`Data e hora de geração: ${new Date().toLocaleString()}`, 15, yClose + 12);
 
                 // Rodapé
                 const totalPages = doc.internal.getNumberOfPages();

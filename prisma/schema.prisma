@@ -103,7 +103,11 @@ model Event {
   isBirthday           Boolean?
   birthdayPersonName   String?
   birthdayPersonDob    String?
-  status               String? 
+  status               String?
+
+  // Auditoria
+  createdBy            String?
+  updatedBy            String?
 }
 
 model EventItem {
@@ -263,7 +267,11 @@ model Transaction {
   paymentMethod String?  // PIX, Boleto, etc.
   eventId       Float?   // Vincula receita a evento (NULL para entradas avulsas)
   accountId     String?  // Vincula a transação a uma conta bancária
-  
+
+  // Auditoria
+  createdBy     String?
+  updatedBy     String?
+
   // Relacionamento opcional
   account       BankAccount? @relation(fields: [accountId], references: [id])
 }
@@ -312,6 +320,25 @@ model PushSubscription {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// --- AUDITORIA ---
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  entityType  String   // "Event", "Transaction", "User", "Monitor", etc.
+  entityId    String   // ID da entidade afetada
+  action      String   // "CREATE", "UPDATE", "DELETE"
+  userId      String   // Quem realizou a ação
+  userName    String   // Nome desnormalizado para exibição
+  userEmail   String   // Email desnormalizado
+  changes     String?  // JSON: {campo: {old: X, new: Y}}
+  snapshot    String?  // JSON: estado completo da entidade no momento
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // --- WHATSAPP INTEGRATION ---
