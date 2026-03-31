@@ -3092,9 +3092,8 @@
                     const chartStartY = 38;
                     const chartX = 55;
                     const chartW = 120;
-                    const barH = 10;
-                    const barGap = 4;
-                    const chartH = catEntries.length * (barH + barGap);
+                    const barH = 7;
+                    const barGap = 3;
                     const maxVal = catEntries[0][1]; // Already sorted desc
 
                     doc.setFontSize(12);
@@ -3109,7 +3108,7 @@
                         const pct = totalDespesasGeral > 0 ? ((val / totalDespesasGeral) * 100).toFixed(1) : '0.0';
 
                         // Label da categoria (à esquerda)
-                        doc.setFontSize(8);
+                        doc.setFontSize(7);
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(...secondaryColor);
                         const catLabel = cat.length > 18 ? cat.substring(0, 18) + '…' : cat;
@@ -3120,7 +3119,7 @@
                         doc.roundedRect(chartX, y, Math.max(barW, 2), barH, 1.5, 1.5, 'F');
 
                         // Valor e % (à direita da barra)
-                        doc.setFontSize(7.5);
+                        doc.setFontSize(7);
                         doc.setFont('helvetica', 'bold');
                         doc.setTextColor(...color);
                         doc.text(`${formatarMoeda(val)} (${pct}%)`, chartX + barW + 3, y + barH / 2 + 1);
@@ -3138,15 +3137,17 @@
                     doc.text('R$ 0', chartX, baseY + 4);
                     doc.text(formatarMoeda(maxVal), chartX + chartW, baseY + 4, { align: 'right' });
 
-                    // Tabela complementar abaixo do gráfico
-                    const tabelaDespY = baseY + 15;
-                    doc.setFontSize(11);
+                    // Tabela complementar — nova página para não cortar
+                    doc.addPage();
+                    addPageHeader('Detalhamento Numérico de Despesas');
+
+                    doc.setFontSize(12);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...secondaryColor);
-                    doc.text('Detalhamento Numérico', 15, tabelaDespY);
+                    doc.text('Detalhamento Numérico por Categoria', 15, 35);
 
                     doc.autoTable({
-                        startY: tabelaDespY + 4,
+                        startY: 40,
                         head: [['#', 'Categoria', 'Valor (R$)', '% do Total', 'Acumulado %']],
                         body: (() => {
                             let acum = 0;
@@ -3169,12 +3170,12 @@
                     });
 
                     // Análise de Pareto
-                    let yPareto = doc.lastAutoTable.finalY + 8;
-                    doc.setFontSize(10);
+                    let yPareto = doc.lastAutoTable.finalY + 10;
+                    doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(...secondaryColor);
                     doc.text('Análise de Pareto (80/20)', 15, yPareto);
-                    yPareto += 5;
+                    yPareto += 6;
 
                     let acumPareto = 0;
                     let categoriasPareto = 0;
@@ -3188,7 +3189,7 @@
                     doc.setFont('helvetica', 'normal');
                     doc.setTextColor(50, 50, 50);
                     doc.text(`${categoriasPareto} de ${catEntries.length} categorias representam ${acumPareto.toFixed(1)}% das despesas totais.`, 18, yPareto);
-                    doc.text(`Concentrar esforços de redução nessas ${categoriasPareto} categorias gera o maior impacto no resultado.`, 18, yPareto + 5);
+                    doc.text(`Concentrar esforços de redução nessas ${categoriasPareto} categorias gera o maior impacto no resultado.`, 18, yPareto + 6);
                 }
 
                 // --- PÁGINA 4 (antiga 2): METAS, SEMÁFORO E DESTAQUES ---
