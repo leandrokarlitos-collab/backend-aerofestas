@@ -227,7 +227,10 @@
                     // Se for permanente, sempre aparece
                     if (cf.tipoRecorrencia === 'permanente') return true;
 
-                    // Se for parcelada, verifica se está no intervalo
+                    // Se for parcelada mas sem dados de parcelamento, trata como permanente
+                    if (cf.tipoRecorrencia === 'parcelada' && (!cf.dataInicio || !cf.numParcelas)) return true;
+
+                    // Se for parcelada com dados completos, verifica se está no intervalo
                     if (cf.tipoRecorrencia === 'parcelada' && cf.dataInicio && cf.numParcelas) {
                         const [anoInicio, mesInicio] = cf.dataInicio.split('-').map(Number);
                         const dataInicio = new Date(anoInicio, mesInicio - 1);
@@ -3987,6 +3990,19 @@
             const btnLimparContaFixa = document.getElementById('limpar-conta-fixa-btn');
             const formContaFixa = document.getElementById('form-conta-fixa');
             const formCategoria = document.getElementById('form-conta-fixa-categoria');
+
+            // Toggle campos parcelada/permanente ao mudar tipo de recorrência
+            document.getElementById('conta-fixa-tipo-recorrencia')?.addEventListener('change', function() {
+                const parcelamentoContainer = document.getElementById('conta-fixa-parcelamento-container');
+                const permanenteContainer = document.getElementById('conta-fixa-permanente-container');
+                if (this.value === 'parcelada') {
+                    parcelamentoContainer.classList.remove('hidden');
+                    permanenteContainer.classList.add('hidden');
+                } else {
+                    parcelamentoContainer.classList.add('hidden');
+                    permanenteContainer.classList.remove('hidden');
+                }
+            });
 
             // Abrir modal de Cadastrar Conta Fixa
             btnAbrirContaFixa?.addEventListener('click', () => {
