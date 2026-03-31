@@ -2907,7 +2907,291 @@
                     doc.text('Sem insights específicos para este período.', 20, currentY);
                 }
 
-                // --- PÁGINA 2: METAS, SEMÁFORO E DESTAQUES ---
+                // --- PÁGINA 2: INDICADORES DE SAÚDE FINANCEIRA ---
+                doc.addPage();
+                addPageHeader('Indicadores de Saúde Financeira da Empresa');
+
+                // ---- Cálculos dos indicadores avançados ----
+                const contasFixasVal = (state.contasFixas || []).reduce((acc, cf) => acc + (parseFloat(cf.valor) || 0), 0);
+                const custosVariaveisVal = despesasOperacionaisVal + monitoresVal; // Custos que oscilam com a operação
+                const custosFixosTotais = contasFixasVal + totalSalariosVal; // Contas fixas + folha
+                const margemContribuicao = totalReceitasVal - custosVariaveisVal;
+                const ratioMC = totalReceitasVal > 0 ? margemContribuicao / totalReceitasVal : 0;
+
+                // 1) Margem de Contribuição (%)
+                const margemContribuicaoPct = totalReceitasVal > 0 ? (margemContribuicao / totalReceitasVal) * 100 : 0;
+                // 2) Ponto de Equilíbrio (Break-even em R$)
+                const pontoEquilibrio = ratioMC > 0 ? custosFixosTotais / ratioMC : 0;
+                // 3) Margem de Segurança (%)
+                const margemSeguranca = totalReceitasVal > 0 && pontoEquilibrio > 0 ? ((totalReceitasVal - pontoEquilibrio) / totalReceitasVal) * 100 : 0;
+                // 4) GAO – Grau de Alavancagem Operacional
+                const gao = saldoLiquidoVal !== 0 ? margemContribuicao / saldoLiquidoVal : 0;
+                // 5) EBITDA Proxy (sem depreciação/juros disponíveis, usa resultado operacional)
+                const ebitdaProxy = margemContribuicao - custosFixosTotais; // Aproximação simplificada
+                const margemEbitda = totalReceitasVal > 0 ? (ebitdaProxy / totalReceitasVal) * 100 : 0;
+                // 6) Índice de Eficiência Operacional
+                const eficienciaOperacional = totalDespesasGeral > 0 ? totalReceitasVal / totalDespesasGeral : 0;
+                // 7) Burn Rate (taxa de queima mensal)
+                const burnRate = totalDespesasGeral;
+                // 8) Runway (meses de operação com saldo atual)
+                const runway = burnRate > 0 && saldoLiquidoVal > 0 ? saldoLiquidoVal / burnRate : 0;
+                // 9) Índice de Concentração de Receita (Herfindahl-Hirschman simplificado)
+                const hhiShares = Object.values(revenueByCompany).map(v => totalReceitasVal > 0 ? (v / totalReceitasVal) : 0);
+                const hhi = hhiShares.reduce((acc, s) => acc + Math.pow(s, 2), 0) * 10000;
+                // 10) Crescimento MoM
+                const prevMonth = shiftMonth(state.selectedMonth, -1);
+                const receitaMesAnterior = getMonthRevenue(prevMonth);
+                const crescimentoMoM = receitaMesAnterior > 0 ? ((totalReceitasVal - receitaMesAnterior) / receitaMesAnterior) * 100 : 0;
+                // 11) Elasticidade Custo-Receita
+                const despesaMesAnterior = getMonthExpenses(prevMonth);
+                const varReceita = receitaMesAnterior > 0 ? (totalReceitasVal - receitaMesAnterior) / receitaMesAnterior : 0;
+                const varDespesa = despesaMesAnterior > 0 ? (totalDespesasGeral - despesaMesAnterior) / despesaMesAnterior : 0;
+                const elasticidade = varReceita !== 0 ? varDespesa / varReceita : 0;
+                // 12) Custo por Evento
+                const custoMedioPorEvento = eventosMes.length > 0 ? totalDespesasGeral / eventosMes.length : 0;
+                // 13) Lucratividade por Evento
+                const lucratividadePorEvento = eventosMes.length > 0 ? saldoLiquidoVal / eventosMes.length : 0;
+                // 14) Índice de Comprometimento de Receita
+                const comprometimentoReceita = totalReceitasVal > 0 ? (custosFixosTotais / totalReceitasVal) * 100 : 0;
+
+                let yInd = 34;
+                doc.setFontSize(13);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...secondaryColor);
+                doc.text('Análise de Indicadores Econômico-Financeiros', 15, yInd);
+                yInd += 3;
+
+                // Definição dos indicadores com semáforo e explicação
+                const indicadores = [
+                    {
+                        nome: 'Margem de Contribuição',
+                        valor: `${margemContribuicaoPct.toFixed(1)}%`,
+                        status: margemContribuicaoPct >= 40 ? 'verde' : (margemContribuicaoPct >= 20 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Percentual da receita que sobra após cobrir custos variáveis (operacionais + monitores). Indica quanto cada real de venda contribui para cobrir custos fixos e gerar lucro.'
+                    },
+                    {
+                        nome: 'Ponto de Equilíbrio (Break-even)',
+                        valor: formatarMoeda(pontoEquilibrio),
+                        status: totalReceitasVal >= pontoEquilibrio ? 'verde' : 'vermelho',
+                        explicacao: 'Faturamento mínimo necessário para cobrir todos os custos (fixos + variáveis). Abaixo desse valor a empresa opera no prejuízo.'
+                    },
+                    {
+                        nome: 'Margem de Segurança',
+                        valor: `${margemSeguranca.toFixed(1)}%`,
+                        status: margemSeguranca >= 25 ? 'verde' : (margemSeguranca >= 10 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Distância percentual entre a receita atual e o ponto de equilíbrio. Quanto maior, mais resiliente a empresa é a quedas de faturamento.'
+                    },
+                    {
+                        nome: 'GAO (Alavancagem Operacional)',
+                        valor: gao.toFixed(2) + 'x',
+                        status: (gao > 0 && gao <= 3) ? 'verde' : (gao > 3 && gao <= 5 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Mede a sensibilidade do lucro a variações na receita. GAO de 2x significa que um aumento de 10% na receita gera 20% de aumento no lucro — mas o inverso também vale.'
+                    },
+                    {
+                        nome: 'EBITDA Proxy',
+                        valor: formatarMoeda(ebitdaProxy) + ` (${margemEbitda.toFixed(1)}%)`,
+                        status: margemEbitda >= 15 ? 'verde' : (margemEbitda >= 5 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Aproximação do lucro operacional antes de juros, impostos e depreciação. Indica a capacidade de geração de caixa da operação pura.'
+                    },
+                    {
+                        nome: 'Eficiência Operacional',
+                        valor: eficienciaOperacional.toFixed(2) + 'x',
+                        status: eficienciaOperacional >= 1.3 ? 'verde' : (eficienciaOperacional >= 1.0 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Cada R$1 gasto na operação gera R$' + eficienciaOperacional.toFixed(2) + ' em receita. Valores acima de 1,3x indicam boa eficiência; abaixo de 1x indica prejuízo.'
+                    },
+                    {
+                        nome: 'Comprometimento de Receita (Custos Fixos)',
+                        valor: `${comprometimentoReceita.toFixed(1)}%`,
+                        status: comprometimentoReceita <= 40 ? 'verde' : (comprometimentoReceita <= 60 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Percentual da receita absorvido por custos fixos (folha + contas fixas). Quanto menor, mais flexível a estrutura. Acima de 60% é sinal de rigidez financeira.'
+                    },
+                    {
+                        nome: 'Crescimento MoM',
+                        valor: `${crescimentoMoM >= 0 ? '+' : ''}${crescimentoMoM.toFixed(1)}%`,
+                        status: crescimentoMoM >= 5 ? 'verde' : (crescimentoMoM >= -5 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Variação percentual da receita em relação ao mês anterior. Mede a dinâmica de crescimento da empresa no curto prazo.'
+                    },
+                    {
+                        nome: 'Elasticidade Custo-Receita',
+                        valor: elasticidade.toFixed(2),
+                        status: (elasticidade >= 0 && elasticidade < 1) ? 'verde' : (elasticidade >= 1 && elasticidade <= 1.2 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Se < 1, os custos crescem menos que a receita (ganho de escala). Se > 1, os custos crescem mais rápido que a receita (perda de eficiência).'
+                    },
+                    {
+                        nome: 'Concentração de Receita (HHI)',
+                        valor: hhi.toFixed(0) + ' pontos',
+                        status: hhi < 2500 ? 'verde' : (hhi < 5000 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Índice Herfindahl-Hirschman: mede a dependência de poucas fontes de receita. Até 2.500 = diversificado; 2.500–5.000 = moderada concentração; acima = alta dependência.'
+                    },
+                    {
+                        nome: 'Ticket Médio por Evento',
+                        valor: formatarMoeda(ticketMedioEvento),
+                        status: ticketMedioEvento >= 1500 ? 'verde' : (ticketMedioEvento >= 800 ? 'amarelo' : 'vermelho'),
+                        explicacao: 'Valor médio faturado por evento realizado. Indicador de precificação e posicionamento de mercado.'
+                    },
+                    {
+                        nome: 'Lucratividade por Evento',
+                        valor: formatarMoeda(lucratividadePorEvento),
+                        status: lucratividadePorEvento > 0 ? 'verde' : 'vermelho',
+                        explicacao: 'Lucro líquido médio por evento. Combina eficiência de custo com capacidade de geração de receita por operação unitária.'
+                    }
+                ];
+
+                // Renderiza indicadores como tabela compacta com semáforo
+                doc.autoTable({
+                    startY: yInd + 2,
+                    head: [['', 'Indicador', 'Valor', 'Análise']],
+                    body: indicadores.map(ind => {
+                        const dot = ind.status === 'verde' ? '●' : (ind.status === 'amarelo' ? '●' : '●');
+                        return [dot, ind.nome, ind.valor, ind.explicacao];
+                    }),
+                    theme: 'grid',
+                    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+                    bodyStyles: { textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.1, fontSize: 7.5, cellPadding: 2 },
+                    alternateRowStyles: { fillColor: [249, 250, 251] },
+                    columnStyles: {
+                        0: { cellWidth: 6, halign: 'center', fontSize: 10 },
+                        1: { cellWidth: 38, fontStyle: 'bold', fontSize: 8 },
+                        2: { cellWidth: 30, halign: 'right', fontStyle: 'bold', fontSize: 8 },
+                        3: { cellWidth: 'auto', fontSize: 7 }
+                    },
+                    didParseCell: function(data) {
+                        if (data.column.index === 0 && data.section === 'body') {
+                            const ind = indicadores[data.row.index];
+                            if (ind) {
+                                if (ind.status === 'verde') data.cell.styles.textColor = [16, 185, 129];
+                                else if (ind.status === 'amarelo') data.cell.styles.textColor = [245, 158, 11];
+                                else data.cell.styles.textColor = [239, 68, 68];
+                            }
+                        }
+                    }
+                });
+
+                // --- PÁGINA 3: GRÁFICO DE BARRAS — DISTRIBUIÇÃO DE DESPESAS ---
+                doc.addPage();
+                addPageHeader('Distribuição de Despesas — Análise por Categoria');
+
+                // Coleta despesas por categoria para o gráfico de barras
+                const despesasCategorias = {};
+                gastosMes.forEach(g => {
+                    const cat = g.categoria || 'Sem Categoria';
+                    despesasCategorias[cat] = (despesasCategorias[cat] || 0) + (parseFloat(g.valor) || 0);
+                });
+                if (monitoresVal > 0) despesasCategorias['Monitores'] = monitoresVal;
+                if (totalSalariosVal > 0) despesasCategorias['Folha & Comissões'] = totalSalariosVal;
+                if (contasFixasVal > 0) despesasCategorias['Contas Fixas'] = contasFixasVal;
+
+                const catEntries = Object.entries(despesasCategorias).sort((a, b) => b[1] - a[1]);
+                const barColors = [
+                    [239, 68, 68], [245, 158, 11], [139, 92, 246], [59, 130, 246],
+                    [236, 72, 153], [20, 184, 166], [99, 102, 241], [16, 185, 129],
+                    [251, 146, 60], [168, 85, 247]
+                ];
+
+                if (catEntries.length > 0) {
+                    const chartStartY = 38;
+                    const chartX = 55;
+                    const chartW = 120;
+                    const barH = 10;
+                    const barGap = 4;
+                    const chartH = catEntries.length * (barH + barGap);
+                    const maxVal = catEntries[0][1]; // Already sorted desc
+
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...secondaryColor);
+                    doc.text('Despesas por Categoria (R$)', 15, chartStartY - 2);
+
+                    catEntries.forEach(([cat, val], idx) => {
+                        const y = chartStartY + 6 + idx * (barH + barGap);
+                        const barW = maxVal > 0 ? (val / maxVal) * chartW : 0;
+                        const color = barColors[idx % barColors.length];
+                        const pct = totalDespesasGeral > 0 ? ((val / totalDespesasGeral) * 100).toFixed(1) : '0.0';
+
+                        // Label da categoria (à esquerda)
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(...secondaryColor);
+                        const catLabel = cat.length > 18 ? cat.substring(0, 18) + '…' : cat;
+                        doc.text(catLabel, chartX - 2, y + barH / 2 + 1, { align: 'right' });
+
+                        // Barra
+                        doc.setFillColor(...color);
+                        doc.roundedRect(chartX, y, Math.max(barW, 2), barH, 1.5, 1.5, 'F');
+
+                        // Valor e % (à direita da barra)
+                        doc.setFontSize(7.5);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(...color);
+                        doc.text(`${formatarMoeda(val)} (${pct}%)`, chartX + barW + 3, y + barH / 2 + 1);
+                    });
+
+                    // Linha base do gráfico
+                    const baseY = chartStartY + 6 + catEntries.length * (barH + barGap);
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(chartX, baseY, chartX + chartW, baseY);
+
+                    // Legenda de escala
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(150, 150, 150);
+                    doc.text('R$ 0', chartX, baseY + 4);
+                    doc.text(formatarMoeda(maxVal), chartX + chartW, baseY + 4, { align: 'right' });
+
+                    // Tabela complementar abaixo do gráfico
+                    const tabelaDespY = baseY + 15;
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...secondaryColor);
+                    doc.text('Detalhamento Numérico', 15, tabelaDespY);
+
+                    doc.autoTable({
+                        startY: tabelaDespY + 4,
+                        head: [['#', 'Categoria', 'Valor (R$)', '% do Total', 'Acumulado %']],
+                        body: (() => {
+                            let acum = 0;
+                            return catEntries.map(([cat, val], idx) => {
+                                const pct = totalDespesasGeral > 0 ? (val / totalDespesasGeral) * 100 : 0;
+                                acum += pct;
+                                return [idx + 1, cat, formatarMoeda(val), `${pct.toFixed(1)}%`, `${acum.toFixed(1)}%`];
+                            });
+                        })(),
+                        theme: 'grid',
+                        headStyles: { fillColor: [239, 68, 68], textColor: [255, 255, 255], fontSize: 9 },
+                        bodyStyles: { fontSize: 8.5 },
+                        alternateRowStyles: { fillColor: [254, 242, 242] },
+                        columnStyles: {
+                            0: { cellWidth: 8, halign: 'center' },
+                            2: { halign: 'right', fontStyle: 'bold' },
+                            3: { halign: 'right' },
+                            4: { halign: 'right', fontStyle: 'bold' }
+                        }
+                    });
+
+                    // Análise de Pareto
+                    let yPareto = doc.lastAutoTable.finalY + 8;
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(...secondaryColor);
+                    doc.text('Análise de Pareto (80/20)', 15, yPareto);
+                    yPareto += 5;
+
+                    let acumPareto = 0;
+                    let categoriasPareto = 0;
+                    for (const [, val] of catEntries) {
+                        acumPareto += totalDespesasGeral > 0 ? (val / totalDespesasGeral) * 100 : 0;
+                        categoriasPareto++;
+                        if (acumPareto >= 80) break;
+                    }
+
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(50, 50, 50);
+                    doc.text(`${categoriasPareto} de ${catEntries.length} categorias representam ${acumPareto.toFixed(1)}% das despesas totais.`, 18, yPareto);
+                    doc.text(`Concentrar esforços de redução nessas ${categoriasPareto} categorias gera o maior impacto no resultado.`, 18, yPareto + 5);
+                }
+
+                // --- PÁGINA 4 (antiga 2): METAS, SEMÁFORO E DESTAQUES ---
                 doc.addPage();
                 addPageHeader('Metas, Risco Executivo e Destaques');
 
