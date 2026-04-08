@@ -52,7 +52,10 @@
       "Bash(git merge claude/romantic-lamport --no-edit)",
       "Bash(awk 'NR>1')",
       "Bash(node -c server.js)",
-      "WebFetch(domain:docs.railway.com)"
+      "WebFetch(domain:docs.railway.com)",
+      "Bash(node -e \"require\\(''uuid''\\)\")",
+      "Bash(find '/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas' -type f \\\\\\(-name *.html -o -name *.js -o -name *.json \\\\\\))",
+      "Bash(find '/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas' -type f -name *chart* -o -name *relatorio* -o -name *report*)"
     ]
   }
 }

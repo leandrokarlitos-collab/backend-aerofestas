@@ -719,6 +719,13 @@
     <script>
         const API_BASE = "https://backend-aerofestas-production.up.railway.app/api";
 
+        function getAuthHeaders(includeJson = false) {
+            const headers = includeJson ? { 'Content-Type': 'application/json' } : {};
+            const token = localStorage.getItem('authToken');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            return headers;
+        }
+
         // --- CONFIGURAÇÃO CLOUDINARY ---
         const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dyqgxvptu/image/upload";
         const CLOUDINARY_PRESET = "c4h43hti";
@@ -989,7 +996,7 @@
             try {
                 const res = await fetch(`${API_BASE}/finance/monitores/verificar`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(true),
                     body: JSON.stringify({ nome, nascimento })
                 });
 
@@ -1209,7 +1216,7 @@
 
                 const res = await fetch(url, {
                     method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(true),
                     body: JSON.stringify(payload)
                 });
 
@@ -1220,7 +1227,11 @@
                     document.getElementById('page-subtitle').classList.add('hidden');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
-                    alert('Erro ao salvar. Verifique sua conexão.');
+                    if (res.status === 401) {
+                        alert('Sua sessão expirou ou este cadastro exige autenticação. Faça login e tente novamente.');
+                    } else {
+                        alert('Erro ao salvar. Verifique sua conexão.');
+                    }
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalContent;
                 }
