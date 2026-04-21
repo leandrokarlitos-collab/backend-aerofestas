@@ -10,7 +10,10 @@ export const api = {
 
     getBrinquedos: async () => {
         try {
-            const res = await fetch(`${BASE_URL}/admin/toys`);
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             return res.ok ? await res.json() : [];
         } catch (e) { return []; }
     },

@@ -17,6 +17,7 @@ const dailyPlanRoutes = require('./routes/dailyPlans');
 const auditRoutes = require('./routes/audit');
 const { router: backupRoutes, runBackup } = require('./routes/backup');
 const { adminRouter: eventsAdminRouter, publicRouter: eventsPublicRouter } = require('./routes/events');
+const toyRouter = require('./routes/toys');
 const cron = require('node-cron');
 const webpush = require('./config/webpush');
 const { errorHandler, installProcessHandlers } = require('./middleware/errorHandler');
@@ -290,15 +291,6 @@ app.post('/api/migrar-completo', async (req, res) => {
 });
 
 // --- ROTAS DE LEITURA ---
-app.get('/api/admin/toys', async (req, res) => {
-    try {
-        const toys = await prisma.toy.findMany({ orderBy: { name: 'asc' } });
-        res.json(toys);
-    } catch (error) {
-        console.error('Erro ao buscar brinquedos:', error);
-        res.status(500).json({ error: 'Erro ao buscar brinquedos' });
-    }
-});
 app.get('/api/admin/clients', async (req, res) => {
     try {
         const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
@@ -315,36 +307,6 @@ app.get('/api/admin/companies', async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar empresas:', error);
         res.status(500).json({ error: 'Erro ao buscar empresas' });
-    }
-});
-
-// --- CRUD BRINQUEDOS ---
-app.post('/api/admin/toys', async (req, res) => {
-    try {
-        const { id, name, quantity } = req.body;
-        const toyId = id ? parseFloat(id) : Date.now();
-        const saved = await prisma.toy.upsert({
-            where: { id: toyId },
-            update: { name, quantity: parseInt(quantity) || 1 },
-            create: { id: toyId, name, quantity: parseInt(quantity) || 1 }
-        });
-        res.json({ success: true, data: saved });
-    } catch (error) {
-        console.error('Erro ao salvar brinquedo:', error);
-        res.status(500).json({ error: 'Erro ao salvar brinquedo', details: error.message });
-    }
-});
-
-app.delete('/api/admin/toys/:id', async (req, res) => {
-    const toyId = parseFloat(req.params.id);
-    if (isNaN(toyId)) return res.status(400).json({ error: 'ID inválido' });
-    try {
-        await prisma.eventItem.deleteMany({ where: { toyId } });
-        await prisma.toy.delete({ where: { id: toyId } });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao deletar brinquedo:', error);
-        res.status(500).json({ error: 'Erro ao deletar brinquedo' });
     }
 });
 
@@ -397,6 +359,7 @@ app.get('/api/finance/fixed-expenses', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', eventsAdminRouter);
+app.use('/api/admin/toys', toyRouter);
 app.use('/api/public', eventsPublicRouter);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin/history', historyRoutes);

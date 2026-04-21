@@ -60,7 +60,10 @@
       "Bash(node --check config/webpush.js)",
       "Bash(node --check middleware/errorHandler.js)",
       "Bash(node --check services/EventService.js)",
-      "Bash(node --check routes/events.js)"
+      "Bash(node --check routes/events.js)",
+      "Bash(node --check services/ToyService.js)",
+      "Bash(node --check routes/toys.js)",
+      "Bash(node --check js/api.js)"
     ]
   }
 }
