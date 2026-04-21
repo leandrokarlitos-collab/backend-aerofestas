@@ -63,7 +63,11 @@
       "Bash(node --check routes/events.js)",
       "Bash(node --check services/ToyService.js)",
       "Bash(node --check routes/toys.js)",
-      "Bash(node --check js/api.js)"
+      "Bash(node --check js/api.js)",
+      "Bash(node --check services/ClientService.js)",
+      "Bash(node --check services/CompanyService.js)",
+      "Bash(node --check routes/clients.js)",
+      "Bash(node --check routes/companies.js)"
     ]
   }
 }

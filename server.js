@@ -18,6 +18,8 @@ const auditRoutes = require('./routes/audit');
 const { router: backupRoutes, runBackup } = require('./routes/backup');
 const { adminRouter: eventsAdminRouter, publicRouter: eventsPublicRouter } = require('./routes/events');
 const toyRouter = require('./routes/toys');
+const clientRouter = require('./routes/clients');
+const companyRouter = require('./routes/companies');
 const cron = require('node-cron');
 const webpush = require('./config/webpush');
 const { errorHandler, installProcessHandlers } = require('./middleware/errorHandler');
@@ -290,58 +292,6 @@ app.post('/api/migrar-completo', async (req, res) => {
     }
 });
 
-// --- ROTAS DE LEITURA ---
-app.get('/api/admin/clients', async (req, res) => {
-    try {
-        const clients = await prisma.client.findMany({ orderBy: { name: 'asc' } });
-        res.json(clients);
-    } catch (error) {
-        console.error('Erro ao buscar clientes:', error);
-        res.status(500).json({ error: 'Erro ao buscar clientes' });
-    }
-});
-app.get('/api/admin/companies', async (req, res) => {
-    try {
-        const companies = await prisma.company.findMany({ orderBy: { name: 'asc' } });
-        res.json(companies);
-    } catch (error) {
-        console.error('Erro ao buscar empresas:', error);
-        res.status(500).json({ error: 'Erro ao buscar empresas' });
-    }
-});
-
-// --- CRUD EMPRESAS ---
-app.post('/api/admin/companies', async (req, res) => {
-    try {
-        const { id, name, cnpj, address, phone, email, paymentInfo, repName, repDoc } = req.body;
-        const companyId = id ? parseFloat(id) : Date.now();
-        const saved = await prisma.company.upsert({
-            where: { id: companyId },
-            update: { name, cnpj: cnpj || null, address: address || null, phone: phone || null, email: email || null, paymentInfo: paymentInfo || null, repName: repName || null, repDoc: repDoc || null },
-            create: { id: companyId, name, cnpj: cnpj || null, address: address || null, phone: phone || null, email: email || null, paymentInfo: paymentInfo || null, repName: repName || null, repDoc: repDoc || null }
-        });
-        res.json({ success: true, data: saved });
-    } catch (error) {
-        console.error('Erro ao salvar empresa:', error);
-        res.status(500).json({ error: 'Erro ao salvar empresa', details: error.message });
-    }
-});
-
-app.delete('/api/admin/companies/:id', async (req, res) => {
-    const companyId = parseFloat(req.params.id);
-    if (isNaN(companyId)) return res.status(400).json({ error: 'ID inválido' });
-    try {
-        const eventsUsingCompany = await prisma.event.count({ where: { yourCompanyId: companyId } });
-        if (eventsUsingCompany > 0) {
-            return res.status(400).json({ error: 'Empresa em uso por eventos, não pode ser excluída' });
-        }
-        await prisma.company.delete({ where: { id: companyId } });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erro ao deletar empresa:', error);
-        res.status(500).json({ error: 'Erro ao deletar empresa' });
-    }
-});
 app.get('/api/finance/accounts', async (req, res) => {
     try {
         const accounts = await prisma.bankAccount.findMany({ orderBy: { name: 'asc' } });
@@ -360,6 +310,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', eventsAdminRouter);
 app.use('/api/admin/toys', toyRouter);
+app.use('/api/admin/clients', clientRouter);
+app.use('/api/admin/companies', companyRouter);
 app.use('/api/public', eventsPublicRouter);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin/history', historyRoutes);

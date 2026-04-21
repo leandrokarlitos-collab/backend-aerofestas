@@ -20,7 +20,10 @@ export const api = {
 
     getClientes: async () => {
         try {
-            const res = await fetch(`${BASE_URL}/admin/clients`);
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             return res.ok ? await res.json() : [];
         } catch (e) { return []; }
     },
@@ -34,7 +37,10 @@ export const api = {
 
     getEmpresas: async () => {
         try {
-            const res = await fetch(`${BASE_URL}/admin/companies`);
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/companies`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             return res.ok ? await res.json() : [];
         } catch (e) {
             console.error('Erro ao buscar empresas:', e);
