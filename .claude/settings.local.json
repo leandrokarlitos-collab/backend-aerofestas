@@ -55,7 +55,12 @@
       "WebFetch(domain:docs.railway.com)",
       "Bash(node -e \"require\\(''uuid''\\)\")",
       "Bash(find '/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas' -type f \\\\\\(-name *.html -o -name *.js -o -name *.json \\\\\\))",
-      "Bash(find '/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas' -type f -name *chart* -o -name *relatorio* -o -name *report*)"
+      "Bash(find '/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas' -type f -name *chart* -o -name *relatorio* -o -name *report*)",
+      "Bash(node --check server.js)",
+      "Bash(node --check config/webpush.js)",
+      "Bash(node --check middleware/errorHandler.js)",
+      "Bash(node --check services/EventService.js)",
+      "Bash(node --check routes/events.js)"
     ]
   }
 }

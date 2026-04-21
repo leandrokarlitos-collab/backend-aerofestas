@@ -5,8 +5,6 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const prisma = require('./prisma/client');
 
-const { authenticate } = require('./middleware/auth');
-const { logAudit, computeChanges } = require('./services/audit');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
@@ -18,17 +16,10 @@ const dailyPlanRoutes = require('./routes/dailyPlans');
 // const whatsappRoutes = require('./routes/whatsapp');
 const auditRoutes = require('./routes/audit');
 const { router: backupRoutes, runBackup } = require('./routes/backup');
+const { adminRouter: eventsAdminRouter, publicRouter: eventsPublicRouter } = require('./routes/events');
 const cron = require('node-cron');
-const webpush = require('web-push');
-
-const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BIiU_AzAKYphDuzGTCEy-tvcZGZtEjdaW4JZZ3WVGJYOrDJ4hjpmOmA_yOD_R4O_n1N8RrTm190cLPd10grA4g0';
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'Gyay8GSr9huvXx-5OGG1YTp18j28I9PpBg33ORBfs6Y';
-
-webpush.setVapidDetails(
-    'mailto:contato@aerofestas.com.br',
-    VAPID_PUBLIC,
-    VAPID_PRIVATE
-);
+const webpush = require('./config/webpush');
+const { errorHandler, installProcessHandlers } = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -389,21 +380,6 @@ app.delete('/api/admin/companies/:id', async (req, res) => {
         res.status(500).json({ error: 'Erro ao deletar empresa' });
     }
 });
-app.get('/api/admin/events-full', async (req, res) => {
-    try {
-        const events = await prisma.event.findMany({
-            include: {
-                items: { include: { toy: true } },
-                company: true
-            },
-            orderBy: { date: 'desc' }
-        });
-        res.json(events);
-    } catch (error) {
-        console.error('Erro ao buscar eventos:', error);
-        res.status(500).json({ error: 'Erro ao buscar eventos' });
-    }
-});
 app.get('/api/finance/accounts', async (req, res) => {
     try {
         const accounts = await prisma.bankAccount.findMany({ orderBy: { name: 'asc' } });
@@ -417,261 +393,11 @@ app.get('/api/finance/fixed-expenses', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao buscar contas fixas" }); }
 });
 
-// --- CADASTRO PÚBLICO DO EVENTO (Link para o cliente preencher dados) ---
-app.get('/api/public/events/:id', async (req, res) => {
-    try {
-        const id = parseFloat(req.params.id);
-        const event = await prisma.event.findUnique({
-            where: { id },
-            include: { items: { include: { toy: true } }, company: true }
-        });
-        if (!event) return res.status(404).json({ error: "Evento não encontrado" });
-        // Retorna apenas dados não-sensíveis para o formulário público
-        res.json({
-            id: event.id,
-            date: event.date,
-            endDate: event.endDate,
-            startTime: event.startTime,
-            endTime: event.endTime,
-            companyName: event.company?.name || '',
-            items: event.items.map(i => ({ nome: i.toy?.nome || 'Item', quantidade: i.quantity })),
-            price: event.price,
-            // Dados já preenchidos pelo cliente (para re-edição)
-            clientType: event.clientType,
-            clientName: event.clientName,
-            clientCpf: event.clientCpf,
-            clientRg: event.clientRg,
-            clientDob: event.clientDob,
-            clientPhone: event.clientPhone,
-            clientPhoneBackup: event.clientPhoneBackup,
-            cnpj: event.cnpj,
-            companyAddress: event.companyAddress,
-            repName: event.repName,
-            repPhone: event.repPhone,
-            clientAddress: event.clientAddress,
-            cep: event.cep,
-            complemento: event.complemento,
-            referencia: event.referencia,
-            bairro: event.bairro,
-            cidade: event.cidade,
-            uf: event.uf,
-            isBirthday: event.isBirthday,
-            birthdayPersonName: event.birthdayPersonName,
-            birthdayPersonDob: event.birthdayPersonDob,
-        });
-    } catch (e) {
-        console.error("Erro ao buscar evento público:", e);
-        res.status(500).json({ error: "Erro ao buscar evento" });
-    }
-});
-
-app.put('/api/public/events/:id', async (req, res) => {
-    try {
-        const id = parseFloat(req.params.id);
-        const d = req.body;
-        // Só permite atualizar dados do cliente, endereço e aniversariante
-        const updated = await prisma.event.update({
-            where: { id },
-            data: {
-                clientType: d.clientType,
-                clientName: d.clientName,
-                clientCpf: d.clientCpf,
-                clientRg: d.clientRg,
-                clientDob: d.clientDob,
-                clientPhone: d.clientPhone,
-                clientPhoneBackup: d.clientPhoneBackup,
-                cnpj: d.cnpj,
-                companyAddress: d.companyAddress,
-                repName: d.repName,
-                repPhone: d.repPhone,
-                clientAddress: d.clientAddress,
-                contractAddress: d.contractAddress,
-                cep: d.cep,
-                complemento: d.complemento,
-                referencia: d.referencia,
-                bairro: d.bairro,
-                cidade: d.cidade,
-                uf: d.uf,
-                isBirthday: d.isBirthday || false,
-                birthdayPersonName: d.birthdayPersonName,
-                birthdayPersonDob: d.birthdayPersonDob,
-                status: 'cadastro_completo',
-            }
-        });
-
-        // Envia push notification para admins
-        try {
-            const subscriptions = await prisma.pushSubscription.findMany();
-            const payload = JSON.stringify({
-                title: 'Cadastro de Evento Preenchido!',
-                body: `${d.clientName || 'Cliente'} preencheu o cadastro do evento.`,
-                url: '/Agenda%20de%20eventos.html',
-                type: 'EVENT_CADASTRO_COMPLETO'
-            });
-            for (const sub of subscriptions) {
-                try {
-                    await webpush.sendNotification(
-                        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-                        payload
-                    );
-                } catch (pushErr) {
-                    if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
-                        await prisma.pushSubscription.delete({ where: { id: sub.id } });
-                    }
-                }
-            }
-        } catch (notifErr) {
-            console.error('Erro ao enviar notificação push:', notifErr);
-        }
-
-        res.json({ success: true, data: updated });
-    } catch (e) {
-        console.error("Erro ao atualizar evento público:", e);
-        res.status(500).json({ error: "Erro ao atualizar evento" });
-    }
-});
-
-// --- SALVAR EVENTO ---
-app.post('/api/admin/events', authenticate, async (req, res) => {
-    const evt = req.body;
-    const eventId = evt.id ? parseFloat(evt.id) : Date.now();
-    const isUpdate = !!evt.id;
-    try {
-        // Busca evento existente para auditoria (se for update)
-        let existingEvent = null;
-        if (isUpdate) {
-            existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
-        }
-
-        const itens = (evt.items || evt.toys || []).map(item => ({
-            quantity: parseInt(item.quantity) || 1,
-            price: (item.price !== undefined && item.price !== null) ? parseFloat(item.price) : (item.valor !== undefined && item.valor !== null ? parseFloat(item.valor) : 0),
-            toyId: item.id ? parseFloat(item.id) : (item.toyId ? parseFloat(item.toyId) : null)
-        })).filter(i => i.toyId !== null);
-
-        // Deleta itens antigos se for atualização
-        if (isUpdate) await prisma.eventItem.deleteMany({ where: { eventId: eventId } });
-
-        // Campos compartilhados (sem 'id' — Prisma v5 rejeita id no update)
-        const fields = {
-            date: evt.date,
-            endDate: evt.endDate || null,
-            clientName: evt.clientName,
-            yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
-            startTime: evt.startTime,
-            endTime: evt.endTime,
-            price: evt.price ? parseFloat(evt.price) : 0,
-
-            // Campos adicionais do cliente
-            clientType: evt.clientType,
-            clientCpf: evt.clientCpf,
-            clientRg: evt.clientRg,
-            clientDob: evt.clientDob,
-            clientPhone: evt.clientPhone,
-            clientPhoneBackup: evt.clientPhoneBackup,
-
-            // Campos PJ
-            cnpj: evt.cnpj,
-            companyAddress: evt.companyAddress,
-            repName: evt.repName,
-            repCpf: evt.repCpf,
-            repPhone: evt.repPhone,
-            repPhoneBackup: evt.repPhoneBackup,
-
-            // Endereço do evento
-            clientAddress: evt.clientAddress,
-            contractAddress: evt.contractAddress,
-            cep: evt.cep,
-            complemento: evt.complemento,
-            referencia: evt.referencia,
-            bairro: evt.bairro,
-            cidade: evt.cidade,
-            uf: evt.uf,
-
-            // Financeiro
-            subtotal: evt.subtotal ? parseFloat(evt.subtotal) : 0,
-            discountType: evt.discountType,
-            discountValue: evt.discountValue ? parseFloat(evt.discountValue) : 0,
-            deliveryFee: evt.deliveryFee ? parseFloat(evt.deliveryFee) : 0,
-            paymentStatus: evt.paymentStatus,
-            signalAmount: evt.signalAmount ? parseFloat(evt.signalAmount) : 0,
-            signalReceived: evt.signalReceived || false,
-            paymentDetails: evt.paymentDetails,
-
-            // Outros
-            monitor: evt.monitor,
-            eventObservations: evt.eventObservations,
-            isBirthday: evt.isBirthday || false,
-            birthdayPersonName: evt.birthdayPersonName,
-            birthdayPersonDob: evt.birthdayPersonDob,
-
-            // Auditoria
-            updatedBy: req.user.id,
-        };
-
-        const saved = await prisma.event.upsert({
-            where: { id: eventId },
-            update: { ...fields, items: { create: itens } },
-            create: { id: eventId, ...fields, createdBy: req.user.id, items: { create: itens } },
-            include: { items: { include: { toy: true } } }
-        });
-
-        // Log de auditoria
-        if (isUpdate && existingEvent) {
-            const changes = computeChanges(existingEvent, saved, [
-                'date', 'endDate', 'clientName', 'price', 'subtotal', 'paymentStatus',
-                'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
-                'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived'
-            ]);
-            logAudit({ entityType: 'Event', entityId: eventId, action: 'UPDATE', user: req.user, changes, snapshot: { clientName: saved.clientName, date: saved.date, price: saved.price } });
-        } else {
-            logAudit({ entityType: 'Event', entityId: eventId, action: 'CREATE', user: req.user, snapshot: { clientName: saved.clientName, date: saved.date, price: saved.price } });
-        }
-
-        res.json({ success: true, data: saved });
-    } catch (error) {
-        console.error('Erro ao salvar evento:', error);
-        res.status(500).json({ error: "Erro ao salvar evento", details: error.message });
-    }
-});
-
-// --- DELETAR EVENTO ---
-app.delete('/api/admin/events/:id', authenticate, async (req, res) => {
-    const eventId = parseFloat(req.params.id);
-
-    if (isNaN(eventId)) {
-        return res.status(400).json({ error: "ID inválido" });
-    }
-
-    try {
-        // Busca evento antes de deletar (snapshot para auditoria)
-        const existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
-
-        // Primeiro deleta os itens associados ao evento
-        await prisma.eventItem.deleteMany({
-            where: { eventId: eventId }
-        });
-
-        // Depois deleta o evento
-        await prisma.event.delete({
-            where: { id: eventId }
-        });
-
-        // Log de auditoria
-        if (existingEvent) {
-            logAudit({ entityType: 'Event', entityId: eventId, action: 'DELETE', user: req.user, snapshot: { clientName: existingEvent.clientName, date: existingEvent.date, price: existingEvent.price } });
-        }
-
-        res.json({ success: true, message: "Evento excluído com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao deletar evento:", error);
-        res.status(500).json({ error: "Erro ao excluir evento" });
-    }
-});
-
 // --- ROTAS FINAIS ---
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin', eventsAdminRouter);
+app.use('/api/public', eventsPublicRouter);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin/history', historyRoutes);
 app.use('/api/finance', financeRoutes);
@@ -782,6 +508,12 @@ app.get('/', (req, res) => res.redirect('/login.html'));
 // === [DESATIVADO] WhatsApp AutoSync, Purge e Cleanup ===
 // Módulo WhatsApp desconectado - será desenvolvido em sistema paralelo
 // AutoSync, purgeOldMessages e cleanup de grupo foram desativados
+
+// --- ERROR HANDLER GLOBAL (sempre por último) ---
+app.use(errorHandler);
+
+// --- Safety nets ao nível do processo ---
+installProcessHandlers();
 
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);

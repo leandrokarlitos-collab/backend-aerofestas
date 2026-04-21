@@ -15,7 +15,7 @@ function buildUrl(url) {
     try {
         const u = new URL(url);
         // Plano Hobby Railway: ~100 conexões disponíveis, 20 é seguro e eficiente
-        if (!u.searchParams.has('connection_limit')) u.searchParams.set('connection_limit', '20');
+        if (!u.searchParams.has('connection_limit')) u.searchParams.set('connection_limit', '5');
         if (!u.searchParams.has('pool_timeout'))     u.searchParams.set('pool_timeout', '20');
         return u.toString();
     } catch {
