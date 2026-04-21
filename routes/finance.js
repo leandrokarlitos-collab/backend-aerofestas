@@ -1,8 +1,7 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const { authenticate } = require('../middleware/auth');
-const { logAudit, computeChanges } = require('../services/audit');
 
 // --- DASHBOARD E LEITURA ---
 
@@ -166,24 +165,21 @@ router.get('/fixed-expenses', async (req, res) => {
 // --- CRIAÇÃO (SALVAR DADOS) ---
 
 // POST /api/finance/transactions (Salvar Gasto)
-router.post('/transactions', authenticate, async (req, res) => {
+router.post('/transactions', async (req, res) => {
     try {
         const t = req.body;
         const newTransaction = await prisma.transaction.create({
             data: {
-                id: t.id || Date.now().toString(),
+                id: t.id || Date.now().toString(), // Garante um ID
                 description: t.description,
                 amount: parseFloat(t.amount),
                 type: t.type || 'EXPENSE',
                 date: t.date,
                 category: t.category,
                 paymentMethod: t.paymentMethod,
-                accountId: t.accountId,
-                createdBy: req.user.id,
-                updatedBy: req.user.id
+                accountId: t.accountId
             }
         });
-        logAudit({ entityType: 'Transaction', entityId: newTransaction.id, action: 'CREATE', user: req.user, snapshot: { description: newTransaction.description, amount: newTransaction.amount, type: newTransaction.type, date: newTransaction.date } });
         res.json(newTransaction);
     } catch (error) {
         console.error("Erro ao salvar transação:", error);
@@ -192,11 +188,10 @@ router.post('/transactions', authenticate, async (req, res) => {
 });
 
 // PUT /api/finance/transactions/:id (Atualizar Gasto)
-router.put('/transactions/:id', authenticate, async (req, res) => {
+router.put('/transactions/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const t = req.body;
-        const existing = await prisma.transaction.findUnique({ where: { id } });
         const updated = await prisma.transaction.update({
             where: { id },
             data: {
@@ -206,14 +201,9 @@ router.put('/transactions/:id', authenticate, async (req, res) => {
                 date: t.date,
                 category: t.category,
                 paymentMethod: t.paymentMethod,
-                accountId: t.accountId,
-                updatedBy: req.user.id
+                accountId: t.accountId
             }
         });
-        if (existing) {
-            const changes = computeChanges(existing, updated, ['description', 'amount', 'type', 'date', 'category', 'paymentMethod']);
-            logAudit({ entityType: 'Transaction', entityId: id, action: 'UPDATE', user: req.user, changes, snapshot: { description: updated.description, amount: updated.amount, type: updated.type, date: updated.date } });
-        }
         res.json(updated);
     } catch (error) {
         console.error("Erro ao atualizar transação:", error);
@@ -502,7 +492,7 @@ router.post('/monitores/verificar', async (req, res) => {
 });
 
 // POST /api/finance/monitores
-router.post('/monitores', authenticate, async (req, res) => {
+router.post('/monitores', async (req, res) => {
     try {
         const m = req.body;
         const novoMonitor = await prisma.monitor.create({
@@ -540,7 +530,6 @@ router.post('/monitores', authenticate, async (req, res) => {
                 tiktok: m.tiktok
             }
         });
-        logAudit({ entityType: 'Monitor', entityId: novoMonitor.id, action: 'CREATE', user: req.user, snapshot: { nome: novoMonitor.nome, status: novoMonitor.status } });
         res.json(novoMonitor);
     } catch (e) {
         console.error("Erro ao criar monitor:", e);
@@ -549,7 +538,7 @@ router.post('/monitores', authenticate, async (req, res) => {
 });
 
 // PUT /api/finance/monitores/:id
-router.put('/monitores/:id', authenticate, async (req, res) => {
+router.put('/monitores/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const m = req.body;
@@ -588,7 +577,6 @@ router.put('/monitores/:id', authenticate, async (req, res) => {
                 tiktok: m.tiktok
             }
         });
-        logAudit({ entityType: 'Monitor', entityId: id, action: 'UPDATE', user: req.user, snapshot: { nome: updated.nome, status: updated.status } });
         res.json(updated);
     } catch (e) {
         console.error("Erro ao atualizar monitor:", e);
@@ -619,9 +607,7 @@ router.patch('/monitores/:id/status', async (req, res) => {
 router.delete('/monitores/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        const existing = await prisma.monitor.findUnique({ where: { id } });
         await prisma.monitor.delete({ where: { id } });
-        logAudit({ entityType: 'Monitor', entityId: id, action: 'DELETE', user: req.user, snapshot: existing ? { nome: existing.nome } : null });
         res.json({ success: true });
     } catch (e) {
         console.error("Erro ao deletar monitor:", e);
@@ -671,7 +657,7 @@ router.get('/pagamentos-monitores', async (req, res) => {
 });
 
 // POST /api/finance/pagamentos-monitores
-router.post('/pagamentos-monitores', authenticate, async (req, res) => {
+router.post('/pagamentos-monitores', async (req, res) => {
     try {
         const p = req.body;
         const novoPagamento = await prisma.pagamentoMonitor.create({
@@ -693,7 +679,6 @@ router.post('/pagamentos-monitores', authenticate, async (req, res) => {
                 numEventos: p.numEventos ? parseFloat(p.numEventos) : null
             }
         });
-        logAudit({ entityType: 'PagamentoMonitor', entityId: novoPagamento.id, action: 'CREATE', user: req.user, snapshot: { nome: novoPagamento.nome, pagamento: novoPagamento.pagamento, data: novoPagamento.data } });
         res.json(novoPagamento);
     } catch (e) {
         console.error("Erro ao criar pagamento:", e);
@@ -702,7 +687,7 @@ router.post('/pagamentos-monitores', authenticate, async (req, res) => {
 });
 
 // PUT /api/finance/pagamentos-monitores/:id
-router.put('/pagamentos-monitores/:id', authenticate, async (req, res) => {
+router.put('/pagamentos-monitores/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const p = req.body;
@@ -728,7 +713,6 @@ router.put('/pagamentos-monitores/:id', authenticate, async (req, res) => {
             }
         });
 
-        logAudit({ entityType: 'PagamentoMonitor', entityId: id, action: 'UPDATE', user: req.user, snapshot: { nome: pagamentoAtualizado.nome, pagamento: pagamentoAtualizado.pagamento, statusPagamento: pagamentoAtualizado.statusPagamento } });
         res.json(pagamentoAtualizado);
     } catch (e) {
         console.error("Erro ao atualizar pagamento:", e);
@@ -737,12 +721,10 @@ router.put('/pagamentos-monitores/:id', authenticate, async (req, res) => {
 });
 
 // DELETE /api/finance/pagamentos-monitores/:id
-router.delete('/pagamentos-monitores/:id', authenticate, async (req, res) => {
+router.delete('/pagamentos-monitores/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const existing = await prisma.pagamentoMonitor.findUnique({ where: { id } });
         await prisma.pagamentoMonitor.delete({ where: { id } });
-        logAudit({ entityType: 'PagamentoMonitor', entityId: id, action: 'DELETE', user: req.user, snapshot: existing ? { nome: existing.nome, pagamento: existing.pagamento } : null });
         res.json({ success: true });
     } catch (e) {
         console.error("Erro ao deletar pagamento:", e);
@@ -906,41 +888,19 @@ router.post('/seed-salarios', async (req, res) => {
 });
 
 // DELETE Genérico (Para todos os tipos incluindo categorias)
-router.delete('/:type/:id', authenticate, async (req, res) => {
+router.delete('/:type/:id', async (req, res) => {
     try {
         const { type, id } = req.params;
-        let entityType = type;
-        let snapshot = null;
 
-        if (type === 'transactions') {
-            const existing = await prisma.transaction.findUnique({ where: { id } });
-            if (existing) snapshot = { description: existing.description, amount: existing.amount, type: existing.type, date: existing.date };
-            entityType = 'Transaction';
-            await prisma.transaction.delete({ where: { id } });
-        } else if (type === 'accounts') {
-            entityType = 'BankAccount';
-            await prisma.bankAccount.delete({ where: { id } });
-        } else if (type === 'fixed-expenses') {
-            const existing = await prisma.fixedExpense.findUnique({ where: { id } });
-            if (existing) snapshot = { description: existing.description, amount: existing.amount };
-            entityType = 'FixedExpense';
-            await prisma.fixedExpense.delete({ where: { id } });
-        } else if (type === 'categories-expenses') {
-            entityType = 'ExpenseCategory';
-            await prisma.expenseCategory.delete({ where: { id } });
-        } else if (type === 'categories-fixed') {
-            entityType = 'FixedExpenseCategory';
-            await prisma.fixedExpenseCategory.delete({ where: { id } });
-        } else {
-            return res.status(400).json({ error: "Tipo inválido" });
-        }
+        if (type === 'transactions') await prisma.transaction.delete({ where: { id } });
+        else if (type === 'accounts') await prisma.bankAccount.delete({ where: { id } });
+        else if (type === 'fixed-expenses') await prisma.fixedExpense.delete({ where: { id } });
+        else if (type === 'categories-expenses') await prisma.expenseCategory.delete({ where: { id } });
+        else if (type === 'categories-fixed') await prisma.fixedExpenseCategory.delete({ where: { id } });
+        else return res.status(400).json({ error: "Tipo inválido" });
 
-        logAudit({ entityType, entityId: id, action: 'DELETE', user: req.user, snapshot });
         res.json({ success: true });
-    } catch (e) {
-        console.error("Erro ao deletar:", e);
-        res.status(500).json({ error: "Erro ao deletar" });
-    }
+    } catch (e) { res.status(500).json({ error: "Erro ao deletar" }); }
 });
 
 module.exports = router;
