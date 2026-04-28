@@ -5181,7 +5181,13 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     return;
                 }
 
-                const toyListString = event.toys.map(eventToy => {
+                // Compatível com estrutura antiga (event.items) e nova (event.toys)
+                const eventToys = event.toys || event.items || [];
+                if (!Array.isArray(eventToys) || eventToys.length === 0) {
+                    showToast("Adicione equipamentos ao evento antes de gerar o contrato.", true);
+                    return;
+                }
+                const toyListString = eventToys.map(eventToy => {
                     const toy = toys.find(t => t.id === eventToy.id);
                     if (!toy) return null;
                     return `- ${eventToy.quantity}x ${toy.name}`;
