@@ -103,6 +103,362 @@
             inset: 0 0 0 1px rgba(255, 255, 255, 0.02);
         }
 
+        /* === Overlay de loading da geração do contrato === */
+        .contract-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            animation: contractLoaderFade 0.25s ease-out;
+        }
+        .contract-loader.hidden { display: none; }
+        @keyframes contractLoaderFade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .contract-loader-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+            padding: 36px 40px;
+            box-shadow: 0 25px 60px -15px rgba(79, 70, 229, 0.4);
+            max-width: 420px;
+            width: calc(100% - 40px);
+            text-align: center;
+            animation: contractLoaderPop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .contract-loader-x {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+        .contract-loader-x:hover {
+            background: #f1f5f9;
+            color: #1f2937;
+            transform: rotate(90deg);
+        }
+        .dark .contract-loader-x:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+        }
+        .dark .contract-loader-card {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        @keyframes contractLoaderPop {
+            from { opacity: 0; transform: scale(0.85) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .contract-loader-rings {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            margin: 0 auto 22px;
+        }
+        .contract-loader-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 4px solid transparent;
+        }
+        .contract-loader-ring-1 {
+            border-top-color: #4f46e5;
+            border-right-color: #a855f7;
+            animation: contractRingSpin 1.4s linear infinite;
+        }
+        .contract-loader-ring-2 {
+            inset: 12px;
+            border-top-color: #a855f7;
+            border-left-color: #4f46e5;
+            opacity: 0.55;
+            animation: contractRingSpin 2s linear infinite reverse;
+        }
+        @keyframes contractRingSpin {
+            to { transform: rotate(360deg); }
+        }
+        .contract-loader-icon {
+            position: absolute;
+            inset: 28px;
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.6rem;
+            box-shadow: 0 8px 22px -6px rgba(79, 70, 229, 0.6);
+            animation: contractIconPulse 1.8s ease-in-out infinite;
+        }
+        @keyframes contractIconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+        .contract-loader-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 6px;
+        }
+        .dark .contract-loader-title { color: #f8fafc; }
+        .contract-loader-status {
+            font-size: 0.95rem;
+            color: #4f46e5;
+            font-weight: 600;
+            margin-bottom: 20px;
+            min-height: 1.5em;
+            transition: opacity 0.2s ease;
+        }
+        .contract-loader-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        .contract-loader-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.88rem;
+            color: #94a3b8;
+            transition: color 0.3s ease;
+            padding: 6px 12px;
+            border-radius: 10px;
+        }
+        .contract-loader-step.active {
+            color: #4f46e5;
+            background: rgba(79, 70, 229, 0.08);
+            font-weight: 600;
+        }
+        .contract-loader-step.done {
+            color: #10b981;
+        }
+        .contract-loader-step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .contract-loader-step.active .contract-loader-step-dot {
+            background: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+            animation: contractDotPulse 1.2s ease-in-out infinite;
+        }
+        .contract-loader-step.done .contract-loader-step-dot {
+            background: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+        }
+        @keyframes contractDotPulse {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2); }
+            50% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0.05); }
+        }
+        .contract-loader-hint {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .contract-loader-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 18px;
+            animation: contractActionsFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .contract-loader-actions.hidden { display: none; }
+        @keyframes contractActionsFade {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .contract-loader-btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: white;
+            padding: 13px 22px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 22px -6px rgba(79, 70, 229, 0.55);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+        }
+        .contract-loader-btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+            box-shadow: 0 14px 30px -6px rgba(79, 70, 229, 0.65);
+        }
+        .contract-loader-btn-primary:active { transform: translateY(0); }
+        .contract-loader-btn-secondary {
+            background: transparent;
+            color: #4f46e5;
+            padding: 10px 22px;
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .contract-loader-btn-secondary:hover {
+            background: rgba(79, 70, 229, 0.07);
+            border-color: rgba(79, 70, 229, 0.5);
+        }
+        .dark .contract-loader-btn-secondary {
+            color: #a5b4fc;
+            border-color: rgba(165, 180, 252, 0.3);
+        }
+
+        /* === Modal de pré-visualização do PDF gerado === */
+        .contract-pdf-preview-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 20px;
+            animation: contractLoaderFade 0.25s ease-out;
+        }
+        .contract-pdf-preview-modal.hidden { display: none; }
+        .contract-pdf-preview-card {
+            background: #ffffff;
+            border-radius: 22px;
+            width: 100%;
+            max-width: 1080px;
+            height: 92vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+            animation: contractLoaderPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .dark .contract-pdf-preview-card {
+            background: #0f172a;
+        }
+        .contract-pdf-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 22px;
+            gap: 14px;
+            flex-wrap: wrap;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(168, 85, 247, 0.06));
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .dark .contract-pdf-preview-header {
+            border-bottom-color: rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(168, 85, 247, 0.15));
+        }
+        .contract-pdf-preview-titles { min-width: 0; }
+        .contract-pdf-preview-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+        .dark .contract-pdf-preview-title { color: #f8fafc; }
+        .contract-pdf-preview-subtitle {
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin: 2px 0 0 0;
+        }
+        .dark .contract-pdf-preview-subtitle { color: #94a3b8; }
+        .contract-pdf-preview-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .contract-pdf-preview-btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: white;
+            padding: 9px 16px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            box-shadow: 0 6px 16px -4px rgba(79, 70, 229, 0.5);
+            transition: filter 0.2s ease, transform 0.2s ease;
+        }
+        .contract-pdf-preview-btn-primary:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .contract-pdf-preview-btn-secondary {
+            background: transparent;
+            color: #4f46e5;
+            padding: 9px 16px;
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s ease;
+        }
+        .contract-pdf-preview-btn-secondary:hover { background: #eef2ff; }
+        .dark .contract-pdf-preview-btn-secondary {
+            color: #a5b4fc;
+            border-color: rgba(165, 180, 252, 0.3);
+        }
+        .dark .contract-pdf-preview-btn-secondary:hover {
+            background: rgba(165, 180, 252, 0.08);
+        }
+        .contract-pdf-preview-btn-close {
+            background: transparent;
+            border: none;
+            color: #6b7280;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+        .contract-pdf-preview-btn-close:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+            transform: rotate(90deg);
+        }
+        .dark .contract-pdf-preview-btn-close { color: #94a3b8; }
+        .dark .contract-pdf-preview-btn-close:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+        }
+        .contract-pdf-preview-iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: #f3f4f6;
+            min-height: 0;
+        }
+        .dark .contract-pdf-preview-iframe { background: #1e293b; }
+
         .day-cell {
             min-height: 120px;
             height: 100%;
@@ -1422,9 +1778,77 @@
                 <button id="print-gemini-content-btn"
                     class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors"><i
                         class="fas fa-print mr-2"></i>Imprimir</button>
+                <button id="download-contract-pdf-btn"
+                    class="hidden bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-colors"><i
+                        class="fas fa-file-pdf mr-2"></i>Baixar PDF</button>
                 <button id="copy-gemini-content-btn" class="shiny-btn px-6 py-2 rounded-md"><i
                         class="fas fa-copy mr-2"></i>Copiar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Overlay de loading durante a geração do contrato -->
+    <div id="contract-loader" class="contract-loader hidden">
+        <div class="contract-loader-card">
+            <button id="contract-loader-x-btn" type="button" class="contract-loader-x" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="contract-loader-rings">
+                <div class="contract-loader-ring contract-loader-ring-1"></div>
+                <div class="contract-loader-ring contract-loader-ring-2"></div>
+                <div class="contract-loader-icon">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+            </div>
+            <h3 class="contract-loader-title">Gerando seu contrato</h3>
+            <p id="contract-loader-status" class="contract-loader-status">Iniciando...</p>
+            <div class="contract-loader-steps">
+                <div id="contract-step-1" class="contract-loader-step">
+                    <span class="contract-loader-step-dot"></span>
+                    <span>Consultando IA jurídica</span>
+                </div>
+                <div id="contract-step-2" class="contract-loader-step">
+                    <span class="contract-loader-step-dot"></span>
+                    <span>Estruturando cláusulas</span>
+                </div>
+                <div id="contract-step-3" class="contract-loader-step">
+                    <span class="contract-loader-step-dot"></span>
+                    <span>Montando PDF profissional</span>
+                </div>
+            </div>
+            <p id="contract-loader-hint" class="contract-loader-hint"><i class="fas fa-info-circle mr-1"></i>Isso pode levar alguns segundos. Não feche a janela.</p>
+            <div id="contract-loader-actions" class="contract-loader-actions hidden">
+                <button id="contract-loader-download-btn" type="button" class="contract-loader-btn-primary">
+                    <i class="fas fa-file-pdf mr-2"></i>Baixar Contrato
+                </button>
+                <button id="contract-loader-close-btn" type="button" class="contract-loader-btn-secondary">
+                    <i class="fas fa-eye mr-2"></i>Ver pré-visualização
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de pré-visualização do PDF gerado (iframe) -->
+    <div id="contract-pdf-preview-modal" class="contract-pdf-preview-modal hidden">
+        <div class="contract-pdf-preview-card">
+            <div class="contract-pdf-preview-header">
+                <div class="contract-pdf-preview-titles">
+                    <h3 class="contract-pdf-preview-title"><i class="fas fa-file-contract mr-2"></i>Pré-visualização do Contrato</h3>
+                    <p class="contract-pdf-preview-subtitle">Confira o documento antes de enviar para assinatura.</p>
+                </div>
+                <div class="contract-pdf-preview-actions">
+                    <button id="contract-pdf-preview-download-btn" type="button" class="contract-pdf-preview-btn-primary">
+                        <i class="fas fa-download mr-2"></i>Baixar
+                    </button>
+                    <button id="contract-pdf-preview-edit-btn" type="button" class="contract-pdf-preview-btn-secondary">
+                        <i class="fas fa-pen mr-2"></i>Editar texto
+                    </button>
+                    <button id="contract-pdf-preview-close-btn" type="button" class="contract-pdf-preview-btn-close" aria-label="Fechar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <iframe id="contract-pdf-preview-iframe" class="contract-pdf-preview-iframe" title="Pré-visualização do contrato em PDF"></iframe>
         </div>
     </div>
 
@@ -1768,6 +2192,63 @@
             const closeGeminiModalBtn = document.getElementById('close-gemini-modal-btn');
             const copyGeminiContentBtn = document.getElementById('copy-gemini-content-btn');
             const printGeminiContentBtn = document.getElementById('print-gemini-content-btn'); // Botão novo
+            const downloadContractPdfBtn = document.getElementById('download-contract-pdf-btn');
+            let currentContractMeta = null; // { event, yourCompany } enquanto o modal exibe um contrato
+
+            // === Overlay visual durante a geração do contrato ===
+            const ContractLoader = (() => {
+                const el = document.getElementById('contract-loader');
+                const statusEl = document.getElementById('contract-loader-status');
+                const hintEl = document.getElementById('contract-loader-hint');
+                const actionsEl = document.getElementById('contract-loader-actions');
+                const stepEls = [
+                    document.getElementById('contract-step-1'),
+                    document.getElementById('contract-step-2'),
+                    document.getElementById('contract-step-3'),
+                ];
+                const STATUSES = [
+                    'Conectando ao Gemini...',
+                    'Estruturando cláusulas jurídicas...',
+                    'Montando o PDF profissional...',
+                ];
+                const setStep = (idx) => {
+                    stepEls.forEach((s, i) => {
+                        if (!s) return;
+                        s.classList.remove('active', 'done');
+                        if (i < idx) s.classList.add('done');
+                        else if (i === idx) s.classList.add('active');
+                    });
+                    if (statusEl && idx >= 0 && idx < STATUSES.length) {
+                        statusEl.style.opacity = '0';
+                        setTimeout(() => {
+                            statusEl.textContent = STATUSES[idx];
+                            statusEl.style.opacity = '1';
+                        }, 150);
+                    }
+                };
+                return {
+                    show() {
+                        if (!el) return;
+                        el.classList.remove('hidden');
+                        if (actionsEl) actionsEl.classList.add('hidden');
+                        if (hintEl) hintEl.style.display = '';
+                        setStep(0);
+                    },
+                    advance(idx) { setStep(idx); },
+                    finish() {
+                        stepEls.forEach(s => s && s.classList.add('done'));
+                        if (statusEl) statusEl.textContent = 'Pronto! Contrato baixado automaticamente.';
+                        // Mostra botões de ação ao concluir
+                        if (hintEl) hintEl.style.display = 'none';
+                        if (actionsEl) actionsEl.classList.remove('hidden');
+                    },
+                    hide() {
+                        if (el) el.classList.add('hidden');
+                        if (actionsEl) actionsEl.classList.add('hidden');
+                        if (hintEl) hintEl.style.display = '';
+                    },
+                };
+            })();
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toast-message');
             const toastIcon = document.getElementById('toast-icon');
@@ -2274,6 +2755,382 @@
                 printWindow.focus();
             };
             // --- FIM DA MODIFICAÇÃO (Refatoração para Impressão) ---
+
+            // ====================================================================
+            // ContractPDF — gera o PDF profissional do contrato a partir do texto
+            // em Markdown retornado pela API Gemini.
+            // ====================================================================
+            const ContractPDF = (() => {
+                // Layout A4 (mm)
+                const PAGE_W = 210;
+                const PAGE_H = 297;
+                const MARGIN_X = 22;
+                const MARGIN_TOP = 25;
+                const MARGIN_BOTTOM = 22;
+                const CONTENT_W = PAGE_W - MARGIN_X * 2;
+                const FONT_BODY = 'times';
+                const FONT_HEAD = 'helvetica';
+
+                // 1) Parse Markdown -> blocos tipados
+                const parse = (raw) => {
+                    const blocks = [];
+                    const lines = (raw || '').replace(/\r\n/g, '\n').split('\n');
+                    let para = [];
+                    const flush = () => {
+                        if (para.length) {
+                            const t = para.join(' ').replace(/[ \t]+/g, ' ').trim();
+                            if (t) blocks.push({ type: 'p', text: t });
+                            para = [];
+                        }
+                    };
+                    for (const rawLine of lines) {
+                        const line = rawLine.trim();
+                        if (!line) { flush(); continue; }
+                        if (line.startsWith('```')) continue;
+                        if (/^---+$/.test(line)) { flush(); blocks.push({ type: 'hr' }); continue; }
+                        if (/^#\s+/.test(line)) { flush(); blocks.push({ type: 'h1', text: line.replace(/^#\s+/, '').replace(/\*\*/g, '') }); }
+                        else if (/^##\s+/.test(line)) { flush(); blocks.push({ type: 'h2', text: line.replace(/^##\s+/, '').replace(/\*\*/g, '') }); }
+                        else if (/^###\s+/.test(line)) { flush(); blocks.push({ type: 'h3', text: line.replace(/^###\s+/, '').replace(/\*\*/g, '') }); }
+                        else if (/^[-*]\s+/.test(line)) { flush(); blocks.push({ type: 'li', text: line.replace(/^[-*]\s+/, '') }); }
+                        else if (/^\*\*[^*]+\*\*\s*:?\s*$/.test(line)) {
+                            flush();
+                            blocks.push({ type: 'h3', text: line.replace(/\*\*/g, '').replace(/:\s*$/, '') });
+                        } else {
+                            para.push(line);
+                        }
+                    }
+                    flush();
+                    return blocks;
+                };
+
+                // 2) Inline runs (negrito **...**)
+                const splitRuns = (text) => {
+                    const runs = [];
+                    const re = /\*\*(.+?)\*\*/g;
+                    let last = 0, m;
+                    while ((m = re.exec(text)) !== null) {
+                        if (m.index > last) runs.push({ text: text.slice(last, m.index), bold: false });
+                        runs.push({ text: m[1], bold: true });
+                        last = m.index + m[0].length;
+                    }
+                    if (last < text.length) runs.push({ text: text.slice(last), bold: false });
+                    return runs;
+                };
+
+                // 3) Cabeçalho de página (CONTRATADA)
+                const drawPageHeader = (doc, info) => {
+                    if (!info) return;
+                    doc.setFont(FONT_HEAD, 'bold');
+                    doc.setFontSize(10);
+                    doc.setTextColor(40, 40, 70);
+                    doc.text(info.companyName || '', MARGIN_X, MARGIN_TOP - 9);
+                    doc.setFont(FONT_HEAD, 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(90, 90, 110);
+                    const detail = [];
+                    if (info.cnpj) detail.push(`CNPJ: ${info.cnpj}`);
+                    if (info.address) detail.push(info.address);
+                    if (info.phone) detail.push(`Tel: ${info.phone}`);
+                    if (detail.length) doc.text(detail.join('  •  '), MARGIN_X, MARGIN_TOP - 4);
+                    doc.setDrawColor(79, 70, 229);
+                    doc.setLineWidth(0.6);
+                    doc.line(MARGIN_X, MARGIN_TOP - 1, PAGE_W - MARGIN_X, MARGIN_TOP - 1);
+                    doc.setTextColor(0, 0, 0);
+                };
+
+                // 4) Renderização rica com word-wrap e justificação
+                const renderRichText = (doc, runs, x, startY, maxW, opts) => {
+                    const lh = opts.lineHeight;
+                    const justify = !!opts.justify;
+                    const family = opts.fontFamily || FONT_BODY;
+                    const tokens = [];
+                    for (const run of runs) {
+                        const parts = run.text.split(/(\s+)/);
+                        for (const p of parts) {
+                            if (p === '') continue;
+                            tokens.push({ text: p, bold: run.bold, ws: /^\s+$/.test(p) });
+                        }
+                    }
+                    let y = startY;
+                    let line = [];
+                    let lineW = 0;
+                    const measure = (tok) => {
+                        doc.setFont(family, tok.bold ? 'bold' : 'normal');
+                        return doc.getTextWidth(tok.text);
+                    };
+                    const pageBreakIfNeeded = () => {
+                        if (y > PAGE_H - MARGIN_BOTTOM) {
+                            doc.addPage();
+                            drawPageHeader(doc, opts.headerInfo);
+                            y = MARGIN_TOP + 10;
+                        }
+                    };
+                    const drawLine = (lastLine) => {
+                        while (line.length && line[0].ws) line.shift();
+                        while (line.length && line[line.length - 1].ws) line.pop();
+                        if (!line.length) return;
+                        pageBreakIfNeeded();
+                        let extra = 0;
+                        if (justify && !lastLine) {
+                            const wsCount = line.filter(t => t.ws).length;
+                            const w = line.reduce((s, t) => s + measure(t), 0);
+                            if (wsCount > 0 && w < maxW) {
+                                extra = (maxW - w) / wsCount;
+                                if (extra > 3.5) extra = 3.5; // evita gaps esquisitos
+                            }
+                        }
+                        let drawX = x;
+                        for (const tok of line) {
+                            doc.setFont(family, tok.bold ? 'bold' : 'normal');
+                            doc.text(tok.text, drawX, y);
+                            drawX += measure(tok);
+                            if (tok.ws && extra > 0) drawX += extra;
+                        }
+                        y += lh;
+                        line = [];
+                        lineW = 0;
+                    };
+                    for (const tok of tokens) {
+                        const w = measure(tok);
+                        if (tok.ws) {
+                            if (line.length === 0) continue;
+                            line.push(tok); lineW += w;
+                        } else {
+                            if (lineW + w > maxW && line.length > 0) drawLine(false);
+                            line.push(tok); lineW += w;
+                        }
+                    }
+                    drawLine(true);
+                    return y;
+                };
+
+                // 5) Bloco de assinaturas (CONTRATADA / CONTRATANTE + 2 testemunhas)
+                const renderSignatureBlock = (doc, y, headerInfo, contratada, contratante, location) => {
+                    const ensure = (need) => {
+                        if (y + need > PAGE_H - MARGIN_BOTTOM) {
+                            doc.addPage();
+                            drawPageHeader(doc, headerInfo);
+                            y = MARGIN_TOP + 10;
+                        }
+                    };
+                    ensure(70);
+                    y += 8;
+                    doc.setFont(FONT_BODY, 'normal');
+                    doc.setFontSize(11);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(location, PAGE_W / 2, y, { align: 'center' });
+                    y += 18;
+
+                    const colW = (CONTENT_W - 14) / 2;
+                    const leftX = MARGIN_X;
+                    const rightX = MARGIN_X + colW + 14;
+
+                    doc.setDrawColor(40, 40, 60);
+                    doc.setLineWidth(0.4);
+                    doc.line(leftX, y, leftX + colW, y);
+                    doc.line(rightX, y, rightX + colW, y);
+                    y += 5;
+
+                    doc.setFont(FONT_HEAD, 'bold');
+                    doc.setFontSize(9);
+                    doc.text('CONTRATADA', leftX + colW / 2, y, { align: 'center' });
+                    doc.text('CONTRATANTE', rightX + colW / 2, y, { align: 'center' });
+                    y += 4;
+
+                    doc.setFont(FONT_BODY, 'normal');
+                    doc.setFontSize(9);
+                    if (contratada) {
+                        const cl = doc.splitTextToSize(contratada, colW);
+                        cl.forEach((ln, i) => doc.text(ln, leftX + colW / 2, y + i * 4, { align: 'center' }));
+                    }
+                    if (contratante) {
+                        const cl = doc.splitTextToSize(contratante, colW);
+                        cl.forEach((ln, i) => doc.text(ln, rightX + colW / 2, y + i * 4, { align: 'center' }));
+                    }
+                    y += 18;
+
+                    ensure(20);
+                    doc.setDrawColor(40, 40, 60);
+                    doc.line(leftX, y, leftX + colW, y);
+                    doc.line(rightX, y, rightX + colW, y);
+                    y += 5;
+                    doc.setFont(FONT_HEAD, 'bold');
+                    doc.setFontSize(9);
+                    doc.text('TESTEMUNHA 1', leftX + colW / 2, y, { align: 'center' });
+                    doc.text('TESTEMUNHA 2', rightX + colW / 2, y, { align: 'center' });
+                    y += 5;
+                    doc.setFont(FONT_BODY, 'normal');
+                    doc.setFontSize(9);
+                    doc.text('Nome: _______________________', leftX, y);
+                    doc.text('Nome: _______________________', rightX, y);
+                    y += 5;
+                    doc.text('CPF: ________________________', leftX, y);
+                    doc.text('CPF: ________________________', rightX, y);
+                    return y;
+                };
+
+                // 6) Numeração de páginas
+                const renderFooter = (doc) => {
+                    const N = doc.internal.getNumberOfPages();
+                    for (let i = 1; i <= N; i++) {
+                        doc.setPage(i);
+                        doc.setDrawColor(220, 220, 230);
+                        doc.setLineWidth(0.3);
+                        doc.line(MARGIN_X, PAGE_H - 14, PAGE_W - MARGIN_X, PAGE_H - 14);
+                        doc.setFont(FONT_HEAD, 'normal');
+                        doc.setFontSize(8);
+                        doc.setTextColor(110, 110, 130);
+                        doc.text(`Página ${i} de ${N}`, PAGE_W - MARGIN_X, PAGE_H - 9, { align: 'right' });
+                        doc.setTextColor(0, 0, 0);
+                    }
+                };
+
+                // 7) Build — monta o documento jsPDF e o RETORNA (sem salvar)
+                const build = (text, event, yourCompany) => {
+                    if (!window.jspdf || !window.jspdf.jsPDF) {
+                        showToast('Biblioteca jsPDF não carregada.', true);
+                        return null;
+                    }
+                    const blocks = parse(text);
+                    const meta = { event, yourCompany };
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    const headerInfo = {
+                        companyName: meta.yourCompany.name,
+                        cnpj: meta.yourCompany.cnpj,
+                        address: meta.yourCompany.address,
+                        phone: meta.yourCompany.phone,
+                    };
+                    drawPageHeader(doc, headerInfo);
+                    let y = MARGIN_TOP + 10;
+
+                    const ensure = (need) => {
+                        if (y + need > PAGE_H - MARGIN_BOTTOM) {
+                            doc.addPage();
+                            drawPageHeader(doc, headerInfo);
+                            y = MARGIN_TOP + 10;
+                        }
+                    };
+
+                    for (const block of blocks) {
+                        if (block.type === 'h1') {
+                            ensure(24);
+                            doc.setFont(FONT_HEAD, 'bold');
+                            doc.setFontSize(13.5);
+                            doc.setTextColor(20, 20, 50);
+                            const lines = doc.splitTextToSize(block.text.toUpperCase(), CONTENT_W);
+                            for (const ln of lines) {
+                                doc.text(ln, PAGE_W / 2, y, { align: 'center' });
+                                y += 6.5;
+                            }
+                            y += 1.5;
+                            doc.setDrawColor(120, 120, 140);
+                            doc.setLineWidth(0.3);
+                            doc.line(MARGIN_X + 30, y, PAGE_W - MARGIN_X - 30, y);
+                            y += 7;
+                            doc.setTextColor(0, 0, 0);
+                        } else if (block.type === 'h2') {
+                            y += 3;
+                            ensure(10);
+                            doc.setFont(FONT_HEAD, 'bold');
+                            doc.setFontSize(10.5);
+                            doc.setTextColor(30, 30, 60);
+                            const lines = doc.splitTextToSize(block.text.toUpperCase(), CONTENT_W);
+                            for (const ln of lines) {
+                                doc.text(ln, MARGIN_X, y);
+                                y += 5.5;
+                            }
+                            y += 1.5;
+                            doc.setTextColor(0, 0, 0);
+                        } else if (block.type === 'h3') {
+                            y += 1.5;
+                            ensure(8);
+                            doc.setFont(FONT_HEAD, 'bold');
+                            doc.setFontSize(10);
+                            doc.setTextColor(40, 40, 70);
+                            const lines = doc.splitTextToSize(block.text, CONTENT_W);
+                            for (const ln of lines) {
+                                doc.text(ln, MARGIN_X, y);
+                                y += 5;
+                            }
+                            y += 0.5;
+                            doc.setTextColor(0, 0, 0);
+                        } else if (block.type === 'hr') {
+                            ensure(6);
+                            doc.setDrawColor(200, 200, 210);
+                            doc.setLineWidth(0.3);
+                            doc.line(MARGIN_X, y, PAGE_W - MARGIN_X, y);
+                            y += 4;
+                        } else if (block.type === 'li') {
+                            doc.setFont(FONT_BODY, 'normal');
+                            doc.setFontSize(11);
+                            ensure(6);
+                            doc.text('•', MARGIN_X + 2, y);
+                            const runs = splitRuns(block.text);
+                            y = renderRichText(doc, runs, MARGIN_X + 7, y, CONTENT_W - 7, {
+                                lineHeight: 5.6, justify: false, fontFamily: FONT_BODY, headerInfo
+                            });
+                            y += 0.5;
+                        } else if (block.type === 'p') {
+                            doc.setFont(FONT_BODY, 'normal');
+                            doc.setFontSize(11);
+                            const runs = splitRuns(block.text);
+                            y = renderRichText(doc, runs, MARGIN_X, y, CONTENT_W, {
+                                lineHeight: 5.8, justify: true, fontFamily: FONT_BODY, headerInfo
+                            });
+                            y += 2.5;
+                        }
+                    }
+
+                    // Local + assinaturas
+                    const today = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
+                    const location = `Aparecida de Goiânia/GO, ${today}.`;
+                    const contratadaLabel = meta.yourCompany.name +
+                        (meta.yourCompany.repName ? `\n${meta.yourCompany.repName}` : '');
+                    const contratanteLabel = meta.event.clientName +
+                        (meta.event.clientType === 'PJ' && meta.event.repName ? `\n${meta.event.repName}` : '');
+                    renderSignatureBlock(doc, y, headerInfo, contratadaLabel, contratanteLabel, location);
+
+                    renderFooter(doc);
+                    return doc;
+                };
+
+                const filenameFor = (event) => {
+                    const safe = (s) => (s || '').toString().replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 50);
+                    return `Contrato_${safe(event && event.clientName) || 'Cliente'}_${(event && event.date) || ''}.pdf`;
+                };
+
+                return {
+                    parse,
+                    build,
+                    filenameFor,
+                    generate(text, event, yourCompany) {
+                        try {
+                            const doc = build(text, event, yourCompany);
+                            if (!doc) return false;
+                            doc.save(filenameFor(event));
+                            return true;
+                        } catch (err) {
+                            console.error('Falha ao gerar PDF do contrato:', err);
+                            showToast('Erro ao gerar PDF do contrato.', true);
+                            return false;
+                        }
+                    },
+                    // Retorna uma blob URL do PDF montado (para iframe de preview)
+                    previewUrl(text, event, yourCompany) {
+                        try {
+                            const doc = build(text, event, yourCompany);
+                            if (!doc) return null;
+                            const blob = doc.output('blob');
+                            return URL.createObjectURL(blob);
+                        } catch (err) {
+                            console.error('Falha ao pré-visualizar PDF:', err);
+                            showToast('Erro ao pré-visualizar PDF.', true);
+                            return null;
+                        }
+                    }
+                };
+            })();
 
             const callGeminiAPI = async (prompt, buttonElement = null) => {
                 const apiKey = getApiKey();
@@ -4404,72 +5261,80 @@ no endereço e data especificados.`;
                 }
 
                 const prompt = `
-Aja como um assistente jurídico. Crie um CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS
-PARA EVENTOS formal e completo. Use as seguintes informações para preencher o contrato:
+Aja como um assistente jurídico. Gere um CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E
+EQUIPAMENTOS PARA EVENTOS formal e completo, em português brasileiro.
 
-- **CONTRATADA:**
-- Razão Social/Nome: ${yourCompany.name}
-- CNPJ: ${yourCompany.cnpj || 'Não informado'}
-- Endereço: ${yourCompany.address || 'Não informado'}
-- Telefone: ${yourCompany.phone || 'Não informado'}
-- E-mail: ${yourCompany.email || 'Não informado'}
-- Representante Legal: ${yourCompany.repName || 'Não informado'}, portador do documento ${yourCompany.repDoc || 'Não informado'}
+FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS em Markdown puro, seguindo estritamente estas regras:
+- O título do documento deve ser a primeira linha, no formato: "# CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS"
+- Antes das cláusulas, qualifique as partes usando subtítulos "### CONTRATADA" e "### CONTRATANTE", com os dados em parágrafos comuns (rótulos em **negrito** quando apropriado, ex.: "**Razão Social:** ...").
+- Em seguida, inclua um parágrafo de abertura: "As partes acima qualificadas têm entre si justo e contratado o presente CONTRATO DE PRESTAÇÃO DE SERVIÇO, mediante as cláusulas e condições a seguir."
+- Cada cláusula deve ser um cabeçalho de nível 2 no formato exato: "## CLÁUSULA PRIMEIRA – DO OBJETO" (use travessão "–"), seguida de um ou mais parágrafos com o texto da cláusula. Use parágrafos completos em prosa jurídica formal — NÃO use listas com hífen para o texto principal das cláusulas (apenas para sublistas pontuais quando necessário).
+- Use **negrito** para destacar valores monetários, datas, prazos e termos-chave dentro dos parágrafos.
+- NÃO inclua bloco de assinaturas, linhas de assinatura, local, data, "Aparecida de Goiânia" ou nomes de testemunhas no final — tudo isso será adicionado automaticamente. Encerre apenas com a frase de fechamento como último parágrafo: "E, por estarem assim justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das testemunhas abaixo."
+- NÃO use blocos de código, NÃO use HTML. Apenas Markdown limpo.
 
+DADOS DA CONTRATADA:
+- **Razão Social/Nome:** ${yourCompany.name}
+- **CNPJ:** ${yourCompany.cnpj || 'Não informado'}
+- **Endereço:** ${yourCompany.address || 'Não informado'}
+- **Telefone:** ${yourCompany.phone || 'Não informado'}
+- **E-mail:** ${yourCompany.email || 'Não informado'}
+- **Representante Legal:** ${yourCompany.repName || 'Não informado'}, portador do documento ${yourCompany.repDoc || 'Não informado'}
+
+DADOS DO CONTRATANTE:
 ${contratantePromptSection}
 
-- ** OBJETO DO CONTRATO(Lista de Equipamentos / Serviços):**
-                    ${toyListString}
+OBJETO DO CONTRATO (Equipamentos/Serviços):
+${toyListString}
 
-- ** DATA E HORA DO EVENTO:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.
-- ** LOCAL DE INSTALAÇÃO / EVENTO:** ${fullEventAddressContract || 'O mesmo endereço do contratante.'}
-- ** DETALHE DO EVENTO:** ${birthdayContractPrompt}
+EVENTO:
+- **Data e hora:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.
+- **Local de instalação:** ${fullEventAddressContract || 'O mesmo endereço do contratante.'}
+${birthdayContractPrompt ? `- **Detalhe:** ${birthdayContractPrompt}` : ''}
 
+VALORES E PAGAMENTO:
 ${financePromptSection}
 
-- ** CONDIÇÕES DE PAGAMENTO ESPECÍFICAS:** ${paymentDetailsText}. ${paymentDataText}
+CONDIÇÕES DE PAGAMENTO ESPECÍFICAS: ${paymentDetailsText}. ${paymentDataText}
 
-O contrato deve ser estruturado com um título claro("CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E
-EQUIPAMENTOS PARA EVENTOS"), qualificação completa das partes e cláusulas numeradas, incluindo:
-1. ** CLÁUSULA PRIMEIRA - DO OBJETO:** Descrever a locação dos equipamentos / brinquedos listados para o evento na data,
-                        hora e local especificados.${birthdayContractPrompt} Mencionar que inclui montagem e desmontagem.
-2. ** CLÁUSULA SEGUNDA - DOS SERVIÇOS:** Listar os serviços inclusos: a) Fornecimento dos equipamentos; b) Montagem e
-        desmontagem; c) Fornecimento de mão de obra(monitores, se aplicável, caso contrário omitir);
-        3. ** CLÁUSULA TERCEIRA - DO PRAZO:** Definir o prazo determinado do contrato, correspondendo exatamente à data e
-horários de início e término do evento.
-4. ** CLÁUSULA QUARTA - DO VALOR E PAGAMENTO:** Mencionar o valor total(${formatCurrency(valorTotal)}), a taxa de
-        entrega(${formatCurrency(frete)}), e USAR EXATAMENTE as "CONDIÇÕES DE PAGAMENTO ESPECÍFICAS" e o "STATUS FINANCEIRO"
-            (especialmente o valor do sinal) fornecidos acima.
-5. ** CLÁUSULA QUINTA - DAS DESPESAS:** Informar que o valor pago engloba todas as despesas da CONTRATADA(material,
-                transporte, mão de obra, impostos, etc.), constituindo a única remuneração devida.
-6. ** CLÁUSULA SEXTA - DAS OBRIGAÇÕES DA CONTRATADA:** Garantir a entrega dos equipamentos em perfeitas condições de uso
-e segurança, e realizar a montagem e desmontagem nos horários acordados.
-7. ** CLÁUSULA SÉTIMA - DAS OBRIGAÇÕES DO CONTRATANTE:**
-            - Fornecer local seguro, plano, limpo e com ponto de energia elétrica compatível e acessível.
-- Supervisionar o uso dos brinquedos por um adulto responsável.
-- Responsabilizar - se por danos por mau uso(sapatos, alimentos, objetos pontiagudos, excesso de peso / capacidade, etc.).
-- Não mover os equipamentos do local de instalação.
-- Em caso de chuva / ventos fortes, desligar os infláveis e protegê - los.
-8. ** CLÁUSULA OITAVA - DA RESCISÃO(CANCELAMENTO):** Incluir cláusula sobre cancelamento(Ex: "O cancelamento da locação
-por parte do CONTRATANTE com antecedência superior a 7(sete) dias da data do evento implicará na devolução integral do
-valor pago a título de sinal.Cancelamentos realizados com 7(sete) dias ou menos de antecedência da data do evento
-resultarão na retenção de 50 % (cinquenta por cento) do valor total do contrato, a título de multa compensatória por
-perdas e danos.").
-        9. ** CLÁUSULA NONA - DA RESPONSABILIDADE(PROBLEMAS EXTERNOS):** Isentar a CONTRATADA por mal funcionamento devido a
-problemas de energia elétrica, clima adverso(chuvas, ventos fortes) ou depredação por terceiros.
-10. ** CLÁUSULA DÉCIMA - DO FORO:** Definir o foro da comarca da CONTRATADA(Ex: Aparecida de Goiânia, GO) para dirimir
-quaisquer controvérsias, com renúncia a qualquer outro.
+CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... – ..."):
+1. CLÁUSULA PRIMEIRA – DO OBJETO: descrever a locação dos equipamentos/brinquedos listados para o evento na data, hora e local especificados${birthdayContractPrompt ? '. ' + birthdayContractPrompt : ''}. Mencionar que inclui montagem e desmontagem.
+2. CLÁUSULA SEGUNDA – DOS SERVIÇOS: listar serviços inclusos (fornecimento, montagem/desmontagem, monitores se aplicável).
+3. CLÁUSULA TERCEIRA – DO PRAZO: prazo determinado, correspondendo exatamente à data/horários do evento.
+4. CLÁUSULA QUARTA – DO VALOR E DO PAGAMENTO: mencionar valor total **${formatCurrency(valorTotal)}**, taxa de entrega **${formatCurrency(frete)}** e usar EXATAMENTE as condições e status financeiro fornecidos.
+5. CLÁUSULA QUINTA – DAS DESPESAS: o valor pago engloba todas as despesas da CONTRATADA (material, transporte, mão de obra, tributos), constituindo única remuneração devida.
+6. CLÁUSULA SEXTA – DAS OBRIGAÇÕES DA CONTRATADA: entregar equipamentos em perfeitas condições de uso e segurança; realizar montagem/desmontagem nos horários acordados.
+7. CLÁUSULA SÉTIMA – DAS OBRIGAÇÕES DO CONTRATANTE: fornecer local seguro, plano, limpo, com ponto de energia compatível; supervisionar o uso por adulto responsável; responder por danos por mau uso (sapatos, alimentos, objetos pontiagudos, excesso de peso); não mover os equipamentos; em caso de chuva/ventos fortes, desligar os infláveis e protegê-los.
+8. CLÁUSULA OITAVA – DA RESCISÃO E DO CANCELAMENTO: cancelamento com antecedência superior a 7 dias implica devolução integral do sinal; cancelamentos com 7 dias ou menos resultam em retenção de 50% do valor total como multa compensatória.
+9. CLÁUSULA NONA – DA RESPONSABILIDADE: isentar a CONTRATADA por mau funcionamento decorrente de problemas de energia elétrica, clima adverso ou depredação por terceiros.
+10. CLÁUSULA DÉCIMA – DO FORO: foro da comarca de Aparecida de Goiânia/GO, com renúncia a qualquer outro.
+                `;
 
-Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tudo quanto se encontra disposto neste
-        instrumento, assinam - no, em 02(duas) vias de igual teor e forma.", local, data e linhas para as assinaturas da
-        CONTRATADA(representada por seu responsável) e do CONTRATANTE.
-** Local e data:** Aparecida de Goiânia, GO, ${todayFormatted}.
-        `;
-
-                const contract = await callGeminiAPI(prompt, buttonElement);
-
-                if (contract) {
-                    showGeminiModal("Contrato de Locação (Gerado)", contract);
-                    openPrintWindow(`Contrato - ${event.clientName} `, contract);
+                ContractLoader.show();
+                let contract = null;
+                try {
+                    ContractLoader.advance(0);
+                    contract = await callGeminiAPI(prompt, buttonElement);
+                    if (contract) {
+                        ContractLoader.advance(1);
+                        // pequena pausa para o usuário perceber a transição visual
+                        await new Promise(r => setTimeout(r, 300));
+                        ContractLoader.advance(2);
+                        currentContractMeta = { event, yourCompany, text: contract };
+                        if (downloadContractPdfBtn) downloadContractPdfBtn.classList.remove('hidden');
+                        // Auto-download imediato do PDF
+                        ContractPDF.generate(contract, event, yourCompany);
+                        await new Promise(r => setTimeout(r, 250));
+                        ContractLoader.finish();
+                        // Não fecha mais o overlay automaticamente — o usuário decide
+                        // via botões "Baixar Contrato" ou "Ver pré-visualização".
+                    } else {
+                        // Falha na chamada Gemini → esconde overlay
+                        ContractLoader.hide();
+                    }
+                } catch (err) {
+                    ContractLoader.hide();
+                    throw err;
                 }
             };
             // --- FIM DA MODIFICAÇÃO ---
@@ -4754,7 +5619,11 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
 
             // --- INÍCIO DA CORREÇÃO ---
             saveApiKeyBtn.addEventListener('click', saveApiKey);
-            closeGeminiModalBtn.addEventListener('click', () => hideModal(geminiModal));
+            closeGeminiModalBtn.addEventListener('click', () => {
+                hideModal(geminiModal);
+                currentContractMeta = null;
+                if (downloadContractPdfBtn) downloadContractPdfBtn.classList.add('hidden');
+            });
 
             // Novo listener para o botão de imprimir do modal
             printGeminiContentBtn.addEventListener('click', () => {
@@ -4762,6 +5631,118 @@ Finalize o contrato com a frase "E por estarem às partes em pleno acordo em tud
                 const content = geminiModalContent.value;
                 openPrintWindow(title, content);
             });
+
+            // Listener para baixar o PDF profissional do contrato (usa o conteúdo
+            // atual do textarea, permitindo edições antes do download).
+            if (downloadContractPdfBtn) {
+                downloadContractPdfBtn.addEventListener('click', () => {
+                    if (!currentContractMeta) {
+                        showToast('Nenhum contrato disponível para gerar PDF.', true);
+                        return;
+                    }
+                    const text = geminiModalContent.value;
+                    ContractPDF.generate(text, currentContractMeta.event, currentContractMeta.yourCompany);
+                });
+            }
+
+            // === Modal de pré-visualização do PDF (iframe) ===
+            const ContractPdfPreview = (() => {
+                const el = document.getElementById('contract-pdf-preview-modal');
+                const iframe = document.getElementById('contract-pdf-preview-iframe');
+                const closeBtn = document.getElementById('contract-pdf-preview-close-btn');
+                const downloadBtn = document.getElementById('contract-pdf-preview-download-btn');
+                const editBtn = document.getElementById('contract-pdf-preview-edit-btn');
+                let currentUrl = null;
+
+                const close = () => {
+                    if (!el) return;
+                    el.classList.add('hidden');
+                    if (iframe) iframe.src = 'about:blank';
+                    if (currentUrl) {
+                        URL.revokeObjectURL(currentUrl);
+                        currentUrl = null;
+                    }
+                };
+
+                if (closeBtn) closeBtn.addEventListener('click', close);
+                if (el) el.addEventListener('click', (e) => { if (e.target === el) close(); });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && el && !el.classList.contains('hidden')) close();
+                });
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', () => {
+                        if (!currentContractMeta || !currentContractMeta.text) {
+                            showToast('Nenhum contrato disponível para baixar.', true);
+                            return;
+                        }
+                        ContractPDF.generate(
+                            currentContractMeta.text,
+                            currentContractMeta.event,
+                            currentContractMeta.yourCompany
+                        );
+                    });
+                }
+                if (editBtn) {
+                    editBtn.addEventListener('click', () => {
+                        close();
+                        if (currentContractMeta && currentContractMeta.text) {
+                            showGeminiModal("Contrato de Locação (Pré-visualização)", currentContractMeta.text);
+                        }
+                    });
+                }
+
+                return {
+                    open() {
+                        if (!el || !iframe || !currentContractMeta || !currentContractMeta.text) {
+                            showToast('Nenhum contrato disponível para pré-visualizar.', true);
+                            return;
+                        }
+                        const url = ContractPDF.previewUrl(
+                            currentContractMeta.text,
+                            currentContractMeta.event,
+                            currentContractMeta.yourCompany
+                        );
+                        if (!url) return;
+                        // revoga URL anterior
+                        if (currentUrl) URL.revokeObjectURL(currentUrl);
+                        currentUrl = url;
+                        iframe.src = url;
+                        el.classList.remove('hidden');
+                    },
+                    close,
+                };
+            })();
+
+            // === Listeners dos botões dentro do overlay de loading do contrato ===
+            const contractLoaderDownloadBtn = document.getElementById('contract-loader-download-btn');
+            const contractLoaderCloseBtn = document.getElementById('contract-loader-close-btn');
+            const contractLoaderXBtn = document.getElementById('contract-loader-x-btn');
+            if (contractLoaderDownloadBtn) {
+                contractLoaderDownloadBtn.addEventListener('click', () => {
+                    if (!currentContractMeta || !currentContractMeta.text) {
+                        showToast('Nenhum contrato disponível para baixar.', true);
+                        return;
+                    }
+                    ContractPDF.generate(
+                        currentContractMeta.text,
+                        currentContractMeta.event,
+                        currentContractMeta.yourCompany
+                    );
+                });
+            }
+            if (contractLoaderCloseBtn) {
+                // "Ver pré-visualização" → abre o PDF renderizado em iframe
+                contractLoaderCloseBtn.addEventListener('click', () => {
+                    ContractLoader.hide();
+                    ContractPdfPreview.open();
+                });
+            }
+            if (contractLoaderXBtn) {
+                // X → simplesmente fecha o overlay sem abrir mais nada
+                contractLoaderXBtn.addEventListener('click', () => {
+                    ContractLoader.hide();
+                });
+            }
 
             copyGeminiContentBtn.addEventListener('click', () => {
                 geminiModalContent.select();
