@@ -1771,13 +1771,15 @@
                 <button id="close-gemini-modal-btn"
                     class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
             </div>
-            <textarea id="gemini-modal-content" class="form-input w-full h-64 p-3 rounded-md bg-white/50 text-sm"
-                readonly></textarea>
+            <textarea id="gemini-modal-content" class="form-input w-full h-64 p-3 rounded-md bg-white/50 text-sm"></textarea>
             <div class="flex justify-end space-x-4 mt-6">
                 <!-- Botão Imprimir Adicionado -->
                 <button id="print-gemini-content-btn"
                     class="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors"><i
                         class="fas fa-print mr-2"></i>Imprimir</button>
+                <button id="preview-contract-pdf-btn"
+                    class="hidden bg-indigo-100 text-indigo-700 px-6 py-2 rounded-md hover:bg-indigo-200 transition-colors border border-indigo-200"><i
+                        class="fas fa-eye mr-2"></i>Pré-visualizar</button>
                 <button id="download-contract-pdf-btn"
                     class="hidden bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-colors"><i
                         class="fas fa-file-pdf mr-2"></i>Baixar PDF</button>
@@ -2193,7 +2195,8 @@
             const copyGeminiContentBtn = document.getElementById('copy-gemini-content-btn');
             const printGeminiContentBtn = document.getElementById('print-gemini-content-btn'); // Botão novo
             const downloadContractPdfBtn = document.getElementById('download-contract-pdf-btn');
-            let currentContractMeta = null; // { event, yourCompany } enquanto o modal exibe um contrato
+            const previewContractPdfBtn = document.getElementById('preview-contract-pdf-btn');
+            let currentContractMeta = null; // { event, yourCompany, text } enquanto o modal exibe um contrato
 
             // === Overlay visual durante a geração do contrato ===
             const ContractLoader = (() => {
@@ -5328,6 +5331,7 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                         ContractLoader.advance(2);
                         currentContractMeta = { event, yourCompany, text: contract };
                         if (downloadContractPdfBtn) downloadContractPdfBtn.classList.remove('hidden');
+                        if (previewContractPdfBtn) previewContractPdfBtn.classList.remove('hidden');
                         // Auto-download imediato do PDF
                         ContractPDF.generate(contract, event, yourCompany);
                         await new Promise(r => setTimeout(r, 250));
@@ -5629,6 +5633,7 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 hideModal(geminiModal);
                 currentContractMeta = null;
                 if (downloadContractPdfBtn) downloadContractPdfBtn.classList.add('hidden');
+                if (previewContractPdfBtn) previewContractPdfBtn.classList.add('hidden');
             });
 
             // Novo listener para o botão de imprimir do modal
@@ -5648,6 +5653,24 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                     }
                     const text = geminiModalContent.value;
                     ContractPDF.generate(text, currentContractMeta.event, currentContractMeta.yourCompany);
+                });
+            }
+
+            // Listener para pré-visualizar o PDF a partir do texto editado
+            // (atualiza currentContractMeta.text com a edição, fecha o modal
+            // de texto e reabre o modal de pré-visualização do PDF).
+            if (previewContractPdfBtn) {
+                previewContractPdfBtn.addEventListener('click', () => {
+                    if (!currentContractMeta) {
+                        showToast('Nenhum contrato disponível para pré-visualizar.', true);
+                        return;
+                    }
+                    // Sincroniza edições do textarea no estado compartilhado
+                    currentContractMeta.text = geminiModalContent.value;
+                    // Fecha o modal de texto sem limpar currentContractMeta
+                    hideModal(geminiModal);
+                    // Reabre o modal de PDF preview com a versão atualizada
+                    ContractPdfPreview.open();
                 });
             }
 
