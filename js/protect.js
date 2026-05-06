@@ -9,9 +9,14 @@ const API_BASE_URL = "https://backend-aerofestas-production.up.railway.app";
 // Verifica token ao carregar
 (async function () {
     const publicPages = ['login.html', 'register.html', 'confirm-email.html', 'forgot-password.html', 'reset-password.html'];
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const publicPathPrefixes = ['/propostas/', '/p/'];
+    const path = window.location.pathname;
+    const currentPage = path.split('/').pop() || 'index.html';
 
+    // Whitelist por nome de arquivo (páginas de auth)
     if (publicPages.includes(currentPage)) return;
+    // Whitelist por prefixo de caminho (propostas públicas em /p/* ou /propostas/<slug>/)
+    if (publicPathPrefixes.some(prefix => path.startsWith(prefix))) return;
 
     const token = localStorage.getItem('authToken');
 

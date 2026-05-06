@@ -11,9 +11,10 @@ datasource db {
 // --- SEÇÃO DE ESTOQUE E EVENTOS ---
 
 model Toy {
-  id         Float       @id 
+  id         Float       @id
   name       String
   quantity   Int
+  imageUrl   String?
   eventItems EventItem[]
 }
 

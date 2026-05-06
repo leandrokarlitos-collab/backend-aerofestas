@@ -1,0 +1,548 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light only" />
+    <title>Aero Eventos &mdash; Proposta Festa Junina Maple Bear</title>
+
+    <!--[if mso]>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+    <![endif]-->
+
+    <style type="text/css">
+         /* ===== RESET ===== */
+         body, html {
+             margin: 0 !important;
+             padding: 0 !important;
+             width: 100% !important;
+             height: 100% !important;
+         }
+
+         body {
+             -webkit-text-size-adjust: 100%;
+             -ms-text-size-adjust: 100%;
+             background-color: #F0F6FB;
+         }
+
+         table, td {
+             mso-table-lspace: 0pt;
+             mso-table-rspace: 0pt;
+             border-collapse: collapse !important;
+         }
+
+         img {
+             -ms-interpolation-mode: bicubic;
+             border: 0;
+             outline: none;
+             text-decoration: none;
+             display: block;
+             height: auto;
+             line-height: 100%;
+         }
+
+         /* --- cards de brinquedos --- */
+         .toy-card {
+             background-color: #FFFFFF !important;
+             border: 0 !important;
+             border-top: 5px solid #E31837 !important;
+             border-radius: 14px;
+             overflow: hidden;
+             box-shadow:
+                 0 16px 38px rgba(227, 24, 55, 0.12),
+                 0 4px 12px rgba(15, 27, 45, 0.08);
+             page-break-inside: avoid; /* Previne corte da div na quebra de página do PDF */
+         }
+
+         /* Card "+ Mais Atrações" mantém estilo distinto */
+         .toy-card.more-card {
+             border: 2px dashed #E31837 !important;
+             border-top: 2px dashed #E31837 !important;
+             border-radius: 14px;
+             box-shadow: none !important;
+             background-color: #FFF7F8 !important;
+         }
+
+         /* Numeração premium em chip */
+         .card-num {
+             display: inline-block;
+             background-color: #E31837 !important;
+             color: #FFFFFF !important;
+             font-weight: 900;
+             font-size: 12px;
+             letter-spacing: 1.6px;
+             padding: 4px 10px;
+             border-radius: 6px;
+             margin-right: 10px;
+             vertical-align: 2px;
+             box-shadow: 0 3px 8px rgba(227, 24, 55, 0.32);
+         }
+
+         /* Eyebrow do hero (texto pequeno em vermelho acima do título) */
+         .eyebrow {
+             margin: 0 0 10px 0;
+             font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+             font-size: 11px;
+             font-weight: 700;
+             letter-spacing: 2.5px;
+             color: #E31837;
+             text-transform: uppercase;
+         }
+
+         /* Divider decorativo */
+         .accent-line {
+             display: inline-block;
+             width: 52px;
+             height: 3px;
+             background: linear-gradient(90deg, #E31837 0%, #FF6B7D 100%);
+             border-radius: 2px;
+             margin-top: 18px;
+         }
+
+         /* --- header: padrão de pontos sutil em fundo branco --- */
+         .dot-pattern {
+             background-image: radial-gradient(rgba(227,24,55,0.08) 1px, transparent 1px);
+             background-size: 18px 18px;
+             background-position: 0 0;
+         }
+
+         /* ===== RESPONSIVO ===== */
+         @media only screen and (max-width: 620px) {
+             .container {
+                 width: 100% !important;
+                 max-width: 100% !important;
+             }
+             .px-mobile {
+                 padding-left: 22px !important;
+                 padding-right: 22px !important;
+             }
+             .py-mobile {
+                 padding-top: 28px !important;
+                 padding-bottom: 28px !important;
+             }
+             .h1-mobile {
+                 font-size: 28px !important;
+                 line-height: 34px !important;
+             }
+             .logo-mobile {
+                 width: 96px !important;
+                 height: 96px !important;
+             }
+             .stack {
+                 display: block !important;
+                 width: 100% !important;
+                 max-width: 100% !important;
+                 box-sizing: border-box !important;
+             }
+             .stack-pad-bottom {
+                 padding: 0 0 16px 0 !important;
+             }
+         }
+
+         /* ===== IMPRESSÃO E PDF (A4 - 1 PÁGINA) ===== */
+         @media print {
+             @page {
+                 size: A4 portrait;
+                 margin: 0.4cm;
+             }
+
+             * {
+                 -webkit-print-color-adjust: exact !important;
+                 print-color-adjust: exact !important;
+                 color-adjust: exact !important;
+             }
+
+             html, body {
+                 background-color: #FFFFFF !important;
+                 margin: 0 !important;
+                 padding: 0 !important;
+                 width: 100% !important;
+                 font-size: 12px !important;
+             }
+
+             .container {
+                 width: 100% !important;
+                 max-width: 760px !important;
+                 margin: 0 auto !important;
+             }
+
+             .toy-card, tr, td, img {
+                 page-break-inside: avoid !important;
+                 break-inside: avoid !important;
+             }
+
+             .container, body > table {
+                 page-break-after: avoid !important;
+             }
+
+             /* Remove espaçadores verticais (topo e base) */
+             tr > td[height="20"] {
+                 height: 0 !important;
+                 line-height: 0 !important;
+                 font-size: 0 !important;
+                 padding: 0 !important;
+             }
+
+             /* HEADER removido em print */
+             td.dot-pattern,
+             td.dot-pattern * {
+                 display: none !important;
+                 height: 0 !important;
+                 padding: 0 !important;
+                 margin: 0 !important;
+             }
+
+             /* Faixa-acento superior (gradiente) escondida; faixa inferior mantida */
+             td[bgcolor="#E31837"][style*="linear-gradient"] {
+                 display: none !important;
+                 height: 0 !important;
+                 line-height: 0 !important;
+             }
+             td[bgcolor="#E31837"] {
+                 height: 4px !important;
+                 line-height: 4px !important;
+             }
+
+             /* HERO */
+             td[bgcolor="#FFFFFF"][style*="44px 40px"] {
+                 padding: 14px 28px 6px 28px !important;
+             }
+             h1.h1-mobile {
+                 font-size: 24px !important;
+                 line-height: 30px !important;
+                 letter-spacing: -0.3px !important;
+             }
+             h1.h1-mobile + p,
+             td[bgcolor="#FFFFFF"][style*="44px 40px"] p {
+                 font-size: 13px !important;
+                 line-height: 17px !important;
+                 margin-top: 6px !important;
+             }
+
+             /* WRAPPER da grade de brinquedos */
+             td[bgcolor="#FFFFFF"][style*="12px 40px 8px"] {
+                 padding: 6px 28px 0 28px !important;
+             }
+
+             /* Gaps entre cards */
+             td.stack[style*="0 8px 16px 0"] {
+                 padding: 0 6px 8px 0 !important;
+             }
+             td.stack[style*="0 0 16px 8px"] {
+                 padding: 0 0 8px 6px !important;
+             }
+
+             /* Cards premium: top stripe + sombra suave + chip vermelho */
+             .toy-card {
+                 border-radius: 12px !important;
+                 border-top: 4px solid #E31837 !important;
+                 box-shadow:
+                     0 6px 16px rgba(227, 24, 55, 0.10),
+                     0 2px 6px rgba(15, 27, 45, 0.06) !important;
+             }
+             .toy-card.more-card {
+                 border: 2px dashed #E31837 !important;
+                 border-top: 2px dashed #E31837 !important;
+                 box-shadow: none !important;
+             }
+             .toy-card td:first-child {
+                 background-color: #FFFFFF !important;
+                 border-radius: 0 !important;
+             }
+             .toy-card img {
+                 height: 140px !important;
+                 max-height: 140px !important;
+                 width: 100% !important;
+                 object-fit: contain !important;
+                 background-color: #FFFFFF !important;
+                 border-radius: 0 !important;
+             }
+             .toy-card td[style*="padding:16px"] {
+                 padding: 10px 14px 12px 14px !important;
+             }
+             .toy-card h3 {
+                 font-size: 13px !important;
+                 line-height: 17px !important;
+             }
+             .card-num {
+                 font-size: 11px !important;
+                 padding: 3px 8px !important;
+                 letter-spacing: 1.4px !important;
+                 margin-right: 8px !important;
+             }
+
+             /* FECHAMENTO */
+             td[bgcolor="#FFFFFF"][style*="16px 40px 40px"] {
+                 padding: 8px 28px 10px 28px !important;
+             }
+             td[bgcolor="#FFFFFF"][style*="16px 40px 40px"] p {
+                 font-size: 12px !important;
+                 line-height: 15px !important;
+             }
+
+             /* FOOTER */
+             td[bgcolor="#0F1B2D"] {
+                 padding: 10px 28px !important;
+             }
+             td[bgcolor="#0F1B2D"] img {
+                 width: 38px !important;
+                 height: 38px !important;
+             }
+             td[bgcolor="#0F1B2D"] p {
+                 font-size: 10px !important;
+                 line-height: 13px !important;
+             }
+             td[bgcolor="#0F1B2D"] td[align="center"] {
+                 padding: 2px 0 !important;
+             }
+             td[bgcolor="#0F1B2D"] td[align="center"][style*="padding-bottom:14px"] {
+                 padding: 0 0 4px 0 !important;
+             }
+         }
+    </style>
+</head>
+
+<body width="100%" bgcolor="#F0F6FB" style="margin:0;padding:0;background-color:#F0F6FB;">
+
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#F0F6FB" style="background-color:#F0F6FB;">
+        <tr>
+            <td align="center" style="padding:0;">
+
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" class="container" style="width:600px;max-width:600px;">
+
+                    <tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+
+                    <!-- HEADER -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" class="dot-pattern" style="background-color:#FFFFFF;border-radius:14px 14px 0 0;padding:36px 40px 28px 40px;text-align:center;" align="center">
+                            <img src="Logo Aero Festas.png"
+                                 alt="Aero Eventos"
+                                 width="120" height="120"
+                                 class="logo-mobile"
+                                 style="display:inline-block;width:120px;height:120px;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
+                            <p style="margin:14px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:2.5px;color:#E31837;text-transform:uppercase;">
+                                Proposta de Loca&ccedil;&atilde;o &middot; Maple Bear
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- FAIXA-ACENTO -->
+                    <tr>
+                        <td bgcolor="#E31837" height="5" style="background-color:#E31837;background-image:linear-gradient(90deg,#E31837 0%,#FF6B7D 35%,#E31837 100%);height:5px;line-height:5px;font-size:0;">&nbsp;</td>
+                    </tr>
+
+                    <!-- HERO -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:44px 40px 24px 40px;" class="px-mobile py-mobile">
+                            <p class="eyebrow">Proposta Exclusiva &middot; Festa Junina 2026</p>
+
+                            <h1 class="h1-mobile" style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:34px;line-height:42px;font-weight:800;color:#0F1B2D;letter-spacing:-0.5px;">
+                                Atra&ccedil;&otilde;es para Arrai&aacute; <span style="color:#E31837;">Maple Bear BH</span>
+                            </h1>
+
+                            <p style="margin:14px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#4B4B4B;">
+                                Conforme nossa negocia&ccedil;&atilde;o, separamos as melhores op&ccedil;&otilde;es de brinquedos para garantir a divers&atilde;o e a seguran&ccedil;a na Festa Junina deste ano.
+                            </p>
+
+                            <span class="accent-line">&nbsp;</span>
+                        </td>
+                    </tr>
+
+                    <!-- BRINQUEDOS -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:12px 40px 8px 40px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <!-- LINHA 1 -->
+                                <tr>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 8px 16px 0;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="Touro Mecânico.jpg" alt="Touro Mec&acirc;nico" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">01</span>Touro Mec&acirc;nico</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 0 16px 8px;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="Tobogã Toboshark.avif" alt="Tobog&atilde; Toboshark" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">02</span>Tobog&atilde; Toboshark</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- LINHA 2 -->
+                                <tr>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 8px 16px 0;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="High Jump - 4 estações.png" alt="High Jump - 4 esta&ccedil;&otilde;es" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">03</span>High Jump - 4 esta&ccedil;&otilde;es</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 0 16px 8px;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="Multipark Castelo Medieval.png" alt="Multipark Castelo Medieval" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">04</span>Multipark Castelo Medieval</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- LINHA 3 -->
+                                <tr>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 8px 16px 0;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="Multiplay Jardim Encantado.png" alt="Multiplay Jardim Encantado" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">05</span>Multiplay Jardim Encantado</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 0 16px 8px;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="Combo 3 em 1 - Girafa.png" alt="Combo 3 em 1 - Girafa" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">06</span>Combo 3 em 1 - Girafa</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- LINHA 4 -->
+                                <tr>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 8px 16px 0;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card">
+                                            <tr>
+                                                <td style="padding:0;">
+                                                    <img src="Disco Play.png" alt="Disco Play" style="width:100%;display:block;border-radius:12px 12px 0 0;" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px;">
+                                                    <h3 style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0F1B2D;"><span class="card-num">07</span>Disco Play</h3>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 0 16px 8px;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="toy-card more-card" style="height:100%;border:1px dashed #E31837 !important;background-color:#FFF7F8 !important;box-shadow:none !important;">
+                                            <tr>
+                                                <td align="center" valign="middle" style="padding:36px 20px;">
+                                                    <div style="font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:48px;line-height:1;font-weight:300;color:#E31837;margin-bottom:6px;">+</div>
+                                                    <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:#E31837;text-transform:uppercase;">
+                                                        Mais Atra&ccedil;&otilde;es
+                                                    </p>
+                                                    <p style="margin:8px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;color:#4B4B4B;">
+                                                        E muitas outras atra&ccedil;&otilde;es exclusivas
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- FECHAMENTO -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:16px 40px 40px 40px;" class="px-mobile">
+                            <p style="margin:0 0 6px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#374151;text-align:center;">
+                                Estamos &agrave; disposi&ccedil;&atilde;o para finalizar os detalhes e efetivar a reserva para esta data especial.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- faixa-acento antes do footer -->
+                    <tr>
+                        <td bgcolor="#E31837" height="5" style="background-color:#E31837;height:5px;line-height:5px;font-size:0;">&nbsp;</td>
+                    </tr>
+
+                    <!-- FOOTER -->
+                    <tr>
+                        <td bgcolor="#0F1B2D" style="background-color:#0F1B2D;padding:32px 40px;border-radius:0 0 14px 14px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom:14px;">
+                                        <img src="Logo Aero Festas.png"
+                                             alt="Aero Eventos"
+                                             width="64" height="64"
+                                             style="display:inline-block;width:64px;height:64px;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding-bottom:6px;">
+                                        <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#A0B5C9;">
+                                            Aero Eventos &middot; Parceira Oficial de Grandes Institui&ccedil;&otilde;es
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding:8px 0;">
+                                        <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#D9E2EC;">
+                                            <span style="color:#FF6B7D;font-weight:600;">(62) 98554-5046</span>
+                                            &nbsp;&middot;&nbsp;
+                                            <span style="color:#FF6B7D;font-weight:600;">aerofestaseventos@gmail.com</span>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

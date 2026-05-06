@@ -1,0 +1,893 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light only" />
+    <title>Aero Eventos &mdash; Apresenta&ccedil;&atilde;o Institucional</title>
+
+    <!-- =====================================================================
+         SUBSTITUI&Ccedil;&Otilde;ES NECESS&Aacute;RIAS ANTES DO ENVIO
+         ---------------------------------------------------------------------
+         1) Weverson &mdash; nome da destinat&aacute;ria (use Ctrl+H/Find&amp;Replace
+                        para trocar em segundos &mdash; aparece na sauda&ccedil;&atilde;o do corpo)
+         2) THUMBNAIL DO V&Iacute;DEO   &mdash; [OK] Tumb-V%C3%ADdeo-Aero.png configurada
+                                  Ap&oacute;s deploy: web.app/email-templates/Tumb-V%C3%ADdeo-Aero.png
+                                  V&iacute;deo: drive.google.com/file/d/1gs_SlQLPjq7HtBa9JrEdDTLFAEFXK29w
+                                  Cat&aacute;logo: drive.google.com/file/d/1tIPTNZ1JILca9IcVUaE0O56H3BsPN88A
+
+         LOGO &mdash; j&aacute; configurado para hospedagem Firebase do projeto
+         Arquivo local: /icons/Logo_Aero_Festas.png
+         URL p&uacute;blica: https://agenda-aero-festas.web.app/icons/Logo_Aero_Festas.png
+         (rode `firebase deploy --only hosting` para publicar o arquivo)
+
+         PALETA
+         Azul prim:    #2A86BF   Azul hover:    #1F6A99
+         Vermelho:     #F23545   Vermelho hover:#D02838
+         Navy:         #0F1B2D   Verde online:  #00C853
+         BG p&aacute;gina:    #F0F6FB   BG cards:     #EBF3FA
+         =====================================================================
+    -->
+    <!--[if mso]>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+    <![endif]-->
+
+    <style type="text/css">
+         /* ===== RESET ===== */
+         body, html {
+             margin: 0 !important;
+             padding: 0 !important;
+             width: 100% !important;
+             height: 100% !important;
+         }
+
+         body {
+             -webkit-text-size-adjust: 100%;
+             -ms-text-size-adjust: 100%;
+             background-color: #F0F6FB;
+         }
+
+         table, td {
+             mso-table-lspace: 0pt;
+             mso-table-rspace: 0pt;
+             border-collapse: collapse !important;
+         }
+
+         img {
+             -ms-interpolation-mode: bicubic;
+             border: 0;
+             outline: none;
+             text-decoration: none;
+             display: block;
+             height: auto;
+             line-height: 100%;
+         }
+
+         a {
+             text-decoration: none;
+         }
+
+         #outlook a {
+             padding: 0;
+         }
+
+         .ExternalClass {
+             width: 100%;
+         }
+
+             .ExternalClass, .ExternalClass p, .ExternalClass span,
+             .ExternalClass font, .ExternalClass td, .ExternalClass div {
+                 line-height: 100%;
+             }
+
+         /* ============================================================
+        MICRO-INTERA&Ccedil;&Otilde;ES (progressive enhancement)
+        Apple Mail / iOS Mail / Gmail web modernos / Outlook web suportam
+        Outlook desktop ignora &mdash; estado est&aacute;tico continua premium
+        ============================================================ */
+
+         /* --- pulse-ring no play button do v&iacute;deo --- */
+         @keyframes pulseRing {
+             0% {
+                 box-shadow: 0 0 0 0 rgba(242,53,69,0.55);
+                 transform: scale(1);
+             }
+
+             60% {
+                 box-shadow: 0 0 0 22px rgba(242,53,69,0);
+                 transform: scale(1.04);
+             }
+
+             100% {
+                 box-shadow: 0 0 0 0 rgba(242,53,69,0);
+                 transform: scale(1);
+             }
+         }
+
+         .play-btn {
+             animation: pulseRing 2.4s ease-out infinite;
+             transition: transform 0.3s ease;
+         }
+
+         .video-thumb-link:hover .play-btn {
+             transform: scale(1.12) !important;
+         }
+
+         /* --- bg do v&iacute;deo: zoom suave no hover --- */
+         .video-bg {
+             transition: transform 0.6s ease, background-size 0.6s ease;
+         }
+
+         .video-thumb-link:hover .video-bg {
+             background-size: 115% 115% !important;
+         }
+
+         /* --- badge superior pulsando --- */
+         @keyframes badgePulse {
+             0%, 100% {
+                 background-color: #E8F2FA;
+             }
+
+             50% {
+                 background-color: #D4E8F6;
+             }
+         }
+
+         .badge-pulse {
+             animation: badgePulse 3.5s ease-in-out infinite;
+         }
+
+         /* --- ponto verde "online agora" --- */
+         @keyframes onlineDot {
+             0%, 100% {
+                 box-shadow: 0 0 0 0 rgba(0,200,83,0.6);
+                 transform: scale(1);
+             }
+
+             50% {
+                 box-shadow: 0 0 0 8px rgba(0,200,83,0);
+                 transform: scale(1.15);
+             }
+         }
+
+         .online-dot {
+             animation: onlineDot 1.6s ease-in-out infinite;
+         }
+
+         /* --- bot&atilde;o prim&aacute;rio (WhatsApp): shine animado + lift --- */
+         @keyframes autoShine {
+             0% {
+                 background-position: 0% 0%;
+             }
+
+             15% {
+                 background-position: 200% 0%;
+             }
+
+             100% {
+                 background-position: 200% 0%;
+             }
+         }
+
+         .btn-primary {
+             transition: all 0.25s ease;
+             background-image: linear-gradient(110deg, #F23545 0%, #FF7E89 25%, #F23545 50%);
+             background-size: 200% 100%;
+             background-position: 0% 0%;
+             animation: autoShine 4s infinite; /* Efeito Shine contínuo */
+         }
+
+             .btn-primary:hover {
+                 background-position: 100% 0% !important;
+                 box-shadow: 0 14px 32px rgba(242,53,69,0.50) !important;
+                 transform: translateY(-2px) !important;
+             }
+
+         /* --- bot&atilde;o secund&aacute;rio: outline preenche --- */
+         .btn-secondary {
+             transition: all 0.25s ease;
+         }
+
+             .btn-secondary:hover {
+                 background-color: #2A86BF !important;
+                 color: #FFFFFF !important;
+                 border-color: #2A86BF !important;
+                 transform: translateY(-2px) !important;
+                 box-shadow: 0 12px 28px rgba(42,134,191,0.35) !important;
+             }
+
+         /* --- seta dos CTAs deslizando no hover --- */
+         .cta-arrow {
+             display: inline-block;
+             transition: transform 0.25s ease;
+         }
+
+         .btn-primary:hover .cta-arrow,
+         .btn-secondary:hover .cta-arrow {
+             transform: translateX(6px);
+         }
+
+         /* --- seta com bounce cont&iacute;nuo (chama aten&ccedil;&atilde;o no CTA principal) --- */
+         @keyframes bounceArrow {
+             0%, 100% {
+                 transform: translateX(0);
+             }
+
+             50% {
+                 transform: translateX(4px);
+             }
+         }
+
+         .arrow-bounce {
+             animation: bounceArrow 1.4s ease-in-out infinite;
+             display: inline-block;
+         }
+
+         .btn-primary:hover .arrow-bounce {
+             animation: none;
+             transform: translateX(8px);
+         }
+
+         /* --- cards de eventos: faux-glassmorphism + hover lift + emoji wiggle --- */
+         .event-card {
+             transition: all 0.3s ease;
+             background-color: rgba(235, 243, 250, 0.65) !important;
+             border: 1px solid rgba(255, 255, 255, 0.9) !important;
+             box-shadow: 0 6px 16px rgba(15, 27, 45, 0.05) !important;
+             backdrop-filter: blur(8px); /* Efeito de vidro para clientes compatíveis */
+         }
+
+             .event-card:hover {
+                 background-color: #2A86BF !important;
+                 transform: translateY(-4px) !important;
+                 box-shadow: 0 12px 24px rgba(42,134,191,0.30) !important;
+                 border-color: #2A86BF !important;
+             }
+
+                 .event-card:hover .event-text {
+                     color: #FFFFFF !important;
+                 }
+
+         @keyframes wiggle {
+             0%, 100% {
+                 transform: rotate(0deg);
+             }
+
+             25% {
+                 transform: rotate(-12deg);
+             }
+
+             75% {
+                 transform: rotate(12deg);
+             }
+         }
+
+         .event-emoji {
+             display: inline-block;
+             transition: transform 0.3s ease;
+         }
+
+         .event-card:hover .event-emoji {
+             animation: wiggle 0.5s ease-in-out;
+         }
+
+         /* --- stat cards: hover scale + n&uacute;mero flutuando --- */
+         .stat-card {
+             transition: all 0.3s ease;
+         }
+
+             .stat-card:hover {
+                 transform: translateY(-4px) scale(1.02) !important;
+                 box-shadow: 0 12px 28px rgba(15,27,45,0.12) !important;
+             }
+
+         @keyframes statFloat {
+             0%, 100% {
+                 transform: translateY(0);
+             }
+
+             50% {
+                 transform: translateY(-3px);
+             }
+         }
+
+         .stat-num {
+             display: inline-block;
+             animation: statFloat 3.5s ease-in-out infinite;
+         }
+
+         .stat-card:nth-child(2) .stat-num {
+             animation-delay: 0.4s;
+         }
+
+         .stat-card:nth-child(3) .stat-num {
+             animation-delay: 0.8s;
+         }
+
+         /* --- links de texto: underline reveal --- */
+         .underline-reveal {
+             background-image: linear-gradient(currentColor, currentColor);
+             background-size: 0% 2px;
+             background-position: 0% 100%;
+             background-repeat: no-repeat;
+             transition: background-size 0.3s ease, color 0.2s ease;
+             padding-bottom: 2px;
+         }
+
+             .underline-reveal:hover {
+                 background-size: 100% 2px;
+                 color: #F23545 !important;
+             }
+
+         /* --- links do footer --- */
+         .footer-link {
+             transition: color 0.2s ease;
+         }
+
+             .footer-link:hover {
+                 color: #FFFFFF !important;
+             }
+
+         /* --- header: padr&atilde;o de pontos sutil em fundo branco --- */
+         .dot-pattern {
+             background-image: radial-gradient(rgba(42,134,191,0.10) 1px, transparent 1px);
+             background-size: 18px 18px;
+             background-position: 0 0;
+         }
+
+         /* ===== RESPONSIVO ===== */
+         @media only screen and (max-width: 620px) {
+             .container {
+                 width: 100% !important;
+                 max-width: 100% !important;
+             }
+
+             .px-mobile {
+                 padding-left: 22px !important;
+                 padding-right: 22px !important;
+             }
+
+             .py-mobile {
+                 padding-top: 28px !important;
+                 padding-bottom: 28px !important;
+             }
+
+             .h1-mobile {
+                 font-size: 28px !important;
+                 line-height: 34px !important;
+             }
+
+             .h2-mobile {
+                 font-size: 20px !important;
+                 line-height: 26px !important;
+             }
+
+             .stat-num-mobile {
+                 font-size: 32px !important;
+             }
+
+             .logo-mobile {
+                 width: 96px !important;
+                 height: 96px !important;
+             }
+
+             /* faz o <tr> de stats virar bloco para as células empilharem */
+             .stat-row {
+                 display: block !important;
+                 width: 100% !important;
+             }
+
+             .stack {
+                 display: block !important;
+                 width: 100% !important;
+                 max-width: 100% !important;
+                 box-sizing: border-box !important;
+             }
+
+             .stack-pad-bottom {
+                 padding: 0 0 12px 0 !important;
+             }
+
+             /* garante que o <a> do vídeo ocupe 100% da largura */
+             .video-thumb-link {
+                 width: 100% !important;
+                 max-width: 100% !important;
+             }
+
+             .btn-mobile a {
+                 display: block !important;
+                 width: 100% !important;
+                 box-sizing: border-box !important;
+             }
+
+             .video-mobile {
+                 height: auto !important;
+             }
+
+             .center-mobile {
+                 text-align: center !important;
+             }
+
+             .hide-mobile {
+                 display: none !important;
+                 max-height: 0 !important;
+                 mso-hide: all !important;
+                 overflow: hidden !important;
+             }
+         }
+    </style>
+</head>
+
+<body width="100%" bgcolor="#F0F6FB" style="margin:0;padding:0;background-color:#F0F6FB;">
+
+    <!-- =====================================================================
+         PREHEADER
+         ===================================================================== -->
+    <div style="display:none;font-size:1px;color:#F0F6FB;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
+        Brinquedos premium para eventos escolares &mdash; refer&ecirc;ncia da Rede Marista h&aacute; mais de 25 anos e Rede Maple Bear Goi&acirc;nia h&aacute; 14 anos.
+    </div>
+    <div style="display:none;font-size:1px;color:#F0F6FB;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
+        &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+    </div>
+
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#F0F6FB" style="background-color:#F0F6FB;">
+        <tr>
+            <td align="center" style="padding:0;">
+
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" class="container" style="width:600px;max-width:600px;">
+
+                    <tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+
+                    <!-- ============================================================
+                         HEADER &mdash; logo real centralizada + padr&atilde;o de pontos sutil
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" class="dot-pattern" style="background-color:#FFFFFF;border-radius:14px 14px 0 0;padding:36px 40px 28px 40px;text-align:center;" align="center">
+                            <a href="https://aerofestas.com.br/?utm_source=email&amp;utm_medium=header&amp;utm_campaign=apresentacao" target="_blank" style="text-decoration:none;display:inline-block;">
+                                <img src="https://agenda-aero-festas.web.app/icons/Logo_Aero_Festas.png"
+                                     alt="Aero Eventos"
+                                     width="120" height="120"
+                                     class="logo-mobile"
+                                     style="display:block;width:120px;height:120px;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
+                            </a>
+                            <p style="margin:14px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:2.5px;color:#2A86BF;text-transform:uppercase;">
+                                Eventos &amp; Loca&ccedil;&atilde;o Premium
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         FAIXA-ACENTO &mdash; gradient azul &rarr; vermelho
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#2A86BF" height="5" style="background-color:#2A86BF;background-image:linear-gradient(90deg,#2A86BF 0%,#5BA3D0 35%,#F23545 100%);height:5px;line-height:5px;font-size:0;">&nbsp;</td>
+                    </tr>
+
+                    <!-- ============================================================
+                         HERO
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:44px 40px 24px 40px;" class="px-mobile py-mobile">
+                            <span class="badge-pulse" style="display:inline-block;padding:6px 14px;background-color:#E8F2FA;border-radius:999px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#2A86BF;text-transform:uppercase;">
+                                Apresenta&ccedil;&atilde;o Institucional
+                            </span>
+
+                            <h1 class="h1-mobile" style="margin:18px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:34px;line-height:42px;font-weight:800;color:#0F1B2D;letter-spacing:-0.5px;">
+                                Eventos escolares que viram <span style="color:#2A86BF;">mem&oacute;rias inesquec&iacute;veis</span>.
+                            </h1>
+
+                            <p style="margin:14px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#4B4B4B;">
+                                Brinquedos de alto padr&atilde;o, equipe treinada e log&iacute;stica completa para escolas que entendem que cada evento &eacute; uma oportunidade de encantar fam&iacute;lias.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         CORPO
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:8px 40px 28px 40px;" class="px-mobile">
+                            <p style="margin:0 0 16px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#1F2937;">
+                                <!-- =========================================================
+                                     EDITAR AQUI: nome da destinat&aacute;ria
+                                     Troque Weverson pelo primeiro nome (Ctrl+H no editor).
+                                     ========================================================= -->
+                                Prezado(a) <strong>Gestor(a)</strong>,
+                            </p>
+                            <p style="margin:0 0 16px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#374151;">
+                                &Eacute; com grande satisfa&ccedil;&atilde;o que apresento a <strong style="color:#0F1B2D;">Aero Eventos</strong> &mdash; refer&ecirc;ncia em loca&ccedil;&atilde;o de brinquedos de alto padr&atilde;o para institui&ccedil;&otilde;es que valorizam excel&ecirc;ncia, seguran&ccedil;a e sofistica&ccedil;&atilde;o.
+                            </p>
+                            <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#374151;">
+                                Constru&iacute;mos uma trajet&oacute;ria s&oacute;lida no setor educacional, fornecendo estrutura completa para os eventos de escolas refer&ecirc;ncia no pa&iacute;s &mdash; e ador&iacute;amos fazer parte do pr&oacute;ximo cap&iacute;tulo da sua escola.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         V&Iacute;DEO
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:8px 40px 8px 40px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom:14px;">
+                                        <span style="font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:#2A86BF;text-transform:uppercase;">
+                                            Veja em a&ccedil;&atilde;o
+                                        </span>
+                                        <h3 class="h2-mobile" style="margin:6px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:22px;line-height:28px;font-weight:800;color:#0F1B2D;text-align:center;">
+                                            Um v&iacute;deo vale mais que mil propostas.
+                                        </h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <a href="https://drive.google.com/file/d/1gs_SlQLPjq7HtBa9JrEdDTLFAEFXK29w/view?usp=sharing&amp;utm_source=email&amp;utm_medium=video&amp;utm_campaign=apresentacao" target="_blank" class="video-thumb-link" style="text-decoration:none;display:block;width:100%;max-width:100%;">
+                                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-radius:12px;overflow:hidden;">
+                                                <tr>
+                                                    <td background="https://agenda-aero-festas.web.app/email-templates/Tumb-V%C3%ADdeo-Aero.png"
+                                                        bgcolor="#0F1B2D"
+                                                        valign="middle"
+                                                        align="center"
+                                                        height="290"
+                                                        class="video-mobile video-bg"
+                                                        style="background-image:url('https://agenda-aero-festas.web.app/email-templates/Tumb-V%C3%ADdeo-Aero.png');background-color:#0F1B2D;background-size:cover;background-position:center top;background-repeat:no-repeat;border-radius:12px;height:290px;">
+
+                                                        <!--[if gte mso 9]>
+                                                        <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:520px;height:290px;">
+                                                          <v:fill type="frame" src="https://agenda-aero-festas.web.app/email-templates/Tumb-V%C3%ADdeo-Aero.png" color="#0F1B2D" />
+                                                          <v:textbox inset="0,0,0,0">
+                                                        <![endif]-->
+
+                                                        <div>
+                                                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center">
+                                                                <tr>
+                                                                    <td class="play-btn" align="center" valign="middle" width="80" height="80" style="width:80px;height:80px;background-color:#F23545;border-radius:80px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+                                                                        <span style="display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:80px;color:#FFFFFF;font-weight:bold;padding-left:6px;">
+                                                                            &#9658;
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </div>
+
+                                                        <!--[if gte mso 9]>
+                                                          </v:textbox>
+                                                        </v:rect>
+                                                        <![endif]-->
+
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding-top:12px;">
+                                        <a href="https://drive.google.com/file/d/1gs_SlQLPjq7HtBa9JrEdDTLFAEFXK29w/view?usp=sharing&amp;utm_source=email&amp;utm_medium=video&amp;utm_campaign=apresentacao" target="_blank" class="underline-reveal" style="font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#6B7280;text-decoration:none;">
+                                            Toque para assistir o v&iacute;deo demonstrativo &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         STATS GRID
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:0 40px 12px 40px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom:18px;">
+                                        <span style="font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:#2A86BF;text-transform:uppercase;">
+                                            Confian&ccedil;a comprovada
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr class="stat-row">
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 6px 0 0;" width="33.33%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" height="100%" class="stat-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:12px;border-top:3px solid #F23545;height:100%;">
+                                            <tr>
+                                                <td align="center" valign="middle" style="padding:20px 12px;">
+                                                    <span class="stat-num stat-num-mobile" style="display:inline-block;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:36px;line-height:1;font-weight:800;color:#F23545;letter-spacing:-1px;">25+</span>
+                                                    <span style="display:block;margin-top:8px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#0F1B2D;text-transform:uppercase;">
+                                                        anos<br />Rede Marista
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 3px;" width="33.33%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" height="100%" class="stat-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:12px;border-top:3px solid #F23545;height:100%;">
+                                            <tr>
+                                                <td align="center" valign="middle" style="padding:20px 12px;">
+                                                    <span class="stat-num stat-num-mobile" style="display:inline-block;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:36px;line-height:1;font-weight:800;color:#F23545;letter-spacing:-1px;">14</span>
+                                                    <span style="display:block;margin-top:8px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#0F1B2D;text-transform:uppercase;">
+                                                        anos<br />Rede Maple Bear<br />Goi&acirc;nia
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack" valign="top" style="padding:0 0 0 6px;" width="33.33%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" height="100%" class="stat-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:12px;border-top:3px solid #2A86BF;height:100%;">
+                                            <tr>
+                                                <td align="center" valign="middle" style="padding:20px 12px;">
+                                                    <span class="stat-num stat-num-mobile" style="display:inline-block;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:36px;line-height:1;font-weight:800;color:#2A86BF;letter-spacing:-1px;">BR</span>
+                                                    <span style="display:block;margin-top:8px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#0F1B2D;text-transform:uppercase;">
+                                                        Atendimento<br />Nacional
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         EVENTOS (Cards com Faux-Glassmorphism integrado no style)
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:28px 40px 8px 40px;" class="px-mobile">
+                            <h2 class="h2-mobile" style="margin:0 0 6px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:22px;line-height:28px;font-weight:800;color:#0F1B2D;">
+                                Especialistas em momentos que ficam.
+                            </h2>
+                            <p style="margin:0 0 18px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#6B7280;">
+                                Tipos de eventos que mais entregamos para escolas:
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:0 40px 32px 40px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <!-- linha 1 -->
+                                <tr>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 6px 12px 0;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="event-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:10px;border:1px solid #FFFFFF;box-shadow:0 6px 16px rgba(15,27,45,0.06);">
+                                            <tr>
+                                                <td class="event-text" style="padding:14px 16px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#0F1B2D;">
+                                                    <span class="event-emoji">🎉</span>&nbsp; Festas Juninas
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 0 12px 6px;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="event-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:10px;border:1px solid #FFFFFF;box-shadow:0 6px 16px rgba(15,27,45,0.06);">
+                                            <tr>
+                                                <td class="event-text" style="padding:14px 16px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#0F1B2D;">
+                                                    <span class="event-emoji">🧒</span>&nbsp; Dia das Crian&ccedil;as
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- linha 2 -->
+                                <tr>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 6px 12px 0;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="event-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:10px;border:1px solid #FFFFFF;box-shadow:0 6px 16px rgba(15,27,45,0.06);">
+                                            <tr>
+                                                <td class="event-text" style="padding:14px 16px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#0F1B2D;">
+                                                    <span class="event-emoji">🎄</span>&nbsp; Natal
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack stack-pad-bottom" valign="top" style="padding:0 0 12px 6px;" width="50%">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="event-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:10px;border:1px solid #FFFFFF;box-shadow:0 6px 16px rgba(15,27,45,0.06);">
+                                            <tr>
+                                                <td class="event-text" style="padding:14px 16px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#0F1B2D;">
+                                                    <span class="event-emoji">👨‍👩‍👧</span>&nbsp; Festa da Fam&iacute;lia
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- linha 3 -->
+                                <tr>
+                                    <td colspan="2" valign="top" style="padding:0 0 12px 0;">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="event-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:10px;border:1px solid #FFFFFF;box-shadow:0 6px 16px rgba(15,27,45,0.06);">
+                                            <tr>
+                                                <td class="event-text" style="padding:14px 16px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#0F1B2D;">
+                                                    <span class="event-emoji">✨</span>&nbsp; Datas comemorativas e eventos tem&aacute;ticos
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- linha 4 -->
+                                <tr>
+                                    <td colspan="2" valign="top" style="padding:0;">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="event-card" bgcolor="#EBF3FA" style="background-color:#EBF3FA;border-radius:10px;border:1px solid #FFFFFF;box-shadow:0 6px 16px rgba(15,27,45,0.06);">
+                                            <tr>
+                                                <td class="event-text" style="padding:14px 16px;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#0F1B2D;">
+                                                    <span class="event-emoji">🎓</span>&nbsp; Aula da Saudade
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:18px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#6B7280;text-align:center;">
+                                📍 Estrutura para atender eventos em <strong style="color:#0F1B2D;">todo o Brasil</strong>.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         CTA WHATSAPP &mdash; com badge "online agora" pulsante
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:32px 40px 0 40px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center">
+                                        <h3 class="h2-mobile" style="margin:0 0 8px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:22px;line-height:28px;font-weight:800;color:#0F1B2D;">
+                                            Vamos planejar seu pr&oacute;ximo evento?
+                                        </h3>
+                                        <p style="margin:0 0 14px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#4B4B4B;">
+                                            Resposta r&aacute;pida e personalizada via WhatsApp.
+                                        </p>
+                                    </td>
+                                </tr>
+                                <!-- badge "online agora" com ponto verde pulsante -->
+                                <tr>
+                                    <td align="center" style="padding-bottom:18px;">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center">
+                                            <tr>
+                                                <td valign="middle" style="padding-right:8px;">
+                                                    <span class="online-dot" style="display:inline-block;width:9px;height:9px;background-color:#00C853;border-radius:9px;"></span>
+                                                </td>
+                                                <td valign="middle">
+                                                    <span style="font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;color:#0F1B2D;letter-spacing:0.3px;">
+                                                        Online agora &middot; respondemos em minutos
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- bot&atilde;o com a classe btn-primary atualizada -->
+                                <tr>
+                                    <td align="center" class="btn-mobile">
+                                        <!--[if mso]>
+                                        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+                                          href="https://wa.me/5562985545046?text=Ol%C3%A1%21%20Recebi%20a%20apresenta%C3%A7%C3%A3o%20da%20Aero%20Festas%20por%20e-mail%20e%20gostaria%20de%20conversar%20sobre%20a%20loca%C3%A7%C3%A3o%20de%20brinquedos%20para%20os%20nossos%20pr%C3%B3ximos%20eventos"
+                                          style="height:56px;v-text-anchor:middle;width:300px;" arcsize="14%" stroke="f" fillcolor="#F23545">
+                                          <w:anchorlock/>
+                                          <center style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;">Falar no WhatsApp &rarr;</center>
+                                        </v:roundrect>
+                                        <![endif]-->
+                                        <!--[if !mso]><!-- -->
+                                        <a href="https://wa.me/5562985545046?text=Ol%C3%A1%21%20Recebi%20a%20apresenta%C3%A7%C3%A3o%20da%20Aero%20Festas%20por%20e-mail%20e%20gostaria%20de%20conversar%20sobre%20a%20loca%C3%A7%C3%A3o%20de%20brinquedos%20para%20os%20nossos%20pr%C3%B3ximos%20eventos"
+                                           target="_blank" class="btn-primary"
+                                           style="background-color:#F23545;border-radius:8px;color:#FFFFFF;display:inline-block;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;line-height:56px;text-align:center;text-decoration:none;width:300px;-webkit-text-size-adjust:none;mso-hide:all;box-shadow:0 8px 22px rgba(242,53,69,0.40);">
+                                            Falar no WhatsApp <span class="cta-arrow arrow-bounce">&rarr;</span>
+                                        </a>
+                                        <!--<![endif]-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         CTA CAT&Aacute;LOGO
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:18px 40px 0 40px;" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" class="btn-mobile">
+                                        <!--[if mso]>
+                                        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+                                          href="https://drive.google.com/file/d/1tIPTNZ1JILca9IcVUaE0O56H3BsPN88A/view?usp=sharing&amp;utm_source=email&amp;utm_medium=cta&amp;utm_campaign=catalogo"
+                                          style="height:54px;v-text-anchor:middle;width:300px;" arcsize="15%" strokecolor="#2A86BF" strokeweight="2px" fillcolor="#FFFFFF">
+                                          <w:anchorlock/>
+                                          <center style="color:#2A86BF;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;">Baixar cat&aacute;logo completo &rarr;</center>
+                                        </v:roundrect>
+                                        <![endif]-->
+                                        <!--[if !mso]><!-- -->
+                                        <a href="https://drive.google.com/file/d/1tIPTNZ1JILca9IcVUaE0O56H3BsPN88A/view?usp=sharing&amp;utm_source=email&amp;utm_medium=cta&amp;utm_campaign=catalogo"
+                                           target="_blank" class="btn-secondary"
+                                           style="background-color:#FFFFFF;border:2px solid #2A86BF;border-radius:8px;color:#2A86BF;display:inline-block;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:296px;-webkit-text-size-adjust:none;mso-hide:all;">
+                                            Baixar cat&aacute;logo completo <span class="cta-arrow">&rarr;</span>
+                                        </a>
+                                        <!--<![endif]-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- ============================================================
+                         FECHAMENTO
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:36px 40px 40px 40px;" class="px-mobile">
+                            <p style="margin:0 0 6px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#374151;">
+                                Estamos &agrave; disposi&ccedil;&atilde;o para esclarecer d&uacute;vidas, enviar refer&ecirc;ncias de eventos anteriores ou montar um or&ccedil;amento personalizado.
+                            </p>
+                            <p style="margin:18px 0 4px 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#374151;">
+                                Cordialmente,
+                            </p>
+                            <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#0F1B2D;font-weight:700;">
+                                Equipe Aero Eventos
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- faixa-acento antes do footer (vermelho &rarr; azul) -->
+                    <tr>
+                        <td bgcolor="#F23545" height="5" style="background-color:#F23545;background-image:linear-gradient(90deg,#F23545 0%,#5BA3D0 65%,#2A86BF 100%);height:5px;line-height:5px;font-size:0;">&nbsp;</td>
+                    </tr>
+
+                    <!-- ============================================================
+                         FOOTER
+                         ============================================================ -->
+                    <tr>
+                        <td bgcolor="#0F1B2D" style="background-color:#0F1B2D;padding:32px 40px;border-radius:0 0 14px 14px;background-image:linear-gradient(135deg,#0F1B2D 0%,#1B3358 100%);" class="px-mobile">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom:14px;">
+                                        <img src="https://agenda-aero-festas.web.app/icons/Logo_Aero_Festas.png"
+                                             alt="Aero Eventos"
+                                             width="64" height="64"
+                                             style="display:inline-block;width:64px;height:64px;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding-bottom:6px;">
+                                        <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#A0B5C9;">
+                                            Loca&ccedil;&atilde;o de brinquedos premium &middot; Eventos em todo o Brasil
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding:8px 0;">
+                                        <p style="margin:0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#D9E2EC;">
+                                            <a href="tel:+5562985545046" class="footer-link" style="color:#2A86BF;text-decoration:none;font-weight:600;">(62) 98554-5046</a>
+                                            &nbsp;&middot;&nbsp;
+                                            <a href="mailto:aerofestaseventos@gmail.com" class="footer-link" style="color:#2A86BF;text-decoration:none;font-weight:600;">aerofestaseventos@gmail.com</a>
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding-top:18px;border-top:1px solid #1B3358;">
+                                        <p style="margin:14px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;line-height:18px;color:#7A8FA5;">
+                                            Voc&ecirc; recebeu este e-mail porque sua escola &eacute; potencial parceira da Aero Eventos.<br />
+                                            Caso prefira n&atilde;o receber novos contatos,
+                                            <a href="mailto:aerofestaseventos@gmail.com?subject=Descadastro" class="footer-link" style="color:#A0B5C9;text-decoration:underline;">clique aqui para descadastrar</a>.
+                                        </p>
+                                        <p style="margin:8px 0 0 0;font-family:'Helvetica Neue',Arial,Helvetica,sans-serif;font-size:11px;line-height:18px;color:#5A6B80;">
+                                            &copy; 2026 Aero Eventos &middot; Goi&acirc;nia, GO
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

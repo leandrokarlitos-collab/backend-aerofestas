@@ -1,7 +1,7 @@
 const prisma = require('../prisma/client');
 const { logAudit, computeChanges } = require('./audit');
 
-const TRACKED_FIELDS = ['name', 'quantity'];
+const TRACKED_FIELDS = ['name', 'quantity', 'imageUrl'];
 
 // Fire-and-forget: auditoria nunca deve quebrar o fluxo principal.
 function safeAudit(payload) {
@@ -18,10 +18,15 @@ async function listToys() {
     return prisma.toy.findMany({ orderBy: { name: 'asc' } });
 }
 
-async function createToy({ name, quantity }, user) {
+async function createToy({ name, quantity, imageUrl }, user) {
     const id = Date.now();
     const saved = await prisma.toy.create({
-        data: { id, name, quantity: parseInt(quantity) || 1 }
+        data: {
+            id,
+            name,
+            quantity: parseInt(quantity) || 1,
+            imageUrl: imageUrl || null
+        }
     });
 
     safeAudit({
@@ -29,13 +34,13 @@ async function createToy({ name, quantity }, user) {
         entityId: id,
         action: 'CREATE',
         user,
-        snapshot: { name: saved.name, quantity: saved.quantity }
+        snapshot: { name: saved.name, quantity: saved.quantity, imageUrl: saved.imageUrl }
     });
 
     return saved;
 }
 
-async function updateToy(id, { name, quantity }, user) {
+async function updateToy(id, { name, quantity, imageUrl }, user) {
     const toyId = parseFloat(id);
     if (isNaN(toyId)) {
         const err = new Error('ID inválido');
@@ -50,9 +55,14 @@ async function updateToy(id, { name, quantity }, user) {
         throw err;
     }
 
+    const data = { name, quantity: parseInt(quantity) || 1 };
+    if (imageUrl !== undefined) {
+        data.imageUrl = imageUrl || null;
+    }
+
     const saved = await prisma.toy.update({
         where: { id: toyId },
-        data: { name, quantity: parseInt(quantity) || 1 }
+        data
     });
 
     const changes = computeChanges(existing, saved, TRACKED_FIELDS);
@@ -62,7 +72,7 @@ async function updateToy(id, { name, quantity }, user) {
         action: 'UPDATE',
         user,
         changes,
-        snapshot: { name: saved.name, quantity: saved.quantity }
+        snapshot: { name: saved.name, quantity: saved.quantity, imageUrl: saved.imageUrl }
     });
 
     return saved;
@@ -86,7 +96,7 @@ async function deleteToy(id, user) {
             entityId: toyId,
             action: 'DELETE',
             user,
-            snapshot: { name: existing.name, quantity: existing.quantity }
+            snapshot: { name: existing.name, quantity: existing.quantity, imageUrl: existing.imageUrl }
         });
     }
 }

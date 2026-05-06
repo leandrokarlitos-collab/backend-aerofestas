@@ -2049,6 +2049,9 @@
                                 <input type="number" id="new-toy-quantity" placeholder="Qtd" min="1" value="1"
                                     class="form-input w-20 px-3 py-2 rounded-md">
                             </div>
+                            <input type="url" id="new-toy-image-url"
+                                placeholder="URL da foto (opcional) — ex: https://..."
+                                class="form-input w-full px-3 py-2 rounded-md text-sm">
                             <div class="flex space-x-2">
                                 <button id="add-toy-btn" class="shiny-btn px-4 py-2 rounded-md w-1/2"
                                     title="Adicionar Brinquedo">
@@ -3279,11 +3282,16 @@
                     toys.sort((a, b) => a.name.localeCompare(b.name)).forEach(toy => {
                         const toyItem = document.createElement('div');
                         toyItem.className = 'flex justify-between items-center bg-white/60 p-2 rounded-md';
+                        const thumb = toy.imageUrl
+                            ? `<img src="${toy.imageUrl}" alt="" class="w-8 h-8 rounded-md object-cover border border-white/60 shrink-0" onerror="this.style.display='none'">`
+                            : `<span class="w-8 h-8 rounded-md bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0"><i class="fas fa-cubes text-xs"></i></span>`;
                         toyItem.innerHTML = `
-                    <span class="flex-grow mr-2 truncate" title="${toy.name}">${toy.name}</span>
+                    ${thumb}
+                    <span class="flex-grow mx-2 truncate" title="${toy.name}">${toy.name}</span>
                     <div class="flex items-center space-x-2 shrink-0">
                         <label for="qty-${toy.id}" class="text-sm text-gray-600">Qtd:</label>
                         <input type="number" id="qty-${toy.id}" data-id="${toy.id}" value="${toy.quantity}" min="1" class="edit-toy-quantity form-input w-16 text-center px-1 py-0.5 rounded-md">
+                        <button data-id="${toy.id}" class="edit-toy-image-btn text-purple-500 hover:text-purple-700 text-sm" title="Editar Foto"><i class="fas fa-camera"></i></button>
                         <button data-id="${toy.id}" class="edit-toy-btn text-blue-500 hover:text-blue-700 text-sm" title="Editar Nome"><i class="fas fa-pencil-alt"></i></button>
                         <button data-id="${toy.id}" class="delete-toy-btn text-red-500 hover:text-red-700 text-sm" title="Excluir Brinquedo"><i class="fas fa-trash-alt"></i></button>
                     </div>
@@ -3300,6 +3308,9 @@
                 });
                 document.querySelectorAll('.edit-toy-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => handleEditToy(parseInt(e.currentTarget.dataset.id)));
+                });
+                document.querySelectorAll('.edit-toy-image-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => handleEditToyImage(parseInt(e.currentTarget.dataset.id)));
                 });
                 document.querySelectorAll('.delete-toy-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => handleDeleteToy(parseInt(e.currentTarget.dataset.id)));
@@ -3867,18 +3878,49 @@
             const handleAddToy = async () => {
                 const name = newToyNameInput.value.trim();
                 const quantity = parseInt(newToyQuantityInput.value) || 1;
+                const imageUrlInput = document.getElementById('new-toy-image-url');
+                const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
                 if (name && quantity > 0) {
                     const newToy = { id: Date.now(), name, quantity };
+                    if (imageUrl) newToy.imageUrl = imageUrl;
                     const result = await api.salvarBrinquedo(newToy);
                     if (result && result.data) {
                         toys.push(result.data);
                         renderToys();
                         newToyNameInput.value = '';
                         newToyQuantityInput.value = '1';
+                        if (imageUrlInput) imageUrlInput.value = '';
                         showToast('Brinquedo adicionado!');
                     } else {
                         showToast('Erro ao salvar brinquedo na nuvem. Tente novamente.', true);
                     }
+                }
+            };
+
+            const handleEditToyImage = async (toyId) => {
+                const toy = toys.find(t => t.id === toyId);
+                if (!toy) return;
+                const newUrl = prompt(
+                    'URL da foto do equipamento (deixe em branco para remover):',
+                    toy.imageUrl || ''
+                );
+                if (newUrl === null) return;
+                const trimmed = newUrl.trim();
+                const oldUrl = toy.imageUrl || null;
+                toy.imageUrl = trimmed || null;
+                const result = await api.salvarBrinquedo({
+                    id: toy.id,
+                    name: toy.name,
+                    quantity: toy.quantity,
+                    imageUrl: toy.imageUrl
+                });
+                if (result && (result.success || result.data)) {
+                    if (result.data) Object.assign(toy, result.data);
+                    renderToys();
+                    showToast(trimmed ? 'Foto atualizada!' : 'Foto removida!');
+                } else {
+                    toy.imageUrl = oldUrl;
+                    showToast('Erro ao atualizar foto.', true);
                 }
             };
 
@@ -6133,9 +6175,9 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
             <i class="fas fa-users"></i>
             <span>Clientes</span>
         </a>
-        <a href="./WhatsApp.html" class="nav-item">
-            <i class="fab fa-whatsapp"></i>
-            <span>WhatsApp</span>
+        <a href="./Equipamentos.html" class="nav-item">
+            <i class="fas fa-cubes"></i>
+            <span>Equipamentos</span>
         </a>
     </nav>
 

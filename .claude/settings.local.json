@@ -67,7 +67,15 @@
       "Bash(node --check services/ClientService.js)",
       "Bash(node --check services/CompanyService.js)",
       "Bash(node --check routes/clients.js)",
-      "Bash(node --check routes/companies.js)"
+      "Bash(node --check routes/companies.js)",
+      "Bash(command -v magick)",
+      "Bash(magick -version)",
+      "Bash(command -v cwebp)",
+      "Bash(cwebp -version)",
+      "Bash(command -v ffmpeg)",
+      "Bash(npm --version)",
+      "Bash(node propostas/maple-bear/optimize-images.js)",
+      "Bash(firebase --version)"
     ]
   }
 }

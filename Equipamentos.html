@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipamentos - Aero Festas</title>
+
+    <!-- PWA Config -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="js/pwa-init.js"></script>
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #a855f7;
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .dark {
+            --bg-color: #020617;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-bg: rgba(15, 23, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.10) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.10) 0px, transparent 50%);
+        }
+
+        body.dark {
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.10) 0px, transparent 50%);
+        }
+
+        h1, h2, h3, .font-display {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow:
+                0 8px 32px 0 rgba(31, 38, 135, 0.07),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        .dark .glassmorphism {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        /* Card de equipamento */
+        .equip-card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 18px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        box-shadow 0.35s ease;
+            box-shadow: 0 6px 20px rgba(31, 38, 135, 0.06);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dark .equip-card {
+            background: rgba(30, 41, 59, 0.55);
+            border-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .equip-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(79, 70, 229, 0.18);
+        }
+
+        .equip-card .img-wrap {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .equip-card .img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .equip-card:hover .img-wrap img {
+            transform: scale(1.06);
+        }
+
+        .equip-card .img-wrap .placeholder {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 3rem;
+        }
+
+        .equip-card .qty-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #4f46e5;
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(8px);
+        }
+
+        .equip-card .info {
+            padding: 12px 14px 14px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .equip-card .info h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.25;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .dark .equip-card .info h3 {
+            color: #f1f5f9;
+        }
+
+        .equip-card .info .qty-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Modal de detalhes */
+        #equip-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #equip-modal.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #equip-modal .modal-box {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
+            transform: translateY(20px) scale(0.96);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .dark #equip-modal .modal-box {
+            background: rgba(15, 23, 42, 0.92);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        #equip-modal.open .modal-box {
+            transform: translateY(0) scale(1);
+        }
+
+        #equip-modal .modal-img {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #equip-modal .modal-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #equip-modal .modal-img .placeholder {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 5rem;
+        }
+
+        #equip-modal .modal-body {
+            padding: 22px 26px 26px;
+            overflow-y: auto;
+        }
+
+        #equip-modal h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .dark #equip-modal h2 { color: #f1f5f9; }
+
+        #equip-modal .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(79, 70, 229, 0.08);
+            border-radius: 12px;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+
+        .dark #equip-modal .stat-row {
+            background: rgba(99, 102, 241, 0.18);
+            color: #c7d2fe;
+        }
+
+        #equip-modal .close-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1e293b;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            z-index: 2;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        #equip-modal .close-btn:hover {
+            transform: scale(1.08);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        /* Bottom Nav (idêntica ao Dashboard) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 420px;
+            height: 75px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 15px 0 15px;
+            z-index: 10000;
+            border-radius: 40px;
+            box-shadow:
+                0 20px 40px -10px rgba(0, 0, 0, 0.12),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+            transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .bottom-nav-handle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .bottom-nav-handle::after {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: rgba(79, 70, 229, 0.2);
+            border-radius: 10px;
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .bottom-nav-handle i {
+            position: absolute;
+            font-size: 1.2rem;
+            color: #4f46e5;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .bottom-nav.collapsed {
+            transform: translateX(-50%) translateY(15px);
+            width: 80px;
+            height: 48px;
+            padding: 0;
+            border-radius: 100px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .bottom-nav.collapsed .nav-item {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+
+        .bottom-nav.collapsed .bottom-nav-handle::after {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .bottom-nav.collapsed .bottom-nav-handle i {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (min-width: 1024px) {
+            .bottom-nav { display: none; }
+        }
+
+        .nav-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            width: 65px;
+            height: 100%;
+            text-decoration: none;
+            z-index: 1;
+            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 16px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: -1;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+        }
+
+        .nav-item.active {
+            color: white;
+            transform: translateY(-8px);
+        }
+
+        .nav-item.active::before {
+            transform: translate(-50%, -60%) scale(1);
+            opacity: 1;
+        }
+
+        .nav-item i {
+            font-size: 1.5rem;
+            margin-bottom: 2px;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .nav-item span {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item.active span {
+            opacity: 1;
+            transform: translateY(2px);
+            color: #4f46e5;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.55rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-item:active {
+            transform: scale(0.9) translateY(0);
+        }
+
+        /* Search input */
+        .search-input {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 14px;
+            padding: 10px 14px 10px 40px;
+            font-size: 0.9rem;
+            width: 100%;
+            color: #1e293b;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+        }
+
+        .dark .search-input {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+        }
+
+        /* Empty state */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3.5rem;
+            color: rgba(79, 70, 229, 0.35);
+            margin-bottom: 16px;
+        }
+
+        /* Skeleton loader */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(203, 213, 225, 0.4) 0%, rgba(241, 245, 249, 0.6) 50%, rgba(203, 213, 225, 0.4) 100%);
+            background-size: 200% 100%;
+            animation: skeleton-shine 1.4s ease-in-out infinite;
+            border-radius: 18px;
+            aspect-ratio: 1 / 1.4;
+        }
+
+        @keyframes skeleton-shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Padding inferior para a bottom-nav não cobrir conteúdo no mobile */
+        @media (max-width: 1023px) {
+            main { padding-bottom: 130px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <!-- Cabeçalho -->
+        <header class="mb-6 sm:mb-8">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 flex items-center gap-3">
+                        <i class="fas fa-cubes text-indigo-500"></i> Equipamentos
+                    </h1>
+                    <p class="text-sm text-slate-500 mt-1">
+                        <span id="equip-count">0</span> itens no catálogo
+                    </p>
+                </div>
+                <a href="./Dashboard.html"
+                    class="hidden sm:inline-flex items-center gap-2 bg-white/60 hover:bg-white/80 text-slate-600 px-4 py-2 rounded-xl border border-white/40 shadow-sm transition-all">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+
+            <!-- Busca -->
+            <div class="relative max-w-md">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                <input id="equip-search" type="text" class="search-input"
+                    placeholder="Buscar equipamento por nome..." autocomplete="off">
+            </div>
+        </header>
+
+        <!-- Grid -->
+        <section id="equip-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Skeletons iniciais -->
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+        </section>
+    </main>
+
+    <!-- Modal de detalhes -->
+    <div id="equip-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-box" role="document">
+            <button type="button" class="close-btn" id="equip-modal-close" aria-label="Fechar">
+                <i class="fas fa-xmark"></i>
+            </button>
+            <div class="modal-img" id="equip-modal-img-wrap">
+                <span class="placeholder"><i class="fas fa-cubes"></i></span>
+            </div>
+            <div class="modal-body">
+                <h2 id="equip-modal-name">—</h2>
+                <div class="stat-row">
+                    <i class="fas fa-boxes-stacked"></i>
+                    <span>Quantidade em estoque: <strong id="equip-modal-qty">—</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav active" id="main-bottom-nav">
+        <div class="bottom-nav-handle" id="bottom-nav-handle">
+            <i class="fas fa-chevron-up"></i>
+        </div>
+
+        <a href="./Dashboard.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="./Agenda de eventos.html" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Agenda</span>
+        </a>
+        <a href="./Sistema Gestão Financeira.html" class="nav-item">
+            <i class="fas fa-wallet"></i>
+            <span>Financeiro</span>
+        </a>
+        <a href="./Sistema de CRM.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Clientes</span>
+        </a>
+        <a href="#" class="nav-item active">
+            <i class="fas fa-cubes"></i>
+            <span>Equipamentos</span>
+        </a>
+    </nav>
+
+    <script type="module">
+        import { api } from './js/api.js';
+
+        const grid = document.getElementById('equip-grid');
+        const searchInput = document.getElementById('equip-search');
+        const countEl = document.getElementById('equip-count');
+        const modal = document.getElementById('equip-modal');
+        const modalClose = document.getElementById('equip-modal-close');
+        const modalImgWrap = document.getElementById('equip-modal-img-wrap');
+        const modalName = document.getElementById('equip-modal-name');
+        const modalQty = document.getElementById('equip-modal-qty');
+
+        let allToys = [];
+
+        const escapeHtml = (str) => String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        function renderGrid(items) {
+            countEl.textContent = items.length;
+
+            if (!items.length) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-box-open"></i>
+                        <p class="font-semibold text-base">Nenhum equipamento encontrado</p>
+                        <p class="text-sm mt-1">Cadastre brinquedos pelo catálogo da Agenda.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = items.map(toy => {
+                const safeName = escapeHtml(toy.name);
+                const imgInner = toy.imageUrl
+                    ? `<img src="${escapeHtml(toy.imageUrl)}" alt="${safeName}" loading="lazy"
+                          onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'placeholder',innerHTML:'<i class=\\'fas fa-cubes\\'></i>'}))">`
+                    : `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
+                return `
+                    <article class="equip-card" data-toy-id="${toy.id}" tabindex="0" role="button" aria-label="Detalhes de ${safeName}">
+                        <div class="img-wrap">
+                            ${imgInner}
+                            <span class="qty-badge">${toy.quantity}</span>
+                        </div>
+                        <div class="info">
+                            <h3>${safeName}</h3>
+                            <span class="qty-text">Qtd: ${toy.quantity}</span>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function openModal(toy) {
+            modalName.textContent = toy.name;
+            modalQty.textContent = toy.quantity;
+
+            if (toy.imageUrl) {
+                modalImgWrap.innerHTML = `<img src="${escapeHtml(toy.imageUrl)}" alt="${escapeHtml(toy.name)}">`;
+                const img = modalImgWrap.querySelector('img');
+                img.addEventListener('error', () => {
+                    modalImgWrap.innerHTML = `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
+                }, { once: true });
+            } else {
+                modalImgWrap.innerHTML = `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
+            }
+
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        // Eventos do modal
+        modalClose.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+        });
+
+        // Click delegation nos cards
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.equip-card');
+            if (!card) return;
+            const id = parseFloat(card.dataset.toyId);
+            const toy = allToys.find(t => t.id === id);
+            if (toy) openModal(toy);
+        });
+        grid.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const card = e.target.closest('.equip-card');
+            if (!card) return;
+            e.preventDefault();
+            const id = parseFloat(card.dataset.toyId);
+            const toy = allToys.find(t => t.id === id);
+            if (toy) openModal(toy);
+        });
+
+        // Busca client-side
+        function applyFilter() {
+            const q = searchInput.value.trim().toLowerCase();
+            if (!q) return renderGrid(allToys);
+            renderGrid(allToys.filter(t => (t.name || '').toLowerCase().includes(q)));
+        }
+        searchInput.addEventListener('input', applyFilter);
+
+        // Carrega catálogo
+        async function loadToys() {
+            const toys = await api.getBrinquedos();
+            allToys = Array.isArray(toys)
+                ? [...toys].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+                : [];
+            applyFilter();
+        }
+
+        loadToys();
+
+        // Bottom nav handle (toggle collapse)
+        document.addEventListener('DOMContentLoaded', () => {
+            const bottomNav = document.getElementById('main-bottom-nav');
+            const handle = document.getElementById('bottom-nav-handle');
+            if (!bottomNav) return;
+
+            const toggleNav = (e) => {
+                e.stopPropagation();
+                bottomNav.classList.toggle('collapsed');
+            };
+            handle?.addEventListener('click', toggleNav);
+            bottomNav.addEventListener('click', (e) => {
+                if (bottomNav.classList.contains('collapsed')) toggleNav(e);
+            });
+        });
+    </script>
+
+    <script src="js/protect.js"></script>
+</body>
+
+</html>
