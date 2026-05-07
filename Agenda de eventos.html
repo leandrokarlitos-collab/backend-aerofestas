@@ -803,6 +803,42 @@
         /* red-500 */
         /* FIM: Estilos para Status de Pagamento */
 
+        /* === Botão "Concluir evento" em destaque (CTA do card de evento) === */
+        .conclude-cta {
+            margin-top: 12px;
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+            letter-spacing: 0.01em;
+        }
+        .conclude-cta i { font-size: 1rem; }
+        .conclude-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(217, 119, 6, 0.45);
+            filter: brightness(1.05);
+        }
+        .conclude-cta:active { transform: translateY(0); }
+        .conclude-cta.is-done {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            box-shadow: 0 6px 16px rgba(4, 120, 87, 0.35);
+        }
+        .conclude-cta.is-done:hover {
+            box-shadow: 0 10px 22px rgba(4, 120, 87, 0.45);
+        }
+
         /* === Modal "Concluir evento" (overlay dinâmico) === */
         .conclude-overlay {
             position: fixed;
@@ -3698,7 +3734,6 @@
                         </div>
                         <div class="flex flex-col space-y-2 items-center">
                              <button data-id="${event.id}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
-                            <button data-id="${event.id}" class="conclude-event-btn ${event.status === 'concluido' ? 'text-emerald-700' : 'text-amber-500 hover:text-amber-700'} text-lg shrink-0" title="${event.status === 'concluido' ? 'Evento concluído (clique para revisar)' : 'Concluir evento'}"><i class="fas ${event.status === 'concluido' ? 'fa-circle-check' : 'fa-clipboard-check'}"></i></button>
                             <button data-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 text-lg shrink-0" title="Excluir Evento"><i class="fas fa-times-circle"></i></button>
                             <button data-id="${event.id}" class="generate-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" title="✨ Criar Mensagem de Confirmação"><i class="fas fa-comment-dots"></i></button>
                             <!-- BOTÃO DE IMPRESSÃO INDIVIDUAL REMOVIDO -->
@@ -3706,7 +3741,11 @@
                             <input type="checkbox" data-id="${event.id}" class="event-print-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500" title="Selecionar para Impressão">
                             <button data-id="${event.id}" class="generate-contract-btn text-purple-500 hover:text-purple-600 text-lg shrink-0" title="Gerar Contrato"><i class="fas fa-file-signature"></i></button>
                         </div>
-                    </div>`;
+                    </div>
+                    <button data-id="${event.id}" class="conclude-event-btn conclude-cta ${event.status === 'concluido' ? 'is-done' : ''}">
+                        <i class="fas ${event.status === 'concluido' ? 'fa-circle-check' : 'fa-clipboard-check'}"></i>
+                        <span>${event.status === 'concluido' ? 'Evento concluído · revisar' : 'Concluir evento'}</span>
+                    </button>`;
                         dayEventsList.appendChild(eventDiv);
                     });
                 }

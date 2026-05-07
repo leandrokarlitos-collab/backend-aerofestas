@@ -15,11 +15,31 @@ if ('serviceWorker' in navigator) {
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             console.log('🔄 PWA: Nova atualização disponível!');
-                            // O SW já chama skipWaiting() no install, 
+                            // O SW já chama skipWaiting() no install,
                             // então o evento 'controllerchange' será disparado abaixo.
                         }
                     });
                 });
+
+                // Checagem agressiva de updates:
+                //   1) Imediatamente após registrar
+                //   2) A cada 60s enquanto a aba estiver visível
+                //   3) Sempre que a aba ganha visibilidade ou foco (volta do background)
+                const checkForUpdates = () => {
+                    registration.update().catch(err => {
+                        console.warn('PWA: falha ao checar update:', err);
+                    });
+                };
+
+                checkForUpdates();
+                setInterval(() => {
+                    if (document.visibilityState === 'visible') checkForUpdates();
+                }, 60000);
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') checkForUpdates();
+                });
+                window.addEventListener('focus', checkForUpdates);
+                window.addEventListener('online', checkForUpdates);
             })
             .catch((error) => {
                 console.error('❌ PWA: Erro ao registrar Service Worker:', error);
@@ -138,7 +158,7 @@ function showUpdateToast() {
 
     toast.innerHTML = `
         <i class="fas fa-sync fa-spin"></i>
-        <span>Atualizando para a v2.8.0...</span>
+        <span>Atualizando para a v2.8.1...</span>
     `;
 
     const style = document.createElement('style');
