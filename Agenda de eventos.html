@@ -3875,6 +3875,14 @@
                 showModal(dayEventsModal);
             };
 
+            // Notifica outras abas/páginas (ex.: Equipamentos.html) sobre mudança no catálogo de brinquedos
+            const toysChannel = (() => {
+                try { return new BroadcastChannel('aero-festas-toys'); } catch (_) { return null; }
+            })();
+            const notifyToysChanged = () => {
+                try { toysChannel?.postMessage({ type: 'toys-changed', at: Date.now() }); } catch (_) { /* ignore */ }
+            };
+
             const handleAddToy = async () => {
                 const name = newToyNameInput.value.trim();
                 const quantity = parseInt(newToyQuantityInput.value) || 1;
@@ -3891,6 +3899,7 @@
                         newToyQuantityInput.value = '1';
                         if (imageUrlInput) imageUrlInput.value = '';
                         showToast('Brinquedo adicionado!');
+                        notifyToysChanged();
                     } else {
                         showToast('Erro ao salvar brinquedo na nuvem. Tente novamente.', true);
                     }
@@ -3918,6 +3927,7 @@
                     if (result.data) Object.assign(toy, result.data);
                     renderToys();
                     showToast(trimmed ? 'Foto atualizada!' : 'Foto removida!');
+                    notifyToysChanged();
                 } else {
                     toy.imageUrl = oldUrl;
                     showToast('Erro ao atualizar foto.', true);
@@ -3985,6 +3995,7 @@
                     if (result && result.success) {
                         renderAll();
                         showToast('Brinquedo atualizado!');
+                        notifyToysChanged();
                     } else {
                         toy.name = oldName; // Reverte alteração local
                         showToast('Erro ao atualizar brinquedo na nuvem.', true);
@@ -3999,6 +4010,7 @@
                         toys = toys.filter(t => t.id !== toyId);
                         renderAll();
                         showToast('Brinquedo excluído!');
+                        notifyToysChanged();
                     } else {
                         showToast('Erro ao excluir brinquedo.', true);
                     }
@@ -4018,6 +4030,7 @@
                     const result = await api.salvarBrinquedo({ id: toy.id, name: toy.name, quantity: toy.quantity });
                     if (result && result.success) {
                         showToast('Quantidade atualizada!', false);
+                        notifyToysChanged();
                     } else {
                         toy.quantity = oldQuantity; // Reverte alteração local
                         renderToys();

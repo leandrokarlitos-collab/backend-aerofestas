@@ -531,14 +531,26 @@
                     <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 flex items-center gap-3">
                         <i class="fas fa-cubes text-indigo-500"></i> Equipamentos
                     </h1>
-                    <p class="text-sm text-slate-500 mt-1">
-                        <span id="equip-count">0</span> itens no catálogo
+                    <p class="text-sm text-slate-500 mt-1 flex items-center gap-2">
+                        <span><span id="equip-count">0</span> itens no catálogo</span>
+                        <span id="sync-indicator" class="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium opacity-0 transition-opacity">
+                            <i class="fas fa-circle text-[6px]"></i>
+                            <span id="sync-label">Sincronizado</span>
+                        </span>
                     </p>
                 </div>
-                <a href="./Dashboard.html"
-                    class="hidden sm:inline-flex items-center gap-2 bg-white/60 hover:bg-white/80 text-slate-600 px-4 py-2 rounded-xl border border-white/40 shadow-sm transition-all">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </a>
+                <div class="flex items-center gap-2">
+                    <button id="refresh-btn" type="button"
+                        class="inline-flex items-center gap-2 bg-white/60 hover:bg-white/80 text-slate-600 px-3 sm:px-4 py-2 rounded-xl border border-white/40 shadow-sm transition-all"
+                        title="Sincronizar com o catálogo">
+                        <i class="fas fa-arrows-rotate" id="refresh-icon"></i>
+                        <span class="hidden sm:inline text-sm font-medium">Atualizar</span>
+                    </button>
+                    <a href="./Dashboard.html"
+                        class="hidden sm:inline-flex items-center gap-2 bg-white/60 hover:bg-white/80 text-slate-600 px-4 py-2 rounded-xl border border-white/40 shadow-sm transition-all">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                </div>
             </div>
 
             <!-- Busca -->
@@ -726,15 +738,96 @@
         }
         searchInput.addEventListener('input', applyFilter);
 
-        // Carrega catálogo
-        async function loadToys() {
-            const toys = await api.getBrinquedos();
-            allToys = Array.isArray(toys)
-                ? [...toys].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
-                : [];
-            applyFilter();
+        // ----- Sincronização com o catálogo (mesma fonte: GET /api/admin/toys) -----
+        const refreshBtn = document.getElementById('refresh-btn');
+        const refreshIcon = document.getElementById('refresh-icon');
+        const syncIndicator = document.getElementById('sync-indicator');
+        const syncLabel = document.getElementById('sync-label');
+
+        let lastSignature = '';
+        let isLoading = false;
+        let pollTimer = null;
+
+        function toySignature(list) {
+            // Hash simples — detecta mudanças (incluindo nome, qtd, foto)
+            return list.map(t => `${t.id}:${t.name}:${t.quantity}:${t.imageUrl || ''}`).join('|');
         }
 
+        function flashSync(message, color) {
+            syncLabel.textContent = message;
+            syncIndicator.style.color = color;
+            syncIndicator.style.opacity = '1';
+            clearTimeout(flashSync._t);
+            flashSync._t = setTimeout(() => {
+                syncIndicator.style.opacity = '0';
+            }, 2200);
+        }
+
+        async function loadToys({ silent = false } = {}) {
+            if (isLoading) return;
+            isLoading = true;
+            if (!silent) refreshIcon?.classList.add('fa-spin');
+            try {
+                const toys = await api.getBrinquedos();
+                const list = Array.isArray(toys)
+                    ? [...toys].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+                    : [];
+                const sig = toySignature(list);
+                const changed = sig !== lastSignature;
+                allToys = list;
+                lastSignature = sig;
+                applyFilter();
+                if (!silent) {
+                    flashSync(changed && lastSignature ? 'Atualizado!' : 'Sincronizado', '#059669');
+                } else if (changed) {
+                    flashSync('Catálogo atualizado', '#059669');
+                }
+            } catch (e) {
+                if (!silent) flashSync('Erro ao sincronizar', '#dc2626');
+            } finally {
+                isLoading = false;
+                refreshIcon?.classList.remove('fa-spin');
+            }
+        }
+
+        // Botão manual
+        refreshBtn?.addEventListener('click', () => loadToys());
+
+        // Refetch ao voltar para a aba (catálogo pode ter sido editado em outra aba/página)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') loadToys({ silent: true });
+        });
+        window.addEventListener('focus', () => loadToys({ silent: true }));
+        window.addEventListener('pageshow', (e) => {
+            // bfcache: reentrou na página via navegação back/forward
+            if (e.persisted) loadToys({ silent: true });
+        });
+
+        // Sincronização cross-tab via BroadcastChannel (Agenda dispara após save/delete)
+        try {
+            const bc = new BroadcastChannel('aero-festas-toys');
+            bc.addEventListener('message', (ev) => {
+                if (ev.data && ev.data.type === 'toys-changed') loadToys({ silent: true });
+            });
+        } catch (_) { /* BroadcastChannel pode não existir em browsers antigos */ }
+
+        // Polling leve enquanto a aba está visível (a cada 60s) — barato e não interfere no uso
+        function startPolling() {
+            stopPolling();
+            pollTimer = setInterval(() => {
+                if (document.visibilityState === 'visible') loadToys({ silent: true });
+            }, 60000);
+        }
+        function stopPolling() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') startPolling();
+            else stopPolling();
+        });
+        startPolling();
+
+        // Carga inicial
         loadToys();
 
         // Bottom nav handle (toggle collapse)
