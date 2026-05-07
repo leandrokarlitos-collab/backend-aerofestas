@@ -60,9 +60,9 @@ async function listToys() {
         });
     }
 
-    // Pós-processamento: calcula lastRental, nextRental e filtra unidades ativas
+    // Pós-processamento: calcula lastRental, nextRental, totalEvents, history e filtra unidades ativas
     return toys.map(toy => {
-        const dates = toy.eventItems
+        const events = toy.eventItems
             .filter(ei => ei.event && ei.event.date)
             .map(ei => ({
                 date: ei.event.date,
@@ -72,14 +72,18 @@ async function listToys() {
                 quantity: ei.quantity
             }));
 
-        const past = dates
+        const past = events
             .filter(d => d.date <= today)
             .sort((a, b) => b.date.localeCompare(a.date));
-        const future = dates
+        const future = events
             .filter(d => d.date > today)
             .sort((a, b) => a.date.localeCompare(b.date));
 
         const activeUnits = toy.units.filter(u => u.unitNumber <= toy.quantity);
+
+        // Limita o histórico para não inchar a resposta — 30 mais recentes (passados + futuros)
+        const recentHistory = [...future.slice(0, 10), ...past.slice(0, 30)]
+            .sort((a, b) => b.date.localeCompare(a.date));
 
         return {
             id: toy.id,
@@ -89,7 +93,9 @@ async function listToys() {
             units: activeUnits,
             photos: toy.photos,
             lastRental: past[0] || null,
-            nextRental: future[0] || null
+            nextRental: future[0] || null,
+            totalEvents: events.length,
+            history: recentHistory
         };
     });
 }
@@ -171,19 +177,51 @@ async function deleteToy(id, user) {
     }
 
     const existing = await prisma.toy.findUnique({ where: { id: toyId } });
+    if (!existing) {
+        const err = new Error('Brinquedo não encontrado');
+        err.status = 404;
+        throw err;
+    }
+
+    // BLOQUEIO: não permite excluir se houver evento agendado (data >= hoje) usando este brinquedo.
+    // Eventos passados são liberados — apaga em cascata pra permitir aposentar equipamentos antigos.
+    const today = new Date().toISOString().slice(0, 10);
+    const scheduledItems = await prisma.eventItem.findMany({
+        where: {
+            toyId,
+            event: { date: { gte: today } }
+        },
+        include: { event: { select: { id: true, date: true, clientName: true } } },
+        orderBy: { event: { date: 'asc' } },
+        take: 5
+    });
+
+    if (scheduledItems.length > 0) {
+        const sample = scheduledItems.map(i => ({
+            eventId: i.event.id,
+            date: i.event.date,
+            clientName: i.event.clientName
+        }));
+        const err = new Error(
+            `Este equipamento está em ${scheduledItems.length} evento(s) agendado(s). Remova-o dos eventos antes de excluir.`
+        );
+        err.status = 409;
+        err.details = { scheduledEvents: sample };
+        throw err;
+    }
+
     await prisma.eventItem.deleteMany({ where: { toyId } });
     // ToyUnit e ToyPhoto têm onDelete: Cascade no schema, então caem juntos.
+    // Fotos no Storage NÃO são apagadas — admin pode limpar manualmente se quiser (caminho toys/{id}/).
     await prisma.toy.delete({ where: { id: toyId } });
 
-    if (existing) {
-        safeAudit({
-            entityType: 'Toy',
-            entityId: toyId,
-            action: 'DELETE',
-            user,
-            snapshot: { name: existing.name, quantity: existing.quantity, imageUrl: existing.imageUrl }
-        });
-    }
+    safeAudit({
+        entityType: 'Toy',
+        entityId: toyId,
+        action: 'DELETE',
+        user,
+        snapshot: { name: existing.name, quantity: existing.quantity, imageUrl: existing.imageUrl }
+    });
 }
 
 module.exports = {

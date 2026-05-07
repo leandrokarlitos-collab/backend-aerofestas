@@ -3887,6 +3887,23 @@
                 try { toysChannel?.postMessage({ type: 'toys-changed', at: Date.now() }); } catch (_) { /* ignore */ }
             };
 
+            // Listener: quando Equipamentos.html (ou outra aba) mudar o catálogo, re-puxa do servidor
+            // pra manter o array `toys` daqui sincronizado.
+            const reloadToysFromAPI = async () => {
+                try {
+                    const fresh = await api.getBrinquedos();
+                    if (Array.isArray(fresh)) {
+                        toys = fresh;
+                        renderToys();
+                    }
+                } catch (_) { /* tolera falha silenciosa */ }
+            };
+            try {
+                toysChannel?.addEventListener('message', (ev) => {
+                    if (ev.data?.type === 'toys-changed') reloadToysFromAPI();
+                });
+            } catch (_) { /* */ }
+
             const handleAddToy = async () => {
                 const name = newToyNameInput.value.trim();
                 const quantity = parseInt(newToyQuantityInput.value) || 1;
@@ -4144,17 +4161,26 @@
             };
 
             const handleDeleteToy = async (toyId) => {
-                if (confirm('Tem certeza que deseja excluir este brinquedo?')) {
-                    const result = await api.deletarBrinquedo(toyId);
-                    if (result && result.success) {
-                        toys = toys.filter(t => t.id !== toyId);
-                        renderAll();
-                        showToast('Brinquedo excluído!');
-                        notifyToysChanged();
-                    } else {
-                        showToast('Erro ao excluir brinquedo.', true);
-                    }
+                if (!confirm('Tem certeza que deseja excluir este brinquedo?')) return;
+                const result = await api.deletarBrinquedo(toyId);
+                if (result.ok) {
+                    toys = toys.filter(t => t.id !== toyId);
+                    renderAll();
+                    showToast('Brinquedo excluído!');
+                    notifyToysChanged();
+                    return;
                 }
+                if (result.status === 409 && result.details?.scheduledEvents) {
+                    const lista = result.details.scheduledEvents
+                        .map(e => `• ${e.date}${e.clientName ? ' — ' + e.clientName : ''}`)
+                        .join('\n');
+                    alert(
+                        `${result.error}\n\nEventos agendados (até 5):\n${lista}\n\n` +
+                        `Remova o brinquedo desses eventos antes de excluir.`
+                    );
+                    return;
+                }
+                showToast(result.error || 'Erro ao excluir brinquedo.', true);
             };
 
             const handleEditToyQuantity = async (toyId, newQuantity) => {

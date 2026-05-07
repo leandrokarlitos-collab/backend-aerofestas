@@ -721,7 +721,17 @@
         #equip-modal .gallery-add:hover {
             background: rgba(79, 70, 229, 0.14);
         }
+        #equip-modal .gallery-camera {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: rgba(16, 185, 129, 0.08);
+            color: #047857;
+            font-size: 1.2rem;
+        }
+        #equip-modal .gallery-camera:hover {
+            background: rgba(16, 185, 129, 0.18);
+        }
         .dark #equip-modal .gallery-add { color: #a5b4fc; }
+        .dark #equip-modal .gallery-camera { color: #6ee7b7; }
         #equip-modal .gallery-empty {
             grid-column: 1 / -1;
             color: var(--text-muted);
@@ -861,6 +871,355 @@
             #equip-modal .unit-row .save-btn { grid-column: 2; }
         }
 
+        /* === Toolbar (visão + ordenação) === */
+        .equip-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .equip-toolbar .control-group {
+            display: inline-flex;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 12px;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+        }
+        .dark .equip-toolbar .control-group {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        .equip-toolbar .control-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 12px;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .equip-toolbar .control-btn.active {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: #fff;
+        }
+        .equip-toolbar .control-btn:not(.active):hover {
+            background: rgba(79, 70, 229, 0.08);
+            color: #4f46e5;
+        }
+        .equip-toolbar select.sort-select {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #475569;
+            font-family: inherit;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+        .dark .equip-toolbar select.sort-select {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+        }
+        .equip-toolbar select.sort-select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        /* === Visão em lista === */
+        #equip-grid.view-list {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        #equip-grid.view-list .equip-card {
+            display: grid;
+            grid-template-columns: 70px 1fr auto;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+        }
+        #equip-grid.view-list .equip-card .img-wrap {
+            aspect-ratio: 1;
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+        }
+        #equip-grid.view-list .equip-card .qty-badge { display: none; }
+        #equip-grid.view-list .equip-card .photo-count-badge {
+            top: 4px; left: 4px;
+            font-size: 0.55rem;
+            padding: 2px 5px;
+        }
+        #equip-grid.view-list .equip-card .info {
+            padding: 0;
+            gap: 2px;
+        }
+        #equip-grid.view-list .equip-card .info h3 {
+            font-size: 0.92rem;
+            -webkit-line-clamp: 1;
+        }
+        #equip-grid.view-list .equip-card .info .qty-text { font-size: 0.7rem; }
+        #equip-grid.view-list .equip-card .info .rental-line { font-size: 0.65rem; }
+        #equip-grid.view-list .equip-card .info .condition-pill {
+            margin-top: 2px;
+            font-size: 0.6rem;
+            padding: 2px 7px;
+        }
+        #equip-grid.view-list .equip-card:hover {
+            transform: translateX(2px);
+        }
+        #equip-grid.view-list .equip-card .list-extra {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            padding-right: 4px;
+        }
+        #equip-grid.view-list .equip-card .list-extra .qty-num {
+            color: #4f46e5;
+            font-size: 1rem;
+        }
+        #equip-grid.view-list .equip-card .list-extra .events-num {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        #equip-grid:not(.view-list) .equip-card .list-extra { display: none; }
+
+        /* === Histórico de eventos no modal === */
+        #equip-modal .history-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+        #equip-modal .history-summary .total {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        #equip-modal .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 240px;
+            overflow-y: auto;
+            margin: 0 -8px;
+            padding: 0 8px;
+        }
+        #equip-modal .history-row {
+            display: grid;
+            grid-template-columns: 64px 1fr auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 9px;
+            background: rgba(148, 163, 184, 0.08);
+            cursor: pointer;
+            transition: background 0.15s ease;
+            color: #1e293b;
+            text-decoration: none;
+            font-size: 0.82rem;
+        }
+        .dark #equip-modal .history-row { background: rgba(148, 163, 184, 0.12); color: #f1f5f9; }
+        #equip-modal .history-row:hover {
+            background: rgba(79, 70, 229, 0.15);
+        }
+        #equip-modal .history-row.future {
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            font-weight: 600;
+        }
+        .dark #equip-modal .history-row.future { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
+        #equip-modal .history-row .date {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            font-size: 0.78rem;
+        }
+        #equip-modal .history-row .client {
+            font-size: 0.78rem;
+            color: #475569;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dark #equip-modal .history-row .client { color: #cbd5e1; }
+        #equip-modal .history-row .qty-pill {
+            background: rgba(79, 70, 229, 0.12);
+            color: #4f46e5;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .dark #equip-modal .history-row .qty-pill { background: rgba(99, 102, 241, 0.25); color: #c7d2fe; }
+        #equip-modal .history-empty {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            text-align: center;
+            padding: 12px 0;
+            font-style: italic;
+        }
+
+        /* === FAB (Novo equipamento) === */
+        #equip-fab {
+            position: fixed;
+            bottom: 130px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5 0%, #a855f7 100%);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 14px 30px rgba(79, 70, 229, 0.45);
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9500;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #equip-fab:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 20px 40px rgba(79, 70, 229, 0.55); }
+        #equip-fab:active { transform: scale(0.95); }
+        @media (min-width: 1024px) {
+            #equip-fab { bottom: 30px; }
+        }
+
+        /* === Modal de criação de novo equipamento === */
+        #equip-create-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9600;
+        }
+        #equip-create-modal.open { display: flex; }
+        #equip-create-modal .create-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 26px 28px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.3);
+        }
+        .dark #equip-create-modal .create-box { background: #0f172a; color: #f1f5f9; }
+        #equip-create-modal h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dark #equip-create-modal h3 { color: #f1f5f9; }
+        #equip-create-modal label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            display: block;
+            margin: 12px 0 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .dark #equip-create-modal label { color: #cbd5e1; }
+        #equip-create-modal input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: #fff;
+            color: #1e293b;
+        }
+        .dark #equip-create-modal input {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #f1f5f9;
+        }
+        #equip-create-modal input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+        }
+        #equip-create-modal .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 18px;
+            justify-content: flex-end;
+        }
+        #equip-create-modal button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        #equip-create-modal .btn-cancel {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        #equip-create-modal .btn-confirm {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: #fff;
+        }
+        #equip-create-modal .btn-confirm:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* === Botão de excluir no modal de detalhes === */
+        #equip-modal .danger-zone {
+            border-top: 1px solid rgba(15, 23, 42, 0.06);
+            padding: 14px 24px 22px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .dark #equip-modal .danger-zone { border-top-color: rgba(255, 255, 255, 0.06); }
+        #equip-modal .delete-toy-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s ease;
+        }
+        #equip-modal .delete-toy-btn:hover {
+            background: rgba(239, 68, 68, 0.18);
+        }
+        .dark #equip-modal .delete-toy-btn {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
         /* === Toast === */
         #equip-toast {
             position: fixed;
@@ -923,6 +1282,25 @@
                 <input id="equip-search" type="text" class="search-input"
                     placeholder="Buscar equipamento por nome..." autocomplete="off">
             </div>
+
+            <!-- Toolbar: visão + ordenação -->
+            <div class="equip-toolbar">
+                <div class="control-group" role="tablist" aria-label="Modo de visualização">
+                    <button type="button" class="control-btn active" data-view="grid" role="tab" aria-selected="true" title="Visão em cards">
+                        <i class="fas fa-th-large"></i><span class="hidden sm:inline">Cards</span>
+                    </button>
+                    <button type="button" class="control-btn" data-view="list" role="tab" aria-selected="false" title="Visão em lista">
+                        <i class="fas fa-list"></i><span class="hidden sm:inline">Lista</span>
+                    </button>
+                </div>
+                <select id="equip-sort" class="sort-select" aria-label="Ordenação">
+                    <option value="alpha">Ordem alfabética</option>
+                    <option value="last">Última locação</option>
+                    <option value="next">Próxima locação</option>
+                    <option value="condition">Estado de uso (atenção primeiro)</option>
+                    <option value="events">Mais utilizados</option>
+                </select>
+            </div>
         </header>
 
         <!-- Grid -->
@@ -975,12 +1353,49 @@
                     </div>
                     <div class="units-list" id="equip-modal-units"></div>
                 </section>
+
+                <section class="modal-section">
+                    <div class="section-title">
+                        <i class="fas fa-clock-rotate-left"></i>
+                        <span>Histórico de eventos</span>
+                        <span class="total" id="equip-modal-events-total" style="margin-left:auto;font-size:0.7rem;color:#94a3b8;font-weight:600;text-transform:none;letter-spacing:0;">0</span>
+                    </div>
+                    <div class="history-list" id="equip-modal-history"></div>
+                </section>
+
+                <div class="danger-zone">
+                    <button type="button" class="delete-toy-btn" id="equip-modal-delete">
+                        <i class="fas fa-trash"></i> Excluir equipamento
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Input oculto para upload de fotos (câmera + galeria) -->
-    <input type="file" id="equip-photo-input" accept="image/*" capture="environment" multiple
+    <!-- FAB: Novo equipamento -->
+    <button type="button" id="equip-fab" title="Novo equipamento" aria-label="Novo equipamento">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Modal de criação -->
+    <div id="equip-create-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="create-box" role="document">
+            <h3><i class="fas fa-cubes text-indigo-500"></i> Novo equipamento</h3>
+            <label for="equip-create-name">Nome</label>
+            <input id="equip-create-name" type="text" placeholder="Ex.: Cama Elástica 4m" maxlength="80" autocomplete="off">
+            <label for="equip-create-qty">Quantidade</label>
+            <input id="equip-create-qty" type="number" min="1" max="999" value="1" inputmode="numeric">
+            <div class="actions">
+                <button type="button" class="btn-cancel" id="equip-create-cancel">Cancelar</button>
+                <button type="button" class="btn-confirm" id="equip-create-confirm">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inputs ocultos para upload (galeria/qualquer fonte ou câmera direta) -->
+    <input type="file" id="equip-photo-input" accept="image/*" multiple
+        style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" aria-hidden="true">
+    <input type="file" id="equip-camera-input" accept="image/*" capture="environment"
         style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" aria-hidden="true">
 
     <!-- Overlay de progresso de upload -->
@@ -1050,6 +1465,10 @@
         const modalGallery = document.getElementById('equip-modal-gallery');
         const modalPhotoCount = document.getElementById('equip-modal-photo-count');
         const modalUnits = document.getElementById('equip-modal-units');
+        const modalHistory = document.getElementById('equip-modal-history');
+        const modalEventsTotal = document.getElementById('equip-modal-events-total');
+        const sortSelect = document.getElementById('equip-sort');
+        const viewBtns = document.querySelectorAll('.equip-toolbar .control-btn[data-view]');
         const lightbox = document.getElementById('equip-lightbox');
         const lightboxImg = document.getElementById('equip-lightbox-img');
         const lightboxClose = document.getElementById('equip-lightbox-close');
@@ -1068,6 +1487,8 @@
 
         let allToys = [];
         let openedToyId = null;
+        let currentView = localStorage.getItem('equip_view') || 'grid';        // 'grid' | 'list'
+        let currentSort = localStorage.getItem('equip_sort') || 'alpha';       // alpha | last | next | condition | events
 
         const escapeHtml = (str) => String(str ?? '')
             .replace(/&/g, '&amp;')
@@ -1114,6 +1535,58 @@
             return { total: active.length, ok: active.length - issues.length, issues: issues.length };
         }
 
+        // Severidade: 0 = OK, 5 = pior (DANIFICADO/EM_MANUTENCAO)
+        const CONDITION_SEVERITY = {
+            OK: 0, OUTROS: 1, SUJO: 2, UMIDO: 3, MOLHADO: 4, EM_MANUTENCAO: 5, DANIFICADO: 5
+        };
+        function worstConditionScore(toy) {
+            const active = (toy.units || []).filter(u => u.unitNumber <= toy.quantity);
+            return active.reduce((max, u) => Math.max(max, CONDITION_SEVERITY[u.condition] ?? 0), 0);
+        }
+
+        function sortToys(list) {
+            const arr = [...list];
+            const byName = (a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR');
+            switch (currentSort) {
+                case 'last':
+                    // mais recentes primeiro; sem locação vai pro fim
+                    return arr.sort((a, b) => {
+                        const da = a.lastRental?.date || '';
+                        const db = b.lastRental?.date || '';
+                        if (!da && !db) return byName(a, b);
+                        if (!da) return 1;
+                        if (!db) return -1;
+                        return db.localeCompare(da);
+                    });
+                case 'next':
+                    return arr.sort((a, b) => {
+                        const da = a.nextRental?.date || '';
+                        const db = b.nextRental?.date || '';
+                        if (!da && !db) return byName(a, b);
+                        if (!da) return 1;
+                        if (!db) return -1;
+                        return da.localeCompare(db);
+                    });
+                case 'condition':
+                    return arr.sort((a, b) => {
+                        const sa = worstConditionScore(a);
+                        const sb = worstConditionScore(b);
+                        if (sb !== sa) return sb - sa; // pior primeiro
+                        return byName(a, b);
+                    });
+                case 'events':
+                    return arr.sort((a, b) => {
+                        const ea = a.totalEvents || 0;
+                        const eb = b.totalEvents || 0;
+                        if (eb !== ea) return eb - ea;
+                        return byName(a, b);
+                    });
+                case 'alpha':
+                default:
+                    return arr.sort(byName);
+            }
+        }
+
         function renderGrid(items) {
             countEl.textContent = items.length;
 
@@ -1157,6 +1630,11 @@
                         ? `${summary.ok} OK · ⚠ ${summary.issues}`
                         : `${summary.total} OK`);
                 const cardClass = `equip-card${summary.issues > 0 ? ' has-issues' : ''}`;
+                const totalEvents = toy.totalEvents || 0;
+                const listExtra = `<div class="list-extra">
+                    <span class="qty-num">${toy.quantity}</span>
+                    <span class="events-num">${totalEvents} evento${totalEvents === 1 ? '' : 's'}</span>
+                </div>`;
                 return `
                     <article class="${cardClass}" data-toy-id="${toy.id}" tabindex="0" role="button" aria-label="Detalhes de ${safeName}">
                         <div class="img-wrap">
@@ -1166,7 +1644,7 @@
                         </div>
                         <div class="info">
                             <h3>${safeName}</h3>
-                            <span class="qty-text">Qtd: ${toy.quantity}</span>
+                            <span class="qty-text">Qtd: ${toy.quantity} · ${totalEvents} evento${totalEvents === 1 ? '' : 's'}</span>
                             ${lastLine}
                             ${nextLine}
                             <span class="condition-pill ${condClass}">
@@ -1174,6 +1652,7 @@
                                 ${condText}
                             </span>
                         </div>
+                        ${listExtra}
                     </article>
                 `;
             }).join('');
@@ -1221,12 +1700,37 @@
                 `;
             }).join('');
 
-            const addBtn = `<button type="button" class="gallery-add" id="equip-gallery-add" title="Adicionar foto" aria-label="Adicionar foto"><i class="fas fa-plus"></i></button>`;
+            const addBtn = `<button type="button" class="gallery-add" id="equip-gallery-add" title="Adicionar do dispositivo (galeria, arquivos ou câmera)" aria-label="Adicionar foto"><i class="fas fa-plus"></i></button>`;
+            const cameraBtn = `<button type="button" class="gallery-add gallery-camera" id="equip-gallery-camera" title="Tirar foto agora (câmera)" aria-label="Tirar foto"><i class="fas fa-camera"></i></button>`;
             const empty = photos.length === 0
-                ? `<div class="gallery-empty">Nenhuma foto ainda. Toque no <strong>+</strong> para enviar do celular ou da galeria.</div>`
+                ? `<div class="gallery-empty">Nenhuma foto ainda. Toque no <strong>+</strong> pra escolher da galeria, ou no <i class="fas fa-camera"></i> pra tirar uma agora.</div>`
                 : '';
 
-            modalGallery.innerHTML = items + addBtn + empty;
+            modalGallery.innerHTML = items + addBtn + cameraBtn + empty;
+        }
+
+        function renderHistory(toy) {
+            modalEventsTotal.textContent = `${toy.totalEvents || 0} evento${toy.totalEvents === 1 ? '' : 's'}`;
+            const history = Array.isArray(toy.history) ? toy.history : [];
+            if (!history.length) {
+                modalHistory.innerHTML = `<div class="history-empty">Nenhum evento registrado ainda.</div>`;
+                return;
+            }
+            const today = new Date().toISOString().slice(0, 10);
+            modalHistory.innerHTML = history.map(ev => {
+                const isFuture = ev.date > today;
+                const dateBR = formatDateBR(ev.date);
+                const client = ev.clientName ? escapeHtml(ev.clientName) : '<span style="color:#94a3b8;font-style:italic;">sem cliente</span>';
+                const qty = ev.quantity ? `<span class="qty-pill">${ev.quantity}×</span>` : '';
+                const url = `./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(ev.eventId)}`;
+                return `
+                    <a href="${url}" class="history-row ${isFuture ? 'future' : ''}" data-event-id="${ev.eventId}" title="Abrir evento na Agenda">
+                        <span class="date">${dateBR}</span>
+                        <span class="client">${client}</span>
+                        ${qty}
+                    </a>
+                `;
+            }).join('');
         }
 
         function renderUnits(toy) {
@@ -1290,6 +1794,7 @@
             renderRentalInfo(toy);
             renderGallery(toy);
             renderUnits(toy);
+            renderHistory(toy);
 
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
@@ -1311,6 +1816,7 @@
             renderRentalInfo(toy);
             renderGallery(toy);
             renderUnits(toy);
+            renderHistory(toy);
         }
 
         function closeModal() {
@@ -1322,6 +1828,7 @@
 
         // --- Upload de fotos do celular (câmera + galeria, multi-seleção) ---
         const photoInput = document.getElementById('equip-photo-input');
+        const cameraInput = document.getElementById('equip-camera-input');
         const uploadOverlay = document.getElementById('equip-upload-overlay');
         const uploadTitle = document.getElementById('equip-upload-title');
         const uploadSub = document.getElementById('equip-upload-sub');
@@ -1427,6 +1934,11 @@
             await uploadFilesFlow(files);
             photoInput.value = ''; // permite reupload do mesmo arquivo
         });
+        cameraInput.addEventListener('change', async () => {
+            const files = cameraInput.files;
+            await uploadFilesFlow(files);
+            cameraInput.value = '';
+        });
 
         // --- Galeria: handlers ---
         modalGallery.addEventListener('click', async (e) => {
@@ -1434,6 +1946,12 @@
             if (addBtn) {
                 e.preventDefault();
                 photoInput.click();
+                return;
+            }
+            const camBtn = e.target.closest('#equip-gallery-camera');
+            if (camBtn) {
+                e.preventDefault();
+                cameraInput.click();
                 return;
             }
 
@@ -1577,13 +2095,135 @@
             try { toysChannel?.postMessage({ type: 'toys-changed' }); } catch (_) { /* */ }
         }
 
-        // Busca client-side
+        // --- Criar novo equipamento (FAB) ---
+        const fab = document.getElementById('equip-fab');
+        const createModal = document.getElementById('equip-create-modal');
+        const createName = document.getElementById('equip-create-name');
+        const createQty = document.getElementById('equip-create-qty');
+        const createCancel = document.getElementById('equip-create-cancel');
+        const createConfirm = document.getElementById('equip-create-confirm');
+
+        function openCreateModal() {
+            createName.value = '';
+            createQty.value = '1';
+            createConfirm.disabled = true;
+            createModal.classList.add('open');
+            createModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => createName.focus(), 50);
+        }
+        function closeCreateModal() {
+            createModal.classList.remove('open');
+            createModal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function refreshCreateValid() {
+            const ok = createName.value.trim().length > 0 && (parseInt(createQty.value) || 0) > 0;
+            createConfirm.disabled = !ok;
+        }
+        createName.addEventListener('input', refreshCreateValid);
+        createQty.addEventListener('input', refreshCreateValid);
+        createName.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !createConfirm.disabled) createConfirm.click();
+        });
+
+        fab.addEventListener('click', openCreateModal);
+        createCancel.addEventListener('click', closeCreateModal);
+        createModal.addEventListener('click', (e) => { if (e.target === createModal) closeCreateModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && createModal.classList.contains('open')) closeCreateModal();
+        });
+
+        createConfirm.addEventListener('click', async () => {
+            const name = createName.value.trim();
+            const quantity = parseInt(createQty.value) || 1;
+            if (!name || quantity < 1) return;
+            createConfirm.disabled = true;
+            createConfirm.textContent = 'Criando...';
+            const result = await api.salvarBrinquedo({ id: Date.now(), name, quantity });
+            createConfirm.textContent = 'Criar';
+            if (result && (result.success || result.data)) {
+                showToast('Equipamento criado!', 'success');
+                notifyToysChanged();
+                closeCreateModal();
+                await loadToys({ silent: true });
+            } else {
+                createConfirm.disabled = false;
+                showToast('Erro ao criar equipamento', 'error');
+            }
+        });
+
+        // --- Excluir equipamento (botão no modal de detalhes) ---
+        const modalDeleteBtn = document.getElementById('equip-modal-delete');
+        modalDeleteBtn.addEventListener('click', async () => {
+            if (openedToyId == null) return;
+            const toy = allToys.find(t => t.id === openedToyId);
+            if (!toy) return;
+
+            if (!confirm(`Excluir "${toy.name}"?\n\nIsso apaga o equipamento, suas unidades, fotos do banco e o histórico de eventos passados que o usavam.`)) return;
+
+            modalDeleteBtn.disabled = true;
+            modalDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+            const result = await api.deletarBrinquedo(openedToyId);
+            modalDeleteBtn.disabled = false;
+            modalDeleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir equipamento';
+
+            if (result.ok) {
+                showToast('Equipamento excluído!', 'success');
+                notifyToysChanged();
+                closeModal();
+                await loadToys({ silent: true });
+                return;
+            }
+            if (result.status === 409 && result.details?.scheduledEvents) {
+                const lista = result.details.scheduledEvents
+                    .map(e => `• ${e.date}${e.clientName ? ' — ' + e.clientName : ''}`)
+                    .join('\n');
+                alert(
+                    `${result.error}\n\nEventos agendados (até 5):\n${lista}\n\n` +
+                    `Remova o equipamento desses eventos antes de excluir.`
+                );
+                return;
+            }
+            showToast(result.error || 'Erro ao excluir', 'error');
+        });
+
+        // Busca client-side + sort
         function applyFilter() {
             const q = searchInput.value.trim().toLowerCase();
-            if (!q) return renderGrid(allToys);
-            renderGrid(allToys.filter(t => (t.name || '').toLowerCase().includes(q)));
+            const filtered = q
+                ? allToys.filter(t => (t.name || '').toLowerCase().includes(q))
+                : allToys;
+            renderGrid(sortToys(filtered));
         }
         searchInput.addEventListener('input', applyFilter);
+
+        // Toggle visão grid/lista
+        function applyView() {
+            grid.classList.toggle('view-list', currentView === 'list');
+            viewBtns.forEach(b => {
+                const isActive = b.dataset.view === currentView;
+                b.classList.toggle('active', isActive);
+                b.setAttribute('aria-selected', String(isActive));
+            });
+        }
+        viewBtns.forEach(b => {
+            b.addEventListener('click', () => {
+                currentView = b.dataset.view;
+                localStorage.setItem('equip_view', currentView);
+                applyView();
+            });
+        });
+        applyView();
+
+        // Ordenação
+        sortSelect.value = currentSort;
+        sortSelect.addEventListener('change', () => {
+            currentSort = sortSelect.value;
+            localStorage.setItem('equip_sort', currentSort);
+            applyFilter();
+        });
 
         // ----- Sincronização com o catálogo (mesma fonte: GET /api/admin/toys) -----
         const refreshBtn = document.getElementById('refresh-btn');
@@ -1625,9 +2265,7 @@
             if (!silent) refreshIcon?.classList.add('fa-spin');
             try {
                 const toys = await api.getBrinquedos();
-                const list = Array.isArray(toys)
-                    ? [...toys].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
-                    : [];
+                const list = Array.isArray(toys) ? toys : [];
                 const sig = toySignature(list);
                 const changed = sig !== lastSignature;
                 allToys = list;

@@ -13,6 +13,7 @@ function errorHandler(err, req, res, next) {
 
     res.status(status).json({
         error: err.message || 'Erro interno do servidor',
+        ...(err.details ? { details: err.details } : {}),
         ...(isProd ? {} : { stack: err.stack })
     });
 }

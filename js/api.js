@@ -132,6 +132,9 @@ export const api = {
     },
 
     // Deletar Brinquedo
+    // Retorno: { ok, status, success?, error?, details? }
+    // - 200: { ok: true, status: 200, success: true }
+    // - 409: { ok: false, status: 409, error: "...", details: { scheduledEvents: [...] } }
     deletarBrinquedo: async (id) => {
         try {
             const token = getToken();
@@ -139,8 +142,12 @@ export const api = {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            return res.ok ? await res.json() : null;
-        } catch (error) { console.error('Erro ao deletar brinquedo:', error); return null; }
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (error) {
+            console.error('Erro ao deletar brinquedo:', error);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
     },
 
     // --- BRINQUEDOS: ESTADO POR UNIDADE ---
