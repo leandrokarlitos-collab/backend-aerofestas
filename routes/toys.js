@@ -1,10 +1,25 @@
 const express = require('express');
+const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
 const ToyService = require('../services/ToyService');
 const ToyUnitService = require('../services/ToyUnitService');
 const ToyPhotoService = require('../services/ToyPhotoService');
 
 const router = express.Router();
+
+// Multer em memória — arquivos vão direto para o Firebase Storage, sem tocar disco do Railway.
+// Limites: 15 MB por arquivo (sobra pra fotos originais de celular antes de resize), até 12 arquivos.
+const photoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 15 * 1024 * 1024,
+        files: 12
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype && file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Apenas imagens são permitidas'));
+    }
+});
 
 router.get('/', authenticate, async (req, res, next) => {
     try {
@@ -94,5 +109,38 @@ router.put('/:toyId/photos/:photoId/primary', authenticate, async (req, res, nex
         res.json({ success: true });
     } catch (err) { next(err); }
 });
+
+// Upload direto do celular/galeria — multipart/form-data, campo "files" (1..12 arquivos).
+router.post(
+    '/:toyId/photos/upload',
+    authenticate,
+    (req, res, next) => {
+        photoUpload.array('files', 12)(req, res, (err) => {
+            if (err) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    err.status = 413;
+                    err.message = 'Arquivo maior que 15 MB. Reduza no celular ou tente outra foto.';
+                } else if (err.code === 'LIMIT_FILE_COUNT') {
+                    err.status = 400;
+                    err.message = 'Máximo de 12 fotos por envio.';
+                } else if (!err.status) {
+                    err.status = 400;
+                }
+                return next(err);
+            }
+            next();
+        });
+    },
+    async (req, res, next) => {
+        try {
+            const created = await ToyPhotoService.uploadFiles(
+                req.params.toyId,
+                req.files || [],
+                req.user
+            );
+            res.json({ success: true, data: created });
+        } catch (err) { next(err); }
+    }
+);
 
 module.exports = router;

@@ -1,5 +1,10 @@
 const prisma = require('../prisma/client');
 const { logAudit } = require('./audit');
+const { getBucket } = require('./firebaseAdmin');
+const crypto = require('crypto');
+const path = require('path');
+
+const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'];
 
 function safeAudit(payload) {
     try {
@@ -9,6 +14,22 @@ function safeAudit(payload) {
     } catch (err) {
         console.error('[audit] falha sincrona silenciosa:', err);
     }
+}
+
+function inferExtension(file) {
+    if (file.originalname) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext) return ext;
+    }
+    const map = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp',
+        'image/avif': '.avif',
+        'image/heic': '.heic',
+        'image/heif': '.heif'
+    };
+    return map[file.mimetype] || '.jpg';
 }
 
 /**
@@ -192,9 +213,115 @@ async function deletePhoto(toyId, photoId, user) {
     return { success: true };
 }
 
+/**
+ * Faz upload de N arquivos para o Firebase Storage e cria os ToyPhoto correspondentes.
+ * - Cada arquivo é validado por MIME type e tamanho (já filtrados pelo multer).
+ * - Caminho no Storage: toys/{toyId}/{timestamp}-{rand}{ext}
+ * - O primeiro upload se torna principal automaticamente (se ainda não houver fotos).
+ * - Retorna array de ToyPhoto criados.
+ */
+async function uploadFiles(toyId, files, user) {
+    const id = parseFloat(toyId);
+    if (isNaN(id)) {
+        const err = new Error('toyId inválido');
+        err.status = 400;
+        throw err;
+    }
+
+    if (!Array.isArray(files) || files.length === 0) {
+        const err = new Error('Nenhum arquivo enviado');
+        err.status = 400;
+        throw err;
+    }
+
+    const toy = await prisma.toy.findUnique({ where: { id } });
+    if (!toy) {
+        const err = new Error('Brinquedo não encontrado');
+        err.status = 404;
+        throw err;
+    }
+
+    const bucket = getBucket(); // Lança 503 se Storage não configurado
+
+    // Estado atual de fotos (para definir order e isPrimary do primeiro)
+    const existingCount = await prisma.toyPhoto.count({ where: { toyId: id } });
+    const lastOrderRow = await prisma.toyPhoto.findFirst({
+        where: { toyId: id },
+        orderBy: { order: 'desc' },
+        select: { order: true }
+    });
+    let nextOrder = (lastOrderRow?.order ?? -1) + 1;
+
+    const created = [];
+    let madePrimaryUrl = null;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        if (!ALLOWED_MIME.includes(file.mimetype)) {
+            const err = new Error(`Tipo de arquivo não suportado: ${file.mimetype}`);
+            err.status = 400;
+            throw err;
+        }
+
+        const ext = inferExtension(file);
+        const random = crypto.randomBytes(6).toString('hex');
+        const storagePath = `toys/${id}/${Date.now()}-${random}${ext}`;
+        const storageFile = bucket.file(storagePath);
+
+        await storageFile.save(file.buffer, {
+            metadata: {
+                contentType: file.mimetype,
+                cacheControl: 'public, max-age=31536000, immutable',
+                metadata: {
+                    toyId: String(id),
+                    uploadedBy: user?.email || user?.name || 'unknown'
+                }
+            },
+            resumable: false
+        });
+
+        await storageFile.makePublic();
+
+        // URL pública via storage.googleapis.com (sem token, sem expiração)
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${encodeURI(storagePath)}`;
+
+        const isFirstEver = (existingCount === 0 && i === 0);
+        const photo = await prisma.toyPhoto.create({
+            data: {
+                toyId: id,
+                url: publicUrl,
+                isPrimary: isFirstEver,
+                order: nextOrder++
+            }
+        });
+
+        if (isFirstEver) madePrimaryUrl = publicUrl;
+        created.push(photo);
+
+        safeAudit({
+            entityType: 'ToyPhoto',
+            entityId: photo.id,
+            action: 'CREATE',
+            user,
+            snapshot: { toyId: id, url: publicUrl, isPrimary: isFirstEver, source: 'upload' }
+        });
+    }
+
+    if (madePrimaryUrl) {
+        await prisma.toy.update({
+            where: { id },
+            data: { imageUrl: madePrimaryUrl }
+        });
+    }
+
+    return created;
+}
+
 module.exports = {
     listPhotosByToy,
     addPhoto,
     setPrimary,
-    deletePhoto
+    deletePhoto,
+    uploadFiles
 };

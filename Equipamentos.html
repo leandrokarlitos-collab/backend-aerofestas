@@ -979,6 +979,23 @@
         </div>
     </div>
 
+    <!-- Input oculto para upload de fotos (câmera + galeria) -->
+    <input type="file" id="equip-photo-input" accept="image/*" capture="environment" multiple
+        style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" aria-hidden="true">
+
+    <!-- Overlay de progresso de upload -->
+    <div id="equip-upload-overlay" role="status" aria-hidden="true"
+        style="position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10500;padding:20px;">
+        <div style="background:#fff;border-radius:18px;padding:26px 30px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 60px rgba(0,0,0,0.3);">
+            <i class="fas fa-cloud-arrow-up" style="font-size:2.4rem;color:#4f46e5;margin-bottom:12px;"></i>
+            <p style="font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:4px;" id="equip-upload-title">Enviando fotos…</p>
+            <p style="font-size:0.78rem;color:#64748b;margin-bottom:14px;" id="equip-upload-sub">Preparando 0 / 0</p>
+            <div style="height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                <div id="equip-upload-bar" style="height:100%;background:linear-gradient(90deg,#4f46e5,#a855f7);width:0%;transition:width 0.2s ease;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Lightbox para foto ampliada -->
     <div id="equip-lightbox" role="dialog" aria-modal="true" aria-hidden="true">
         <button type="button" class="lightbox-close" id="equip-lightbox-close" aria-label="Fechar">
@@ -1206,7 +1223,7 @@
 
             const addBtn = `<button type="button" class="gallery-add" id="equip-gallery-add" title="Adicionar foto" aria-label="Adicionar foto"><i class="fas fa-plus"></i></button>`;
             const empty = photos.length === 0
-                ? `<div class="gallery-empty">Nenhuma foto cadastrada. Coloque arquivos em <code>fotos_dos_brinquedos/</code> e clique em "+" para adicionar.</div>`
+                ? `<div class="gallery-empty">Nenhuma foto ainda. Toque no <strong>+</strong> para enviar do celular ou da galeria.</div>`
                 : '';
 
             modalGallery.innerHTML = items + addBtn + empty;
@@ -1303,24 +1320,120 @@
             document.body.style.overflow = '';
         }
 
+        // --- Upload de fotos do celular (câmera + galeria, multi-seleção) ---
+        const photoInput = document.getElementById('equip-photo-input');
+        const uploadOverlay = document.getElementById('equip-upload-overlay');
+        const uploadTitle = document.getElementById('equip-upload-title');
+        const uploadSub = document.getElementById('equip-upload-sub');
+        const uploadBar = document.getElementById('equip-upload-bar');
+
+        function showUploadProgress(title, sub, percent) {
+            uploadTitle.textContent = title;
+            uploadSub.textContent = sub;
+            uploadBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+            uploadOverlay.style.display = 'flex';
+            uploadOverlay.setAttribute('aria-hidden', 'false');
+        }
+        function hideUploadProgress() {
+            uploadOverlay.style.display = 'none';
+            uploadOverlay.setAttribute('aria-hidden', 'true');
+            uploadBar.style.width = '0%';
+        }
+
+        /**
+         * Resiza uma imagem no client (canvas) para no máximo `maxSize` px no maior lado,
+         * exporta como JPEG quality 0.85. Retorna File. Cai pra o original se algo falhar
+         * (ex.: HEIC sem decode nativo no Chrome).
+         */
+        async function resizeImageFile(file, maxSize = 1280, quality = 0.85) {
+            try {
+                const img = await new Promise((resolve, reject) => {
+                    const i = new Image();
+                    i.onload = () => resolve(i);
+                    i.onerror = reject;
+                    i.src = URL.createObjectURL(file);
+                });
+                const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+                const w = Math.max(1, Math.round(img.width * ratio));
+                const h = Math.max(1, Math.round(img.height * ratio));
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(img.src);
+                const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+                if (!blob) return file;
+                const baseName = (file.name || 'foto').replace(/\.[^.]+$/, '');
+                return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+            } catch (_) {
+                // HEIC/HEIF ou outro formato sem decode nativo: manda o arquivo original (backend aceita)
+                return file;
+            }
+        }
+
+        async function uploadFilesFlow(files) {
+            if (!files || !files.length) return;
+            if (openedToyId == null) { showToast('Abra um equipamento antes de enviar.', 'error'); return; }
+
+            // Limita a 12 (mesmo limite do backend)
+            const batch = Array.from(files).slice(0, 12);
+            if (files.length > 12) showToast('Máx. 12 por vez. Enviando as 12 primeiras.', 'error');
+
+            // Filtra só imagens
+            const onlyImages = batch.filter(f => f.type.startsWith('image/'));
+            if (!onlyImages.length) { showToast('Selecione imagens.', 'error'); return; }
+
+            showUploadProgress('Preparando…', `Comprimindo ${onlyImages.length} foto${onlyImages.length === 1 ? '' : 's'}`, 0);
+
+            // Resize em paralelo, com pequena pausa pra UI respirar
+            const prepared = [];
+            for (let i = 0; i < onlyImages.length; i++) {
+                const original = onlyImages[i];
+                showUploadProgress('Preparando…', `Comprimindo ${i + 1} / ${onlyImages.length}`, (i / onlyImages.length) * 20);
+                // 5MB+ → resize. Menor que isso pode passar como veio (já é leve).
+                const file = original.size > 600 * 1024 ? await resizeImageFile(original, 1280, 0.85) : original;
+                prepared.push(file);
+                await new Promise(r => setTimeout(r, 0));
+            }
+
+            showUploadProgress('Enviando…', `0 / ${prepared.length}`, 22);
+            const result = await api.uploadFotosToy(openedToyId, prepared, (pct) => {
+                // 22..96 enquanto sobe
+                const mapped = 22 + (pct * 0.74);
+                showUploadProgress('Enviando…', `${prepared.length} foto${prepared.length === 1 ? '' : 's'}`, mapped);
+            });
+            showUploadProgress('Finalizando…', '', 100);
+
+            if (result.ok) {
+                hideUploadProgress();
+                showToast(`${(result.data || []).length} foto(s) enviada(s)`, 'success');
+                notifyToysChanged();
+                await loadToys({ silent: true });
+                refreshOpenModal();
+            } else {
+                hideUploadProgress();
+                const msg = result.error || (result.status === 503
+                    ? 'Storage não configurado no servidor. Avise o admin.'
+                    : `Falha no upload (${result.status || 'rede'})`);
+                showToast(msg, 'error');
+            }
+        }
+
+        photoInput.addEventListener('change', async () => {
+            const files = photoInput.files;
+            await uploadFilesFlow(files);
+            photoInput.value = ''; // permite reupload do mesmo arquivo
+        });
+
         // --- Galeria: handlers ---
         modalGallery.addEventListener('click', async (e) => {
             const addBtn = e.target.closest('#equip-gallery-add');
             if (addBtn) {
                 e.preventDefault();
-                const url = prompt('URL da foto (ex.: ./fotos_dos_brinquedos/cama-elastica.jpg)');
-                if (!url) return;
-                const cleaned = url.trim();
-                if (!cleaned) return;
-                const result = await api.adicionarFotoToy(openedToyId, cleaned);
-                if (result.ok) {
-                    showToast('Foto adicionada', 'success');
-                    notifyToysChanged();
-                    await loadToys({ silent: true });
-                    refreshOpenModal();
-                } else {
-                    showToast(result.error || 'Erro ao adicionar foto', 'error');
-                }
+                photoInput.click();
                 return;
             }
 

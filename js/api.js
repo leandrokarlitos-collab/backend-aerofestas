@@ -207,6 +207,46 @@ export const api = {
         }
     },
 
+    /**
+     * Faz upload de fotos do celular/galeria para o Firebase Storage via backend.
+     * Aceita 1..12 arquivos (Blob/File). Chama onProgress(percent) durante o upload (0..100).
+     * Retorna { ok, status, data?, error? }.
+     */
+    uploadFotosToy: (toyId, files, onProgress) => {
+        return new Promise((resolve) => {
+            try {
+                const token = getToken();
+                const fd = new FormData();
+                for (const f of files) {
+                    fd.append('files', f, f.name || 'foto.jpg');
+                }
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${BASE_URL}/admin/toys/${toyId}/photos/upload`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.upload.addEventListener('progress', (ev) => {
+                    if (typeof onProgress === 'function' && ev.lengthComputable) {
+                        onProgress(Math.round((ev.loaded / ev.total) * 100));
+                    }
+                });
+                xhr.addEventListener('load', () => {
+                    let json = {};
+                    try { json = JSON.parse(xhr.responseText || '{}'); } catch (_) { /* */ }
+                    resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, ...json });
+                });
+                xhr.addEventListener('error', () => {
+                    resolve({ ok: false, status: 0, error: 'Erro de rede' });
+                });
+                xhr.addEventListener('abort', () => {
+                    resolve({ ok: false, status: 0, error: 'Upload cancelado' });
+                });
+                xhr.send(fd);
+            } catch (error) {
+                console.error('Erro ao iniciar upload:', error);
+                resolve({ ok: false, error: 'Erro ao iniciar upload' });
+            }
+        });
+    },
+
     // Salvar Empresa
     salvarEmpresa: async (empresa) => {
         try {
