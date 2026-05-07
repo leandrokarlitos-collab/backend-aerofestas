@@ -16,6 +16,34 @@ model Toy {
   quantity   Int
   imageUrl   String?
   eventItems EventItem[]
+  units      ToyUnit[]
+  photos     ToyPhoto[]
+}
+
+model ToyUnit {
+  id                 Int      @id @default(autoincrement())
+  toyId              Float
+  toy                Toy      @relation(fields: [toyId], references: [id], onDelete: Cascade)
+  unitNumber         Int
+  condition          String   @default("OK")
+  conditionDetails   String?
+  conditionUpdatedAt DateTime @default(now()) @updatedAt
+  conditionUpdatedBy String?
+
+  @@unique([toyId, unitNumber])
+  @@index([toyId])
+}
+
+model ToyPhoto {
+  id        Int      @id @default(autoincrement())
+  toyId     Float
+  toy       Toy      @relation(fields: [toyId], references: [id], onDelete: Cascade)
+  url       String
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([toyId])
 }
 
 model Client {

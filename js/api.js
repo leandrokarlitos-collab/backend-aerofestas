@@ -143,6 +143,70 @@ export const api = {
         } catch (error) { console.error('Erro ao deletar brinquedo:', error); return null; }
     },
 
+    // --- BRINQUEDOS: ESTADO POR UNIDADE ---
+
+    atualizarEstadoUnidade: async (toyId, unitId, payload) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/units/${unitId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (error) {
+            console.error('Erro ao atualizar estado da unidade:', error);
+            return { ok: false, error: 'Erro de rede' };
+        }
+    },
+
+    // --- BRINQUEDOS: BANCO DE FOTOS ---
+
+    adicionarFotoToy: async (toyId, url) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/photos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ url })
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (error) {
+            console.error('Erro ao adicionar foto:', error);
+            return { ok: false, error: 'Erro de rede' };
+        }
+    },
+
+    removerFotoToy: async (toyId, photoId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/photos/${photoId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (error) {
+            console.error('Erro ao remover foto:', error);
+            return false;
+        }
+    },
+
+    definirFotoPrincipalToy: async (toyId, photoId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/photos/${photoId}/primary`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (error) {
+            console.error('Erro ao definir foto principal:', error);
+            return false;
+        }
+    },
+
     // Salvar Empresa
     salvarEmpresa: async (empresa) => {
         try {

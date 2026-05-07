@@ -518,6 +518,370 @@
         @media (max-width: 1023px) {
             main { padding-bottom: 130px; }
         }
+
+        /* === Card extras: rentals, condition pill === */
+        .equip-card.has-issues {
+            border-color: #fb923c;
+            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.18);
+        }
+        .equip-card .photo-count-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.55);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 999px;
+            backdrop-filter: blur(6px);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .equip-card .rental-line {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            line-height: 1.1;
+        }
+        .equip-card .rental-line.upcoming-soon { color: #059669; }
+        .equip-card .rental-line.muted { color: #94a3b8; }
+        .equip-card .rental-line i { font-size: 0.7rem; width: 12px; text-align: center; }
+        .equip-card .condition-pill {
+            margin-top: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            align-self: flex-start;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .equip-card .condition-pill.has-issues {
+            background: rgba(251, 146, 60, 0.15);
+            color: #c2410c;
+        }
+        .dark .equip-card .condition-pill { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
+        .dark .equip-card .condition-pill.has-issues { background: rgba(251, 146, 60, 0.22); color: #fdba74; }
+
+        /* === Modal expandido === */
+        #equip-modal .modal-box {
+            max-width: 540px;
+            max-height: 92vh;
+        }
+        #equip-modal .modal-section {
+            border-top: 1px solid rgba(15, 23, 42, 0.06);
+            padding: 18px 24px;
+        }
+        .dark #equip-modal .modal-section { border-top-color: rgba(255, 255, 255, 0.06); }
+        #equip-modal .modal-section:first-of-type { border-top: none; }
+        #equip-modal .section-title {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6b7280;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dark #equip-modal .section-title { color: #94a3b8; }
+        #equip-modal .modal-body {
+            padding: 0;
+        }
+        #equip-modal h2 { padding: 22px 24px 0; }
+        #equip-modal .stat-row { margin-bottom: 0; }
+        #equip-modal .modal-section.overview {
+            padding-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #equip-modal .rental-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        #equip-modal .rental-info .rent-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: #475569;
+            padding: 8px 12px;
+            background: rgba(148, 163, 184, 0.08);
+            border-radius: 10px;
+        }
+        .dark #equip-modal .rental-info .rent-line { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; }
+        #equip-modal .rental-info .rent-line i { color: #4f46e5; width: 16px; }
+        #equip-modal .rental-info .rent-line.upcoming-soon { background: rgba(16, 185, 129, 0.1); color: #047857; }
+        #equip-modal .rental-info .rent-line.upcoming-soon i { color: #059669; }
+        #equip-modal .rental-info .rent-line .client { font-weight: 600; }
+        #equip-modal .rental-info .rent-line.empty { color: #94a3b8; font-style: italic; }
+
+        /* === Galeria de fotos === */
+        #equip-modal .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+            gap: 8px;
+        }
+        #equip-modal .gallery-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 100%);
+            cursor: pointer;
+        }
+        #equip-modal .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #equip-modal .gallery-item .placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.85);
+            font-size: 1.4rem;
+            width: 100%;
+            height: 100%;
+        }
+        #equip-modal .gallery-item.is-primary {
+            outline: 3px solid #f59e0b;
+            outline-offset: -1px;
+        }
+        #equip-modal .gallery-item .photo-actions {
+            position: absolute;
+            inset: auto 0 0 0;
+            display: flex;
+            justify-content: space-around;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 6px 4px 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        #equip-modal .gallery-item:hover .photo-actions,
+        #equip-modal .gallery-item:focus-within .photo-actions { opacity: 1; }
+        #equip-modal .gallery-item .photo-actions button,
+        #equip-modal .gallery-item .photo-actions a {
+            background: rgba(255,255,255,0.92);
+            border: none;
+            color: #1e293b;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease, background 0.15s ease;
+            text-decoration: none;
+        }
+        #equip-modal .gallery-item .photo-actions button:hover,
+        #equip-modal .gallery-item .photo-actions a:hover { transform: scale(1.12); background: #fff; }
+        #equip-modal .gallery-item .photo-actions .star.active { background: #f59e0b; color: #fff; }
+        #equip-modal .gallery-item .photo-actions .trash:hover { background: #fee2e2; color: #b91c1c; }
+        #equip-modal .gallery-item .primary-flag {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: #f59e0b;
+            color: #fff;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 999px;
+        }
+        #equip-modal .gallery-add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(79, 70, 229, 0.4);
+            background: rgba(79, 70, 229, 0.06);
+            color: #4f46e5;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            aspect-ratio: 1;
+            transition: background 0.2s ease;
+        }
+        #equip-modal .gallery-add:hover {
+            background: rgba(79, 70, 229, 0.14);
+        }
+        .dark #equip-modal .gallery-add { color: #a5b4fc; }
+        #equip-modal .gallery-empty {
+            grid-column: 1 / -1;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 12px 0;
+            font-style: italic;
+        }
+
+        /* === Lightbox === */
+        #equip-lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            padding: 20px;
+        }
+        #equip-lightbox.open { opacity: 1; pointer-events: auto; }
+        #equip-lightbox img {
+            max-width: 95vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        #equip-lightbox .lightbox-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #1e293b;
+        }
+
+        /* === Lista de unidades === */
+        #equip-modal .units-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        #equip-modal .unit-row {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(148, 163, 184, 0.08);
+            font-size: 0.8rem;
+            transition: background 0.2s ease;
+        }
+        .dark #equip-modal .unit-row { background: rgba(148, 163, 184, 0.1); }
+        #equip-modal .unit-row.dirty { background: rgba(99, 102, 241, 0.12); }
+        #equip-modal .unit-label {
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dark #equip-modal .unit-label { color: #f1f5f9; }
+        #equip-modal .unit-row select,
+        #equip-modal .unit-row input[type="text"] {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 0.78rem;
+            font-family: inherit;
+            color: #1e293b;
+            width: 100%;
+        }
+        .dark #equip-modal .unit-row select,
+        .dark #equip-modal .unit-row input[type="text"] {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+        }
+        #equip-modal .unit-row .unit-fields {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 6px;
+        }
+        #equip-modal .unit-row.compact .unit-fields { grid-template-columns: 1fr; }
+        #equip-modal .unit-row .save-btn {
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, transform 0.15s ease;
+            font-size: 0.85rem;
+        }
+        #equip-modal .unit-row .save-btn:disabled {
+            background: rgba(148, 163, 184, 0.3);
+            cursor: not-allowed;
+            color: #94a3b8;
+        }
+        #equip-modal .unit-row .save-btn:not(:disabled):hover { background: #4338ca; transform: scale(1.05); }
+        #equip-modal .unit-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            background: #10b981;
+        }
+        .unit-dot[data-state="OK"]              { background: #10b981; }
+        .unit-dot[data-state="MOLHADO"]         { background: #3b82f6; }
+        .unit-dot[data-state="UMIDO"]           { background: #06b6d4; }
+        .unit-dot[data-state="SUJO"]            { background: #eab308; }
+        .unit-dot[data-state="DANIFICADO"]      { background: #ef4444; }
+        .unit-dot[data-state="EM_MANUTENCAO"]   { background: #f97316; }
+        .unit-dot[data-state="OUTROS"]          { background: #6b7280; }
+
+        @media (max-width: 540px) {
+            #equip-modal .unit-row {
+                grid-template-columns: 1fr auto;
+            }
+            #equip-modal .unit-label { grid-column: 1 / -1; }
+            #equip-modal .unit-row .unit-fields { grid-column: 1; }
+            #equip-modal .unit-row .save-btn { grid-column: 2; }
+        }
+
+        /* === Toast === */
+        #equip-toast {
+            position: fixed;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(15, 23, 42, 0.92);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 10500;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        #equip-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        #equip-toast.error { background: #b91c1c; }
+        #equip-toast.success { background: #047857; }
     </style>
 </head>
 
@@ -586,13 +950,45 @@
             </div>
             <div class="modal-body">
                 <h2 id="equip-modal-name">—</h2>
-                <div class="stat-row">
-                    <i class="fas fa-boxes-stacked"></i>
-                    <span>Quantidade em estoque: <strong id="equip-modal-qty">—</strong></span>
-                </div>
+
+                <section class="modal-section overview">
+                    <div class="stat-row">
+                        <i class="fas fa-boxes-stacked"></i>
+                        <span>Quantidade em estoque: <strong id="equip-modal-qty">—</strong></span>
+                    </div>
+                    <div class="rental-info" id="equip-modal-rentals"></div>
+                </section>
+
+                <section class="modal-section">
+                    <div class="section-title">
+                        <i class="fas fa-images"></i>
+                        <span>Galeria de fotos</span>
+                        <span style="margin-left: auto; font-size: 0.7rem; color: #94a3b8; font-weight: 600; text-transform: none; letter-spacing: 0;" id="equip-modal-photo-count">0</span>
+                    </div>
+                    <div class="gallery-grid" id="equip-modal-gallery"></div>
+                </section>
+
+                <section class="modal-section">
+                    <div class="section-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span>Estado das unidades</span>
+                    </div>
+                    <div class="units-list" id="equip-modal-units"></div>
+                </section>
             </div>
         </div>
     </div>
+
+    <!-- Lightbox para foto ampliada -->
+    <div id="equip-lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+        <button type="button" class="lightbox-close" id="equip-lightbox-close" aria-label="Fechar">
+            <i class="fas fa-xmark"></i>
+        </button>
+        <img id="equip-lightbox-img" src="" alt="">
+    </div>
+
+    <!-- Toast -->
+    <div id="equip-toast" role="status" aria-live="polite"></div>
 
     <!-- Bottom Nav -->
     <nav class="bottom-nav active" id="main-bottom-nav">
@@ -633,8 +1029,28 @@
         const modalImgWrap = document.getElementById('equip-modal-img-wrap');
         const modalName = document.getElementById('equip-modal-name');
         const modalQty = document.getElementById('equip-modal-qty');
+        const modalRentals = document.getElementById('equip-modal-rentals');
+        const modalGallery = document.getElementById('equip-modal-gallery');
+        const modalPhotoCount = document.getElementById('equip-modal-photo-count');
+        const modalUnits = document.getElementById('equip-modal-units');
+        const lightbox = document.getElementById('equip-lightbox');
+        const lightboxImg = document.getElementById('equip-lightbox-img');
+        const lightboxClose = document.getElementById('equip-lightbox-close');
+        const toastEl = document.getElementById('equip-toast');
+
+        const CONDITION_LABELS = {
+            OK: 'OK',
+            MOLHADO: 'Molhado',
+            UMIDO: 'Úmido',
+            SUJO: 'Sujo',
+            DANIFICADO: 'Danificado',
+            EM_MANUTENCAO: 'Em manutenção',
+            OUTROS: 'Outros'
+        };
+        const CONDITIONS_ORDER = ['OK', 'MOLHADO', 'UMIDO', 'SUJO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
 
         let allToys = [];
+        let openedToyId = null;
 
         const escapeHtml = (str) => String(str ?? '')
             .replace(/&/g, '&amp;')
@@ -642,6 +1058,44 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+
+        function showToast(msg, kind = '') {
+            toastEl.textContent = msg;
+            toastEl.className = '';
+            if (kind) toastEl.classList.add(kind);
+            requestAnimationFrame(() => toastEl.classList.add('show'));
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => toastEl.classList.remove('show'), 2400);
+        }
+
+        function formatDateBR(yyyymmdd) {
+            if (!yyyymmdd || typeof yyyymmdd !== 'string') return '—';
+            const m = yyyymmdd.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return yyyymmdd;
+            return `${m[3]}/${m[2]}/${m[1]}`;
+        }
+
+        function daysFromToday(yyyymmdd) {
+            if (!yyyymmdd) return Infinity;
+            const today = new Date(); today.setHours(0,0,0,0);
+            const target = new Date(yyyymmdd);
+            return Math.floor((target - today) / 86400000);
+        }
+
+        function getPrimaryUrl(toy) {
+            if (toy.photos && toy.photos.length) {
+                const primary = toy.photos.find(p => p.isPrimary);
+                if (primary) return primary.url;
+                return toy.photos[0].url;
+            }
+            return toy.imageUrl || null;
+        }
+
+        function unitsSummary(toy) {
+            const active = (toy.units || []).filter(u => u.unitNumber <= toy.quantity);
+            const issues = active.filter(u => u.condition && u.condition !== 'OK');
+            return { total: active.length, ok: active.length - issues.length, issues: issues.length };
+        }
 
         function renderGrid(items) {
             countEl.textContent = items.length;
@@ -659,31 +1113,155 @@
 
             grid.innerHTML = items.map(toy => {
                 const safeName = escapeHtml(toy.name);
-                const imgInner = toy.imageUrl
-                    ? `<img src="${escapeHtml(toy.imageUrl)}" alt="${safeName}" loading="lazy"
+                const url = getPrimaryUrl(toy);
+                const imgInner = url
+                    ? `<img src="${escapeHtml(url)}" alt="${safeName}" loading="lazy"
                           onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'placeholder',innerHTML:'<i class=\\'fas fa-cubes\\'></i>'}))">`
                     : `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
+                const photoCount = (toy.photos || []).length;
+                const photoBadge = photoCount > 1
+                    ? `<span class="photo-count-badge"><i class="fas fa-images"></i> ${photoCount}</span>`
+                    : '';
+                const last = toy.lastRental;
+                const next = toy.nextRental;
+                const lastLine = last
+                    ? `<span class="rental-line"><i class="fas fa-calendar-check"></i> Última: ${formatDateBR(last.date)}</span>`
+                    : `<span class="rental-line muted"><i class="fas fa-calendar-check"></i> Sem locação anterior</span>`;
+                const nextDays = next ? daysFromToday(next.date) : null;
+                const nextSoon = nextDays !== null && nextDays >= 0 && nextDays <= 7;
+                const nextLine = next
+                    ? `<span class="rental-line ${nextSoon ? 'upcoming-soon' : ''}"><i class="fas fa-arrow-right"></i> Próxima: ${formatDateBR(next.date)}</span>`
+                    : `<span class="rental-line muted"><i class="fas fa-arrow-right"></i> Sem locação agendada</span>`;
+                const summary = unitsSummary(toy);
+                const condClass = summary.issues > 0 ? 'has-issues' : '';
+                const condText = summary.total === 0
+                    ? 'Sem unidades'
+                    : (summary.issues > 0
+                        ? `${summary.ok} OK · ⚠ ${summary.issues}`
+                        : `${summary.total} OK`);
+                const cardClass = `equip-card${summary.issues > 0 ? ' has-issues' : ''}`;
                 return `
-                    <article class="equip-card" data-toy-id="${toy.id}" tabindex="0" role="button" aria-label="Detalhes de ${safeName}">
+                    <article class="${cardClass}" data-toy-id="${toy.id}" tabindex="0" role="button" aria-label="Detalhes de ${safeName}">
                         <div class="img-wrap">
                             ${imgInner}
+                            ${photoBadge}
                             <span class="qty-badge">${toy.quantity}</span>
                         </div>
                         <div class="info">
                             <h3>${safeName}</h3>
                             <span class="qty-text">Qtd: ${toy.quantity}</span>
+                            ${lastLine}
+                            ${nextLine}
+                            <span class="condition-pill ${condClass}">
+                                <i class="fas ${summary.issues > 0 ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
+                                ${condText}
+                            </span>
                         </div>
                     </article>
                 `;
             }).join('');
         }
 
+        function renderRentalInfo(toy) {
+            const last = toy.lastRental;
+            const next = toy.nextRental;
+            const nextDays = next ? daysFromToday(next.date) : null;
+            const nextSoon = nextDays !== null && nextDays >= 0 && nextDays <= 7;
+            const lastHtml = last
+                ? `<div class="rent-line">
+                       <i class="fas fa-calendar-check"></i>
+                       <span>Última locação: <strong>${formatDateBR(last.date)}</strong></span>
+                       ${last.clientName ? `<span class="client">· ${escapeHtml(last.clientName)}</span>` : ''}
+                   </div>`
+                : `<div class="rent-line empty"><i class="fas fa-calendar-check"></i> Sem locação anterior</div>`;
+            const nextHtml = next
+                ? `<div class="rent-line ${nextSoon ? 'upcoming-soon' : ''}">
+                       <i class="fas fa-arrow-right"></i>
+                       <span>Próxima locação: <strong>${formatDateBR(next.date)}</strong></span>
+                       ${next.clientName ? `<span class="client">· ${escapeHtml(next.clientName)}</span>` : ''}
+                   </div>`
+                : `<div class="rent-line empty"><i class="fas fa-arrow-right"></i> Sem locação agendada</div>`;
+            modalRentals.innerHTML = lastHtml + nextHtml;
+        }
+
+        function renderGallery(toy) {
+            const photos = toy.photos || [];
+            modalPhotoCount.textContent = `${photos.length} foto${photos.length === 1 ? '' : 's'}`;
+
+            const items = photos.map(p => {
+                const url = escapeHtml(p.url);
+                return `
+                    <div class="gallery-item ${p.isPrimary ? 'is-primary' : ''}" data-photo-id="${p.id}" data-url="${url}">
+                        <img src="${url}" alt="" loading="lazy"
+                            onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'placeholder',innerHTML:'<i class=\\'fas fa-image\\'></i>'}))">
+                        ${p.isPrimary ? '<span class="primary-flag">PRINCIPAL</span>' : ''}
+                        <div class="photo-actions">
+                            <button type="button" class="star ${p.isPrimary ? 'active' : ''}" data-action="set-primary" title="Marcar como principal" aria-label="Marcar como principal"><i class="fas fa-star"></i></button>
+                            <a href="${url}" download target="_blank" rel="noopener" data-action="download" title="Baixar foto" aria-label="Baixar foto"><i class="fas fa-download"></i></a>
+                            <button type="button" class="trash" data-action="delete" title="Remover foto" aria-label="Remover foto"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const addBtn = `<button type="button" class="gallery-add" id="equip-gallery-add" title="Adicionar foto" aria-label="Adicionar foto"><i class="fas fa-plus"></i></button>`;
+            const empty = photos.length === 0
+                ? `<div class="gallery-empty">Nenhuma foto cadastrada. Coloque arquivos em <code>fotos_dos_brinquedos/</code> e clique em "+" para adicionar.</div>`
+                : '';
+
+            modalGallery.innerHTML = items + addBtn + empty;
+        }
+
+        function renderUnits(toy) {
+            const units = (toy.units || []).filter(u => u.unitNumber <= toy.quantity)
+                .sort((a, b) => a.unitNumber - b.unitNumber);
+
+            if (!units.length) {
+                modalUnits.innerHTML = `<div style="color:#94a3b8;font-style:italic;font-size:0.85rem;text-align:center;padding:8px 0;">Nenhuma unidade cadastrada.</div>`;
+                return;
+            }
+
+            modalUnits.innerHTML = units.map(u => {
+                const opts = CONDITIONS_ORDER.map(c =>
+                    `<option value="${c}" ${u.condition === c ? 'selected' : ''}>${CONDITION_LABELS[c]}</option>`
+                ).join('');
+                return `
+                    <div class="unit-row" data-unit-id="${u.id}" data-original-condition="${u.condition || 'OK'}" data-original-details="${escapeHtml(u.conditionDetails || '')}">
+                        <div class="unit-label">
+                            <span class="unit-dot" data-state="${u.condition || 'OK'}"></span>
+                            Unidade ${u.unitNumber}
+                        </div>
+                        <div class="unit-fields">
+                            <select class="unit-cond" aria-label="Estado da unidade ${u.unitNumber}">${opts}</select>
+                            <input type="text" class="unit-details" value="${escapeHtml(u.conditionDetails || '')}" placeholder="Mais detalhes..." aria-label="Detalhes da unidade ${u.unitNumber}">
+                        </div>
+                        <button type="button" class="save-btn" data-action="save-unit" disabled aria-label="Salvar unidade ${u.unitNumber}"><i class="fas fa-check"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function refreshUnitDirty(row) {
+            const condEl = row.querySelector('.unit-cond');
+            const detEl = row.querySelector('.unit-details');
+            const dotEl = row.querySelector('.unit-dot');
+            const saveBtn = row.querySelector('.save-btn');
+            const origCond = row.dataset.originalCondition;
+            const origDet = row.dataset.originalDetails || '';
+            const dirty = condEl.value !== origCond || (detEl.value || '') !== origDet;
+            row.classList.toggle('dirty', dirty);
+            saveBtn.disabled = !dirty;
+            dotEl.dataset.state = condEl.value;
+        }
+
         function openModal(toy) {
+            openedToyId = toy.id;
             modalName.textContent = toy.name;
             modalQty.textContent = toy.quantity;
 
-            if (toy.imageUrl) {
-                modalImgWrap.innerHTML = `<img src="${escapeHtml(toy.imageUrl)}" alt="${escapeHtml(toy.name)}">`;
+            const url = getPrimaryUrl(toy);
+            if (url) {
+                modalImgWrap.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(toy.name)}">`;
                 const img = modalImgWrap.querySelector('img');
                 img.addEventListener('error', () => {
                     modalImgWrap.innerHTML = `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
@@ -692,16 +1270,158 @@
                 modalImgWrap.innerHTML = `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
             }
 
+            renderRentalInfo(toy);
+            renderGallery(toy);
+            renderUnits(toy);
+
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
         }
 
+        function refreshOpenModal() {
+            if (openedToyId == null) return;
+            const toy = allToys.find(t => t.id === openedToyId);
+            if (!toy) { closeModal(); return; }
+            // Atualiza modal sem fechar
+            modalQty.textContent = toy.quantity;
+            const url = getPrimaryUrl(toy);
+            if (url) {
+                modalImgWrap.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(toy.name)}">`;
+            } else {
+                modalImgWrap.innerHTML = `<span class="placeholder"><i class="fas fa-cubes"></i></span>`;
+            }
+            renderRentalInfo(toy);
+            renderGallery(toy);
+            renderUnits(toy);
+        }
+
         function closeModal() {
+            openedToyId = null;
             modal.classList.remove('open');
             modal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
         }
+
+        // --- Galeria: handlers ---
+        modalGallery.addEventListener('click', async (e) => {
+            const addBtn = e.target.closest('#equip-gallery-add');
+            if (addBtn) {
+                e.preventDefault();
+                const url = prompt('URL da foto (ex.: ./fotos_dos_brinquedos/cama-elastica.jpg)');
+                if (!url) return;
+                const cleaned = url.trim();
+                if (!cleaned) return;
+                const result = await api.adicionarFotoToy(openedToyId, cleaned);
+                if (result.ok) {
+                    showToast('Foto adicionada', 'success');
+                    notifyToysChanged();
+                    await loadToys({ silent: true });
+                    refreshOpenModal();
+                } else {
+                    showToast(result.error || 'Erro ao adicionar foto', 'error');
+                }
+                return;
+            }
+
+            const item = e.target.closest('.gallery-item');
+            if (!item) return;
+            const photoId = parseInt(item.dataset.photoId);
+            const action = e.target.closest('[data-action]')?.dataset.action;
+
+            if (action === 'set-primary') {
+                e.stopPropagation();
+                const ok = await api.definirFotoPrincipalToy(openedToyId, photoId);
+                if (ok) {
+                    showToast('Foto principal atualizada', 'success');
+                    notifyToysChanged();
+                    await loadToys({ silent: true });
+                    refreshOpenModal();
+                } else {
+                    showToast('Erro ao definir principal', 'error');
+                }
+                return;
+            }
+
+            if (action === 'delete') {
+                e.stopPropagation();
+                if (!confirm('Remover esta foto do banco? (O arquivo na pasta não será apagado.)')) return;
+                const ok = await api.removerFotoToy(openedToyId, photoId);
+                if (ok) {
+                    showToast('Foto removida', 'success');
+                    notifyToysChanged();
+                    await loadToys({ silent: true });
+                    refreshOpenModal();
+                } else {
+                    showToast('Erro ao remover foto', 'error');
+                }
+                return;
+            }
+
+            if (action === 'download') {
+                // <a href download> faz o trabalho. Apenas evita propagar para o item.
+                e.stopPropagation();
+                return;
+            }
+
+            // Click no item (não em um botão de ação) → abre lightbox
+            const url = item.dataset.url;
+            if (url) {
+                lightboxImg.src = url;
+                lightbox.classList.add('open');
+                lightbox.setAttribute('aria-hidden', 'false');
+            }
+        });
+
+        lightboxClose.addEventListener('click', () => {
+            lightbox.classList.remove('open');
+            lightbox.setAttribute('aria-hidden', 'true');
+        });
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('open');
+                lightbox.setAttribute('aria-hidden', 'true');
+            }
+        });
+
+        // --- Unidades: handlers ---
+        modalUnits.addEventListener('input', (e) => {
+            const row = e.target.closest('.unit-row');
+            if (row) refreshUnitDirty(row);
+        });
+        modalUnits.addEventListener('change', (e) => {
+            const row = e.target.closest('.unit-row');
+            if (row) refreshUnitDirty(row);
+        });
+        modalUnits.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action="save-unit"]');
+            if (!btn) return;
+            const row = btn.closest('.unit-row');
+            const unitId = parseInt(row.dataset.unitId);
+            const condition = row.querySelector('.unit-cond').value;
+            const conditionDetails = row.querySelector('.unit-details').value.trim();
+
+            if (condition === 'OUTROS' && !conditionDetails) {
+                showToast('Quando o estado é "Outros", os detalhes são obrigatórios.', 'error');
+                row.querySelector('.unit-details').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const result = await api.atualizarEstadoUnidade(openedToyId, unitId, { condition, conditionDetails });
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+
+            if (result.ok) {
+                showToast('Estado atualizado', 'success');
+                notifyToysChanged();
+                await loadToys({ silent: true });
+                refreshOpenModal();
+            } else {
+                btn.disabled = false;
+                showToast(result.error || 'Erro ao salvar', 'error');
+            }
+        });
 
         // Eventos do modal
         modalClose.addEventListener('click', closeModal);
@@ -709,7 +1429,14 @@
             if (e.target === modal) closeModal();
         });
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+            if (e.key === 'Escape') {
+                if (lightbox.classList.contains('open')) {
+                    lightbox.classList.remove('open');
+                    lightbox.setAttribute('aria-hidden', 'true');
+                } else if (modal.classList.contains('open')) {
+                    closeModal();
+                }
+            }
         });
 
         // Click delegation nos cards
@@ -730,6 +1457,13 @@
             if (toy) openModal(toy);
         });
 
+        // Cross-tab notifier (compartilhado entre Equipamentos e Agenda)
+        let toysChannel = null;
+        try { toysChannel = new BroadcastChannel('aero-festas-toys'); } catch (_) { /* */ }
+        function notifyToysChanged() {
+            try { toysChannel?.postMessage({ type: 'toys-changed' }); } catch (_) { /* */ }
+        }
+
         // Busca client-side
         function applyFilter() {
             const q = searchInput.value.trim().toLowerCase();
@@ -749,8 +1483,17 @@
         let pollTimer = null;
 
         function toySignature(list) {
-            // Hash simples — detecta mudanças (incluindo nome, qtd, foto)
-            return list.map(t => `${t.id}:${t.name}:${t.quantity}:${t.imageUrl || ''}`).join('|');
+            // Hash simples — detecta mudanças (nome, qtd, foto principal, fotos no total, estados das unidades, próxima/última locação)
+            return list.map(t => {
+                const photos = (t.photos || []).map(p => `${p.id}:${p.isPrimary ? 'P' : ''}`).join(',');
+                const units = (t.units || [])
+                    .filter(u => u.unitNumber <= t.quantity)
+                    .map(u => `${u.unitNumber}:${u.condition || 'OK'}:${u.conditionDetails || ''}`)
+                    .join(',');
+                const last = t.lastRental ? t.lastRental.date : '';
+                const next = t.nextRental ? t.nextRental.date : '';
+                return `${t.id}:${t.name}:${t.quantity}:${t.imageUrl || ''}:[${photos}]:[${units}]:${last}/${next}`;
+            }).join('|');
         }
 
         function flashSync(message, color) {

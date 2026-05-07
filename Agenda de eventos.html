@@ -3292,6 +3292,7 @@
                         <label for="qty-${toy.id}" class="text-sm text-gray-600">Qtd:</label>
                         <input type="number" id="qty-${toy.id}" data-id="${toy.id}" value="${toy.quantity}" min="1" class="edit-toy-quantity form-input w-16 text-center px-1 py-0.5 rounded-md">
                         <button data-id="${toy.id}" class="edit-toy-image-btn text-purple-500 hover:text-purple-700 text-sm" title="Editar Foto"><i class="fas fa-camera"></i></button>
+                        <button data-id="${toy.id}" class="edit-toy-units-btn text-amber-500 hover:text-amber-700 text-sm" title="Estado das Unidades"><i class="fas fa-clipboard-check"></i></button>
                         <button data-id="${toy.id}" class="edit-toy-btn text-blue-500 hover:text-blue-700 text-sm" title="Editar Nome"><i class="fas fa-pencil-alt"></i></button>
                         <button data-id="${toy.id}" class="delete-toy-btn text-red-500 hover:text-red-700 text-sm" title="Excluir Brinquedo"><i class="fas fa-trash-alt"></i></button>
                     </div>
@@ -3311,6 +3312,9 @@
                 });
                 document.querySelectorAll('.edit-toy-image-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => handleEditToyImage(parseInt(e.currentTarget.dataset.id)));
+                });
+                document.querySelectorAll('.edit-toy-units-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => handleEditToyUnits(parseInt(e.currentTarget.dataset.id)));
                 });
                 document.querySelectorAll('.delete-toy-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => handleDeleteToy(parseInt(e.currentTarget.dataset.id)));
@@ -3932,6 +3936,142 @@
                     toy.imageUrl = oldUrl;
                     showToast('Erro ao atualizar foto.', true);
                 }
+            };
+
+            // --- ESTADO POR UNIDADE: modal dinâmico ---
+            const TOY_UNIT_CONDITIONS = ['OK', 'MOLHADO', 'UMIDO', 'SUJO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
+            const TOY_UNIT_LABELS = {
+                OK: 'OK',
+                MOLHADO: 'Molhado',
+                UMIDO: 'Úmido',
+                SUJO: 'Sujo',
+                DANIFICADO: 'Danificado',
+                EM_MANUTENCAO: 'Em manutenção',
+                OUTROS: 'Outros'
+            };
+            const TOY_UNIT_COLORS = {
+                OK: '#10b981', MOLHADO: '#3b82f6', UMIDO: '#06b6d4',
+                SUJO: '#eab308', DANIFICADO: '#ef4444', EM_MANUTENCAO: '#f97316', OUTROS: '#6b7280'
+            };
+            const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            const handleEditToyUnits = async (toyId) => {
+                // Re-fetch para garantir units atualizadas
+                const freshToys = await api.getBrinquedos();
+                if (Array.isArray(freshToys)) toys = freshToys;
+                const toy = toys.find(t => t.id === toyId);
+                if (!toy) {
+                    showToast('Brinquedo não encontrado.', true);
+                    return;
+                }
+                const units = (toy.units || []).filter(u => u.unitNumber <= toy.quantity)
+                    .sort((a, b) => a.unitNumber - b.unitNumber);
+
+                if (!units.length) {
+                    showToast('Aguarde a sincronização das unidades e tente de novo.', true);
+                    return;
+                }
+
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed; inset: 0; background: rgba(15,23,42,0.55);
+                    backdrop-filter: blur(8px); z-index: 10000;
+                    display: flex; align-items: center; justify-content: center; padding: 20px;
+                `;
+                const box = document.createElement('div');
+                box.style.cssText = `
+                    background: #fff; border-radius: 18px; max-width: 480px; width: 100%;
+                    max-height: 88vh; overflow: auto; box-shadow: 0 30px 60px rgba(15,23,42,0.25);
+                    padding: 22px;
+                `;
+
+                const buildRow = (u) => `
+                    <div class="agenda-unit-row" data-unit-id="${u.id}" data-orig-cond="${u.condition || 'OK'}" data-orig-det="${escAttr(u.conditionDetails || '')}"
+                         style="display:grid;grid-template-columns:auto 1fr 1.4fr auto;gap:8px;align-items:center;padding:8px;border-radius:10px;background:#f8fafc;margin-bottom:6px;">
+                        <span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:0.82rem;color:#1e293b;min-width:90px;">
+                            <span class="agenda-unit-dot" style="width:8px;height:8px;border-radius:50%;background:${TOY_UNIT_COLORS[u.condition || 'OK']};"></span>
+                            Unidade ${u.unitNumber}
+                        </span>
+                        <select class="agenda-unit-cond" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:0.78rem;font-family:inherit;color:#1e293b;">
+                            ${TOY_UNIT_CONDITIONS.map(c =>
+                                `<option value="${c}" ${u.condition === c ? 'selected' : ''}>${TOY_UNIT_LABELS[c]}</option>`
+                            ).join('')}
+                        </select>
+                        <input type="text" class="agenda-unit-details" value="${escAttr(u.conditionDetails || '')}" placeholder="Mais detalhes..."
+                            style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:0.78rem;font-family:inherit;color:#1e293b;">
+                        <button type="button" class="agenda-unit-save" disabled
+                            style="background:#4f46e5;color:#fff;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                `;
+
+                box.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                        <i class="fas fa-clipboard-check text-amber-500" style="font-size:1.2rem;"></i>
+                        <h3 style="margin:0;font-size:1.15rem;font-weight:700;color:#0f172a;">Estado das unidades — ${escAttr(toy.name)}</h3>
+                    </div>
+                    <p style="font-size:0.75rem;color:#64748b;margin-bottom:12px;">Quando o estado é "Outros", o campo de detalhes é obrigatório.</p>
+                    <div id="agenda-units-list">${units.map(buildRow).join('')}</div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+                        <button type="button" id="agenda-units-close" style="background:#e2e8f0;color:#1e293b;border:none;padding:8px 18px;border-radius:10px;font-weight:600;cursor:pointer;">Fechar</button>
+                    </div>
+                `;
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
+
+                const close = () => {
+                    overlay.remove();
+                    document.removeEventListener('keydown', onKey);
+                };
+                const onKey = (e) => { if (e.key === 'Escape') close(); };
+                document.addEventListener('keydown', onKey);
+                overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+                box.querySelector('#agenda-units-close').addEventListener('click', close);
+
+                const refreshDirty = (row) => {
+                    const cond = row.querySelector('.agenda-unit-cond').value;
+                    const det = row.querySelector('.agenda-unit-details').value || '';
+                    const dot = row.querySelector('.agenda-unit-dot');
+                    const btn = row.querySelector('.agenda-unit-save');
+                    const dirty = cond !== row.dataset.origCond || det !== (row.dataset.origDet || '');
+                    btn.disabled = !dirty;
+                    btn.style.opacity = dirty ? '1' : '0.4';
+                    dot.style.background = TOY_UNIT_COLORS[cond] || '#6b7280';
+                };
+
+                box.querySelectorAll('.agenda-unit-row').forEach(row => {
+                    row.querySelector('.agenda-unit-cond').addEventListener('change', () => refreshDirty(row));
+                    row.querySelector('.agenda-unit-details').addEventListener('input', () => refreshDirty(row));
+                    row.querySelector('.agenda-unit-save').addEventListener('click', async () => {
+                        const unitId = parseInt(row.dataset.unitId);
+                        const condition = row.querySelector('.agenda-unit-cond').value;
+                        const conditionDetails = row.querySelector('.agenda-unit-details').value.trim();
+                        if (condition === 'OUTROS' && !conditionDetails) {
+                            showToast('Quando o estado é "Outros", os detalhes são obrigatórios.', true);
+                            row.querySelector('.agenda-unit-details').focus();
+                            return;
+                        }
+                        const btn = row.querySelector('.agenda-unit-save');
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        const result = await api.atualizarEstadoUnidade(toyId, unitId, { condition, conditionDetails });
+                        btn.innerHTML = '<i class="fas fa-check"></i>';
+                        if (result.ok) {
+                            row.dataset.origCond = condition;
+                            row.dataset.origDet = conditionDetails;
+                            refreshDirty(row);
+                            showToast('Estado atualizado!');
+                            notifyToysChanged();
+                            // Atualiza objeto local sem fechar modal
+                            const u = (toy.units || []).find(x => x.id === unitId);
+                            if (u) { u.condition = condition; u.conditionDetails = conditionDetails || null; }
+                        } else {
+                            btn.disabled = false;
+                            showToast(result.error || 'Erro ao salvar.', true);
+                        }
+                    });
+                });
             };
 
             // --- INÍCIO DA NOVA FUNÇÃO ---
