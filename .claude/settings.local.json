@@ -75,7 +75,8 @@
       "Bash(command -v ffmpeg)",
       "Bash(npm --version)",
       "Bash(node propostas/maple-bear/optimize-images.js)",
-      "Bash(firebase --version)"
+      "Bash(firebase --version)",
+      "WebFetch(domain:agenda-aero-festas.web.app)"
     ]
   }
 }
