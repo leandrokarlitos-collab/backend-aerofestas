@@ -27,7 +27,10 @@ async function listToys() {
         orderBy: { name: 'asc' },
         include: {
             units: { orderBy: { unitNumber: 'asc' } },
-            photos: { orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }] },
+            photos: {
+                orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }],
+                include: { event: { select: { id: true, date: true, clientName: true } } }
+            },
             eventItems: {
                 include: {
                     event: {
@@ -48,7 +51,10 @@ async function listToys() {
             orderBy: { name: 'asc' },
             include: {
                 units: { orderBy: { unitNumber: 'asc' } },
-                photos: { orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }] },
+                photos: {
+                orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }],
+                include: { event: { select: { id: true, date: true, clientName: true } } }
+            },
                 eventItems: {
                     include: {
                         event: {

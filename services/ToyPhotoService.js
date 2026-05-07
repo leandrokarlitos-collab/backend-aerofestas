@@ -41,15 +41,19 @@ async function listPhotosByToy(toyId) {
 
     return prisma.toyPhoto.findMany({
         where: { toyId: id },
-        orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }]
+        orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }],
+        include: {
+            event: { select: { id: true, date: true, clientName: true } }
+        }
     });
 }
 
 /**
  * Adiciona uma foto ao banco. Se for a primeira do toy, marca como principal
  * e atualiza Toy.imageUrl (denormalizado).
+ * @param eventId opcional — vincula a foto a um evento específico
  */
-async function addPhoto(toyId, url, user) {
+async function addPhoto(toyId, url, user, eventId = null) {
     const id = parseFloat(toyId);
     if (isNaN(id)) {
         const err = new Error('toyId inválido');
@@ -71,6 +75,15 @@ async function addPhoto(toyId, url, user) {
         throw err;
     }
 
+    let resolvedEventId = null;
+    if (eventId != null && eventId !== '') {
+        const evId = parseFloat(eventId);
+        if (!isNaN(evId)) {
+            const ev = await prisma.event.findUnique({ where: { id: evId }, select: { id: true } });
+            if (ev) resolvedEventId = evId;
+        }
+    }
+
     const existing = await prisma.toyPhoto.findMany({
         where: { toyId: id },
         orderBy: { order: 'desc' },
@@ -84,7 +97,8 @@ async function addPhoto(toyId, url, user) {
             toyId: id,
             url: cleanUrl,
             isPrimary: isFirstPhoto,
-            order: nextOrder
+            order: nextOrder,
+            eventId: resolvedEventId
         }
     });
 
@@ -100,7 +114,7 @@ async function addPhoto(toyId, url, user) {
         entityId: created.id,
         action: 'CREATE',
         user,
-        snapshot: { toyId: id, url: cleanUrl, isPrimary: isFirstPhoto }
+        snapshot: { toyId: id, url: cleanUrl, isPrimary: isFirstPhoto, eventId: resolvedEventId }
     });
 
     return created;
@@ -218,9 +232,10 @@ async function deletePhoto(toyId, photoId, user) {
  * - Cada arquivo é validado por MIME type e tamanho (já filtrados pelo multer).
  * - Caminho no Storage: toys/{toyId}/{timestamp}-{rand}{ext}
  * - O primeiro upload se torna principal automaticamente (se ainda não houver fotos).
+ * - Se eventId for passado, vincula cada foto criada ao evento.
  * - Retorna array de ToyPhoto criados.
  */
-async function uploadFiles(toyId, files, user) {
+async function uploadFiles(toyId, files, user, eventId = null) {
     const id = parseFloat(toyId);
     if (isNaN(id)) {
         const err = new Error('toyId inválido');
@@ -239,6 +254,15 @@ async function uploadFiles(toyId, files, user) {
         const err = new Error('Brinquedo não encontrado');
         err.status = 404;
         throw err;
+    }
+
+    let resolvedEventId = null;
+    if (eventId != null && eventId !== '') {
+        const evId = parseFloat(eventId);
+        if (!isNaN(evId)) {
+            const ev = await prisma.event.findUnique({ where: { id: evId }, select: { id: true } });
+            if (ev) resolvedEventId = evId;
+        }
     }
 
     const bucket = getBucket(); // Lança 503 se Storage não configurado
@@ -266,7 +290,8 @@ async function uploadFiles(toyId, files, user) {
 
         const ext = inferExtension(file);
         const random = crypto.randomBytes(6).toString('hex');
-        const storagePath = `toys/${id}/${Date.now()}-${random}${ext}`;
+        const eventSegment = resolvedEventId ? `event-${resolvedEventId}-` : '';
+        const storagePath = `toys/${id}/${eventSegment}${Date.now()}-${random}${ext}`;
         const storageFile = bucket.file(storagePath);
 
         await storageFile.save(file.buffer, {
@@ -275,6 +300,7 @@ async function uploadFiles(toyId, files, user) {
                 cacheControl: 'public, max-age=31536000, immutable',
                 metadata: {
                     toyId: String(id),
+                    eventId: resolvedEventId ? String(resolvedEventId) : '',
                     uploadedBy: user?.email || user?.name || 'unknown'
                 }
             },
@@ -292,7 +318,8 @@ async function uploadFiles(toyId, files, user) {
                 toyId: id,
                 url: publicUrl,
                 isPrimary: isFirstEver,
-                order: nextOrder++
+                order: nextOrder++,
+                eventId: resolvedEventId
             }
         });
 
@@ -304,7 +331,7 @@ async function uploadFiles(toyId, files, user) {
             entityId: photo.id,
             action: 'CREATE',
             user,
-            snapshot: { toyId: id, url: publicUrl, isPrimary: isFirstEver, source: 'upload' }
+            snapshot: { toyId: id, url: publicUrl, isPrimary: isFirstEver, eventId: resolvedEventId, source: 'upload' }
         });
     }
 

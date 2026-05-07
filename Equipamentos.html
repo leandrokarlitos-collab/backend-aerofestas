@@ -705,6 +705,32 @@
             padding: 2px 6px;
             border-radius: 999px;
         }
+        #equip-modal .gallery-item .event-tag {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            right: 4px;
+            background: rgba(15, 23, 42, 0.78);
+            color: #fff;
+            font-size: 0.55rem;
+            font-weight: 600;
+            padding: 3px 6px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            backdrop-filter: blur(4px);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s ease;
+        }
+        #equip-modal .gallery-item .event-tag:hover {
+            background: rgba(79, 70, 229, 0.95);
+        }
+        #equip-modal .gallery-item .event-tag i { font-size: 0.55rem; }
         #equip-modal .gallery-add {
             display: flex;
             align-items: center;
@@ -1686,11 +1712,24 @@
 
             const items = photos.map(p => {
                 const url = escapeHtml(p.url);
+                let eventTag = '';
+                if (p.event && p.event.id) {
+                    const eventDate = formatDateBR(p.event.date);
+                    const clientShort = p.event.clientName ? ' · ' + escapeHtml(p.event.clientName) : '';
+                    const eventTitle = `Foto do evento de ${eventDate}${p.event.clientName ? ' (' + escapeHtml(p.event.clientName) + ')' : ''}. Clique para abrir na Agenda.`;
+                    eventTag = `<a href="./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(p.event.id)}"
+                                   class="event-tag" data-action="open-event"
+                                   title="${eventTitle}">
+                                   <i class="fas fa-calendar-day"></i>
+                                   <span>${eventDate}${clientShort}</span>
+                                </a>`;
+                }
                 return `
                     <div class="gallery-item ${p.isPrimary ? 'is-primary' : ''}" data-photo-id="${p.id}" data-url="${url}">
                         <img src="${url}" alt="" loading="lazy"
                             onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'placeholder',innerHTML:'<i class=\\'fas fa-image\\'></i>'}))">
                         ${p.isPrimary ? '<span class="primary-flag">PRINCIPAL</span>' : ''}
+                        ${eventTag}
                         <div class="photo-actions">
                             <button type="button" class="star ${p.isPrimary ? 'active' : ''}" data-action="set-primary" title="Marcar como principal" aria-label="Marcar como principal"><i class="fas fa-star"></i></button>
                             <a href="${url}" download target="_blank" rel="noopener" data-action="download" title="Baixar foto" aria-label="Baixar foto"><i class="fas fa-download"></i></a>
@@ -1991,6 +2030,12 @@
 
             if (action === 'download') {
                 // <a href download> faz o trabalho. Apenas evita propagar para o item.
+                e.stopPropagation();
+                return;
+            }
+
+            if (action === 'open-event') {
+                // <a> navega sozinho pra Agenda. Apenas evita abrir o lightbox.
                 e.stopPropagation();
                 return;
             }

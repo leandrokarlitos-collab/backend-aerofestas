@@ -82,7 +82,8 @@ router.post('/:toyId/photos', authenticate, async (req, res, next) => {
         const created = await ToyPhotoService.addPhoto(
             req.params.toyId,
             req.body.url,
-            req.user
+            req.user,
+            req.body.eventId || null
         );
         res.json({ success: true, data: created });
     } catch (err) { next(err); }
@@ -133,10 +134,13 @@ router.post(
     },
     async (req, res, next) => {
         try {
+            // eventId chega no body do multipart (campo de texto opcional)
+            const eventId = req.body?.eventId || null;
             const created = await ToyPhotoService.uploadFiles(
                 req.params.toyId,
                 req.files || [],
-                req.user
+                req.user,
+                eventId
             );
             res.json({ success: true, data: created });
         } catch (err) { next(err); }

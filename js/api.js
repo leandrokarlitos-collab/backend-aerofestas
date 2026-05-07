@@ -217,9 +217,10 @@ export const api = {
     /**
      * Faz upload de fotos do celular/galeria para o Firebase Storage via backend.
      * Aceita 1..12 arquivos (Blob/File). Chama onProgress(percent) durante o upload (0..100).
+     * @param eventId opcional — vincula as fotos a um evento específico (para mostrar origem na galeria)
      * Retorna { ok, status, data?, error? }.
      */
-    uploadFotosToy: (toyId, files, onProgress) => {
+    uploadFotosToy: (toyId, files, onProgress, eventId = null) => {
         return new Promise((resolve) => {
             try {
                 const token = getToken();
@@ -227,6 +228,7 @@ export const api = {
                 for (const f of files) {
                     fd.append('files', f, f.name || 'foto.jpg');
                 }
+                if (eventId != null) fd.append('eventId', String(eventId));
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `${BASE_URL}/admin/toys/${toyId}/photos/upload`);
                 xhr.setRequestHeader('Authorization', `Bearer ${token}`);

@@ -43,7 +43,13 @@ model ToyPhoto {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 
+  // Foto vinculada a um evento específico (opcional). Se o evento for apagado,
+  // a foto continua viva mas perde a referência (SetNull).
+  eventId   Float?
+  event     Event?   @relation("EventPhotos", fields: [eventId], references: [id], onDelete: SetNull)
+
   @@index([toyId])
+  @@index([eventId])
 }
 
 model Client {
@@ -137,6 +143,9 @@ model Event {
   // Auditoria
   createdBy            String?
   updatedBy            String?
+
+  // Fotos vinculadas a este evento (registradas durante "Concluir evento")
+  toyPhotos            ToyPhoto[] @relation("EventPhotos")
 }
 
 model EventItem {

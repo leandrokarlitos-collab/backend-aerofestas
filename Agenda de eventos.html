@@ -803,6 +803,242 @@
         /* red-500 */
         /* FIM: Estilos para Status de Pagamento */
 
+        /* === Modal "Concluir evento" (overlay dinâmico) === */
+        .conclude-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 10000;
+        }
+        .conclude-box {
+            background: #fff;
+            border-radius: 18px;
+            max-width: 640px;
+            width: 100%;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.3);
+            overflow: hidden;
+        }
+        .conclude-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: #fff;
+        }
+        .conclude-header h3 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+        .conclude-header .subtitle { font-size: 0.78rem; opacity: 0.85; margin-top: 2px; }
+        .conclude-header .close-x {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .conclude-body {
+            overflow-y: auto;
+            flex: 1;
+            padding: 16px 22px 18px;
+        }
+        .conclude-section { margin-bottom: 20px; }
+        .conclude-section h4 {
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6b7280;
+            margin: 0 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .conclude-payment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 540px) {
+            .conclude-payment-grid { grid-template-columns: 1fr; }
+        }
+        .conclude-payment-cell {
+            background: #f8fafc;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+        }
+        .conclude-payment-cell .label { color: #64748b; font-weight: 600; font-size: 0.7rem; }
+        .conclude-payment-cell .value { font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+        .conclude-payment-cell.remaining .value { color: #b91c1c; }
+        .conclude-payment-cell.remaining.paid .value { color: #047857; }
+        .conclude-payment-select {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            background: #fff;
+            color: #1e293b;
+        }
+        .conclude-toy-block {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .conclude-toy-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .conclude-toy-title .qty-tag {
+            background: #4f46e5;
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+        .conclude-units { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+        .conclude-unit-row {
+            display: grid;
+            grid-template-columns: 90px 1fr 1.2fr auto;
+            gap: 6px;
+            align-items: center;
+            font-size: 0.78rem;
+            padding: 4px 6px;
+            border-radius: 6px;
+            background: #fff;
+        }
+        @media (max-width: 540px) {
+            .conclude-unit-row { grid-template-columns: 1fr auto; }
+            .conclude-unit-row .conc-cond,
+            .conclude-unit-row .conc-det { grid-column: 1; }
+            .conclude-unit-row .conc-save { grid-column: 2; }
+        }
+        .conclude-unit-row .conc-label {
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .conclude-unit-row .conc-dot {
+            width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #10b981;
+        }
+        .conclude-unit-row .conc-cond,
+        .conclude-unit-row .conc-det {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 4px 7px;
+            font-size: 0.74rem;
+            font-family: inherit;
+            background: #fff;
+            color: #1e293b;
+            width: 100%;
+        }
+        .conclude-unit-row .conc-save {
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+        .conclude-unit-row .conc-save:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .conclude-photos-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .conclude-photos-row .photo-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #e2e8f0;
+        }
+        .conclude-photos-row .upload-btn {
+            background: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+            border: 1px dashed rgba(79, 70, 229, 0.5);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .conclude-photos-row .upload-btn:hover { background: rgba(79, 70, 229, 0.18); }
+        .conclude-photos-row .upload-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .conclude-photos-empty { font-size: 0.72rem; color: #94a3b8; font-style: italic; }
+        .conclude-footer {
+            padding: 14px 22px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            background: #f8fafc;
+        }
+        .conclude-footer button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.88rem;
+        }
+        .conclude-footer .btn-cancel { background: #e2e8f0; color: #1e293b; }
+        .conclude-footer .btn-confirm {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .conclude-footer .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+        .conclude-progress {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            font-weight: 700;
+            color: #4f46e5;
+            border-radius: 18px;
+            z-index: 1;
+        }
+
         /* [SUPER-PREMIUM] Unified Fluid Capsule Bottom Nav */
         .bottom-nav {
             position: fixed;
@@ -3462,6 +3698,7 @@
                         </div>
                         <div class="flex flex-col space-y-2 items-center">
                              <button data-id="${event.id}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
+                            <button data-id="${event.id}" class="conclude-event-btn ${event.status === 'concluido' ? 'text-emerald-700' : 'text-amber-500 hover:text-amber-700'} text-lg shrink-0" title="${event.status === 'concluido' ? 'Evento concluído (clique para revisar)' : 'Concluir evento'}"><i class="fas ${event.status === 'concluido' ? 'fa-circle-check' : 'fa-clipboard-check'}"></i></button>
                             <button data-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 text-lg shrink-0" title="Excluir Evento"><i class="fas fa-times-circle"></i></button>
                             <button data-id="${event.id}" class="generate-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" title="✨ Criar Mensagem de Confirmação"><i class="fas fa-comment-dots"></i></button>
                             <!-- BOTÃO DE IMPRESSÃO INDIVIDUAL REMOVIDO -->
@@ -3506,6 +3743,7 @@
                 dayEventsList.appendChild(linkCadastroBtn);
 
                 document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id))));
+                document.querySelectorAll('.conclude-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleConcludeEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.delete-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.generate-message-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateMessage(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
                 // <!-- LISTENER DO BOTÃO INDIVIDUAL REMOVIDO -->
@@ -4300,6 +4538,335 @@
             const handleEditEvent = (eventId) => {
                 const event = events.find(e => e.id === eventId);
                 if (event) showEventModal(event.date, event);
+            };
+
+            // === Concluir evento: modal de fechamento ===
+            // - Pagamento (informa total, sinal, restante e permite atualizar status)
+            // - Unidades dos brinquedos do evento (mesma UI da seção Equipamentos)
+            // - Upload de fotos do evento por brinquedo (vincula com eventId → aparece na galeria do equipamento)
+            const handleConcludeEvent = async (eventId) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) {
+                    showToast('Evento não encontrado.', true);
+                    return;
+                }
+
+                // Re-fetch do catálogo pra garantir que units estão atualizadas
+                try {
+                    const fresh = await api.getBrinquedos();
+                    if (Array.isArray(fresh)) toys = fresh;
+                } catch (_) { /* tolera offline */ }
+
+                const eventItems = (event.items || event.toys || []);
+                const eventToys = eventItems.map(item => {
+                    const toyId = item.toyId || item.toy?.id || item.id;
+                    const toy = toys.find(t => t.id === toyId);
+                    return toy ? { toy, qtyRented: item.quantity || 1 } : null;
+                }).filter(Boolean);
+
+                // Mapa de fotos já vinculadas a este evento (para mostrar miniaturas iniciais)
+                const eventPhotosByToy = {};
+                for (const t of toys) {
+                    const ps = (t.photos || []).filter(p => p.eventId === event.id);
+                    if (ps.length) eventPhotosByToy[t.id] = ps;
+                }
+
+                // === Build modal ===
+                const overlay = document.createElement('div');
+                overlay.className = 'conclude-overlay';
+
+                const dateBR = (() => {
+                    const m = (event.date || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    return m ? `${m[3]}/${m[2]}/${m[1]}` : event.date;
+                })();
+                const total = Number(event.price) || 0;
+                const sinal = Number(event.signalAmount) || 0;
+                const restante = Math.max(total - sinal, 0);
+                const isPaidFull = event.paymentStatus === 'Pago Integralmente';
+
+                const buildToyBlock = ({ toy, qtyRented }) => {
+                    const units = (toy.units || [])
+                        .filter(u => u.unitNumber <= toy.quantity)
+                        .sort((a, b) => a.unitNumber - b.unitNumber);
+
+                    const unitRows = units.map(u => `
+                        <div class="conclude-unit-row" data-unit-id="${u.id}" data-orig-cond="${u.condition || 'OK'}" data-orig-det="${escAttr(u.conditionDetails || '')}">
+                            <span class="conc-label">
+                                <span class="conc-dot" style="background:${TOY_UNIT_COLORS[u.condition || 'OK']};"></span>
+                                Unidade ${u.unitNumber}
+                            </span>
+                            <select class="conc-cond" aria-label="Estado da unidade ${u.unitNumber}">
+                                ${TOY_UNIT_CONDITIONS.map(c =>
+                                    `<option value="${c}" ${u.condition === c ? 'selected' : ''}>${TOY_UNIT_LABELS[c]}</option>`
+                                ).join('')}
+                            </select>
+                            <input type="text" class="conc-det" value="${escAttr(u.conditionDetails || '')}" placeholder="Mais detalhes...">
+                            <button type="button" class="conc-save" disabled aria-label="Salvar"><i class="fas fa-check"></i></button>
+                        </div>
+                    `).join('');
+
+                    const existingPhotos = (eventPhotosByToy[toy.id] || [])
+                        .map(p => `<img src="${escAttr(p.url)}" alt="" class="photo-thumb" loading="lazy">`)
+                        .join('');
+
+                    return `
+                        <div class="conclude-toy-block" data-toy-id="${toy.id}">
+                            <div class="conclude-toy-title">
+                                <i class="fas fa-cubes text-indigo-500"></i>
+                                <span>${escAttr(toy.name)}</span>
+                                <span class="qty-tag">${qtyRented} alugada${qtyRented === 1 ? '' : 's'}</span>
+                            </div>
+                            <div class="conclude-units">${unitRows}</div>
+                            <div class="conclude-photos-row" data-photos-row="${toy.id}">
+                                ${existingPhotos || '<span class="conclude-photos-empty">Nenhuma foto deste evento ainda</span>'}
+                                <button type="button" class="upload-btn" data-action="upload-event-photo" data-toy-id="${toy.id}">
+                                    <i class="fas fa-camera"></i> Adicionar fotos do evento
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const toysBlocks = eventToys.length
+                    ? eventToys.map(buildToyBlock).join('')
+                    : '<p style="color:#94a3b8;font-style:italic;">Este evento não tem equipamentos vinculados.</p>';
+
+                overlay.innerHTML = `
+                    <div class="conclude-box" role="document" style="position:relative;">
+                        <header class="conclude-header">
+                            <div>
+                                <h3><i class="fas fa-clipboard-check"></i> Concluir evento</h3>
+                                <div class="subtitle">${dateBR}${event.clientName ? ' — ' + escAttr(event.clientName) : ''}${event.status === 'concluido' ? ' · <strong>Já concluído</strong> (revisão)' : ''}</div>
+                            </div>
+                            <button type="button" class="close-x" data-action="close" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+                        </header>
+                        <div class="conclude-body">
+
+                            <section class="conclude-section">
+                                <h4><i class="fas fa-money-bill-wave"></i> Pagamento</h4>
+                                <div class="conclude-payment-grid">
+                                    <div class="conclude-payment-cell">
+                                        <div class="label">Total</div>
+                                        <div class="value">${formatCurrency(total)}</div>
+                                    </div>
+                                    <div class="conclude-payment-cell">
+                                        <div class="label">Sinal recebido</div>
+                                        <div class="value">${formatCurrency(sinal)}</div>
+                                    </div>
+                                    <div class="conclude-payment-cell remaining ${restante === 0 ? 'paid' : ''}">
+                                        <div class="label">Restante</div>
+                                        <div class="value">${formatCurrency(restante)}</div>
+                                    </div>
+                                </div>
+                                <select class="conclude-payment-select" id="conclude-payment-status">
+                                    <option value="Aguardando Sinal" ${event.paymentStatus === 'Aguardando Sinal' ? 'selected' : ''}>⏳ Aguardando Sinal</option>
+                                    <option value="Sinal Pago" ${event.paymentStatus === 'Sinal Pago' ? 'selected' : ''}>💸 Sinal Pago (parcial)</option>
+                                    <option value="Pago Integralmente" ${isPaidFull ? 'selected' : ''}>✅ Pago Integralmente</option>
+                                    <option value="Cancelado" ${event.paymentStatus === 'Cancelado' ? 'selected' : ''}>❌ Cancelado</option>
+                                </select>
+                            </section>
+
+                            <section class="conclude-section">
+                                <h4><i class="fas fa-cubes"></i> Estado dos equipamentos do evento</h4>
+                                ${toysBlocks}
+                            </section>
+
+                        </div>
+                        <footer class="conclude-footer">
+                            <button type="button" class="btn-cancel" data-action="close">Fechar</button>
+                            <button type="button" class="btn-confirm" id="conclude-confirm">
+                                <i class="fas fa-circle-check"></i>
+                                ${event.status === 'concluido' ? 'Atualizar' : 'Concluir evento'}
+                            </button>
+                        </footer>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+
+                // Inputs ocultos (um por toy) pra abrir picker e câmera direta
+                const fileInputs = {};
+                eventToys.forEach(({ toy }) => {
+                    const inp = document.createElement('input');
+                    inp.type = 'file';
+                    inp.accept = 'image/*';
+                    inp.multiple = true;
+                    inp.style.cssText = 'position:absolute;left:-9999px;width:0;height:0;opacity:0;';
+                    overlay.appendChild(inp);
+                    fileInputs[toy.id] = inp;
+                });
+
+                const close = () => {
+                    overlay.remove();
+                    document.removeEventListener('keydown', onKey);
+                };
+                const onKey = (e) => { if (e.key === 'Escape') close(); };
+                document.addEventListener('keydown', onKey);
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) close();
+                });
+                overlay.querySelectorAll('[data-action="close"]').forEach(b => b.addEventListener('click', close));
+
+                // === Unidades: lógica de save (idêntica à do handleEditToyUnits) ===
+                const refreshDirty = (row) => {
+                    const cond = row.querySelector('.conc-cond').value;
+                    const det = row.querySelector('.conc-det').value || '';
+                    const dot = row.querySelector('.conc-dot');
+                    const btn = row.querySelector('.conc-save');
+                    const dirty = cond !== row.dataset.origCond || det !== (row.dataset.origDet || '');
+                    btn.disabled = !dirty;
+                    dot.style.background = TOY_UNIT_COLORS[cond] || '#6b7280';
+                };
+                overlay.querySelectorAll('.conclude-unit-row').forEach(row => {
+                    const toyBlock = row.closest('.conclude-toy-block');
+                    const toyId = parseFloat(toyBlock.dataset.toyId);
+                    row.querySelector('.conc-cond').addEventListener('change', () => refreshDirty(row));
+                    row.querySelector('.conc-det').addEventListener('input', () => refreshDirty(row));
+                    row.querySelector('.conc-save').addEventListener('click', async () => {
+                        const unitId = parseInt(row.dataset.unitId);
+                        const condition = row.querySelector('.conc-cond').value;
+                        const conditionDetails = row.querySelector('.conc-det').value.trim();
+                        if (condition === 'OUTROS' && !conditionDetails) {
+                            showToast('Quando o estado é "Outros", os detalhes são obrigatórios.', true);
+                            row.querySelector('.conc-det').focus();
+                            return;
+                        }
+                        const btn = row.querySelector('.conc-save');
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        const result = await api.atualizarEstadoUnidade(toyId, unitId, { condition, conditionDetails });
+                        btn.innerHTML = '<i class="fas fa-check"></i>';
+                        if (result.ok) {
+                            row.dataset.origCond = condition;
+                            row.dataset.origDet = conditionDetails;
+                            refreshDirty(row);
+                            showToast('Estado atualizado!');
+                            notifyToysChanged();
+                        } else {
+                            btn.disabled = false;
+                            showToast(result.error || 'Erro ao salvar.', true);
+                        }
+                    });
+                });
+
+                // === Upload de fotos do evento ===
+                const compressIfBig = async (file) => {
+                    if (!file || file.size <= 600 * 1024) return file;
+                    try {
+                        const img = await new Promise((resolve, reject) => {
+                            const i = new Image();
+                            i.onload = () => resolve(i);
+                            i.onerror = reject;
+                            i.src = URL.createObjectURL(file);
+                        });
+                        const ratio = Math.min(1280 / img.width, 1280 / img.height, 1);
+                        const w = Math.max(1, Math.round(img.width * ratio));
+                        const h = Math.max(1, Math.round(img.height * ratio));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w; canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        URL.revokeObjectURL(img.src);
+                        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+                        if (!blob) return file;
+                        const baseName = (file.name || 'foto').replace(/\.[^.]+$/, '');
+                        return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
+                    } catch (_) { return file; }
+                };
+
+                overlay.querySelectorAll('[data-action="upload-event-photo"]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const toyId = parseFloat(btn.dataset.toyId);
+                        fileInputs[toyId]?.click();
+                    });
+                });
+
+                Object.entries(fileInputs).forEach(([toyId, inp]) => {
+                    inp.addEventListener('change', async () => {
+                        const files = inp.files;
+                        if (!files || !files.length) return;
+                        const tId = parseFloat(toyId);
+                        const list = Array.from(files).slice(0, 12);
+                        const onlyImages = list.filter(f => f.type.startsWith('image/'));
+                        if (!onlyImages.length) return;
+
+                        const block = overlay.querySelector(`.conclude-toy-block[data-toy-id="${toyId}"]`);
+                        const upBtn = block?.querySelector('[data-action="upload-event-photo"]');
+                        if (upBtn) {
+                            upBtn.disabled = true;
+                            upBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+                        }
+
+                        // Comprime cada foto antes de enviar
+                        const prepared = [];
+                        for (const f of onlyImages) prepared.push(await compressIfBig(f));
+
+                        const result = await api.uploadFotosToy(tId, prepared, null, event.id);
+
+                        if (upBtn) {
+                            upBtn.disabled = false;
+                            upBtn.innerHTML = '<i class="fas fa-camera"></i> Adicionar fotos do evento';
+                        }
+
+                        if (result.ok && Array.isArray(result.data)) {
+                            // Atualiza o row de fotos com as novas miniaturas
+                            const row = block.querySelector('.conclude-photos-row');
+                            const empty = row.querySelector('.conclude-photos-empty');
+                            if (empty) empty.remove();
+                            result.data.forEach(p => {
+                                const img = document.createElement('img');
+                                img.src = p.url;
+                                img.className = 'photo-thumb';
+                                img.alt = '';
+                                row.insertBefore(img, upBtn);
+                            });
+                            showToast(`${result.data.length} foto(s) enviada(s)`);
+                            notifyToysChanged();
+                        } else {
+                            showToast(result.error || 'Erro ao enviar fotos', true);
+                        }
+                        inp.value = '';
+                    });
+                });
+
+                // === Confirmar conclusão ===
+                const confirmBtn = overlay.querySelector('#conclude-confirm');
+                confirmBtn.addEventListener('click', async () => {
+                    const newStatus = overlay.querySelector('#conclude-payment-status').value;
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+                    const updatedEvent = {
+                        ...event,
+                        status: 'concluido',
+                        paymentStatus: newStatus,
+                        signalReceived: newStatus === 'Pago Integralmente' || newStatus === 'Sinal Pago' ? true : event.signalReceived,
+                        // Garante que os items estejam no formato aceito pelo salvarEvento (id + quantity + price)
+                        items: eventItems.map(it => ({
+                            id: it.toyId || it.toy?.id || it.id,
+                            quantity: it.quantity || 1,
+                            price: it.price ?? null
+                        }))
+                    };
+
+                    const result = await api.salvarEvento(updatedEvent);
+                    if (result && (result.success || result.data)) {
+                        // Atualiza array local
+                        const idx = events.findIndex(e => e.id === event.id);
+                        if (idx >= 0) events[idx] = { ...events[idx], status: 'concluido', paymentStatus: newStatus };
+                        renderAll();
+                        // Re-render lista do dia (se modal aberta)
+                        if (selectedDate) renderDayEvents(selectedDate);
+                        close();
+                        showToast('Evento concluído!');
+                    } else {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = '<i class="fas fa-circle-check"></i> Concluir evento';
+                        showToast('Erro ao salvar evento.', true);
+                    }
+                });
             };
 
             const handleDeleteEvent = async (eventId) => {
