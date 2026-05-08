@@ -214,6 +214,48 @@ export const api = {
         }
     },
 
+    // --- BRINQUEDOS: DIÁRIO DE MANUTENÇÕES ---
+
+    getManutencoesToy: async (toyId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/maintenances`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    salvarManutencaoToy: async (toyId, payload) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/maintenances`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (error) {
+            console.error('Erro ao salvar manutenção:', error);
+            return { ok: false, error: 'Erro de rede' };
+        }
+    },
+
+    removerManutencaoToy: async (toyId, maintenanceId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/toys/${toyId}/maintenances/${maintenanceId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (error) {
+            console.error('Erro ao remover manutenção:', error);
+            return false;
+        }
+    },
+
     /**
      * Faz upload de fotos do celular/galeria para o Firebase Storage via backend.
      * Aceita 1..12 arquivos (Blob/File). Chama onProgress(percent) durante o upload (0..100).

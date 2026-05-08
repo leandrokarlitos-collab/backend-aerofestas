@@ -4233,19 +4233,23 @@
             };
 
             // --- ESTADO POR UNIDADE: modal dinâmico ---
-            const TOY_UNIT_CONDITIONS = ['OK', 'MOLHADO', 'UMIDO', 'SUJO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
+            const TOY_UNIT_CONDITIONS = ['OK', 'DESCONHECIDO', 'MOLHADO', 'UMIDO', 'SUJO', 'MOFADO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
             const TOY_UNIT_LABELS = {
                 OK: 'OK',
+                DESCONHECIDO: 'Desconhecido (verificar)',
                 MOLHADO: 'Molhado',
                 UMIDO: 'Úmido',
                 SUJO: 'Sujo',
+                MOFADO: 'Mofado',
                 DANIFICADO: 'Danificado',
                 EM_MANUTENCAO: 'Em manutenção',
                 OUTROS: 'Outros'
             };
             const TOY_UNIT_COLORS = {
-                OK: '#10b981', MOLHADO: '#3b82f6', UMIDO: '#06b6d4',
-                SUJO: '#eab308', DANIFICADO: '#ef4444', EM_MANUTENCAO: '#f97316', OUTROS: '#6b7280'
+                OK: '#10b981', DESCONHECIDO: '#f59e0b',
+                MOLHADO: '#3b82f6', UMIDO: '#06b6d4',
+                SUJO: '#eab308', MOFADO: '#dc2626', DANIFICADO: '#b91c1c',
+                EM_MANUTENCAO: '#f97316', OUTROS: '#6b7280'
             };
             const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -4620,8 +4624,10 @@
                 })();
                 const total = Number(event.price) || 0;
                 const sinal = Number(event.signalAmount) || 0;
-                const restante = Math.max(total - sinal, 0);
+                const restanteCalc = Math.max(total - sinal, 0);
                 const isPaidFull = event.paymentStatus === 'Pago Integralmente';
+                const isCancelled = event.paymentStatus === 'Cancelado';
+                const restante = isPaidFull ? 0 : restanteCalc;
 
                 const buildToyBlock = ({ toy, qtyRented }) => {
                     const units = (toy.units || [])
@@ -4683,31 +4689,27 @@
 
                             <section class="conclude-section">
                                 <h4><i class="fas fa-money-bill-wave"></i> Pagamento</h4>
-                                <div class="conclude-payment-grid">
-                                    <div class="conclude-payment-cell">
-                                        <div class="label">Total</div>
-                                        <div class="value">${formatCurrency(total)}</div>
-                                    </div>
-                                    <div class="conclude-payment-cell">
-                                        <div class="label">Sinal recebido</div>
-                                        <div class="value">${formatCurrency(sinal)}</div>
-                                    </div>
-                                    <div class="conclude-payment-cell remaining ${restante === 0 ? 'paid' : ''}">
-                                        <div class="label">Restante</div>
-                                        <div class="value">${formatCurrency(restante)}</div>
-                                    </div>
+                                <div class="conclude-payment-grid" id="conclude-payment-grid">
+                                    <!-- preenchido por updatePaymentDisplay() -->
                                 </div>
                                 <select class="conclude-payment-select" id="conclude-payment-status">
                                     <option value="Aguardando Sinal" ${event.paymentStatus === 'Aguardando Sinal' ? 'selected' : ''}>⏳ Aguardando Sinal</option>
                                     <option value="Sinal Pago" ${event.paymentStatus === 'Sinal Pago' ? 'selected' : ''}>💸 Sinal Pago (parcial)</option>
                                     <option value="Pago Integralmente" ${isPaidFull ? 'selected' : ''}>✅ Pago Integralmente</option>
-                                    <option value="Cancelado" ${event.paymentStatus === 'Cancelado' ? 'selected' : ''}>❌ Cancelado</option>
+                                    <option value="Cancelado" ${isCancelled ? 'selected' : ''}>❌ Cancelado</option>
                                 </select>
                             </section>
 
                             <section class="conclude-section">
                                 <h4><i class="fas fa-cubes"></i> Estado dos equipamentos do evento</h4>
                                 ${toysBlocks}
+                            </section>
+
+                            <section class="conclude-section">
+                                <h4><i class="fas fa-pen-to-square"></i> Observações do evento</h4>
+                                <textarea id="conclude-event-obs"
+                                    placeholder="Anote aqui qualquer detalhe relevante: como foi a entrega, ocorrências, comentários do cliente, lembretes para próximos eventos..."
+                                    style="width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:0.88rem;background:#fff;color:#1e293b;resize:vertical;min-height:90px;">${escAttr(event.eventObservations || '')}</textarea>
                             </section>
 
                         </div>
@@ -4722,6 +4724,69 @@
                 `;
 
                 document.body.appendChild(overlay);
+
+                // === Atualização inteligente do bloco de pagamento ===
+                // - Pago Integralmente: só Total, marcado como quitado
+                // - Cancelado: aviso simples
+                // - Aguardando Sinal: Total + Restante (sem mostrar "sinal recebido = 0")
+                // - Sinal Pago: Total + Sinal + Restante
+                const paymentGrid = overlay.querySelector('#conclude-payment-grid');
+                const paymentSelect = overlay.querySelector('#conclude-payment-status');
+                const updatePaymentDisplay = () => {
+                    const status = paymentSelect.value;
+                    if (status === 'Pago Integralmente') {
+                        paymentGrid.style.gridTemplateColumns = '1fr';
+                        paymentGrid.innerHTML = `
+                            <div class="conclude-payment-cell remaining paid" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);">
+                                <div class="label" style="color:#047857;">Total recebido</div>
+                                <div class="value" style="color:#047857;">${formatCurrency(total)} <i class="fas fa-circle-check" style="font-size:0.85rem;"></i></div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    if (status === 'Cancelado') {
+                        paymentGrid.style.gridTemplateColumns = '1fr';
+                        paymentGrid.innerHTML = `
+                            <div class="conclude-payment-cell" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);">
+                                <div class="label" style="color:#b91c1c;">Evento cancelado</div>
+                                <div class="value" style="color:#b91c1c;font-size:0.85rem;">Total contratado: ${formatCurrency(total)}${sinal > 0 ? ' · sinal recebido: ' + formatCurrency(sinal) : ''}</div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    if (status === 'Aguardando Sinal' || sinal === 0) {
+                        paymentGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                        paymentGrid.innerHTML = `
+                            <div class="conclude-payment-cell">
+                                <div class="label">Total</div>
+                                <div class="value">${formatCurrency(total)}</div>
+                            </div>
+                            <div class="conclude-payment-cell remaining">
+                                <div class="label">A receber</div>
+                                <div class="value">${formatCurrency(total)}</div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    // Sinal pago (parcial)
+                    paymentGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    paymentGrid.innerHTML = `
+                        <div class="conclude-payment-cell">
+                            <div class="label">Total</div>
+                            <div class="value">${formatCurrency(total)}</div>
+                        </div>
+                        <div class="conclude-payment-cell">
+                            <div class="label">Sinal recebido</div>
+                            <div class="value">${formatCurrency(sinal)}</div>
+                        </div>
+                        <div class="conclude-payment-cell remaining">
+                            <div class="label">Restante</div>
+                            <div class="value">${formatCurrency(restanteCalc)}</div>
+                        </div>
+                    `;
+                };
+                updatePaymentDisplay();
+                paymentSelect.addEventListener('change', updatePaymentDisplay);
 
                 // Inputs ocultos (um por toy) pra abrir picker e câmera direta
                 const fileInputs = {};
@@ -4781,6 +4846,12 @@
                             refreshDirty(row);
                             showToast('Estado atualizado!');
                             notifyToysChanged();
+                            // Atualiza array local de toys para que próximos opens vejam o novo estado
+                            const localToy = toys.find(t => t.id === toyId);
+                            if (localToy) {
+                                const u = (localToy.units || []).find(x => x.id === unitId);
+                                if (u) { u.condition = condition; u.conditionDetails = conditionDetails || null; }
+                            }
                         } else {
                             btn.disabled = false;
                             showToast(result.error || 'Erro ao salvar.', true);
@@ -4874,6 +4945,7 @@
                 const confirmBtn = overlay.querySelector('#conclude-confirm');
                 confirmBtn.addEventListener('click', async () => {
                     const newStatus = overlay.querySelector('#conclude-payment-status').value;
+                    const newObservations = overlay.querySelector('#conclude-event-obs').value.trim();
                     confirmBtn.disabled = true;
                     confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
@@ -4882,6 +4954,7 @@
                         status: 'concluido',
                         paymentStatus: newStatus,
                         signalReceived: newStatus === 'Pago Integralmente' || newStatus === 'Sinal Pago' ? true : event.signalReceived,
+                        eventObservations: newObservations || null,
                         // Garante que os items estejam no formato aceito pelo salvarEvento (id + quantity + price)
                         items: eventItems.map(it => ({
                             id: it.toyId || it.toy?.id || it.id,
@@ -4894,7 +4967,14 @@
                     if (result && (result.success || result.data)) {
                         // Atualiza array local
                         const idx = events.findIndex(e => e.id === event.id);
-                        if (idx >= 0) events[idx] = { ...events[idx], status: 'concluido', paymentStatus: newStatus };
+                        if (idx >= 0) {
+                            events[idx] = {
+                                ...events[idx],
+                                status: 'concluido',
+                                paymentStatus: newStatus,
+                                eventObservations: newObservations || null
+                            };
+                        }
                         renderAll();
                         // Re-render lista do dia (se modal aberta)
                         if (selectedDate) renderDayEvents(selectedDate);
@@ -6339,6 +6419,35 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
         disponível(is)` : `Nenhuma unidade disponível`;
                     showToast(`Estoque insuficiente! ${availableText} para este horário.`, true);
                     return;
+                }
+
+                // === ALERTA: estado de unidades não-OK ===
+                // Se o brinquedo tem qualquer unidade fora de "OK" no catálogo, avisa o operador
+                // antes de incluir no evento. Permite escolher continuar mesmo assim.
+                const issueUnits = (selectedToy.units || [])
+                    .filter(u => u.unitNumber <= selectedToy.quantity)
+                    .filter(u => u.condition && u.condition !== 'OK');
+
+                if (issueUnits.length > 0) {
+                    // Conta por estado e ordena por severidade (mais grave primeiro)
+                    const counts = {};
+                    for (const u of issueUnits) {
+                        counts[u.condition] = (counts[u.condition] || 0) + 1;
+                    }
+                    const severityRank = {
+                        DANIFICADO: 100, MOFADO: 90, EM_MANUTENCAO: 70,
+                        DESCONHECIDO: 60, MOLHADO: 50, UMIDO: 40, SUJO: 30, OUTROS: 10
+                    };
+                    const summary = Object.entries(counts)
+                        .sort((a, b) => (severityRank[b[0]] || 0) - (severityRank[a[0]] || 0))
+                        .map(([cond, n]) => `• ${n} ${(TOY_UNIT_LABELS[cond] || cond).toLowerCase()}`)
+                        .join('\n');
+
+                    const proceed = confirm(
+                        `⚠️ Atenção: "${selectedToy.name}" tem ${issueUnits.length} unidade(s) com estado de atenção:\n\n${summary}\n\n` +
+                        `Deseja incluir mesmo assim no evento?`
+                    );
+                    if (!proceed) return;
                 }
 
                 // Verifica se já existe na lista

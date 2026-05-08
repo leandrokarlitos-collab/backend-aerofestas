@@ -11,13 +11,32 @@ datasource db {
 // --- SEÇÃO DE ESTOQUE E EVENTOS ---
 
 model Toy {
-  id         Float       @id
-  name       String
-  quantity   Int
-  imageUrl   String?
-  eventItems EventItem[]
-  units      ToyUnit[]
-  photos     ToyPhoto[]
+  id           Float            @id
+  name         String
+  quantity     Int
+  imageUrl     String?
+  eventItems   EventItem[]
+  units        ToyUnit[]
+  photos       ToyPhoto[]
+  maintenances ToyMaintenance[]
+}
+
+model ToyMaintenance {
+  id          Int       @id @default(autoincrement())
+  toyId       Float
+  toy         Toy       @relation(fields: [toyId], references: [id], onDelete: Cascade)
+  unitNumber  Int?      // null = manutenção geral; senão refere a uma unidade específica
+  date        String    // YYYY-MM-DD - quando a manutenção foi feita
+  description String    // o que foi feito
+  cost        Float?    // opcional - custo da manutenção
+  monitorId   String?
+  monitor     Monitor?  @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+  monitorName String?   // denormalizado pra preservar nome caso o Monitor seja excluído
+  createdAt   DateTime  @default(now())
+  createdBy   String?
+
+  @@index([toyId])
+  @@index([date])
 }
 
 model ToyUnit {
@@ -200,6 +219,7 @@ model Monitor {
   tiktok            String?
   desempenho        Desempenho[]
   pagamentos        PagamentoMonitor[]
+  manutencoes       ToyMaintenance[]
 }
 
 model Desempenho {

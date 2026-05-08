@@ -4,6 +4,7 @@ const { authenticate } = require('../middleware/auth');
 const ToyService = require('../services/ToyService');
 const ToyUnitService = require('../services/ToyUnitService');
 const ToyPhotoService = require('../services/ToyPhotoService');
+const ToyMaintenanceService = require('../services/ToyMaintenanceService');
 
 const router = express.Router();
 
@@ -146,5 +147,36 @@ router.post(
         } catch (err) { next(err); }
     }
 );
+
+// --- ToyMaintenance (diário de manutenções) ---
+
+router.get('/:toyId/maintenances', authenticate, async (req, res, next) => {
+    try {
+        const list = await ToyMaintenanceService.listByToy(req.params.toyId);
+        res.json(list);
+    } catch (err) { next(err); }
+});
+
+router.post('/:toyId/maintenances', authenticate, async (req, res, next) => {
+    try {
+        const created = await ToyMaintenanceService.create(
+            req.params.toyId,
+            req.body || {},
+            req.user
+        );
+        res.json({ success: true, data: created });
+    } catch (err) { next(err); }
+});
+
+router.delete('/:toyId/maintenances/:maintenanceId', authenticate, async (req, res, next) => {
+    try {
+        await ToyMaintenanceService.remove(
+            req.params.toyId,
+            req.params.maintenanceId,
+            req.user
+        );
+        res.json({ success: true });
+    } catch (err) { next(err); }
+});
 
 module.exports = router;

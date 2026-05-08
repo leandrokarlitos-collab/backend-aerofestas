@@ -519,10 +519,78 @@
             main { padding-bottom: 130px; }
         }
 
-        /* === Card extras: rentals, condition pill === */
+        /* === Card extras: aura amarela (atenção) e vermelha (severo) === */
         .equip-card.has-issues {
-            border-color: #fb923c;
-            box-shadow: 0 6px 20px rgba(251, 146, 60, 0.18);
+            border-color: #f59e0b;
+            box-shadow:
+                0 0 0 2px rgba(245, 158, 11, 0.55),
+                0 0 22px 4px rgba(245, 158, 11, 0.45),
+                0 6px 24px rgba(217, 119, 6, 0.25);
+            animation: equip-aura-pulse-amber 2.4s ease-in-out infinite;
+        }
+        .equip-card.has-issues:hover {
+            box-shadow:
+                0 0 0 2px rgba(245, 158, 11, 0.7),
+                0 0 30px 6px rgba(245, 158, 11, 0.55),
+                0 14px 30px rgba(217, 119, 6, 0.35);
+        }
+        @keyframes equip-aura-pulse-amber {
+            0%, 100% {
+                box-shadow:
+                    0 0 0 2px rgba(245, 158, 11, 0.55),
+                    0 0 22px 4px rgba(245, 158, 11, 0.45),
+                    0 6px 24px rgba(217, 119, 6, 0.25);
+            }
+            50% {
+                box-shadow:
+                    0 0 0 2px rgba(245, 158, 11, 0.85),
+                    0 0 32px 8px rgba(245, 158, 11, 0.55),
+                    0 6px 24px rgba(217, 119, 6, 0.35);
+            }
+        }
+
+        /* Severo: MOFADO ou DANIFICADO → aura VERMELHA, prevalece sobre amarela */
+        .equip-card.has-severe {
+            border-color: #dc2626;
+            box-shadow:
+                0 0 0 2px rgba(220, 38, 38, 0.6),
+                0 0 24px 4px rgba(220, 38, 38, 0.5),
+                0 6px 26px rgba(185, 28, 28, 0.3);
+            animation: equip-aura-pulse-red 1.8s ease-in-out infinite;
+        }
+        .equip-card.has-severe:hover {
+            box-shadow:
+                0 0 0 2px rgba(220, 38, 38, 0.8),
+                0 0 34px 8px rgba(220, 38, 38, 0.65),
+                0 14px 32px rgba(185, 28, 28, 0.4);
+        }
+        @keyframes equip-aura-pulse-red {
+            0%, 100% {
+                box-shadow:
+                    0 0 0 2px rgba(220, 38, 38, 0.6),
+                    0 0 24px 4px rgba(220, 38, 38, 0.5),
+                    0 6px 26px rgba(185, 28, 28, 0.3);
+            }
+            50% {
+                box-shadow:
+                    0 0 0 3px rgba(220, 38, 38, 0.95),
+                    0 0 36px 10px rgba(220, 38, 38, 0.65),
+                    0 6px 26px rgba(185, 28, 28, 0.4);
+            }
+        }
+
+        /* Na visão lista, sem pulso */
+        #equip-grid.view-list .equip-card.has-issues {
+            animation: none;
+            box-shadow:
+                0 0 0 2px rgba(245, 158, 11, 0.6),
+                0 0 14px 2px rgba(245, 158, 11, 0.35);
+        }
+        #equip-grid.view-list .equip-card.has-severe {
+            animation: none;
+            box-shadow:
+                0 0 0 2px rgba(220, 38, 38, 0.7),
+                0 0 16px 2px rgba(220, 38, 38, 0.45);
         }
         .equip-card .photo-count-badge {
             position: absolute;
@@ -881,10 +949,12 @@
             background: #10b981;
         }
         .unit-dot[data-state="OK"]              { background: #10b981; }
+        .unit-dot[data-state="DESCONHECIDO"]    { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25); }
         .unit-dot[data-state="MOLHADO"]         { background: #3b82f6; }
         .unit-dot[data-state="UMIDO"]           { background: #06b6d4; }
         .unit-dot[data-state="SUJO"]            { background: #eab308; }
-        .unit-dot[data-state="DANIFICADO"]      { background: #ef4444; }
+        .unit-dot[data-state="MOFADO"]          { background: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25); }
+        .unit-dot[data-state="DANIFICADO"]      { background: #b91c1c; box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.25); }
         .unit-dot[data-state="EM_MANUTENCAO"]   { background: #f97316; }
         .unit-dot[data-state="OUTROS"]          { background: #6b7280; }
 
@@ -1099,6 +1169,162 @@
             padding: 12px 0;
             font-style: italic;
         }
+
+        /* === Diário de manutenções === */
+        #equip-modal .maint-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+        #equip-modal .maint-row {
+            display: grid;
+            grid-template-columns: 60px 1fr auto;
+            gap: 8px;
+            align-items: flex-start;
+            padding: 8px 10px;
+            border-radius: 9px;
+            background: rgba(245, 158, 11, 0.08);
+            border-left: 3px solid #f59e0b;
+            font-size: 0.8rem;
+        }
+        .dark #equip-modal .maint-row { background: rgba(245, 158, 11, 0.12); }
+        #equip-modal .maint-row .maint-date {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            font-size: 0.74rem;
+            color: #c2410c;
+        }
+        #equip-modal .maint-row .maint-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        #equip-modal .maint-row .maint-desc {
+            color: #1e293b;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .dark #equip-modal .maint-row .maint-desc { color: #f1f5f9; }
+        #equip-modal .maint-row .maint-meta {
+            font-size: 0.7rem;
+            color: #6b7280;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        #equip-modal .maint-row .maint-meta i { font-size: 0.65rem; }
+        #equip-modal .maint-row .maint-cost {
+            color: #047857;
+            font-weight: 700;
+        }
+        #equip-modal .maint-row .maint-del {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        #equip-modal .maint-row .maint-del:hover {
+            color: #b91c1c;
+            background: rgba(239, 68, 68, 0.08);
+        }
+        #equip-modal .maint-empty {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            text-align: center;
+            padding: 12px 0;
+            font-style: italic;
+        }
+        #equip-modal .maint-add-toggle {
+            margin-top: 10px;
+            background: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+            border: 1px dashed rgba(79, 70, 229, 0.45);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #equip-modal .maint-add-toggle:hover { background: rgba(79, 70, 229, 0.2); }
+        #equip-modal .maint-form {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(99, 102, 241, 0.08);
+            border-radius: 10px;
+            gap: 8px;
+            flex-direction: column;
+        }
+        #equip-modal .maint-form.open { display: flex; }
+        #equip-modal .maint-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        @media (max-width: 540px) {
+            #equip-modal .maint-form .row { grid-template-columns: 1fr; }
+        }
+        #equip-modal .maint-form input,
+        #equip-modal .maint-form select,
+        #equip-modal .maint-form textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 0.82rem;
+            font-family: inherit;
+            background: #fff;
+            color: #1e293b;
+        }
+        .dark #equip-modal .maint-form input,
+        .dark #equip-modal .maint-form select,
+        .dark #equip-modal .maint-form textarea {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #f1f5f9;
+        }
+        #equip-modal .maint-form label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6b7280;
+            margin-bottom: 2px;
+            display: block;
+        }
+        #equip-modal .maint-form .actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+        #equip-modal .maint-form .btn-cancel {
+            background: #e2e8f0;
+            color: #1e293b;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        #equip-modal .maint-form .btn-save {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: #fff;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        #equip-modal .maint-form .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* === FAB (Novo equipamento) === */
         #equip-fab {
@@ -1382,6 +1608,50 @@
 
                 <section class="modal-section">
                     <div class="section-title">
+                        <i class="fas fa-screwdriver-wrench"></i>
+                        <span>Diário de manutenções</span>
+                        <span class="total" id="equip-modal-maint-total" style="margin-left:auto;font-size:0.7rem;color:#94a3b8;font-weight:600;text-transform:none;letter-spacing:0;">0</span>
+                    </div>
+                    <div class="maint-list" id="equip-modal-maint-list"></div>
+                    <button type="button" class="maint-add-toggle" id="equip-maint-add-toggle">
+                        <i class="fas fa-plus"></i> Registrar manutenção
+                    </button>
+                    <div class="maint-form" id="equip-maint-form" aria-hidden="true">
+                        <div class="row">
+                            <div>
+                                <label for="equip-maint-date">Data</label>
+                                <input type="date" id="equip-maint-date">
+                            </div>
+                            <div>
+                                <label for="equip-maint-unit">Unidade</label>
+                                <select id="equip-maint-unit"><option value="">Geral (toda a frota)</option></select>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="equip-maint-desc">O que foi feito? *</label>
+                            <textarea id="equip-maint-desc" rows="2" placeholder="Ex.: Troquei o motor do soprador, costurei rasgo na lateral..."></textarea>
+                        </div>
+                        <div class="row">
+                            <div>
+                                <label for="equip-maint-monitor">Quem fez (monitor)</label>
+                                <select id="equip-maint-monitor">
+                                    <option value="">— Selecione —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="equip-maint-cost">Custo (opcional, R$)</label>
+                                <input type="number" id="equip-maint-cost" min="0" step="0.01" placeholder="0,00" inputmode="decimal">
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button type="button" class="btn-cancel" id="equip-maint-cancel">Cancelar</button>
+                            <button type="button" class="btn-save" id="equip-maint-save" disabled>Salvar registro</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="modal-section">
+                    <div class="section-title">
                         <i class="fas fa-clock-rotate-left"></i>
                         <span>Histórico de eventos</span>
                         <span class="total" id="equip-modal-events-total" style="margin-left:auto;font-size:0.7rem;color:#94a3b8;font-weight:600;text-transform:none;letter-spacing:0;">0</span>
@@ -1493,6 +1763,17 @@
         const modalUnits = document.getElementById('equip-modal-units');
         const modalHistory = document.getElementById('equip-modal-history');
         const modalEventsTotal = document.getElementById('equip-modal-events-total');
+        const modalMaintList = document.getElementById('equip-modal-maint-list');
+        const modalMaintTotal = document.getElementById('equip-modal-maint-total');
+        const maintAddToggle = document.getElementById('equip-maint-add-toggle');
+        const maintForm = document.getElementById('equip-maint-form');
+        const maintDateInput = document.getElementById('equip-maint-date');
+        const maintUnitSelect = document.getElementById('equip-maint-unit');
+        const maintDescInput = document.getElementById('equip-maint-desc');
+        const maintMonitorSelect = document.getElementById('equip-maint-monitor');
+        const maintCostInput = document.getElementById('equip-maint-cost');
+        const maintCancelBtn = document.getElementById('equip-maint-cancel');
+        const maintSaveBtn = document.getElementById('equip-maint-save');
         const sortSelect = document.getElementById('equip-sort');
         const viewBtns = document.querySelectorAll('.equip-toolbar .control-btn[data-view]');
         const lightbox = document.getElementById('equip-lightbox');
@@ -1502,14 +1783,18 @@
 
         const CONDITION_LABELS = {
             OK: 'OK',
+            DESCONHECIDO: 'Desconhecido (verificar)',
             MOLHADO: 'Molhado',
             UMIDO: 'Úmido',
             SUJO: 'Sujo',
+            MOFADO: 'Mofado',
             DANIFICADO: 'Danificado',
             EM_MANUTENCAO: 'Em manutenção',
             OUTROS: 'Outros'
         };
-        const CONDITIONS_ORDER = ['OK', 'MOLHADO', 'UMIDO', 'SUJO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
+        const CONDITIONS_ORDER = ['OK', 'DESCONHECIDO', 'MOLHADO', 'UMIDO', 'SUJO', 'MOFADO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
+        // Estados que disparam aura VERMELHA (severos). Os demais não-OK ficam amarelos.
+        const SEVERE_CONDITIONS = new Set(['MOFADO', 'DANIFICADO']);
 
         let allToys = [];
         let openedToyId = null;
@@ -1558,12 +1843,19 @@
         function unitsSummary(toy) {
             const active = (toy.units || []).filter(u => u.unitNumber <= toy.quantity);
             const issues = active.filter(u => u.condition && u.condition !== 'OK');
-            return { total: active.length, ok: active.length - issues.length, issues: issues.length };
+            const severe = active.filter(u => u.condition && SEVERE_CONDITIONS.has(u.condition));
+            return {
+                total: active.length,
+                ok: active.length - issues.length,
+                issues: issues.length,
+                severe: severe.length
+            };
         }
 
-        // Severidade: 0 = OK, 5 = pior (DANIFICADO/EM_MANUTENCAO)
+        // Severidade: 0 = OK, 7 = pior. MOFADO/DANIFICADO ficam mais críticos.
         const CONDITION_SEVERITY = {
-            OK: 0, OUTROS: 1, SUJO: 2, UMIDO: 3, MOLHADO: 4, EM_MANUTENCAO: 5, DANIFICADO: 5
+            OK: 0, OUTROS: 1, SUJO: 2, UMIDO: 3, MOLHADO: 4, DESCONHECIDO: 4,
+            EM_MANUTENCAO: 5, MOFADO: 7, DANIFICADO: 7
         };
         function worstConditionScore(toy) {
             const active = (toy.units || []).filter(u => u.unitNumber <= toy.quantity);
@@ -1655,7 +1947,8 @@
                     : (summary.issues > 0
                         ? `${summary.ok} OK · ⚠ ${summary.issues}`
                         : `${summary.total} OK`);
-                const cardClass = `equip-card${summary.issues > 0 ? ' has-issues' : ''}`;
+                const auraClass = summary.severe > 0 ? ' has-severe' : (summary.issues > 0 ? ' has-issues' : '');
+                const cardClass = `equip-card${auraClass}`;
                 const totalEvents = toy.totalEvents || 0;
                 const listExtra = `<div class="list-extra">
                     <span class="qty-num">${toy.quantity}</span>
@@ -1772,6 +2065,146 @@
             }).join('');
         }
 
+        // === Diário de manutenções ===
+        let monitorsCache = null;
+        async function loadMonitorsOnce() {
+            if (monitorsCache) return monitorsCache;
+            try {
+                const res = await api.getMonitores(1, 200);
+                // a API pode devolver array direto ou { data: [...] }
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+                monitorsCache = list.filter(m => (m.status || '').toLowerCase() !== 'inativo');
+                return monitorsCache;
+            } catch (e) {
+                monitorsCache = [];
+                return monitorsCache;
+            }
+        }
+
+        function fillMaintMonitorSelect(monitors) {
+            const opts = ['<option value="">— Selecione (opcional) —</option>']
+                .concat(monitors.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nome || m.name || 'Sem nome')}</option>`));
+            maintMonitorSelect.innerHTML = opts.join('');
+        }
+
+        function fillMaintUnitSelect(toy) {
+            const opts = ['<option value="">Geral (toda a frota)</option>'];
+            for (let i = 1; i <= toy.quantity; i++) {
+                opts.push(`<option value="${i}">Unidade ${i}</option>`);
+            }
+            maintUnitSelect.innerHTML = opts.join('');
+        }
+
+        function renderMaintenances(toy) {
+            const list = Array.isArray(toy.maintenances) ? toy.maintenances : [];
+            modalMaintTotal.textContent = `${list.length} registro${list.length === 1 ? '' : 's'}`;
+            if (!list.length) {
+                modalMaintList.innerHTML = `<div class="maint-empty">Nenhuma manutenção registrada ainda. Use o botão abaixo para começar.</div>`;
+                return;
+            }
+            modalMaintList.innerHTML = list.map(m => {
+                const dateBR = formatDateBR(m.date);
+                const unitTag = m.unitNumber ? `<span><i class="fas fa-cube"></i> Unidade ${m.unitNumber}</span>` : '';
+                const monitorTag = m.monitor?.nome || m.monitorName
+                    ? `<span><i class="fas fa-user-shield"></i> ${escapeHtml(m.monitor?.nome || m.monitorName)}</span>`
+                    : '';
+                const costTag = m.cost != null
+                    ? `<span class="maint-cost"><i class="fas fa-dollar-sign"></i> ${(Number(m.cost) || 0).toFixed(2).replace('.', ',')}</span>`
+                    : '';
+                return `
+                    <div class="maint-row" data-maint-id="${m.id}">
+                        <span class="maint-date">${dateBR}</span>
+                        <div class="maint-info">
+                            <span class="maint-desc">${escapeHtml(m.description)}</span>
+                            <span class="maint-meta">${unitTag}${monitorTag}${costTag}</span>
+                        </div>
+                        <button type="button" class="maint-del" title="Excluir registro" aria-label="Excluir"><i class="fas fa-times"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openMaintForm(toy) {
+            maintForm.classList.add('open');
+            maintForm.setAttribute('aria-hidden', 'false');
+            maintAddToggle.style.display = 'none';
+            // Preenche defaults
+            const today = new Date().toISOString().slice(0, 10);
+            maintDateInput.value = today;
+            maintDescInput.value = '';
+            maintCostInput.value = '';
+            fillMaintUnitSelect(toy);
+            maintUnitSelect.value = '';
+            // Carrega monitores (cache)
+            loadMonitorsOnce().then(fillMaintMonitorSelect);
+            maintMonitorSelect.value = '';
+            maintSaveBtn.disabled = true;
+            setTimeout(() => maintDescInput.focus(), 60);
+        }
+        function closeMaintForm() {
+            maintForm.classList.remove('open');
+            maintForm.setAttribute('aria-hidden', 'true');
+            maintAddToggle.style.display = '';
+        }
+
+        maintAddToggle.addEventListener('click', () => {
+            const toy = allToys.find(t => t.id === openedToyId);
+            if (toy) openMaintForm(toy);
+        });
+        maintCancelBtn.addEventListener('click', closeMaintForm);
+        maintDescInput.addEventListener('input', () => {
+            maintSaveBtn.disabled = !maintDescInput.value.trim();
+        });
+
+        maintSaveBtn.addEventListener('click', async () => {
+            if (openedToyId == null) return;
+            const description = maintDescInput.value.trim();
+            if (!description) return;
+
+            const payload = {
+                date: maintDateInput.value || undefined,
+                description,
+                unitNumber: maintUnitSelect.value || null,
+                monitorId: maintMonitorSelect.value || null,
+                cost: maintCostInput.value || null
+            };
+
+            maintSaveBtn.disabled = true;
+            maintSaveBtn.textContent = 'Salvando...';
+            const result = await api.salvarManutencaoToy(openedToyId, payload);
+            maintSaveBtn.textContent = 'Salvar registro';
+
+            if (result.ok) {
+                showToast('Manutenção registrada', 'success');
+                closeMaintForm();
+                notifyToysChanged();
+                await loadToys({ silent: true });
+                refreshOpenModal();
+            } else {
+                maintSaveBtn.disabled = false;
+                showToast(result.error || 'Erro ao salvar manutenção', 'error');
+            }
+        });
+
+        modalMaintList.addEventListener('click', async (e) => {
+            const delBtn = e.target.closest('.maint-del');
+            if (!delBtn) return;
+            const row = delBtn.closest('.maint-row');
+            const mId = parseInt(row?.dataset.maintId);
+            if (!mId || openedToyId == null) return;
+            if (!confirm('Excluir este registro de manutenção?')) return;
+
+            const ok = await api.removerManutencaoToy(openedToyId, mId);
+            if (ok) {
+                showToast('Registro removido', 'success');
+                notifyToysChanged();
+                await loadToys({ silent: true });
+                refreshOpenModal();
+            } else {
+                showToast('Erro ao remover registro', 'error');
+            }
+        });
+
         function renderUnits(toy) {
             const units = (toy.units || []).filter(u => u.unitNumber <= toy.quantity)
                 .sort((a, b) => a.unitNumber - b.unitNumber);
@@ -1833,6 +2266,7 @@
             renderRentalInfo(toy);
             renderGallery(toy);
             renderUnits(toy);
+            renderMaintenances(toy);
             renderHistory(toy);
 
             modal.classList.add('open');
@@ -1855,6 +2289,7 @@
             renderRentalInfo(toy);
             renderGallery(toy);
             renderUnits(toy);
+            renderMaintenances(toy);
             renderHistory(toy);
         }
 
@@ -1863,6 +2298,7 @@
             modal.classList.remove('open');
             modal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
+            closeMaintForm();
         }
 
         // --- Upload de fotos do celular (câmera + galeria, multi-seleção) ---
@@ -2281,16 +2717,17 @@
         let pollTimer = null;
 
         function toySignature(list) {
-            // Hash simples — detecta mudanças (nome, qtd, foto principal, fotos no total, estados das unidades, próxima/última locação)
+            // Hash simples — detecta mudanças (nome, qtd, foto principal, fotos no total, estados das unidades, próxima/última locação, manutenções)
             return list.map(t => {
                 const photos = (t.photos || []).map(p => `${p.id}:${p.isPrimary ? 'P' : ''}`).join(',');
                 const units = (t.units || [])
                     .filter(u => u.unitNumber <= t.quantity)
                     .map(u => `${u.unitNumber}:${u.condition || 'OK'}:${u.conditionDetails || ''}`)
                     .join(',');
+                const maint = (t.maintenances || []).map(m => `${m.id}:${m.date}`).join(',');
                 const last = t.lastRental ? t.lastRental.date : '';
                 const next = t.nextRental ? t.nextRental.date : '';
-                return `${t.id}:${t.name}:${t.quantity}:${t.imageUrl || ''}:[${photos}]:[${units}]:${last}/${next}`;
+                return `${t.id}:${t.name}:${t.quantity}:${t.imageUrl || ''}:[${photos}]:[${units}]:[${maint}]:${last}/${next}`;
             }).join('|');
         }
 

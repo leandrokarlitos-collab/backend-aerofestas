@@ -31,6 +31,11 @@ async function listToys() {
                 orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }],
                 include: { event: { select: { id: true, date: true, clientName: true } } }
             },
+            maintenances: {
+                orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+                take: 30,
+                include: { monitor: { select: { id: true, nome: true } } }
+            },
             eventItems: {
                 include: {
                     event: {
@@ -54,6 +59,11 @@ async function listToys() {
                 photos: {
                 orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }, { createdAt: 'asc' }],
                 include: { event: { select: { id: true, date: true, clientName: true } } }
+            },
+            maintenances: {
+                orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+                take: 30,
+                include: { monitor: { select: { id: true, nome: true } } }
             },
                 eventItems: {
                     include: {
@@ -98,6 +108,7 @@ async function listToys() {
             imageUrl: toy.imageUrl,
             units: activeUnits,
             photos: toy.photos,
+            maintenances: toy.maintenances || [],
             lastRental: past[0] || null,
             nextRental: future[0] || null,
             totalEvents: events.length,

@@ -1,7 +1,7 @@
 const prisma = require('../prisma/client');
 const { logAudit, computeChanges } = require('./audit');
 
-const VALID_CONDITIONS = ['OK', 'MOLHADO', 'UMIDO', 'SUJO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
+const VALID_CONDITIONS = ['OK', 'DESCONHECIDO', 'MOLHADO', 'UMIDO', 'SUJO', 'MOFADO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
 const TRACKED_FIELDS = ['condition', 'conditionDetails'];
 
 function safeAudit(payload) {
