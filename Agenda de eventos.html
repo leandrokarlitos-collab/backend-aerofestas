@@ -838,6 +838,28 @@
         .conclude-cta.is-done:hover {
             box-shadow: 0 10px 22px rgba(4, 120, 87, 0.45);
         }
+        /* CTA do evento cancelado: reativar (azul/cinza neutro) */
+        .conclude-cta.is-cancelled {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            box-shadow: 0 6px 16px rgba(71, 85, 105, 0.35);
+        }
+        .conclude-cta.is-cancelled:hover {
+            box-shadow: 0 10px 22px rgba(71, 85, 105, 0.5);
+        }
+        /* Card de evento cancelado: faixa diagonal vermelha discreta no fundo */
+        .event-card-cancelled {
+            background-image: repeating-linear-gradient(
+                -45deg,
+                rgba(239, 68, 68, 0.05) 0,
+                rgba(239, 68, 68, 0.05) 12px,
+                rgba(239, 68, 68, 0.10) 12px,
+                rgba(239, 68, 68, 0.10) 24px
+            );
+        }
+        .event-card-cancelled .text-emerald-600 {
+            text-decoration: line-through;
+            color: #94a3b8 !important;
+        }
 
         /* === Modal "Concluir evento" (overlay dinâmico) === */
         .conclude-overlay {
@@ -1920,10 +1942,33 @@
                             <div id="selected-toys-list" class="mt-3 space-y-2 max-h-24 overflow-y-auto"></div>
                         </div>
 
+                        <!-- Locações externas (equipamentos de terceiros) -->
+                        <div class="border-t border-gray-200 pt-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i>
+                                Locações Externas (terceiros)
+                            </label>
+                            <p class="text-xs text-gray-500 mb-2">Equipamentos alugados de outras empresas. O custo soma no valor final do evento <em>e</em> entra como despesa no Financeiro.</p>
+                            <div class="grid grid-cols-12 gap-2">
+                                <input type="text" id="external-rental-desc" placeholder="O que é (ex.: Touro Mecânico)" class="form-input col-span-7 px-3 py-2 rounded-md text-sm">
+                                <input type="text" id="external-rental-supplier" placeholder="Fornecedor (opcional)" class="form-input col-span-5 px-2 py-2 rounded-md text-sm">
+                            </div>
+                            <div class="grid grid-cols-12 gap-2 mt-2">
+                                <input type="number" id="external-rental-quantity" min="1" value="1" class="form-input col-span-3 px-2 py-2 rounded-md text-sm" title="Quantidade" placeholder="Qtd">
+                                <input type="number" id="external-rental-cost" min="0" step="0.01" placeholder="Custo total R$" class="form-input col-span-6 px-2 py-2 rounded-md text-sm" title="Custo total pago ao terceiro">
+                                <button type="button" id="add-external-rental-btn" class="col-span-3 bg-amber-500 text-white shrink-0 rounded-md hover:bg-amber-600 text-sm font-semibold">Add</button>
+                            </div>
+                            <div id="selected-external-rentals-list" class="mt-3 space-y-2 max-h-24 overflow-y-auto"></div>
+                        </div>
+
                         <div class="bg-gray-100/80 p-3 rounded-md space-y-2">
                             <div class="flex justify-between items-center text-md">
-                                <span class="font-medium text-gray-600">Subtotal:</span>
+                                <span class="font-medium text-gray-600">Subtotal (brinquedos):</span>
                                 <span id="event-subtotal" class="font-semibold text-gray-800">R$ 0,00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm" id="external-rentals-row" style="display:none;">
+                                <span class="font-medium text-gray-600"><i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i> Locações externas:</span>
+                                <span id="external-rentals-amount" class="font-semibold text-amber-600">+ R$ 0,00</span>
                             </div>
                             <div class="flex justify-between items-center text-sm">
                                 <div class="flex items-center space-x-2">
@@ -2562,6 +2607,8 @@
             let currentDate = new Date();
             let selectedDate = null;
             let toysForCurrentEvent = [];
+            // Locações externas (equipamentos de terceiros) do evento atual em edição
+            let externalRentalsForCurrentEvent = [];
 
             // INÍCIO: Estado do Wizard
             let currentStep = 1;
@@ -3708,11 +3755,21 @@
                             cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-green-50 border border-green-400 text-green-700 text-xs font-semibold flex items-center gap-1.5 animate-pulse cursor-pointer review-event-btn" data-id="${event.id}"><i class="fas fa-clipboard-check"></i> Cadastro preenchido — Revisar</div>`;
                         }
 
+                        const isCancelled = event.status === 'cancelado';
+                        const isConcluded = event.status === 'concluido';
                         const eventDiv = document.createElement('div');
-                        eventDiv.className = event.status === 'cadastro_completo' ? 'bg-green-50/60 p-3 rounded-lg border-2 border-green-400' : 'bg-white/50 p-3 rounded-lg border border-gray-200';
+                        eventDiv.className = isCancelled
+                            ? 'event-card-cancelled bg-red-50/60 p-3 rounded-lg border-2 border-red-300 relative'
+                            : (event.status === 'cadastro_completo'
+                                ? 'bg-green-50/60 p-3 rounded-lg border-2 border-green-400'
+                                : 'bg-white/50 p-3 rounded-lg border border-gray-200');
+                        const cancelledBadge = isCancelled
+                            ? `<div class="mb-2 px-3 py-1.5 rounded-md bg-red-100 border border-red-300 text-red-800 text-xs font-bold flex items-center gap-1.5"><i class="fas fa-ban"></i> EVENTO CANCELADO</div>`
+                            : '';
                         eventDiv.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <div>
+                        <div class="${isCancelled ? 'opacity-60' : ''}">
+                            ${cancelledBadge}
                             ${cadastroStatusBadge}
                             ${toysHtml}
                             <div class="mt-2 space-y-1 text-sm text-gray-500">
@@ -3734,6 +3791,10 @@
                         </div>
                         <div class="flex flex-col space-y-2 items-center">
                              <button data-id="${event.id}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
+                            ${isCancelled
+                                ? `<button data-id="${event.id}" class="reactivate-event-btn text-emerald-500 hover:text-emerald-700 text-lg shrink-0" title="Reativar evento"><i class="fas fa-rotate-left"></i></button>`
+                                : `<button data-id="${event.id}" class="cancel-event-btn text-orange-500 hover:text-orange-700 text-lg shrink-0" title="Cancelar evento (sem excluir)"><i class="fas fa-ban"></i></button>`
+                            }
                             <button data-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 text-lg shrink-0" title="Excluir Evento"><i class="fas fa-times-circle"></i></button>
                             <button data-id="${event.id}" class="generate-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" title="✨ Criar Mensagem de Confirmação"><i class="fas fa-comment-dots"></i></button>
                             <!-- BOTÃO DE IMPRESSÃO INDIVIDUAL REMOVIDO -->
@@ -3742,10 +3803,16 @@
                             <button data-id="${event.id}" class="generate-contract-btn text-purple-500 hover:text-purple-600 text-lg shrink-0" title="Gerar Contrato"><i class="fas fa-file-signature"></i></button>
                         </div>
                     </div>
-                    <button data-id="${event.id}" class="conclude-event-btn conclude-cta ${event.status === 'concluido' ? 'is-done' : ''}">
-                        <i class="fas ${event.status === 'concluido' ? 'fa-circle-check' : 'fa-clipboard-check'}"></i>
-                        <span>${event.status === 'concluido' ? 'Evento concluído · revisar' : 'Concluir evento'}</span>
-                    </button>`;
+                    ${isCancelled
+                        ? `<button data-id="${event.id}" class="reactivate-event-btn conclude-cta is-cancelled">
+                                <i class="fas fa-rotate-left"></i>
+                                <span>Reativar evento</span>
+                           </button>`
+                        : `<button data-id="${event.id}" class="conclude-event-btn conclude-cta ${isConcluded ? 'is-done' : ''}">
+                                <i class="fas ${isConcluded ? 'fa-circle-check' : 'fa-clipboard-check'}"></i>
+                                <span>${isConcluded ? 'Evento concluído · revisar' : 'Concluir evento'}</span>
+                           </button>`
+                    }`;
                         dayEventsList.appendChild(eventDiv);
                     });
                 }
@@ -3783,6 +3850,8 @@
 
                 document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.conclude-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleConcludeEvent(parseInt(e.currentTarget.dataset.id))));
+                document.querySelectorAll('.cancel-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleCancelEvent(parseInt(e.currentTarget.dataset.id))));
+                document.querySelectorAll('.reactivate-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleReactivateEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.delete-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.generate-message-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateMessage(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
                 // <!-- LISTENER DO BOTÃO INDIVIDUAL REMOVIDO -->
@@ -4119,12 +4188,91 @@
                 });
             };
 
+            // === Render da lista de locações externas + handlers ===
+            const renderSelectedExternalRentals = () => {
+                const listEl = document.getElementById('selected-external-rentals-list');
+                if (!listEl) return;
+                listEl.innerHTML = '';
+                if (externalRentalsForCurrentEvent.length === 0) {
+                    listEl.innerHTML = '<p class="text-xs text-center text-gray-400 italic pt-1">Nenhuma locação externa.</p>';
+                    return;
+                }
+                externalRentalsForCurrentEvent.forEach((r, idx) => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'flex justify-between items-center bg-amber-50 border border-amber-200 p-2 rounded-md text-sm';
+                    const supplierTag = r.supplier ? ` · ${r.supplier}` : '';
+                    itemEl.innerHTML = `
+                        <span><i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i><strong>${r.description}</strong>${supplierTag} (x${r.quantity || 1}) — ${formatCurrency(r.cost || 0)}</span>
+                        <button type="button" data-idx="${idx}" class="remove-external-rental-btn text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                    `;
+                    listEl.appendChild(itemEl);
+                });
+                listEl.querySelectorAll('.remove-external-rental-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const i = parseInt(e.currentTarget.dataset.idx);
+                        externalRentalsForCurrentEvent.splice(i, 1);
+                        renderSelectedExternalRentals();
+                        updateFinalPrice();
+                    });
+                });
+            };
+
+            // Botão "Add" da seção de locações externas
+            document.getElementById('add-external-rental-btn')?.addEventListener('click', () => {
+                const desc = document.getElementById('external-rental-desc');
+                const sup = document.getElementById('external-rental-supplier');
+                const qty = document.getElementById('external-rental-quantity');
+                const cost = document.getElementById('external-rental-cost');
+
+                const description = (desc.value || '').trim();
+                const supplier = (sup.value || '').trim() || null;
+                const quantity = parseInt(qty.value) || 1;
+                const costVal = parseFloat(cost.value);
+
+                if (!description) {
+                    showToast('Informe a descrição da locação externa.', true);
+                    desc.focus();
+                    return;
+                }
+                if (isNaN(costVal) || costVal < 0) {
+                    showToast('Informe um custo válido para a locação externa.', true);
+                    cost.focus();
+                    return;
+                }
+
+                externalRentalsForCurrentEvent.push({ description, supplier, quantity, cost: costVal });
+                renderSelectedExternalRentals();
+                updateFinalPrice();
+
+                // Limpa campos
+                desc.value = '';
+                sup.value = '';
+                qty.value = '1';
+                cost.value = '';
+                desc.focus();
+            });
+
             const updateFinalPrice = () => {
                 const subtotal = toysForCurrentEvent.reduce((acc, toy) => {
                     const price = (toy.price !== undefined && toy.price !== null) ? toy.price : (toy.valor || 0);
                     return acc + (price * (toy.quantity || 1));
                 }, 0);
                 eventSubtotalEl.textContent = formatCurrency(subtotal);
+
+                // Locações externas: somam direto no preço final (custo repassado ao cliente)
+                const externalRentalsTotal = externalRentalsForCurrentEvent.reduce(
+                    (acc, r) => acc + (Number(r.cost) || 0), 0
+                );
+                const externalRentalsRow = document.getElementById('external-rentals-row');
+                const externalRentalsAmountEl = document.getElementById('external-rentals-amount');
+                if (externalRentalsRow && externalRentalsAmountEl) {
+                    if (externalRentalsTotal > 0) {
+                        externalRentalsRow.style.display = '';
+                        externalRentalsAmountEl.textContent = `+ ${formatCurrency(externalRentalsTotal)}`;
+                    } else {
+                        externalRentalsRow.style.display = 'none';
+                    }
+                }
 
                 // INÍCIO DA MODIFICAÇÃO: Incluir Frete no Cálculo
                 const deliveryFee = parseFloat(deliveryFeeEl.value) || 0;
@@ -4140,8 +4288,8 @@
                     discount = (subtotal * discountValue) / 100;
                 }
 
-                // Preço final = (Subtotal - Desconto) + Frete
-                const finalPrice = (subtotal - discount) + deliveryFee;
+                // Preço final = (Subtotal brinquedos - Desconto) + Locações externas + Frete
+                const finalPrice = (subtotal - discount) + externalRentalsTotal + deliveryFee;
 
                 discountAmountEl.textContent = `- ${formatCurrency(discount)}`;
                 eventPriceEl.value = formatCurrency(finalPrice);
@@ -4988,6 +5136,86 @@
                 });
             };
 
+            // Cancelar evento (sem apagar). Usa o mesmo salvarEvento mudando o status.
+            // Cancelados aparecem riscados na agenda e não contabilizam no Financeiro.
+            const handleCancelEvent = async (eventId) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return showToast('Evento não encontrado.', true);
+                if (event.status === 'cancelado') {
+                    showToast('Este evento já está cancelado.', true);
+                    return;
+                }
+                if (!confirm(
+                    `Cancelar o evento de ${event.clientName || 'sem cliente'} em ${event.date}?\n\n` +
+                    `Ele NÃO será apagado — você pode reativar depois.\n` +
+                    `O valor não será contabilizado nas entradas do Financeiro enquanto estiver cancelado.`
+                )) return;
+
+                const eventItems = (event.items || event.toys || []).map(it => ({
+                    id: it.toyId || it.toy?.id || it.id,
+                    quantity: it.quantity || 1,
+                    price: it.price ?? null
+                }));
+
+                const result = await api.salvarEvento({
+                    ...event,
+                    status: 'cancelado',
+                    paymentStatus: 'Cancelado',
+                    items: eventItems
+                });
+                if (result && (result.success || result.data)) {
+                    const idx = events.findIndex(e => e.id === eventId);
+                    if (idx >= 0) {
+                        events[idx] = { ...events[idx], status: 'cancelado', paymentStatus: 'Cancelado' };
+                    }
+                    renderAll();
+                    if (selectedDate) renderDayEvents(selectedDate);
+                    showToast('Evento cancelado.');
+                } else {
+                    showToast('Erro ao cancelar evento.', true);
+                }
+            };
+
+            // Reativar um evento cancelado (volta a contar no Financeiro)
+            const handleReactivateEvent = async (eventId) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return showToast('Evento não encontrado.', true);
+                if (event.status !== 'cancelado') {
+                    showToast('Este evento não está cancelado.', true);
+                    return;
+                }
+                if (!confirm(
+                    `Reativar o evento de ${event.clientName || 'sem cliente'} em ${event.date}?\n\n` +
+                    `Ele voltará a contabilizar no Financeiro.`
+                )) return;
+
+                const eventItems = (event.items || event.toys || []).map(it => ({
+                    id: it.toyId || it.toy?.id || it.id,
+                    quantity: it.quantity || 1,
+                    price: it.price ?? null
+                }));
+
+                // status volta pra null (ativo); paymentStatus volta pra "Aguardando Sinal"
+                // por padrão (operador pode ajustar manualmente depois)
+                const result = await api.salvarEvento({
+                    ...event,
+                    status: null,
+                    paymentStatus: 'Aguardando Sinal',
+                    items: eventItems
+                });
+                if (result && (result.success || result.data)) {
+                    const idx = events.findIndex(e => e.id === eventId);
+                    if (idx >= 0) {
+                        events[idx] = { ...events[idx], status: null, paymentStatus: 'Aguardando Sinal' };
+                    }
+                    renderAll();
+                    if (selectedDate) renderDayEvents(selectedDate);
+                    showToast('Evento reativado.');
+                } else {
+                    showToast('Erro ao reativar evento.', true);
+                }
+            };
+
             const handleDeleteEvent = async (eventId) => {
                 if (!confirm('Tem certeza que deseja excluir este evento?')) {
                     return;
@@ -5191,6 +5419,14 @@
                     items: toysForCurrentEvent.map(t => ({ id: t.id, quantity: t.quantity, price: t.price })),
                     toys: toysForCurrentEvent, // Mantendo para compatibilidade local se precisar
 
+                    // Locações externas (equipamentos de terceiros) — backend persiste em EventExternalRental
+                    externalRentals: externalRentalsForCurrentEvent.map(r => ({
+                        description: r.description,
+                        supplier: r.supplier || null,
+                        quantity: r.quantity || 1,
+                        cost: Number(r.cost) || 0
+                    })),
+
                     subtotal: toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0),
                     discountType: discountTypeEl.value,
                     discountValue: parseFloat(discountValueEl.value) || 0,
@@ -5305,6 +5541,14 @@
                 eventForm.reset();
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
+                externalRentalsForCurrentEvent = [];
+                // Limpa campos do form de locação externa
+                ['external-rental-desc', 'external-rental-supplier', 'external-rental-cost'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                const erQty = document.getElementById('external-rental-quantity');
+                if (erQty) erQty.value = '1';
                 document.getElementById('event-date').value = dateStr;
                 // INÍCIO DA MODIFICAÇÃO: Preencher campo de data visível
                 document.getElementById('event-date-visible').value = dateStr;
@@ -5352,6 +5596,16 @@
                         }));
                     }
                     toysForCurrentEvent = JSON.parse(JSON.stringify(eventToys));
+
+                    // Carrega locações externas se vierem da API
+                    if (Array.isArray(eventToEdit.externalRentals)) {
+                        externalRentalsForCurrentEvent = eventToEdit.externalRentals.map(r => ({
+                            description: r.description || '',
+                            supplier: r.supplier || null,
+                            quantity: parseInt(r.quantity) || 1,
+                            cost: parseFloat(r.cost) || 0
+                        }));
+                    }
 
                     // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
                     deliveryFeeEl.value = eventToEdit.deliveryFee || 0;
@@ -5405,6 +5659,7 @@
                 toggleClientTypeFields();
                 toggleBirthdayFields(); // <!-- CHAMADA DA NOVA FUNÇÃO -->
                 renderSelectedToysInModal();
+                renderSelectedExternalRentals();
                 updateFinalPrice();
 
                 // --- AUDITORIA: Mostra info de quem criou/modificou ---

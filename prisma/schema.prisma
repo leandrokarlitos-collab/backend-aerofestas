@@ -165,6 +165,22 @@ model Event {
 
   // Fotos vinculadas a este evento (registradas durante "Concluir evento")
   toyPhotos            ToyPhoto[] @relation("EventPhotos")
+
+  // Locações de equipamentos de terceiros (custo extra repassado no preço do evento)
+  externalRentals      EventExternalRental[]
+}
+
+model EventExternalRental {
+  id          Int      @id @default(autoincrement())
+  eventId     Float
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  description String   // ex.: "Cama elástica grande", "Touro mecânico"
+  supplier    String?  // fornecedor (opcional)
+  quantity    Int      @default(1)
+  cost        Float    // custo TOTAL pago ao terceiro (não unitário)
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
 }
 
 model EventItem {

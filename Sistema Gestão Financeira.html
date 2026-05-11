@@ -308,16 +308,27 @@
                     });
 
                     // 1. Mapeia Eventos
-                    state.eventos = eventosCloud.map(evt => ({
-                        id: evt.id.toString(),
-                        data: evt.date,
-                        empresa: evt.company ? evt.company.name : "Aero Festas",
-                        contratante: evt.clientName,
-                        local: "",
-                        items: evt.items?.map(i => ({ nome: i.toy?.name, valor: 0 })) || [],
-                        valor: evt.price || 0,
-                        isSynced: true
-                    }));
+                    // Eventos cancelados (status='cancelado' ou paymentStatus='Cancelado')
+                    // têm valor zerado para todos os cálculos. Mantemos `valorOriginal`
+                    // só pra exibir no card (riscado), preservando contexto histórico.
+                    state.eventos = eventosCloud.map(evt => {
+                        const cancelado = evt.status === 'cancelado' || evt.paymentStatus === 'Cancelado';
+                        const valorOriginal = evt.price || 0;
+                        return {
+                            id: evt.id.toString(),
+                            data: evt.date,
+                            empresa: evt.company ? evt.company.name : "Aero Festas",
+                            contratante: evt.clientName,
+                            local: "",
+                            items: evt.items?.map(i => ({ nome: i.toy?.name, valor: 0 })) || [],
+                            valor: cancelado ? 0 : valorOriginal,
+                            valorOriginal,
+                            cancelado,
+                            status: evt.status || null,
+                            paymentStatus: evt.paymentStatus || null,
+                            isSynced: true
+                        };
+                    });
 
                     // 2. Mapeia Gastos e Pagamentos (Separando pelo tipo/categoria)
                     state.gastos = transacoesCloud
@@ -336,6 +347,36 @@
                                 comprovantes: []
                             };
                         });
+
+                    // 2.1. Locações externas dos eventos viram entradas de despesa "virtuais"
+                    // (não estão na tabela Transaction — são derivadas de Event.externalRentals)
+                    // - Cancelados não geram despesa
+                    // - Editáveis/deletáveis a partir do evento na Agenda
+                    eventosCloud.forEach(evt => {
+                        const cancelado = evt.status === 'cancelado' || evt.paymentStatus === 'Cancelado';
+                        if (cancelado) return;
+                        const rentals = Array.isArray(evt.externalRentals) ? evt.externalRentals : [];
+                        rentals.forEach(r => {
+                            const cost = Number(r.cost) || 0;
+                            if (cost <= 0) return;
+                            const supplierTag = r.supplier ? ` · ${r.supplier}` : '';
+                            const qtyTag = (r.quantity && r.quantity > 1) ? ` (x${r.quantity})` : '';
+                            state.gastos.push({
+                                id: `external-rental-${evt.id}-${r.id}`,
+                                data: evt.date,
+                                descricao: `${r.description}${qtyTag}${supplierTag} — Evento ${evt.clientName || evt.id}`,
+                                categoria: 'Locação Externa',
+                                contaId: null,
+                                conta: '-',
+                                pagamento: 'Repasse a terceiro',
+                                valor: cost,
+                                comprovantes: [],
+                                origem: 'evento',
+                                eventoId: evt.id,
+                                bloqueado: true // não pode editar/deletar pelo Financeiro (gerencia na Agenda)
+                            });
+                        });
+                    });
 
                     // 2.5. Mapeia Receitas (Transações do tipo REVENUE - entradas manuais)
                     state.receitas = transacoesCloud
@@ -785,35 +826,40 @@
                         if (gastosMes.length === 0) {
                             tbodyGastos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
                         } else {
-                            tbodyGastos.innerHTML = gastosMes.sort((a, b) => new Date(a.data) - new Date(b.data)).map(g => `
-                                    <tr>
+                            tbodyGastos.innerHTML = gastosMes.sort((a, b) => new Date(a.data) - new Date(b.data)).map(g => {
+                                const isFromEvent = g.origem === 'evento';
+                                const eventLink = isFromEvent && g.eventoId
+                                    ? `<a href="./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(g.eventoId)}" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Abrir evento na Agenda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
+                                    : '';
+                                const editBtn = g.bloqueado
+                                    ? ''
+                                    : `<button onclick="editarGasto('${g.id}')" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Editar Gasto"><i class="fa-solid fa-edit"></i></button>`;
+                                const delBtn = g.bloqueado
+                                    ? ''
+                                    : `<button onclick="deletarGasto('${g.id}')" class="text-red-600 hover:text-red-900 transition-colors" title="Excluir Gasto"><i class="fa-solid fa-trash-can"></i></button>`;
+                                const histBtn = g.bloqueado
+                                    ? ''
+                                    : `<button onclick="mostrarHistoricoTransacao('${g.id}')" class="text-gray-400 hover:text-indigo-600 transition-colors" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>`;
+                                const rowClass = isFromEvent ? 'class="bg-amber-50/40"' : '';
+                                const catBadge = isFromEvent
+                                    ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"><i class="fa-solid fa-truck-arrow-right"></i> ${g.categoria}</span>`
+                                    : g.categoria;
+                                return `
+                                    <tr ${rowClass}>
                                         <td>${formatarData(g.data)}</td>
                                         <td>${g.descricao}</td>
-                                        <td>${g.categoria}</td>
+                                        <td>${catBadge}</td>
                                         <td>${g.conta}</td>
                                         <td>${g.pagamento}</td>
                                         <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
                                         <td>
                                             <div class="flex space-x-2">
-                                                <button onclick="editarGasto('${g.id}')"
-                                                        class="text-indigo-600 hover:text-indigo-900 transition-colors"
-                                                        title="Editar Gasto">
-                                                    <i class="fa-solid fa-edit"></i>
-                                                </button>
-                                                <button onclick="deletarGasto('${g.id}')"
-                                                        class="text-red-600 hover:text-red-900 transition-colors"
-                                                        title="Excluir Gasto">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </button>
-                                                <button onclick="mostrarHistoricoTransacao('${g.id}')"
-                                                        class="text-gray-400 hover:text-indigo-600 transition-colors"
-                                                        title="Histórico de alterações">
-                                                    <i class="fa-solid fa-clock-rotate-left"></i>
-                                                </button>
+                                                ${editBtn}${delBtn}${histBtn}${eventLink}
                                             </div>
                                         </td>
                                     </tr>
-                                `).join('');
+                                `;
+                            }).join('');
                         }
                     }
 
@@ -872,12 +918,16 @@
                         // Combina eventos e receitas manuais
                         const entradasEventos = eventosMes.map(e => ({
                             data: e.data,
-                            tipo: '📅 Evento',
+                            tipo: e.cancelado ? '🚫 Evento Cancelado' : '📅 Evento',
                             empresa: e.empresa || '-',
-                            descricao: e.contratante,
+                            descricao: e.cancelado
+                                ? `${e.contratante || ''} (CANCELADO — não contabilizado)`
+                                : e.contratante,
                             local: e.local || '-',
-                            detalhes: 'Itens do Evento',
-                            valor: e.valor,
+                            detalhes: e.cancelado ? 'Evento cancelado' : 'Itens do Evento',
+                            valor: e.valor, // já é 0 quando cancelado
+                            valorOriginal: e.valorOriginal,
+                            cancelado: e.cancelado,
                             deletavel: false,
                             editavel: true,
                             eventoId: e.id,
@@ -925,14 +975,21 @@
                                     btnDel = '<span class="text-gray-400 text-xs">-</span>';
                                 }
 
+                                const rowClass = entry.cancelado ? 'class="bg-red-50 text-gray-500"' : '';
+                                const valorCell = entry.cancelado
+                                    ? `<span class="line-through text-gray-400">${formatarMoeda(entry.valorOriginal || 0)}</span>
+                                       <span class="ml-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
+                                         <i class="fa-solid fa-ban"></i> Cancelado
+                                       </span>`
+                                    : `<span class="font-bold text-green-600">${formatarMoeda(entry.valor)}</span>`;
                                 return `
-                                    <tr>
+                                    <tr ${rowClass}>
                                         <td>${formatarData(entry.data)}</td>
                                         <td>${entry.empresa}</td>
                                         <td>${entry.descricao}</td>
                                         <td>${entry.local}</td>
                                         <td>${entry.detalhes}</td>
-                                        <td class="font-bold text-green-600">${formatarMoeda(entry.valor)}</td>
+                                        <td>${valorCell}</td>
                                         <td>
                                             <div class="flex space-x-2">
                                                 ${btnEdit}

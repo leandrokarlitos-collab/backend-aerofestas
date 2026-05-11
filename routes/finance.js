@@ -19,11 +19,27 @@ router.get('/dashboard', async (req, res) => {
         const endStr = endDate.toISOString().split('T')[0];
         const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
-        // 1. Receitas de Eventos
+        // 1. Receitas de Eventos — eventos cancelados NÃO entram na receita.
+        // Mantemos a query retornando todos pra que o frontend possa exibir
+        // a lista com a tag "Cancelado", mas o totalizador filtra.
         const events = await prisma.event.findMany({
-            where: { date: { gte: startStr, lte: endStr } }
+            where: { date: { gte: startStr, lte: endStr } },
+            include: { externalRentals: true }
         });
-        const receitaEventos = events.reduce((acc, evt) => acc + (evt.price || 0), 0);
+        const receitaEventos = events
+            .filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado')
+            .reduce((acc, evt) => acc + (evt.price || 0), 0);
+
+        // 1.2 Locações externas (custo de equipamentos de terceiros usados em eventos)
+        // - Só contam de eventos não-cancelados
+        // - Entram como despesa no totalizador
+        const externalRentalsExpense = events
+            .filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado')
+            .reduce((acc, evt) => {
+                const rentalsTotal = (evt.externalRentals || [])
+                    .reduce((s, r) => s + (Number(r.cost) || 0), 0);
+                return acc + rentalsTotal;
+            }, 0);
 
         // 1.1 Receitas Manuais (Transações)
         const revenueTransactions = await prisma.transaction.findMany({
@@ -128,7 +144,7 @@ router.get('/dashboard', async (req, res) => {
         }
         const salaryPending = salaryPendingDetails.reduce((acc, p) => acc + p.amount, 0);
 
-        const despesaTotal = expensesFromTransactions + monitorPaid;
+        const despesaTotal = expensesFromTransactions + monitorPaid + externalRentalsExpense;
         const pendingTotal = monitorPending + fixedPending + salaryPending;
         const allPendingDetails = [...monitorPendingDetails, ...fixedPendingDetails, ...salaryPendingDetails];
 

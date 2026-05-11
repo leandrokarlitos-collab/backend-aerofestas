@@ -32,6 +32,17 @@ function normalizeItems(rawItems) {
         .filter(i => i.toyId !== null);
 }
 
+function normalizeExternalRentals(rawList) {
+    return (rawList || [])
+        .map(r => ({
+            description: String(r.description || '').trim(),
+            supplier: r.supplier ? String(r.supplier).trim() : null,
+            quantity: parseInt(r.quantity) || 1,
+            cost: toFloatOr(r.cost, 0)
+        }))
+        .filter(r => r.description.length > 0 && r.cost >= 0);
+}
+
 function buildEventFields(evt, userId) {
     return {
         date: evt.date,
@@ -93,15 +104,32 @@ async function upsertEvent(evt, user) {
         : null;
 
     const items = normalizeItems(evt.items || evt.toys);
-    if (isUpdate) await prisma.eventItem.deleteMany({ where: { eventId } });
+    const externalRentals = normalizeExternalRentals(evt.externalRentals);
+    if (isUpdate) {
+        await prisma.eventItem.deleteMany({ where: { eventId } });
+        await prisma.eventExternalRental.deleteMany({ where: { eventId } });
+    }
 
     const fields = buildEventFields(evt, user.id);
 
     const saved = await prisma.event.upsert({
         where: { id: eventId },
-        update: { ...fields, items: { create: items } },
-        create: { id: eventId, ...fields, createdBy: user.id, items: { create: items } },
-        include: { items: { include: { toy: true } } }
+        update: {
+            ...fields,
+            items: { create: items },
+            externalRentals: { create: externalRentals }
+        },
+        create: {
+            id: eventId,
+            ...fields,
+            createdBy: user.id,
+            items: { create: items },
+            externalRentals: { create: externalRentals }
+        },
+        include: {
+            items: { include: { toy: true } },
+            externalRentals: true
+        }
     });
 
     const snapshot = { clientName: saved.clientName, date: saved.date, price: saved.price };
@@ -125,6 +153,7 @@ async function deleteEvent(id, user) {
 
     const existingEvent = await prisma.event.findUnique({ where: { id: eventId } });
     await prisma.eventItem.deleteMany({ where: { eventId } });
+    await prisma.eventExternalRental.deleteMany({ where: { eventId } });
     await prisma.event.delete({ where: { id: eventId } });
 
     if (existingEvent) {
@@ -144,7 +173,11 @@ async function deleteEvent(id, user) {
 
 async function listEventsFull() {
     return prisma.event.findMany({
-        include: { items: { include: { toy: true } }, company: true },
+        include: {
+            items: { include: { toy: true } },
+            company: true,
+            externalRentals: true
+        },
         orderBy: { date: 'desc' }
     });
 }
