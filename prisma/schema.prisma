@@ -159,6 +159,9 @@ model Event {
   birthdayPersonDob    String?
   status               String?
 
+  // Tipo de agendamento: "event" (default) ou "meeting" (reunião — sem cliente/equipamentos/financeiro)
+  eventType            String?  @default("event")
+
   // Auditoria
   createdBy            String?
   updatedBy            String?

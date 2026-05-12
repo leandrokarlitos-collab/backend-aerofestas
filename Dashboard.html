@@ -1753,19 +1753,28 @@
                     const eventDate = new Date(event.date + 'T00:00:00');
                     const formattedDate = eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                     const dayOfWeek = eventDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+                    const isMeeting = event.eventType === 'meeting';
+                    const accentColor = isMeeting ? 'text-violet-600' : 'text-indigo-600';
+                    const borderColor = isMeeting ? 'border-violet-300' : 'border-indigo-200';
+                    const subtitleLine = isMeeting
+                        ? (event.monitor ? `<i class="fas fa-user-friends fa-fw mr-1"></i> ${event.monitor}` : '<i class="fas fa-handshake fa-fw mr-1"></i> Reunião')
+                        : `<i class="fas fa-map-marker-alt fa-fw mr-1"></i> ${event.clientAddress || 'Local a confirmar'}`;
+                    const badge = isMeeting
+                        ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs font-bold mr-2"><i class="fas fa-handshake"></i> Reunião</span>'
+                        : '';
 
                     // Link para editar evento na agenda
                     return `
                 <a href="./Agenda de eventos.html?editEvent=${event.id}" class="block transition-transform transform hover:scale-[1.02] hover:shadow-lg rounded-lg" title="Clique para ver detalhes e editar na agenda">
                     <div class="flex items-center gap-4 p-3 bg-white/50 rounded-lg" style="background-color: var(--card-bg)">
                         <div class="text-center w-20 flex-shrink-0">
-                            <p class="text-2xl font-bold text-indigo-600">${formattedDate.split(' ')[0]}</p>
+                            <p class="text-2xl font-bold ${accentColor}">${formattedDate.split(' ')[0]}</p>
                             <p class="text-sm text-gray-500 capitalize">${dayOfWeek.split('-')[0]}</p>
                         </div>
-                        <div class="flex-grow border-l-2 border-indigo-200 pl-4">
-                            <p class="font-semibold">${event.clientName}</p>
-                            <p class="text-sm capitalize" style="color: var(--text-muted-color)"><i class="fas fa-map-marker-alt fa-fw mr-1"></i> ${event.clientAddress || 'Local a confirmar'}</p>
-                            <p class="text-sm" style="color: var(--text-muted-color)"><i class="fas fa-clock fa-fw mr-1"></i> ${event.startTime || ''} - ${event.endTime || ''}</p>
+                        <div class="flex-grow border-l-2 ${borderColor} pl-4">
+                            <p class="font-semibold">${badge}${event.clientName || ''}</p>
+                            <p class="text-sm capitalize" style="color: var(--text-muted-color)">${subtitleLine}</p>
+                            <p class="text-sm" style="color: var(--text-muted-color)"><i class="fas fa-clock fa-fw mr-1"></i> ${event.startTime || ''}${event.endTime && event.endTime !== event.startTime ? ' - ' + event.endTime : ''}</p>
                         </div>
                     </div>
                 </a>

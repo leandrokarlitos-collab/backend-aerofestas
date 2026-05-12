@@ -311,7 +311,8 @@
                     // Eventos cancelados (status='cancelado' ou paymentStatus='Cancelado')
                     // têm valor zerado para todos os cálculos. Mantemos `valorOriginal`
                     // só pra exibir no card (riscado), preservando contexto histórico.
-                    state.eventos = eventosCloud.map(evt => {
+                    // Reuniões (eventType='meeting') são filtradas — não geram receita.
+                    state.eventos = eventosCloud.filter(evt => evt.eventType !== 'meeting').map(evt => {
                         const cancelado = evt.status === 'cancelado' || evt.paymentStatus === 'Cancelado';
                         const valorOriginal = evt.price || 0;
                         return {
@@ -351,8 +352,10 @@
                     // 2.1. Locações externas dos eventos viram entradas de despesa "virtuais"
                     // (não estão na tabela Transaction — são derivadas de Event.externalRentals)
                     // - Cancelados não geram despesa
+                    // - Reuniões nunca geram despesa
                     // - Editáveis/deletáveis a partir do evento na Agenda
                     eventosCloud.forEach(evt => {
+                        if (evt.eventType === 'meeting') return;
                         const cancelado = evt.status === 'cancelado' || evt.paymentStatus === 'Cancelado';
                         if (cancelado) return;
                         const rentals = Array.isArray(evt.externalRentals) ? evt.externalRentals : [];

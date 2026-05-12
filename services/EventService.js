@@ -5,7 +5,7 @@ const webpush = require('../config/webpush');
 const TRACKED_FIELDS = [
     'date', 'endDate', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
-    'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived'
+    'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType'
 ];
 
 const toFloatOr = (v, fallback) =>
@@ -90,6 +90,8 @@ function buildEventFields(evt, userId) {
         isBirthday: evt.isBirthday || false,
         birthdayPersonName: evt.birthdayPersonName,
         birthdayPersonDob: evt.birthdayPersonDob,
+
+        eventType: evt.eventType === 'meeting' ? 'meeting' : 'event',
 
         updatedBy: userId
     };
@@ -194,6 +196,7 @@ async function getPublicEvent(id) {
         id: event.id,
         date: event.date,
         endDate: event.endDate,
+        eventType: event.eventType || 'event',
         startTime: event.startTime,
         endTime: event.endTime,
         companyName: event.company?.name || '',
