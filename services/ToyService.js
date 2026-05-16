@@ -2,7 +2,7 @@ const prisma = require('../prisma/client');
 const { logAudit, computeChanges } = require('./audit');
 const ToyUnitService = require('./ToyUnitService');
 
-const TRACKED_FIELDS = ['name', 'quantity', 'imageUrl'];
+const TRACKED_FIELDS = ['name', 'quantity', 'imageUrl', 'defaultPrice'];
 
 // Fire-and-forget: auditoria nunca deve quebrar o fluxo principal.
 function safeAudit(payload) {
@@ -117,7 +117,7 @@ async function listToys() {
     });
 }
 
-async function createToy({ name, quantity, imageUrl }, user) {
+async function createToy({ name, quantity, imageUrl, defaultPrice }, user) {
     const id = Date.now();
     const qty = parseInt(quantity) || 1;
 
@@ -126,7 +126,10 @@ async function createToy({ name, quantity, imageUrl }, user) {
             id,
             name,
             quantity: qty,
-            imageUrl: imageUrl || null
+            imageUrl: imageUrl || null,
+            defaultPrice: (defaultPrice !== undefined && defaultPrice !== null && defaultPrice !== '')
+                ? parseFloat(defaultPrice)
+                : null
         }
     });
 
@@ -138,13 +141,18 @@ async function createToy({ name, quantity, imageUrl }, user) {
         entityId: id,
         action: 'CREATE',
         user,
-        snapshot: { name: saved.name, quantity: saved.quantity, imageUrl: saved.imageUrl }
+        snapshot: {
+            name: saved.name,
+            quantity: saved.quantity,
+            imageUrl: saved.imageUrl,
+            defaultPrice: saved.defaultPrice
+        }
     });
 
     return saved;
 }
 
-async function updateToy(id, { name, quantity, imageUrl }, user) {
+async function updateToy(id, { name, quantity, imageUrl, defaultPrice }, user) {
     const toyId = parseFloat(id);
     if (isNaN(toyId)) {
         const err = new Error('ID inválido');
@@ -163,6 +171,11 @@ async function updateToy(id, { name, quantity, imageUrl }, user) {
     if (imageUrl !== undefined) {
         data.imageUrl = imageUrl || null;
     }
+    if (defaultPrice !== undefined) {
+        data.defaultPrice = (defaultPrice === null || defaultPrice === '')
+            ? null
+            : parseFloat(defaultPrice);
+    }
 
     const saved = await prisma.toy.update({
         where: { id: toyId },
@@ -179,7 +192,12 @@ async function updateToy(id, { name, quantity, imageUrl }, user) {
         action: 'UPDATE',
         user,
         changes,
-        snapshot: { name: saved.name, quantity: saved.quantity, imageUrl: saved.imageUrl }
+        snapshot: {
+            name: saved.name,
+            quantity: saved.quantity,
+            imageUrl: saved.imageUrl,
+            defaultPrice: saved.defaultPrice
+        }
     });
 
     return saved;
@@ -237,7 +255,7 @@ async function deleteToy(id, user) {
         entityId: toyId,
         action: 'DELETE',
         user,
-        snapshot: { name: existing.name, quantity: existing.quantity, imageUrl: existing.imageUrl }
+        snapshot: { name: existing.name, quantity: existing.quantity, imageUrl: existing.imageUrl, defaultPrice: existing.defaultPrice }
     });
 }
 

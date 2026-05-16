@@ -359,6 +359,209 @@ export const api = {
         }
     },
 
+    // ============ PROPOSTAS ============
+    listarPropostas: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/propostas`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { console.error('Erro ao listar propostas:', e); return []; }
+    },
+
+    getProposta: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/propostas/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    criarProposta: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/propostas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                console.error('Erro API ao salvar proposta:', res.status, err);
+                return { success: false, error: err.error || 'Erro ao salvar' };
+            }
+            return await res.json();
+        } catch (e) { return { success: false, error: 'Erro de rede' }; }
+    },
+
+    atualizarProposta: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/propostas/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                return { success: false, error: err.error || 'Erro ao atualizar' };
+            }
+            return await res.json();
+        } catch (e) { return { success: false, error: 'Erro de rede' }; }
+    },
+
+    duplicarProposta: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/propostas/${id}/duplicate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    deletarProposta: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/propostas/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
+
+    uploadCapaProposta: (propostaId, file, onProgress) => {
+        return new Promise((resolve) => {
+            try {
+                const token = getToken();
+                const fd = new FormData();
+                fd.append('image', file, file.name || 'capa.jpg');
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${BASE_URL}/admin/propostas/${propostaId}/og-upload`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                if (typeof onProgress === 'function') {
+                    xhr.upload.addEventListener('progress', (ev) => {
+                        if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
+                    });
+                }
+                xhr.addEventListener('load', () => {
+                    let json = {};
+                    try { json = JSON.parse(xhr.responseText || '{}'); } catch (_) { /* */ }
+                    resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, ...json });
+                });
+                xhr.addEventListener('error', () => resolve({ ok: false, status: 0, error: 'Erro de rede' }));
+                xhr.send(fd);
+            } catch (error) { resolve({ ok: false, error: 'Erro ao iniciar upload' }); }
+        });
+    },
+
+    // ============ TEMPLATES DE PROPOSTA ============
+    listarTemplatesProposta: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/proposta-templates`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    getTemplateProposta: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/proposta-templates/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    getTemplatePropostaDefault: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/proposta-templates/default`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    salvarTemplateProposta: async (dados) => {
+        try {
+            const token = getToken();
+            const url = dados.id
+                ? `${BASE_URL}/admin/proposta-templates/${dados.id}`
+                : `${BASE_URL}/admin/proposta-templates`;
+            const method = dados.id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                return { success: false, error: err.error || 'Erro ao salvar template' };
+            }
+            return await res.json();
+        } catch (e) { return { success: false, error: 'Erro de rede' }; }
+    },
+
+    definirTemplatePadrao: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/proposta-templates/${id}/set-default`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    deletarTemplateProposta: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/proposta-templates/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                return { success: false, error: err.error || 'Erro ao deletar template' };
+            }
+            return { success: true };
+        } catch (e) { return { success: false, error: 'Erro de rede' }; }
+    },
+
+    uploadCapaTemplate: (templateId, file, onProgress) => {
+        return new Promise((resolve) => {
+            try {
+                const token = getToken();
+                const fd = new FormData();
+                fd.append('image', file, file.name || 'capa.jpg');
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${BASE_URL}/admin/proposta-templates/${templateId}/og-upload`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                if (typeof onProgress === 'function') {
+                    xhr.upload.addEventListener('progress', (ev) => {
+                        if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
+                    });
+                }
+                xhr.addEventListener('load', () => {
+                    let json = {};
+                    try { json = JSON.parse(xhr.responseText || '{}'); } catch (_) { /* */ }
+                    resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, ...json });
+                });
+                xhr.addEventListener('error', () => resolve({ ok: false, status: 0, error: 'Erro de rede' }));
+                xhr.send(fd);
+            } catch (error) { resolve({ ok: false, error: 'Erro ao iniciar upload' }); }
+        });
+    },
+
     // Salvar Gasto/Transação
     salvarTransacao: async (dados) => {
         try {

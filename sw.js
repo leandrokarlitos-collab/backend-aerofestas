@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v2.12.0';
+const CACHE_NAME = 'aero-festas-v2.13.0';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
     '/Sistema%20Gest%C3%A3o%20Financeira.html',
     '/Agenda%20de%20eventos.html',
     '/Equipamentos.html',
+    '/Configuracoes-Propostas.html',
     '/WhatsApp.html',
     '/admin.html',
     '/profile.html',
@@ -66,13 +67,19 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
 
     // Ignora requisições de API, websockets, extensões e CDNs EXTERNOS
-    if (url.pathname.includes('/api/') || 
-        url.protocol === 'chrome-extension:' || 
-        url.protocol === 'ws:' || 
+    if (url.pathname.includes('/api/') ||
+        url.protocol === 'chrome-extension:' ||
+        url.protocol === 'ws:' ||
         url.protocol === 'wss:' ||
         !url.origin.includes('agenda-aero-festas.web.app')) {
         // Deixa passar direto para a rede, sem interceptar
         return;
+    }
+
+    // Propostas dinâmicas (/p/* e /propostas/view.html) — SEMPRE rede,
+    // nunca cacheia: o conteúdo depende da API e pode ser editado a qualquer momento.
+    if (url.pathname === '/propostas/view.html' || url.pathname.startsWith('/p/')) {
+        return; // bypass total do SW
     }
 
     // Apenas para recursos LOCAIS da aplicação

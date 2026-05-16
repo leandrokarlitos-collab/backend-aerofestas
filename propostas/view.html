@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="color-scheme" content="light">
+
+<title id="og-title-tag">Proposta · Aero Festas</title>
+<meta id="og-desc-tag" name="description" content="Proposta de brinquedos premium · Aero Festas">
+
+<link id="og-canonical" rel="canonical" href="">
+
+<meta property="og:type" content="website">
+<meta id="og-url" property="og:url" content="">
+<meta id="og-title-meta" property="og:title" content="Proposta · Aero Festas">
+<meta id="og-desc-meta" property="og:description" content="Proposta de brinquedos premium · Aero Festas">
+<meta id="og-image-meta" property="og:image" content="">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="../icons/Logo_Aero_Festas.png" type="image/png">
+<link rel="apple-touch-icon" href="../icons/Logo_Aero_Festas.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="./_shared/styles.css?v=1">
+
+<style>
+  .prop-loading,
+  .prop-error {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 18px;
+    padding: 40px 20px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    color: #1f2937;
+  }
+  .prop-loading .spinner {
+    width: 42px; height: 42px;
+    border: 3px solid rgba(79,70,229,0.15);
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: prop-spin .8s linear infinite;
+  }
+  @keyframes prop-spin { to { transform: rotate(360deg); } }
+  .prop-loading p { color: #6b7280; font-size: 14px; }
+  .prop-error h2 { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 24px; margin: 0; }
+  .prop-error p { color: #6b7280; max-width: 420px; line-height: 1.5; }
+  .prop-error img { width: 90px; opacity: .8; }
+
+  body[data-loaded="true"] .prop-loading,
+  body[data-loaded="true"] .prop-error { display: none; }
+  body:not([data-loaded="true"]) #proposta-root { display: none; }
+
+  /* Bloco "Sobre o evento" — opcional, só aparece se houver dados */
+  .event-info {
+    padding: 60px 0 30px;
+  }
+  .event-info .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .event-info-card {
+    background: rgba(255,255,255,0.65);
+    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 8px 32px rgba(31,38,135,0.07);
+  }
+  .event-info-card h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: clamp(20px, 3vw, 28px);
+    margin: 0 0 18px;
+    color: #1f2937;
+  }
+  .event-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .event-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .event-info-item .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 600;
+  }
+  .event-info-item .value {
+    font-size: 15px;
+    color: #1f2937;
+    font-weight: 500;
+  }
+  .event-info-details {
+    margin: 0;
+    padding-top: 18px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    color: #374151;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  /* Bloco de valores — só aparece se showPrices=true */
+  .resumo-valores {
+    padding: 30px 0;
+  }
+  .resumo-valores .container { max-width: 900px; margin: 0 auto; }
+  .resumo-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.6));
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.45);
+    box-shadow: 0 8px 32px rgba(31,38,135,0.08);
+  }
+  .resumo-card h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    margin: 0 0 18px;
+  }
+  .resumo-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  .resumo-table th, .resumo-table td {
+    padding: 10px 0;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  .resumo-table th {
+    color: #6b7280;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .resumo-table td.qty { width: 60px; text-align: center; color: #6b7280; }
+  .resumo-table td.price,
+  .resumo-table th.price { text-align: right; width: 130px; }
+  .resumo-totais {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 14px;
+  }
+  .resumo-totais .row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #4b5563;
+  }
+  .resumo-totais .row.total {
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 2px solid rgba(0,0,0,0.08);
+    font-size: 20px;
+    font-weight: 800;
+    color: #1f2937;
+    font-family: 'Outfit', sans-serif;
+  }
+  .badge-desconto {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #16a34a, #4ade80);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(22,163,74,0.3);
+    margin-bottom: 10px;
+  }
+  .resumo-discount-line {
+    color: #16a34a;
+    font-weight: 600;
+  }
+  .resumo-discount-line s {
+    color: #9ca3af;
+    margin-right: 8px;
+    font-weight: 500;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- Loading state (default) -->
+<div class="prop-loading" id="prop-loading">
+  <div class="spinner"></div>
+  <p>Carregando sua proposta…</p>
+</div>
+
+<!-- Error state -->
+<div class="prop-error" id="prop-error" style="display:none">
+  <img src="../icons/Logo_Aero_Festas.png" alt="Aero Festas">
+  <h2>Proposta não encontrada</h2>
+  <p id="prop-error-msg">Verifique se o link está correto ou entre em contato com a Aero Festas.</p>
+  <a href="https://wa.me/5562985545046" target="_blank" rel="noopener"
+     style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;background:linear-gradient(135deg,#16a34a,#4ade80);color:#fff;text-decoration:none;font-weight:600;box-shadow:0 8px 20px rgba(22,163,74,0.3);">
+    Falar com a gente
+  </a>
+</div>
+
+<!-- Conteúdo dinâmico -->
+<div id="proposta-root"></div>
+
+<script>
+  (function () {
+    'use strict';
+
+    const API_BASE_URL = 'https://backend-aerofestas-production.up.railway.app';
+
+    // Lê slug da URL: /p/<slug> ou ?slug=<slug>
+    function readSlug() {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get('slug');
+      if (fromQuery) return fromQuery.trim();
+      const path = window.location.pathname.split('/').filter(Boolean);
+      // /p/<slug> -> path = ['p', '<slug>']
+      const pIdx = path.indexOf('p');
+      if (pIdx >= 0 && path[pIdx + 1]) return decodeURIComponent(path[pIdx + 1]);
+      // /propostas/view.html -> sem slug
+      return null;
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatBRL(v) {
+      if (v == null || isNaN(v)) return 'R$ 0,00';
+      return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function buildWhatsappUrl(number, message) {
+      const num = String(number || '').replace(/\D/g, '') || '5562985545046';
+      const text = encodeURIComponent(message || 'Olá! Gostaria de conversar sobre a proposta.');
+      return `https://wa.me/${num}?text=${text}`;
+    }
+
+    function setOgTags(data, publicUrl) {
+      document.title = (data.heroTitle || data.eventTitle || 'Proposta') + ' · Aero Festas';
+      const desc = data.heroSubtitle || `Proposta exclusiva para ${data.clientName}`;
+      const setMeta = (id, attr, val) => {
+        const el = document.getElementById(id);
+        if (el && val != null) el.setAttribute(attr, val);
+      };
+      setMeta('og-title-tag', 'innerText', document.title);
+      setMeta('og-desc-tag', 'content', desc);
+      setMeta('og-canonical', 'href', publicUrl);
+      setMeta('og-url', 'content', publicUrl);
+      setMeta('og-title-meta', 'content', document.title);
+      setMeta('og-desc-meta', 'content', desc);
+      if (data.ogImageUrl) setMeta('og-image-meta', 'content', data.ogImageUrl);
+    }
+
+    function renderHero(data, whatsappUrl) {
+      const featured = data.items.slice(0, 4);
+      const cards = featured.map((it, i) => {
+        const url = it.imageUrl || '';
+        if (!url) return '';
+        return `<div class="float-card float-card-${'abcd'[i]}"><img src="${escapeHtml(url)}" alt="" loading="eager" decoding="async"></div>`;
+      }).join('');
+
+      return `
+        <header class="top-pill" aria-label="${escapeHtml(data.brandPillText || 'Aero Festas')}">
+          <span class="pill-dot" aria-hidden="true"></span>
+          <span class="pill-text">${escapeHtml(data.brandPillText || 'Aero Festas')}${data.clientName ? ` <span class="pill-sep">·</span> <strong>${escapeHtml(data.clientName)}</strong>` : ''}</span>
+        </header>
+
+        <section class="hero" id="topo">
+          <div class="hero-bg" aria-hidden="true">
+            <div class="hero-blob blob-a"></div>
+            <div class="hero-blob blob-b"></div>
+            <div class="hero-pattern"></div>
+          </div>
+          <div class="hero-inner">
+            <p class="eyebrow"><span class="eyebrow-dot"></span>${escapeHtml(data.heroEyebrow || 'Proposta exclusiva')}</p>
+            <h1 class="hero-title">${escapeHtml(data.heroTitle || 'Atrações para o seu evento')}</h1>
+            <p class="hero-sub">${escapeHtml(data.heroSubtitle || 'Brinquedos premium selecionados especialmente para você.')}</p>
+            <div class="hero-ctas">
+              <a class="btn btn-primary btn-magnetic" href="${escapeHtml(whatsappUrl)}" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path fill="currentColor" d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.8 1-1 1.2-.2.2-.4.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.7-1.4-1.6-1.6-1.9-.2-.3 0-.4.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5 0 1.5 1.1 2.9 1.2 3.1.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4M12 21h0a9 9 0 0 1-4.6-1.3l-.3-.2-3.4.9.9-3.3-.2-.3a9 9 0 0 1-1.4-4.8 9 9 0 0 1 9-9 9 9 0 0 1 9 9 9 9 0 0 1-9 9m7.7-16.6A10.7 10.7 0 0 0 12 1 10.7 10.7 0 0 0 1.3 11.7c0 1.9.5 3.7 1.4 5.3L1.2 23l6.2-1.6a10.7 10.7 0 0 0 5.1 1.3h0a10.7 10.7 0 0 0 10.7-10.7c0-2.9-1.1-5.6-3.1-7.6"/>
+                </svg>
+                Conversar pelo WhatsApp
+              </a>
+              <a class="btn btn-ghost" href="#brinquedos">
+                Ver os brinquedos
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-6-6 6 6 6-6"/>
+                </svg>
+              </a>
+            </div>
+            ${cards ? `<div class="hero-cards" aria-hidden="true">${cards}</div>` : ''}
+            <a class="scroll-cue" href="#destaques" aria-label="Rolar para baixo"><span></span></a>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderStats(data) {
+      const count = data.items.length;
+      const year = data.eventDate ? String(data.eventDate).slice(0, 4) : new Date().getFullYear();
+      return `
+        <section class="stats reveal-group" aria-label="Resumo da proposta">
+          <div class="container">
+            <div class="stat-card reveal">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21 11h-2.07a7 7 0 0 0-1.43-3.27l1.46-1.46-1.41-1.41-1.46 1.46A7 7 0 0 0 13 5.07V3h-2v2.07a7 7 0 0 0-3.27 1.43L6.27 5.04 4.86 6.45l1.46 1.46A7 7 0 0 0 5.07 11H3v2h2.07a7 7 0 0 0 1.43 3.27l-1.46 1.46 1.41 1.41 1.46-1.46A7 7 0 0 0 11 18.93V21h2v-2.07a7 7 0 0 0 3.27-1.43l1.46 1.46 1.41-1.41-1.46-1.46A7 7 0 0 0 18.93 13H21v-2zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/></svg>
+              </div>
+              <div class="stat-num" data-counter="${count}">0</div>
+              <div class="stat-label">Brinquedo${count === 1 ? '' : 's'} premium</div>
+            </div>
+            <div class="stat-card reveal">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0 13c-2.7-1-4.7-3.7-5-6.6.5-1.5 3-2.4 5-2.4s4.5.9 5 2.4c-.3 2.9-2.3 5.6-5 6.6z"/></svg>
+              </div>
+              <div class="stat-num">100%</div>
+              <div class="stat-label">Monitoria treinada</div>
+            </div>
+            <div class="stat-card reveal">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+              </div>
+              <div class="stat-num">${escapeHtml(year)}</div>
+              <div class="stat-label">${escapeHtml(data.eventTitle || 'Seu evento')}</div>
+            </div>
+          </div>
+        </section>
+        <div id="destaques"></div>
+      `;
+    }
+
+    function renderEventInfo(data) {
+      const hasInfo = data.eventTitle || data.eventDate || data.eventTime || data.eventLocation || data.eventDetails;
+      if (!hasInfo) return '';
+      const items = [];
+      if (data.clientName) items.push({ label: 'Cliente / Anfitrião', value: data.clientName });
+      if (data.eventTitle) items.push({ label: 'Evento', value: data.eventTitle });
+      if (data.eventDate) {
+        const [y, m, d] = String(data.eventDate).split('-');
+        const formatted = (d && m && y) ? `${d}/${m}/${y}` : data.eventDate;
+        items.push({ label: 'Data', value: formatted });
+      }
+      if (data.eventTime) items.push({ label: 'Horário', value: data.eventTime });
+      if (data.eventLocation) items.push({ label: 'Local', value: data.eventLocation });
+
+      const grid = items.map(it =>
+        `<div class="event-info-item"><span class="label">${escapeHtml(it.label)}</span><span class="value">${escapeHtml(it.value)}</span></div>`
+      ).join('');
+
+      return `
+        <section class="event-info reveal-group">
+          <div class="container">
+            <div class="event-info-card reveal">
+              <h2>Sobre o evento</h2>
+              ${grid ? `<div class="event-info-grid">${grid}</div>` : ''}
+              ${data.eventDetails ? `<p class="event-info-details">${escapeHtml(data.eventDetails)}</p>` : ''}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderToys(data) {
+      if (!data.items.length) return '';
+      const cards = data.items.map((it, i) => {
+        const idx = i + 1;
+        const photos = Array.isArray(it.photos) && it.photos.length ? it.photos : (it.imageUrl ? [it.imageUrl] : []);
+        const primary = photos[0] || '';
+        const photosAttr = photos.length ? ` data-photos='${JSON.stringify(photos).replaceAll("'", "&#39;")}'` : '';
+        const qtyBadge = it.quantity > 1 ? `<span class="toy-sub">${it.quantity} unidades</span>` : '';
+
+        return `
+          <article class="toy-card reveal" data-idx="${idx}"${photosAttr}>
+            <div class="toy-img">
+              ${primary
+                ? `<img src="${escapeHtml(primary)}" data-fullsize="${escapeHtml(primary)}" alt="${escapeHtml(it.name)}" loading="${i < 4 ? 'eager' : 'lazy'}" decoding="async">`
+                : `<div style="background:linear-gradient(135deg,#818cf8 0%,#c4b5fd 100%);width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Outfit';font-size:48px;">${escapeHtml(it.name.charAt(0))}</div>`
+              }
+            </div>
+            <div class="toy-meta">
+              <span class="toy-num">${String(idx).padStart(2, '0')}</span>
+              <h3 class="toy-name">${escapeHtml(it.name)} ${qtyBadge}</h3>
+            </div>
+            ${primary ? `<button class="toy-zoom" aria-label="Ampliar ${escapeHtml(it.name)}" data-open="${idx}">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M15 3h6v6h-2V6.4l-4.3 4.3-1.4-1.4L17.6 5H15V3zM3 15h2v2.6l4.3-4.3 1.4 1.4L6.4 19H9v2H3v-6z"/></svg>
+            </button>` : ''}
+          </article>
+        `;
+      }).join('');
+
+      return `
+        <section class="toys" id="brinquedos">
+          <div class="container">
+            <header class="section-head reveal">
+              <p class="section-eyebrow">A Coleção</p>
+              <h2 class="section-title">${data.items.length === 1 ? 'O brinquedo' : `Os ${data.items.length} brinquedos`} da proposta</h2>
+              <p class="section-sub">Toque em cada brinquedo para ver em tela cheia. Use o swipe ou as setas para navegar.</p>
+            </header>
+            <div class="toy-grid reveal-group" id="toyGrid">${cards}</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderValores(data) {
+      if (!data.showPrices) return '';
+      const subtotal = data.subtotal || 0;
+      const total = data.total || subtotal;
+      const desconto = subtotal - total;
+      const showBadge = desconto > 0.01;
+      const discLabel = data.discountType === 'percent'
+        ? `${data.discountValue}% (${formatBRL(desconto)})`
+        : formatBRL(desconto);
+
+      const rows = data.items
+        .filter(it => it.unitPrice != null)
+        .map(it => `
+          <tr>
+            <td>${escapeHtml(it.name)}</td>
+            <td class="qty">×${it.quantity}</td>
+            <td class="price">${formatBRL((it.unitPrice || 0) * it.quantity)}</td>
+          </tr>
+        `).join('');
+
+      return `
+        <section class="resumo-valores reveal-group">
+          <div class="container">
+            <div class="resumo-card reveal">
+              <h2>Resumo de valores</h2>
+              ${rows ? `
+                <table class="resumo-table">
+                  <thead>
+                    <tr><th>Item</th><th class="qty">Qtd</th><th class="price">Valor</th></tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              ` : ''}
+              <div class="resumo-totais">
+                <div class="row"><span>Subtotal</span><span>${formatBRL(subtotal)}</span></div>
+                ${showBadge ? `
+                  <div style="margin:8px 0;"><span class="badge-desconto">★ Desconto aplicado: ${escapeHtml(discLabel)}</span></div>
+                  <div class="row resumo-discount-line"><span>Você economiza</span><span><s>${formatBRL(subtotal)}</s>${formatBRL(total)}</span></div>
+                ` : ''}
+                <div class="row total"><span>Total</span><span>${formatBRL(total)}</span></div>
+              </div>
+              ${data.observacoes ? `<p style="margin-top:14px;color:#6b7280;font-size:13px;white-space:pre-wrap;">${escapeHtml(data.observacoes)}</p>` : ''}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderWhy(whyCards) {
+      if (!whyCards.length) return '';
+      const items = whyCards.map(w => `
+        <div class="why-card reveal">
+          <div class="why-icon">
+            <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4z"/></svg>
+          </div>
+          <h3>${escapeHtml(w.title || '')}</h3>
+          <p>${escapeHtml(w.body || '')}</p>
+        </div>
+      `).join('');
+      return `
+        <section class="why">
+          <div class="container">
+            <header class="section-head reveal">
+              <p class="section-eyebrow">Tranquilidade</p>
+              <h2 class="section-title">Por que escolher a Aero Festas</h2>
+            </header>
+            <div class="why-grid reveal-group">${items}</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderHow(howItWorks) {
+      if (!howItWorks.length) return '';
+      const items = howItWorks.map(s => `
+        <li class="step reveal">
+          <div class="step-num">${escapeHtml(String(s.num || ''))}</div>
+          <div class="step-body">
+            <h3>${escapeHtml(s.title || '')}</h3>
+            <p>${escapeHtml(s.body || '')}</p>
+          </div>
+        </li>
+      `).join('');
+      return `
+        <section class="how">
+          <div class="container">
+            <header class="section-head reveal">
+              <p class="section-eyebrow">Simples assim</p>
+              <h2 class="section-title">Como funciona</h2>
+            </header>
+            <ol class="timeline reveal-group">${items}</ol>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderFaq(faq) {
+      if (!faq.length) return '';
+      const items = faq.map(f => `
+        <details class="reveal" style="background:rgba(255,255,255,0.6);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.4);border-radius:14px;padding:14px 18px;margin-bottom:10px;">
+          <summary style="cursor:pointer;font-weight:600;font-family:'Outfit',sans-serif;font-size:15px;color:#1f2937;">${escapeHtml(f.q || '')}</summary>
+          <p style="margin:10px 0 0;color:#4b5563;line-height:1.6;">${escapeHtml(f.a || '')}</p>
+        </details>
+      `).join('');
+      return `
+        <section class="faq" style="padding:40px 0 60px;">
+          <div class="container" style="max-width:760px;margin:0 auto;">
+            <header class="section-head reveal">
+              <p class="section-eyebrow">Tire suas dúvidas</p>
+              <h2 class="section-title">Perguntas frequentes</h2>
+            </header>
+            <div class="reveal-group">${items}</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderCtaFinal(data, whatsappUrl) {
+      return `
+        <section class="cta-final">
+          <div class="container">
+            <div class="cta-card reveal">
+              <p class="cta-eyebrow">Vamos conversar?</p>
+              <h2 class="cta-title">Pronto para uma festa inesquecível?</h2>
+              <p class="cta-sub">Estamos à disposição para finalizar os detalhes e garantir a sua data.</p>
+              <div class="cta-actions">
+                <a class="btn btn-primary btn-magnetic btn-lg" href="${escapeHtml(whatsappUrl)}" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                    <path fill="currentColor" d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.8 1-1 1.2-.2.2-.4.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.7-1.4-1.6-1.6-1.9-.2-.3 0-.4.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5 0 1.5 1.1 2.9 1.2 3.1.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4M12 21h0a9 9 0 0 1-4.6-1.3l-.3-.2-3.4.9.9-3.3-.2-.3a9 9 0 0 1-1.4-4.8 9 9 0 0 1 9-9 9 9 0 0 1 9 9 9 9 0 0 1-9 9m7.7-16.6A10.7 10.7 0 0 0 12 1 10.7 10.7 0 0 0 1.3 11.7c0 1.9.5 3.7 1.4 5.3L1.2 23l6.2-1.6a10.7 10.7 0 0 0 5.1 1.3h0a10.7 10.7 0 0 0 10.7-10.7c0-2.9-1.1-5.6-3.1-7.6"/>
+                  </svg>
+                  Confirmar pelo WhatsApp
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderFooter() {
+      return `
+        <footer class="site-footer">
+          <div class="container">
+            <img class="footer-logo" src="../icons/Logo_Aero_Festas.png" alt="Aero Festas" width="56" height="56">
+            <p class="footer-line">Aero Festas · Parceira oficial do seu evento</p>
+            <p class="footer-meta">© <span id="year">2026</span> Aero Festas Eventos. Todos os direitos reservados.</p>
+          </div>
+        </footer>
+      `;
+    }
+
+    function renderStickyMobile(whatsappUrl) {
+      return `
+        <a class="sticky-mobile-cta" href="${escapeHtml(whatsappUrl)}" target="_blank" rel="noopener" aria-label="Conversar pelo WhatsApp">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="currentColor" d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.8 1-1 1.2-.2.2-.4.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.8-.7-1.4-1.6-1.6-1.9-.2-.3 0-.4.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5 0 1.5 1.1 2.9 1.2 3.1.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4M12 21h0a9 9 0 0 1-4.6-1.3l-.3-.2-3.4.9.9-3.3-.2-.3a9 9 0 0 1-1.4-4.8 9 9 0 0 1 9-9 9 9 0 0 1 9 9 9 9 0 0 1-9 9m7.7-16.6A10.7 10.7 0 0 0 12 1 10.7 10.7 0 0 0 1.3 11.7c0 1.9.5 3.7 1.4 5.3L1.2 23l6.2-1.6a10.7 10.7 0 0 0 5.1 1.3h0a10.7 10.7 0 0 0 10.7-10.7c0-2.9-1.1-5.6-3.1-7.6"/>
+          </svg>
+          <span>Conversar agora</span>
+        </a>
+      `;
+    }
+
+    function renderLightbox(itemCount) {
+      return `
+        <dialog class="lightbox" id="lightbox" aria-label="Galeria de brinquedos">
+          <button class="lb-close" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+          <button class="lb-nav lb-prev" aria-label="Anterior">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="lb-stage"><div class="lb-track" id="lbTrack"></div></div>
+          <button class="lb-nav lb-next" aria-label="Próximo">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
+          </button>
+          <div class="lb-meta">
+            <span class="lb-counter" id="lbCounter">1 / ${itemCount}</span>
+            <span class="lb-title" id="lbTitle"></span>
+          </div>
+        </dialog>
+      `;
+    }
+
+    function showError(msg) {
+      document.getElementById('prop-loading').style.display = 'none';
+      const err = document.getElementById('prop-error');
+      err.style.display = 'flex';
+      if (msg) document.getElementById('prop-error-msg').textContent = msg;
+    }
+
+    async function init() {
+      const slug = readSlug();
+      if (!slug) {
+        showError('Esta página espera um link válido — verifique o endereço.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/public/propostas/${encodeURIComponent(slug)}`, {
+          cache: 'no-store'
+        });
+        if (res.status === 404) {
+          showError('Esta proposta não foi encontrada ou foi removida.');
+          return;
+        }
+        if (!res.ok) {
+          showError('Não conseguimos carregar a proposta agora. Tente novamente em instantes.');
+          return;
+        }
+
+        const data = await res.json();
+        const publicUrl = `${window.location.origin}/p/${slug}`;
+        const whatsappUrl = buildWhatsappUrl(data.whatsappNumber, data.whatsappMessage);
+
+        setOgTags(data, publicUrl);
+
+        const root = document.getElementById('proposta-root');
+        root.innerHTML = `
+          <div class="scroll-progress" aria-hidden="true"></div>
+          ${renderHero(data, whatsappUrl)}
+          <div class="junina-divider" aria-hidden="true">
+            <svg viewBox="0 0 600 24" preserveAspectRatio="none">
+              <path d="M0 4 Q 30 18 60 4 T 120 4 T 180 4 T 240 4 T 300 4 T 360 4 T 420 4 T 480 4 T 540 4 T 600 4" fill="none" stroke="currentColor" stroke-width="1" opacity=".25"/>
+            </svg>
+          </div>
+          ${renderStats(data)}
+          ${renderEventInfo(data)}
+          ${renderToys(data)}
+          ${renderValores(data)}
+          ${renderWhy(data.whyCards || [])}
+          ${renderHow(data.howItWorks || [])}
+          ${renderFaq(data.faq || [])}
+          ${renderCtaFinal(data, whatsappUrl)}
+          ${renderFooter()}
+          ${renderStickyMobile(whatsappUrl)}
+          ${renderLightbox(data.items.length)}
+        `;
+
+        document.body.setAttribute('data-loaded', 'true');
+
+        // Carrega o app.js compartilhado APÓS o DOM estar populado
+        const script = document.createElement('script');
+        script.src = './_shared/app.js?v=1';
+        script.defer = true;
+        document.body.appendChild(script);
+      } catch (err) {
+        console.error('[proposta] erro:', err);
+        showError('Erro de conexão. Verifique sua internet e tente novamente.');
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+</script>
+
+</body>
+</html>

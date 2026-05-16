@@ -236,6 +236,14 @@ function injectPremiumUserMenu(userData) {
         adminBtn.innerHTML = '<i class="fas fa-user-shield text-sm"></i>';
         adminBtn.title = "Painel Admin";
         menuItems.appendChild(adminBtn);
+
+        // Botão Templates de Propostas
+        const tplBtn = document.createElement('a');
+        tplBtn.href = 'Configuracoes-Propostas.html';
+        tplBtn.className = 'user-menu-btn flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 rounded-xl transition-all duration-200 shadow-md hover:shadow-xl hover:scale-110';
+        tplBtn.innerHTML = '<i class="fas fa-file-invoice text-sm"></i>';
+        tplBtn.title = "Templates de Propostas";
+        menuItems.appendChild(tplBtn);
     }
 
     // Divisor e Logout

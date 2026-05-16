@@ -32,10 +32,10 @@ router.get('/', authenticate, async (req, res, next) => {
 // POST — semântica upsert (backward-compat com salvarBrinquedo do frontend)
 router.post('/', authenticate, async (req, res, next) => {
     try {
-        const { id, name, quantity, imageUrl } = req.body;
+        const { id, name, quantity, imageUrl, defaultPrice } = req.body;
         const saved = id
-            ? await ToyService.updateToy(id, { name, quantity, imageUrl }, req.user)
-            : await ToyService.createToy({ name, quantity, imageUrl }, req.user);
+            ? await ToyService.updateToy(id, { name, quantity, imageUrl, defaultPrice }, req.user)
+            : await ToyService.createToy({ name, quantity, imageUrl, defaultPrice }, req.user);
         res.json({ success: true, data: saved });
     } catch (err) { next(err); }
 });

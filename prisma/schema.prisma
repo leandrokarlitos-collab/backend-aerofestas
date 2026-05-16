@@ -11,14 +11,16 @@ datasource db {
 // --- SEÇÃO DE ESTOQUE E EVENTOS ---
 
 model Toy {
-  id           Float            @id
-  name         String
-  quantity     Int
-  imageUrl     String?
-  eventItems   EventItem[]
-  units        ToyUnit[]
-  photos       ToyPhoto[]
-  maintenances ToyMaintenance[]
+  id            Float            @id
+  name          String
+  quantity      Int
+  imageUrl      String?
+  defaultPrice  Float?           // Preço sugerido para gerar propostas (opcional)
+  eventItems    EventItem[]
+  units         ToyUnit[]
+  photos        ToyPhoto[]
+  maintenances  ToyMaintenance[]
+  propostaItems PropostaItem[]
 }
 
 model ToyMaintenance {
@@ -79,6 +81,7 @@ model Client {
   cpf     String?
 
   whatsappConversations WhatsAppConversation[]
+  propostas             Proposta[]
 }
 
 // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
@@ -190,12 +193,114 @@ model EventItem {
   id       Int   @id @default(autoincrement())
   quantity Int
   price    Float? // Preço específico desta locação
-  
+
   eventId  Float
   event    Event @relation(fields: [eventId], references: [id])
-  
+
   toyId    Float?
   toy      Toy?   @relation(fields: [toyId], references: [id])
+}
+
+// --- SEÇÃO DE PROPOSTAS ---
+
+model Proposta {
+  id              Float    @id        // Date.now()
+  slug            String   @unique    // ex.: "festa-joao-7f3a"
+  status          String?  @default("draft") // "draft" | "sent" | "viewed"
+
+  // Cliente (snapshot — FK opcional pro Client cadastrado)
+  clientName      String
+  clientId        Float?
+  client          Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientPhone     String?
+
+  // Detalhes do evento (opcionais — exibidos em bloco "Sobre o evento" na view pública)
+  eventTitle      String?  // ex.: "Arraiá da Maple Bear"
+  eventDate       String?  // YYYY-MM-DD
+  eventTime       String?  // ex.: "Das 14h às 18h"
+  eventLocation   String?  // ex.: "Escola Maple Bear, Belo Horizonte"
+  eventDetails    String?  // texto livre
+
+  // Toggle de valores
+  showPrices      Boolean  @default(false)
+
+  // Financeiro (mesmo padrão de Event)
+  discountType    String?  // "percent" | "value"
+  discountValue   Float?
+  subtotal        Float?
+  total           Float?
+  observacoes     String?
+
+  // Template + overrides (campos espelhados, todos opcionais — coalescência no getPublic)
+  templateId      String?
+  template        PropostaTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  heroEyebrow     String?
+  heroTitle       String?
+  heroSubtitle    String?
+  whatsappNumber  String?
+  whatsappMessage String?
+  brandPillText   String?
+  whyCards        String?  // JSON serializado
+  faq             String?  // JSON serializado
+  howItWorks      String?  // JSON serializado
+  ogImageUrl      String?
+
+  items           PropostaItem[]
+
+  // Auditoria + telemetria leve
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedBy       String?
+  updatedAt       DateTime @updatedAt
+  viewedAt        DateTime?
+  viewCount       Int      @default(0)
+
+  @@index([slug])
+  @@index([createdAt])
+  @@index([clientId])
+}
+
+model PropostaItem {
+  id               Int      @id @default(autoincrement())
+  propostaId       Float
+  proposta         Proposta @relation(fields: [propostaId], references: [id], onDelete: Cascade)
+  toyId            Float?
+  toy              Toy?     @relation(fields: [toyId], references: [id], onDelete: SetNull)
+  quantity         Int      @default(1)
+  unitPrice        Float?   // null quando showPrices=false
+  order            Int      @default(0)
+
+  // Snapshot anti-deleção: se o Toy for renomeado/excluído, a proposta antiga preserva o nome/foto
+  toyNameSnapshot  String?
+  toyImageSnapshot String?
+
+  @@index([propostaId])
+}
+
+model PropostaTemplate {
+  id              String   @id @default(uuid())
+  nome            String
+  isDefault       Boolean  @default(false)
+
+  heroEyebrow     String
+  heroTitle       String
+  heroSubtitle    String
+  brandPillText   String?
+  whyCards        String   // JSON array
+  faq             String?  // JSON array
+  howItWorks      String   // JSON array (timeline)
+  whatsappNumber  String
+  whatsappMessage String   // suporta {{clientName}}, {{propostaUrl}}, {{eventDate}}, {{eventTitle}}
+  ogImageUrl      String?
+
+  propostas       Proposta[]
+
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedBy       String?
+  updatedAt       DateTime @updatedAt
+
+  @@index([isDefault])
 }
 
 // --- SEÇÃO FINANCEIRA E RH ---

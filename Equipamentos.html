@@ -1326,11 +1326,21 @@
         }
         #equip-modal .maint-form .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* === FAB (Novo equipamento) === */
-        #equip-fab {
+        /* === SpeedDial (ações flutuantes) === */
+        #equip-speeddial {
             position: fixed;
             bottom: 130px;
             right: 24px;
+            z-index: 9500;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+        }
+        @media (min-width: 1024px) {
+            #equip-speeddial { bottom: 30px; }
+        }
+        #equip-speeddial .sd-toggle {
             width: 56px;
             height: 56px;
             border-radius: 50%;
@@ -1343,14 +1353,596 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9500;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            order: 99;
         }
-        #equip-fab:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 20px 40px rgba(79, 70, 229, 0.55); }
-        #equip-fab:active { transform: scale(0.95); }
-        @media (min-width: 1024px) {
-            #equip-fab { bottom: 30px; }
+        #equip-speeddial .sd-toggle:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 20px 40px rgba(79, 70, 229, 0.55); }
+        #equip-speeddial .sd-toggle:active { transform: scale(0.95); }
+        #equip-speeddial .sd-toggle-icon {
+            transition: transform 0.25s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         }
+        #equip-speeddial.is-open .sd-toggle-icon {
+            transform: rotate(45deg);
+        }
+
+        #equip-speeddial .sd-action {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px 10px 18px;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 0.88rem;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+            opacity: 0;
+            transform: translateY(20px) scale(0.85);
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        #equip-speeddial.is-open .sd-action {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        /* Stagger das animações */
+        #equip-speeddial.is-open .sd-action-secondary { transition-delay: 0.04s; }
+        #equip-speeddial.is-open .sd-action-primary { transition-delay: 0.08s; }
+
+        #equip-speeddial .sd-label {
+            white-space: nowrap;
+            color: inherit;
+        }
+        #equip-speeddial .sd-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.22);
+            font-size: 0.95rem;
+        }
+
+        /* Primário: Gerar Proposta — gradiente forte, destaque */
+        #equip-speeddial .sd-action-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #a855f7 100%);
+            color: #fff;
+            box-shadow: 0 14px 30px rgba(79, 70, 229, 0.45);
+        }
+        #equip-speeddial .sd-action-primary:hover {
+            transform: translateY(-2px) scale(1.03) !important;
+            box-shadow: 0 18px 36px rgba(79, 70, 229, 0.55);
+        }
+
+        /* Secundário: Novo equipamento — branco glassy */
+        #equip-speeddial .sd-action-secondary {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            color: #4338ca;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        #equip-speeddial .sd-action-secondary .sd-icon {
+            background: rgba(79, 70, 229, 0.12);
+            color: #4f46e5;
+        }
+        #equip-speeddial .sd-action-secondary:hover {
+            background: #fff;
+            transform: translateY(-2px) scale(1.03) !important;
+        }
+
+        @media (max-width: 480px) {
+            #equip-speeddial .sd-label { display: none; }
+            #equip-speeddial .sd-action {
+                width: 48px;
+                height: 48px;
+                padding: 0;
+                justify-content: center;
+            }
+            #equip-speeddial .sd-action .sd-icon {
+                background: transparent;
+            }
+            #equip-speeddial .sd-action-primary .sd-icon { color: #fff; }
+        }
+
+        /* === Modal Wizard de Proposta === */
+        #proposta-wizard-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9700;
+            overflow-y: auto;
+        }
+        #proposta-wizard-modal.open { display: flex; }
+        .prop-wizard-box {
+            background: #fff;
+            border-radius: 24px;
+            padding: 22px 24px;
+            max-width: 640px;
+            width: 100%;
+            margin: 30px 0;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+        }
+        .prop-wizard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+        }
+        .prop-wizard-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .prop-wizard-header h2 i { color: #4f46e5; }
+        #prop-step-indicator {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            margin: 0;
+        }
+        .prop-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(15, 23, 42, 0.05);
+            border-radius: 50%;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .prop-close:hover { background: rgba(15, 23, 42, 0.1); color: #0f172a; }
+
+        .prop-step { animation: prop-fadein 0.35s ease; }
+        @keyframes prop-fadein {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .prop-step-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 12px;
+        }
+        .prop-step label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            margin: 10px 0 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .prop-optional {
+            font-weight: 500;
+            color: #94a3b8;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .prop-step input[type="text"],
+        .prop-step input[type="tel"],
+        .prop-step input[type="date"],
+        .prop-step input[type="number"],
+        .prop-step textarea,
+        .prop-step select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-family: inherit;
+            background: #fff;
+            color: #0f172a;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .prop-step input:focus,
+        .prop-step textarea:focus,
+        .prop-step select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+        .prop-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 520px) {
+            .prop-row-2 { grid-template-columns: 1fr; }
+        }
+
+        /* Toggle showPrices */
+        .prop-toggle-row {
+            margin: 14px 0 6px;
+            padding: 12px;
+            background: rgba(79, 70, 229, 0.04);
+            border-radius: 12px;
+            border: 1px dashed rgba(79, 70, 229, 0.2);
+        }
+        .prop-toggle {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+        }
+        .prop-toggle input { display: none; }
+        .prop-toggle-slider {
+            width: 42px;
+            height: 24px;
+            background: #cbd5e1;
+            border-radius: 999px;
+            position: relative;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+        }
+        .prop-toggle-slider::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.25s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .prop-toggle input:checked + .prop-toggle-slider {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+        }
+        .prop-toggle input:checked + .prop-toggle-slider::before {
+            transform: translateX(18px);
+        }
+        .prop-toggle-text strong {
+            display: block;
+            font-size: 0.92rem;
+            color: #0f172a;
+            font-weight: 700;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .prop-toggle-text small {
+            display: block;
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .prop-template-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 14px;
+        }
+        .prop-template-row select { width: 100%; }
+        .prop-template-link {
+            font-size: 0.78rem;
+            color: #4f46e5;
+            text-decoration: none;
+            margin-top: 4px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .prop-template-link:hover { text-decoration: underline; }
+
+        /* Step 2 — seleção de brinquedos */
+        .prop-toy-search {
+            position: relative;
+            margin-bottom: 14px;
+        }
+        .prop-toy-search i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .prop-toy-search input {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 12px;
+            font-size: 0.92rem;
+        }
+        .prop-toy-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .prop-toy-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #fff;
+            transition: all 0.18s ease;
+            cursor: pointer;
+        }
+        .prop-toy-card:hover {
+            border-color: rgba(79, 70, 229, 0.3);
+            background: rgba(79, 70, 229, 0.02);
+        }
+        .prop-toy-card.is-selected {
+            border-color: #4f46e5;
+            background: rgba(79, 70, 229, 0.06);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+        }
+        .prop-toy-card img {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #818cf8, #c4b5fd);
+            flex-shrink: 0;
+        }
+        .prop-toy-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .prop-toy-name {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 0.9rem;
+            margin: 0 0 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .prop-toy-meta {
+            font-size: 0.74rem;
+            color: #64748b;
+        }
+        .prop-toy-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .prop-toy-controls .qty-stepper {
+            display: flex;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.04);
+            border-radius: 999px;
+            padding: 2px;
+        }
+        .prop-toy-controls .qty-stepper button {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #4f46e5;
+            font-weight: 700;
+            font-size: 0.92rem;
+            border-radius: 50%;
+        }
+        .prop-toy-controls .qty-stepper button:hover:not(:disabled) {
+            background: rgba(79, 70, 229, 0.1);
+        }
+        .prop-toy-controls .qty-stepper button:disabled {
+            color: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .prop-toy-controls .qty-stepper input {
+            width: 36px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 0.9rem;
+            padding: 0;
+        }
+        .prop-toy-price {
+            width: 84px;
+            padding: 6px 8px !important;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 8px;
+            font-size: 0.82rem !important;
+            text-align: right;
+        }
+        .prop-selected-summary {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(168, 85, 247, 0.08));
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.88rem;
+            color: #4338ca;
+            font-weight: 600;
+        }
+
+        /* Step 3 — valores */
+        .prop-values-card {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+        .prop-values-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.92rem;
+            color: #475569;
+        }
+        .prop-values-total {
+            border-top: 2px solid rgba(15, 23, 42, 0.08);
+            padding-top: 12px !important;
+            margin-top: 6px;
+            font-size: 1.05rem;
+            color: #0f172a;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+        }
+        .prop-discount-row {
+            padding: 10px 0;
+            border-top: 1px dashed rgba(15, 23, 42, 0.1);
+            margin: 6px 0;
+        }
+        .prop-discount-row label {
+            margin: 0 0 6px !important;
+        }
+        .prop-discount-inputs {
+            display: grid;
+            grid-template-columns: 1fr 100px;
+            gap: 8px;
+        }
+
+        .prop-personalize {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            padding: 0;
+            background: #fff;
+            margin-top: 6px;
+        }
+        .prop-personalize > summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.92rem;
+        }
+        .prop-personalize > summary::-webkit-details-marker { display: none; }
+        .prop-personalize > summary i { color: #a855f7; }
+        .prop-personalize-body {
+            padding: 0 14px 14px;
+        }
+
+        /* Step 4 — preview/sucesso */
+        .prop-preview-card {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            font-size: 0.88rem;
+            color: #334155;
+            line-height: 1.55;
+        }
+        .prop-preview-card strong { color: #0f172a; }
+        .prop-preview-card .prop-preview-line {
+            padding: 4px 0;
+        }
+        .prop-preview-card .prop-preview-items {
+            list-style: none;
+            padding: 8px 0 0;
+            margin: 8px 0 0;
+            border-top: 1px dashed rgba(15, 23, 42, 0.1);
+        }
+        .prop-preview-card .prop-preview-items li {
+            padding: 3px 0;
+            font-size: 0.85rem;
+        }
+        .prop-success-icon {
+            text-align: center;
+            font-size: 3.4rem;
+            color: #16a34a;
+            margin-bottom: 8px;
+            animation: prop-pop 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        @keyframes prop-pop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .prop-url-row {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0 16px;
+        }
+        .prop-url-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+        .prop-success-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .prop-success-actions a {
+            flex: 1;
+            min-width: 140px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+
+        .prop-wizard-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .prop-wizard-footer button,
+        .prop-wizard-footer .btn-confirm,
+        .prop-wizard-footer .btn-cancel {
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .prop-wizard-footer .btn-cancel {
+            background: rgba(15, 23, 42, 0.05);
+            color: #64748b;
+        }
+        .prop-wizard-footer .btn-cancel:hover { background: rgba(15, 23, 42, 0.1); color: #0f172a; }
+        .prop-wizard-footer .btn-confirm {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: #fff;
+            margin-left: auto;
+        }
+        .prop-wizard-footer .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* === Modal de criação de novo equipamento === */
         #equip-create-modal {
@@ -1586,6 +2178,16 @@
                         <i class="fas fa-boxes-stacked"></i>
                         <span>Quantidade em estoque: <strong id="equip-modal-qty">—</strong></span>
                     </div>
+                    <div class="stat-row" id="equip-modal-price-row" style="cursor:pointer;">
+                        <i class="fas fa-tag"></i>
+                        <span>Preço sugerido para propostas:
+                            <strong id="equip-modal-price-display">—</strong>
+                            <button type="button" id="equip-modal-price-edit"
+                                style="margin-left:8px;font-size:0.7rem;color:#4f46e5;background:none;border:none;cursor:pointer;text-decoration:underline;font-weight:600;">
+                                Editar
+                            </button>
+                        </span>
+                    </div>
                     <div class="rental-info" id="equip-modal-rentals"></div>
                 </section>
 
@@ -1668,10 +2270,26 @@
         </div>
     </div>
 
-    <!-- FAB: Novo equipamento -->
-    <button type="button" id="equip-fab" title="Novo equipamento" aria-label="Novo equipamento">
-        <i class="fas fa-plus"></i>
-    </button>
+    <!-- SpeedDial: ações flutuantes -->
+    <div id="equip-speeddial" aria-label="Ações rápidas">
+        <!-- Item 1 (primário): Gerar Proposta -->
+        <button type="button" id="equip-fab-proposta" class="sd-action sd-action-primary"
+            aria-label="Gerar Proposta" title="Gerar Proposta">
+            <span class="sd-label">Gerar Proposta</span>
+            <span class="sd-icon"><i class="fas fa-file-invoice"></i></span>
+        </button>
+        <!-- Item 2 (secundário): Novo equipamento (mantém ID #equip-fab) -->
+        <button type="button" id="equip-fab" class="sd-action sd-action-secondary"
+            aria-label="Novo equipamento" title="Novo equipamento">
+            <span class="sd-label">Novo equipamento</span>
+            <span class="sd-icon"><i class="fas fa-cubes"></i></span>
+        </button>
+        <!-- Toggle principal -->
+        <button type="button" id="equip-speeddial-toggle" class="sd-toggle"
+            aria-label="Abrir ações" aria-expanded="false">
+            <i class="fas fa-plus sd-toggle-icon"></i>
+        </button>
+    </div>
 
     <!-- Modal de criação -->
     <div id="equip-create-modal" role="dialog" aria-modal="true" aria-hidden="true">
@@ -1681,10 +2299,202 @@
             <input id="equip-create-name" type="text" placeholder="Ex.: Cama Elástica 4m" maxlength="80" autocomplete="off">
             <label for="equip-create-qty">Quantidade</label>
             <input id="equip-create-qty" type="number" min="1" max="999" value="1" inputmode="numeric">
+            <label for="equip-create-price">Preço sugerido para propostas <span style="font-weight:400;color:#94a3b8;">(opcional)</span></label>
+            <input id="equip-create-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ex.: 450,00">
+            <small style="display:block;color:#94a3b8;font-size:0.75rem;margin-top:-6px;margin-bottom:6px;">Será pré-preenchido ao gerar propostas e pode ser ajustado por proposta.</small>
             <div class="actions">
                 <button type="button" class="btn-cancel" id="equip-create-cancel">Cancelar</button>
                 <button type="button" class="btn-confirm" id="equip-create-confirm">Criar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Wizard: Gerar Proposta -->
+    <div id="proposta-wizard-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="prop-wizard-box" role="document">
+            <header class="prop-wizard-header">
+                <div>
+                    <h2><i class="fas fa-file-invoice"></i> Gerar Proposta</h2>
+                    <p id="prop-step-indicator">Etapa 1 de 4</p>
+                </div>
+                <button type="button" class="prop-close" id="prop-wizard-close" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </header>
+
+            <!-- STEP 1: Cliente & Configuração -->
+            <section class="prop-step" data-step="1">
+                <h3 class="prop-step-title">Quem vai receber esta proposta?</h3>
+                <label for="prop-client-name">Nome do cliente / anfitrião *</label>
+                <input id="prop-client-name" type="text" placeholder="Ex.: João Silva, Maple Bear BH..." autocomplete="off" list="prop-clients-datalist">
+                <datalist id="prop-clients-datalist"></datalist>
+
+                <label for="prop-client-phone">WhatsApp do cliente <span class="prop-optional">(opcional)</span></label>
+                <input id="prop-client-phone" type="tel" placeholder="(62) 98554-5046" inputmode="tel">
+
+                <div class="prop-row-2">
+                    <div>
+                        <label for="prop-event-title">Título do evento <span class="prop-optional">(opcional)</span></label>
+                        <input id="prop-event-title" type="text" placeholder="Ex.: Festa Junina, Aniversário de 5 anos...">
+                    </div>
+                    <div>
+                        <label for="prop-event-date">Data <span class="prop-optional">(opcional)</span></label>
+                        <input id="prop-event-date" type="date">
+                    </div>
+                </div>
+
+                <div class="prop-row-2">
+                    <div>
+                        <label for="prop-event-time">Horário <span class="prop-optional">(opcional)</span></label>
+                        <input id="prop-event-time" type="text" placeholder="Ex.: Das 14h às 18h">
+                    </div>
+                    <div>
+                        <label for="prop-event-location">Local <span class="prop-optional">(opcional)</span></label>
+                        <input id="prop-event-location" type="text" placeholder="Ex.: Escola Maple Bear BH">
+                    </div>
+                </div>
+
+                <label for="prop-event-details">Detalhes da festa <span class="prop-optional">(opcional)</span></label>
+                <textarea id="prop-event-details" rows="2" placeholder="Anote informações relevantes sobre o evento que serão exibidas na proposta..."></textarea>
+
+                <div class="prop-toggle-row">
+                    <label class="prop-toggle">
+                        <input type="checkbox" id="prop-show-prices">
+                        <span class="prop-toggle-slider"></span>
+                        <span class="prop-toggle-text">
+                            <strong>Incluir valores na proposta</strong>
+                            <small>Quando ativado, mostra preço dos itens, subtotal e desconto.</small>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="prop-template-row">
+                    <label for="prop-template-select">Template visual</label>
+                    <select id="prop-template-select">
+                        <option value="">Carregando templates...</option>
+                    </select>
+                    <a href="./Configuracoes-Propostas.html" target="_blank" rel="noopener" class="prop-template-link">
+                        <i class="fas fa-pen-to-square"></i> Gerenciar templates
+                    </a>
+                </div>
+            </section>
+
+            <!-- STEP 2: Seleção de brinquedos -->
+            <section class="prop-step" data-step="2" hidden>
+                <h3 class="prop-step-title">Quais brinquedos vão na proposta?</h3>
+
+                <div class="prop-toy-search">
+                    <i class="fas fa-search"></i>
+                    <input id="prop-toy-search" type="text" placeholder="Buscar brinquedo...">
+                </div>
+
+                <div id="prop-toy-grid" class="prop-toy-grid"></div>
+
+                <div class="prop-selected-summary" id="prop-selected-summary">
+                    <span><strong id="prop-selected-count">0</strong> brinquedo(s) selecionado(s)</span>
+                    <span id="prop-selected-subtotal" hidden></span>
+                </div>
+            </section>
+
+            <!-- STEP 3: Personalização & valores -->
+            <section class="prop-step" data-step="3" hidden>
+                <h3 class="prop-step-title">Ajustes finais</h3>
+
+                <div id="prop-values-block" hidden>
+                    <div class="prop-values-card">
+                        <div class="prop-values-row">
+                            <span>Subtotal</span>
+                            <strong id="prop-values-subtotal">R$ 0,00</strong>
+                        </div>
+
+                        <div class="prop-discount-row">
+                            <label>Desconto</label>
+                            <div class="prop-discount-inputs">
+                                <select id="prop-discount-type">
+                                    <option value="">Sem desconto</option>
+                                    <option value="percent">% (porcentagem)</option>
+                                    <option value="value">R$ (valor fixo)</option>
+                                </select>
+                                <input id="prop-discount-value" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" disabled>
+                            </div>
+                        </div>
+
+                        <div class="prop-values-row prop-values-total">
+                            <span>Total</span>
+                            <strong id="prop-values-total">R$ 0,00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <details class="prop-personalize">
+                    <summary>
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                        Personalizar textos desta proposta
+                        <span class="prop-optional">(opcional — sobrescreve o template)</span>
+                    </summary>
+                    <div class="prop-personalize-body">
+                        <label for="prop-hero-eyebrow">Texto acima do título</label>
+                        <input id="prop-hero-eyebrow" type="text" placeholder="Ex.: Proposta exclusiva · Festa Junina 2026">
+
+                        <label for="prop-hero-title">Título principal</label>
+                        <input id="prop-hero-title" type="text" placeholder="Ex.: Atrações para o Arraiá Maple Bear BH">
+
+                        <label for="prop-hero-subtitle">Subtítulo</label>
+                        <textarea id="prop-hero-subtitle" rows="2" placeholder="Texto descritivo logo abaixo do título"></textarea>
+
+                        <label for="prop-whatsapp-message">Mensagem inicial do WhatsApp <span class="prop-optional">(suporta {{clientName}} {{propostaUrl}} {{eventTitle}} {{eventDate}})</span></label>
+                        <textarea id="prop-whatsapp-message" rows="2" placeholder="Olá! Sou {{clientName}} e gostaria de conversar sobre a proposta {{propostaUrl}}."></textarea>
+
+                        <label for="prop-observacoes">Observações no resumo de valores <span class="prop-optional">(opcional)</span></label>
+                        <textarea id="prop-observacoes" rows="2" placeholder="Ex.: Valor inclui montagem e desmontagem. Saldo no dia do evento."></textarea>
+                    </div>
+                </details>
+            </section>
+
+            <!-- STEP 4: Confirmar / Link gerado -->
+            <section class="prop-step" data-step="4" hidden>
+                <div id="prop-preview-block">
+                    <h3 class="prop-step-title">Resumo final</h3>
+                    <div class="prop-preview-card" id="prop-preview-card"></div>
+                </div>
+
+                <div id="prop-success-block" hidden>
+                    <div class="prop-success-icon"><i class="fas fa-circle-check"></i></div>
+                    <h3 class="prop-step-title" style="text-align:center;">Proposta gerada!</h3>
+                    <p style="text-align:center;color:#64748b;margin-bottom:18px;">Compartilhe o link abaixo com seu cliente.</p>
+
+                    <div class="prop-url-row">
+                        <input id="prop-public-url" type="text" readonly>
+                        <button type="button" id="prop-copy-url" class="btn-confirm">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+
+                    <div class="prop-success-actions">
+                        <a id="prop-open-preview" target="_blank" rel="noopener" class="btn-cancel">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Abrir prévia
+                        </a>
+                        <a id="prop-share-whatsapp" target="_blank" rel="noopener" class="btn-confirm" style="background:#16a34a;">
+                            <i class="fab fa-whatsapp"></i> Compartilhar via WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="prop-wizard-footer">
+                <button type="button" class="btn-cancel" id="prop-prev-btn" hidden>
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <button type="button" class="btn-confirm" id="prop-next-btn">
+                    Avançar <i class="fas fa-arrow-right"></i>
+                </button>
+                <button type="button" class="btn-confirm" id="prop-generate-btn" hidden style="background:linear-gradient(135deg,#16a34a,#22c55e);">
+                    <i class="fas fa-rocket"></i> Gerar proposta
+                </button>
+                <button type="button" class="btn-cancel" id="prop-done-btn" hidden>
+                    Fechar
+                </button>
+            </footer>
         </div>
     </div>
 
@@ -1757,6 +2567,13 @@
         const modalImgWrap = document.getElementById('equip-modal-img-wrap');
         const modalName = document.getElementById('equip-modal-name');
         const modalQty = document.getElementById('equip-modal-qty');
+        const modalPriceDisplay = document.getElementById('equip-modal-price-display');
+        const modalPriceEdit = document.getElementById('equip-modal-price-edit');
+
+        function formatBRLEquip(v) {
+            if (v == null || isNaN(v)) return '—';
+            return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
         const modalRentals = document.getElementById('equip-modal-rentals');
         const modalGallery = document.getElementById('equip-modal-gallery');
         const modalPhotoCount = document.getElementById('equip-modal-photo-count');
@@ -2251,6 +3068,7 @@
             openedToyId = toy.id;
             modalName.textContent = toy.name;
             modalQty.textContent = toy.quantity;
+            if (modalPriceDisplay) modalPriceDisplay.textContent = formatBRLEquip(toy.defaultPrice);
 
             const url = getPrimaryUrl(toy);
             if (url) {
@@ -2280,6 +3098,7 @@
             if (!toy) { closeModal(); return; }
             // Atualiza modal sem fechar
             modalQty.textContent = toy.quantity;
+            if (modalPriceDisplay) modalPriceDisplay.textContent = formatBRLEquip(toy.defaultPrice);
             const url = getPrimaryUrl(toy);
             if (url) {
                 modalImgWrap.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(toy.name)}">`;
@@ -2581,12 +3400,14 @@
         const createModal = document.getElementById('equip-create-modal');
         const createName = document.getElementById('equip-create-name');
         const createQty = document.getElementById('equip-create-qty');
+        const createPrice = document.getElementById('equip-create-price');
         const createCancel = document.getElementById('equip-create-cancel');
         const createConfirm = document.getElementById('equip-create-confirm');
 
         function openCreateModal() {
             createName.value = '';
             createQty.value = '1';
+            if (createPrice) createPrice.value = '';
             createConfirm.disabled = true;
             createModal.classList.add('open');
             createModal.setAttribute('aria-hidden', 'false');
@@ -2620,9 +3441,13 @@
             const name = createName.value.trim();
             const quantity = parseInt(createQty.value) || 1;
             if (!name || quantity < 1) return;
+            const priceRaw = createPrice ? createPrice.value.trim() : '';
+            const defaultPrice = priceRaw === '' ? null : parseFloat(priceRaw);
             createConfirm.disabled = true;
             createConfirm.textContent = 'Criando...';
-            const result = await api.salvarBrinquedo({ id: Date.now(), name, quantity });
+            const payload = { id: Date.now(), name, quantity };
+            if (defaultPrice !== null && !isNaN(defaultPrice)) payload.defaultPrice = defaultPrice;
+            const result = await api.salvarBrinquedo(payload);
             createConfirm.textContent = 'Criar';
             if (result && (result.success || result.data)) {
                 showToast('Equipamento criado!', 'success');
@@ -2634,6 +3459,51 @@
                 showToast('Erro ao criar equipamento', 'error');
             }
         });
+
+        // --- Editar preço sugerido (inline no modal de detalhes) ---
+        if (modalPriceEdit) {
+            modalPriceEdit.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (openedToyId == null) return;
+                const toy = allToys.find(t => t.id === openedToyId);
+                if (!toy) return;
+                const currentRaw = toy.defaultPrice != null ? String(toy.defaultPrice).replace('.', ',') : '';
+                const input = prompt(
+                    `Preço sugerido para "${toy.name}" (em R$):\n\nDeixe em branco para remover.`,
+                    currentRaw
+                );
+                if (input === null) return; // Cancelado
+                const cleaned = input.trim().replace(',', '.');
+                let newPrice = null;
+                if (cleaned !== '') {
+                    const parsed = parseFloat(cleaned);
+                    if (isNaN(parsed) || parsed < 0) {
+                        showToast('Valor inválido', 'error');
+                        return;
+                    }
+                    newPrice = parsed;
+                }
+                modalPriceEdit.disabled = true;
+                modalPriceEdit.textContent = '...';
+                const payload = {
+                    id: toy.id,
+                    name: toy.name,
+                    quantity: toy.quantity,
+                    defaultPrice: newPrice
+                };
+                const result = await api.salvarBrinquedo(payload);
+                modalPriceEdit.disabled = false;
+                modalPriceEdit.textContent = 'Editar';
+                if (result && (result.success || result.data)) {
+                    showToast('Preço atualizado', 'success');
+                    notifyToysChanged();
+                    await loadToys({ silent: true });
+                    refreshOpenModal();
+                } else {
+                    showToast('Erro ao atualizar preço', 'error');
+                }
+            });
+        }
 
         // --- Excluir equipamento (botão no modal de detalhes) ---
         const modalDeleteBtn = document.getElementById('equip-modal-delete');
@@ -2821,6 +3691,479 @@
                 if (bottomNav.classList.contains('collapsed')) toggleNav(e);
             });
         });
+
+        // ============================================================
+        // SPEEDDIAL + WIZARD DE PROPOSTA
+        // ============================================================
+        const speeddial = document.getElementById('equip-speeddial');
+        const speeddialToggle = document.getElementById('equip-speeddial-toggle');
+        const propostaFab = document.getElementById('equip-fab-proposta');
+
+        function openSpeeddial() {
+            if (!speeddial) return;
+            speeddial.classList.add('is-open');
+            speeddialToggle.setAttribute('aria-expanded', 'true');
+        }
+        function closeSpeeddial() {
+            if (!speeddial) return;
+            speeddial.classList.remove('is-open');
+            speeddialToggle.setAttribute('aria-expanded', 'false');
+        }
+        if (speeddialToggle) {
+            speeddialToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (speeddial.classList.contains('is-open')) closeSpeeddial();
+                else openSpeeddial();
+            });
+        }
+        document.addEventListener('click', (e) => {
+            if (!speeddial?.classList.contains('is-open')) return;
+            if (!speeddial.contains(e.target)) closeSpeeddial();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && speeddial?.classList.contains('is-open')) closeSpeeddial();
+        });
+
+        // ============================================================
+        // WIZARD DE PROPOSTA
+        // ============================================================
+        const propWizardModal = document.getElementById('proposta-wizard-modal');
+        const propClose = document.getElementById('prop-wizard-close');
+        const propStepIndicator = document.getElementById('prop-step-indicator');
+        const propPrevBtn = document.getElementById('prop-prev-btn');
+        const propNextBtn = document.getElementById('prop-next-btn');
+        const propGenerateBtn = document.getElementById('prop-generate-btn');
+        const propDoneBtn = document.getElementById('prop-done-btn');
+
+        // Step 1 inputs
+        const propClientName = document.getElementById('prop-client-name');
+        const propClientPhone = document.getElementById('prop-client-phone');
+        const propEventTitle = document.getElementById('prop-event-title');
+        const propEventDate = document.getElementById('prop-event-date');
+        const propEventTime = document.getElementById('prop-event-time');
+        const propEventLocation = document.getElementById('prop-event-location');
+        const propEventDetails = document.getElementById('prop-event-details');
+        const propShowPrices = document.getElementById('prop-show-prices');
+        const propTemplateSelect = document.getElementById('prop-template-select');
+        const propClientsDatalist = document.getElementById('prop-clients-datalist');
+
+        // Step 2
+        const propToyGrid = document.getElementById('prop-toy-grid');
+        const propToySearch = document.getElementById('prop-toy-search');
+        const propSelectedCount = document.getElementById('prop-selected-count');
+        const propSelectedSubtotal = document.getElementById('prop-selected-subtotal');
+
+        // Step 3
+        const propValuesBlock = document.getElementById('prop-values-block');
+        const propValuesSubtotal = document.getElementById('prop-values-subtotal');
+        const propValuesTotal = document.getElementById('prop-values-total');
+        const propDiscountType = document.getElementById('prop-discount-type');
+        const propDiscountValue = document.getElementById('prop-discount-value');
+        const propHeroEyebrow = document.getElementById('prop-hero-eyebrow');
+        const propHeroTitle = document.getElementById('prop-hero-title');
+        const propHeroSubtitle = document.getElementById('prop-hero-subtitle');
+        const propWhatsappMessage = document.getElementById('prop-whatsapp-message');
+        const propObservacoes = document.getElementById('prop-observacoes');
+
+        // Step 4
+        const propPreviewBlock = document.getElementById('prop-preview-block');
+        const propPreviewCard = document.getElementById('prop-preview-card');
+        const propSuccessBlock = document.getElementById('prop-success-block');
+        const propPublicUrl = document.getElementById('prop-public-url');
+        const propCopyUrl = document.getElementById('prop-copy-url');
+        const propOpenPreview = document.getElementById('prop-open-preview');
+        const propShareWhatsapp = document.getElementById('prop-share-whatsapp');
+
+        // Estado do wizard
+        let propStep = 1;
+        let propSelections = new Map(); // toyId -> { quantity, unitPrice }
+        let propTemplatesCache = [];
+        let propGeneratedSlug = null;
+
+        function formatBRLProp(v) {
+            if (v == null || isNaN(v)) return 'R$ 0,00';
+            return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function calcProposalFinancials() {
+            const showPrices = propShowPrices.checked;
+            if (!showPrices) return { subtotal: 0, total: 0, desconto: 0 };
+            let subtotal = 0;
+            propSelections.forEach((sel) => {
+                if (sel.unitPrice != null && !isNaN(sel.unitPrice)) {
+                    subtotal += sel.unitPrice * sel.quantity;
+                }
+            });
+            const dType = propDiscountType.value;
+            const dValRaw = parseFloat(propDiscountValue.value);
+            let desconto = 0;
+            if (dType === 'percent' && !isNaN(dValRaw)) desconto = subtotal * (dValRaw / 100);
+            else if (dType === 'value' && !isNaN(dValRaw)) desconto = dValRaw;
+            const total = Math.max(0, subtotal - desconto);
+            return { subtotal, total, desconto };
+        }
+
+        function refreshSelectedSummary() {
+            const showPrices = propShowPrices.checked;
+            propSelectedCount.textContent = propSelections.size;
+            const { subtotal } = calcProposalFinancials();
+            if (showPrices && subtotal > 0) {
+                propSelectedSubtotal.textContent = `Subtotal: ${formatBRLProp(subtotal)}`;
+                propSelectedSubtotal.hidden = false;
+            } else {
+                propSelectedSubtotal.hidden = true;
+            }
+        }
+
+        function refreshValuesBlock() {
+            const showPrices = propShowPrices.checked;
+            if (!showPrices) {
+                propValuesBlock.hidden = true;
+                return;
+            }
+            propValuesBlock.hidden = false;
+            const { subtotal, total } = calcProposalFinancials();
+            propValuesSubtotal.textContent = formatBRLProp(subtotal);
+            propValuesTotal.textContent = formatBRLProp(total);
+        }
+
+        propDiscountType.addEventListener('change', () => {
+            propDiscountValue.disabled = !propDiscountType.value;
+            if (!propDiscountType.value) propDiscountValue.value = '';
+            refreshValuesBlock();
+        });
+        propDiscountValue.addEventListener('input', refreshValuesBlock);
+        propShowPrices.addEventListener('change', () => {
+            renderToyGrid();
+            refreshSelectedSummary();
+            refreshValuesBlock();
+        });
+
+        function showStep(n) {
+            propStep = n;
+            document.querySelectorAll('#proposta-wizard-modal .prop-step').forEach(el => {
+                el.hidden = parseInt(el.dataset.step) !== n;
+            });
+            propStepIndicator.textContent = `Etapa ${n} de 4`;
+            propPrevBtn.hidden = n === 1 || (n === 4 && propGeneratedSlug);
+            propNextBtn.hidden = n === 4;
+            propGenerateBtn.hidden = n !== 4 || !!propGeneratedSlug;
+            propDoneBtn.hidden = !propGeneratedSlug;
+
+            if (n === 4 && !propGeneratedSlug) renderPreview();
+        }
+
+        function openWizard() {
+            // Reset estado
+            propStep = 1;
+            propSelections.clear();
+            propGeneratedSlug = null;
+            propClientName.value = '';
+            propClientPhone.value = '';
+            propEventTitle.value = '';
+            propEventDate.value = '';
+            propEventTime.value = '';
+            propEventLocation.value = '';
+            propEventDetails.value = '';
+            propShowPrices.checked = false;
+            propDiscountType.value = '';
+            propDiscountValue.value = '';
+            propDiscountValue.disabled = true;
+            propHeroEyebrow.value = '';
+            propHeroTitle.value = '';
+            propHeroSubtitle.value = '';
+            propWhatsappMessage.value = '';
+            propObservacoes.value = '';
+            propPreviewBlock.hidden = false;
+            propSuccessBlock.hidden = true;
+
+            // Popula datalist de clientes + templates (paralelo, não bloqueante)
+            api.getClientes().then(clientes => {
+                propClientsDatalist.innerHTML = (clientes || []).map(c =>
+                    `<option value="${escapeHtml(c.name || c.nome || '')}">${escapeHtml(c.phone || c.telefone || '')}</option>`
+                ).join('');
+            }).catch(() => {});
+            api.listarTemplatesProposta().then(list => {
+                propTemplatesCache = list || [];
+                propTemplateSelect.innerHTML = propTemplatesCache.length
+                    ? propTemplatesCache.map(t => `<option value="${t.id}" ${t.isDefault ? 'selected' : ''}>${escapeHtml(t.nome)}${t.isDefault ? ' (padrão)' : ''}</option>`).join('')
+                    : '<option value="">Nenhum template cadastrado — usaremos os textos padrão.</option>';
+            }).catch(() => {
+                propTemplateSelect.innerHTML = '<option value="">Erro ao carregar templates</option>';
+            });
+
+            renderToyGrid();
+            refreshSelectedSummary();
+            refreshValuesBlock();
+            showStep(1);
+
+            propWizardModal.classList.add('open');
+            propWizardModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => propClientName.focus(), 50);
+        }
+
+        function closeWizard() {
+            propWizardModal.classList.remove('open');
+            propWizardModal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function renderToyGrid(filter = '') {
+            const showPrices = propShowPrices.checked;
+            const q = (filter || propToySearch.value || '').toLowerCase().trim();
+            const list = (q ? allToys.filter(t => (t.name || '').toLowerCase().includes(q)) : allToys)
+                .slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+            if (!list.length) {
+                propToyGrid.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;">Nenhum brinquedo encontrado.</div>`;
+                return;
+            }
+
+            propToyGrid.innerHTML = list.map(toy => {
+                const url = getPrimaryUrl(toy);
+                const sel = propSelections.get(toy.id);
+                const isSelected = !!sel;
+                const qty = sel?.quantity || 1;
+                const unitPrice = sel?.unitPrice ?? (toy.defaultPrice ?? '');
+
+                return `
+                    <div class="prop-toy-card ${isSelected ? 'is-selected' : ''}" data-toy-id="${toy.id}">
+                        ${url ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(toy.name)}">` : `<img alt="" style="background:linear-gradient(135deg,#818cf8,#c4b5fd);">`}
+                        <div class="prop-toy-info">
+                            <p class="prop-toy-name">${escapeHtml(toy.name)}</p>
+                            <p class="prop-toy-meta">${toy.quantity} em estoque${toy.defaultPrice != null ? ' · sugerido: ' + formatBRLProp(toy.defaultPrice) : ''}</p>
+                        </div>
+                        <div class="prop-toy-controls">
+                            ${isSelected ? `
+                                <div class="qty-stepper" data-toy-id="${toy.id}">
+                                    <button type="button" data-action="dec" ${qty <= 1 ? 'disabled' : ''}>−</button>
+                                    <input type="number" min="1" max="${toy.quantity}" value="${qty}" data-action="qty">
+                                    <button type="button" data-action="inc" ${qty >= toy.quantity ? 'disabled' : ''}>+</button>
+                                </div>
+                                ${showPrices ? `<input type="number" class="prop-toy-price" min="0" step="0.01" inputmode="decimal" placeholder="R$" value="${unitPrice}" data-toy-id="${toy.id}" data-action="price">` : ''}
+                            ` : `
+                                <button type="button" class="btn-confirm" data-toy-id="${toy.id}" data-action="add" style="padding:6px 14px;border-radius:999px;background:linear-gradient(135deg,#4f46e5,#a855f7);color:#fff;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        propToySearch.addEventListener('input', () => renderToyGrid());
+
+        propToyGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('.prop-toy-card');
+            const btn = e.target.closest('button[data-action]');
+            if (!card || !btn) return;
+            const toyId = parseFloat(card.dataset.toyId);
+            const toy = allToys.find(t => t.id === toyId);
+            if (!toy) return;
+            const action = btn.dataset.action;
+            const current = propSelections.get(toyId);
+
+            if (action === 'add') {
+                propSelections.set(toyId, {
+                    quantity: 1,
+                    unitPrice: toy.defaultPrice ?? null
+                });
+            } else if (action === 'inc' && current) {
+                if (current.quantity < toy.quantity) current.quantity++;
+            } else if (action === 'dec' && current) {
+                if (current.quantity > 1) current.quantity--;
+                else propSelections.delete(toyId);
+            }
+            renderToyGrid();
+            refreshSelectedSummary();
+            refreshValuesBlock();
+        });
+
+        propToyGrid.addEventListener('input', (e) => {
+            const target = e.target;
+            if (target.dataset.action === 'qty') {
+                const card = target.closest('.prop-toy-card');
+                const toyId = parseFloat(card.dataset.toyId);
+                const toy = allToys.find(t => t.id === toyId);
+                if (!toy) return;
+                const v = Math.max(1, Math.min(toy.quantity, parseInt(target.value) || 1));
+                const cur = propSelections.get(toyId);
+                if (cur) cur.quantity = v;
+                refreshSelectedSummary();
+                refreshValuesBlock();
+            } else if (target.dataset.action === 'price') {
+                const toyId = parseFloat(target.dataset.toyId);
+                const cur = propSelections.get(toyId);
+                if (cur) {
+                    const v = target.value.trim();
+                    cur.unitPrice = v === '' ? null : parseFloat(v.replace(',', '.'));
+                }
+                refreshSelectedSummary();
+                refreshValuesBlock();
+            }
+        });
+
+        function validateStep(n) {
+            if (n === 1) {
+                if (!propClientName.value.trim()) {
+                    showToast('Informe o nome do cliente', 'error');
+                    propClientName.focus();
+                    return false;
+                }
+                return true;
+            }
+            if (n === 2) {
+                if (propSelections.size === 0) {
+                    showToast('Selecione ao menos um brinquedo', 'error');
+                    return false;
+                }
+                return true;
+            }
+            return true;
+        }
+
+        function renderPreview() {
+            const showPrices = propShowPrices.checked;
+            const items = [];
+            propSelections.forEach((sel, toyId) => {
+                const toy = allToys.find(t => t.id === toyId);
+                if (toy) items.push({ ...toy, _quantity: sel.quantity, _unitPrice: sel.unitPrice });
+            });
+            const { subtotal, total, desconto } = calcProposalFinancials();
+            const tpl = propTemplatesCache.find(t => t.id === propTemplateSelect.value);
+
+            const lines = [];
+            lines.push(`<p class="prop-preview-line"><strong>Cliente:</strong> ${escapeHtml(propClientName.value)}</p>`);
+            if (propEventTitle.value) lines.push(`<p class="prop-preview-line"><strong>Evento:</strong> ${escapeHtml(propEventTitle.value)}</p>`);
+            if (propEventDate.value) {
+                const [y, m, d] = propEventDate.value.split('-');
+                lines.push(`<p class="prop-preview-line"><strong>Data:</strong> ${d}/${m}/${y}</p>`);
+            }
+            if (propEventTime.value) lines.push(`<p class="prop-preview-line"><strong>Horário:</strong> ${escapeHtml(propEventTime.value)}</p>`);
+            if (propEventLocation.value) lines.push(`<p class="prop-preview-line"><strong>Local:</strong> ${escapeHtml(propEventLocation.value)}</p>`);
+            if (tpl) lines.push(`<p class="prop-preview-line"><strong>Template:</strong> ${escapeHtml(tpl.nome)}</p>`);
+
+            const itemsList = items.map(it => {
+                const priceLine = showPrices && it._unitPrice != null
+                    ? ` — ${formatBRLProp(it._unitPrice * it._quantity)}`
+                    : '';
+                return `<li>• ${escapeHtml(it.name)} (×${it._quantity})${priceLine}</li>`;
+            }).join('');
+            lines.push(`<ul class="prop-preview-items">${itemsList}</ul>`);
+
+            if (showPrices) {
+                lines.push(`<p class="prop-preview-line" style="margin-top:8px;"><strong>Subtotal:</strong> ${formatBRLProp(subtotal)}</p>`);
+                if (desconto > 0.01) lines.push(`<p class="prop-preview-line" style="color:#16a34a;"><strong>Desconto:</strong> -${formatBRLProp(desconto)}</p>`);
+                lines.push(`<p class="prop-preview-line" style="font-size:1.05rem;color:#0f172a;"><strong>Total:</strong> ${formatBRLProp(total)}</p>`);
+            } else {
+                lines.push(`<p class="prop-preview-line" style="color:#64748b;font-style:italic;">Proposta sem valores — apenas apresentação com CTA WhatsApp.</p>`);
+            }
+
+            propPreviewCard.innerHTML = lines.join('');
+        }
+
+        async function generateProposta() {
+            const showPrices = propShowPrices.checked;
+            const items = [];
+            propSelections.forEach((sel, toyId) => {
+                items.push({
+                    toyId,
+                    quantity: sel.quantity,
+                    unitPrice: showPrices ? sel.unitPrice : null
+                });
+            });
+
+            const payload = {
+                clientName: propClientName.value.trim(),
+                clientPhone: propClientPhone.value.trim() || null,
+                eventTitle: propEventTitle.value.trim() || null,
+                eventDate: propEventDate.value || null,
+                eventTime: propEventTime.value.trim() || null,
+                eventLocation: propEventLocation.value.trim() || null,
+                eventDetails: propEventDetails.value.trim() || null,
+                showPrices,
+                templateId: propTemplateSelect.value || null,
+                discountType: showPrices ? (propDiscountType.value || null) : null,
+                discountValue: showPrices && propDiscountValue.value ? parseFloat(propDiscountValue.value) : null,
+                observacoes: propObservacoes.value.trim() || null,
+                heroEyebrow: propHeroEyebrow.value.trim() || null,
+                heroTitle: propHeroTitle.value.trim() || null,
+                heroSubtitle: propHeroSubtitle.value.trim() || null,
+                whatsappMessage: propWhatsappMessage.value.trim() || null,
+                items
+            };
+
+            propGenerateBtn.disabled = true;
+            propGenerateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+            const result = await api.criarProposta(payload);
+            propGenerateBtn.disabled = false;
+            propGenerateBtn.innerHTML = '<i class="fas fa-rocket"></i> Gerar proposta';
+
+            if (!result || result.success === false || !result.data) {
+                showToast(result?.error || 'Erro ao gerar proposta', 'error');
+                return;
+            }
+
+            const slug = result.data.slug;
+            propGeneratedSlug = slug;
+            const publicUrl = `${window.location.origin}/p/${slug}`;
+            propPublicUrl.value = publicUrl;
+            propOpenPreview.href = publicUrl;
+            const waMsg = encodeURIComponent(`Olá! Segue a proposta da Aero Festas: ${publicUrl}`);
+            propShareWhatsapp.href = `https://wa.me/?text=${waMsg}`;
+
+            propPreviewBlock.hidden = true;
+            propSuccessBlock.hidden = false;
+            propGenerateBtn.hidden = true;
+            propPrevBtn.hidden = true;
+            propDoneBtn.hidden = false;
+
+            showToast('Proposta gerada!', 'success');
+        }
+
+        propCopyUrl.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(propPublicUrl.value);
+                propCopyUrl.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                setTimeout(() => { propCopyUrl.innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 1800);
+            } catch {
+                propPublicUrl.select();
+                document.execCommand('copy');
+            }
+        });
+
+        propPrevBtn.addEventListener('click', () => {
+            if (propStep > 1) showStep(propStep - 1);
+        });
+        propNextBtn.addEventListener('click', () => {
+            if (!validateStep(propStep)) return;
+            if (propStep < 4) showStep(propStep + 1);
+        });
+        propGenerateBtn.addEventListener('click', generateProposta);
+        propDoneBtn.addEventListener('click', closeWizard);
+        propClose.addEventListener('click', () => {
+            if (propGeneratedSlug || confirm('Fechar sem gerar a proposta?')) closeWizard();
+        });
+        propWizardModal.addEventListener('click', (e) => {
+            if (e.target === propWizardModal) {
+                if (propGeneratedSlug || confirm('Fechar sem gerar a proposta?')) closeWizard();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && propWizardModal.classList.contains('open')) {
+                if (propGeneratedSlug) closeWizard();
+            }
+        });
+
+        // SpeedDial → abrir wizard
+        if (propostaFab) {
+            propostaFab.addEventListener('click', () => {
+                closeSpeeddial();
+                openWizard();
+            });
+        }
     </script>
 
     <script src="js/protect.js"></script>

@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Templates de Propostas · Aero Festas</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="icon" href="./icons/Logo_Aero_Festas.png" type="image/png">
+
+<script src="js/pwa-init.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background:
+            radial-gradient(1200px 600px at 10% -10%, rgba(168,85,247,0.18), transparent 60%),
+            radial-gradient(1000px 500px at 110% 110%, rgba(79,70,229,0.18), transparent 60%),
+            linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+        min-height: 100vh;
+        padding-bottom: 120px;
+    }
+    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
+
+    .tpl-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(16px) saturate(160%);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 20px;
+        padding: 18px 20px;
+        box-shadow: 0 8px 28px rgba(31, 38, 135, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tpl-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(31, 38, 135, 0.12); }
+    .tpl-card .info { flex: 1; min-width: 0; }
+    .tpl-card .name {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #0f172a;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .tpl-card .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .tpl-card .meta { color: #64748b; font-size: 0.82rem; }
+    .tpl-card .actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+        align-items: center;
+    }
+    .tpl-action {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        background: rgba(255, 255, 255, 0.8);
+        color: #475569;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+    .tpl-action:hover { color: #0f172a; background: #fff; transform: translateY(-1px); }
+    .tpl-action.danger { color: #ef4444; }
+    .tpl-action.danger:hover { background: #fef2f2; }
+    .tpl-action.star { color: #f59e0b; }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5, #a855f7);
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 10px 24px rgba(79, 70, 229, 0.3);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(79, 70, 229, 0.4); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Modal de edição */
+    #tpl-modal {
+        position: fixed; inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 20px;
+        z-index: 9000;
+        overflow-y: auto;
+    }
+    #tpl-modal.open { display: flex; }
+    .tpl-modal-box {
+        background: #fff;
+        border-radius: 24px;
+        max-width: 760px;
+        width: 100%;
+        margin: 30px 0;
+        box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .tpl-modal-header {
+        padding: 18px 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+    .tpl-modal-header h2 {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+    .tpl-modal-close {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(15, 23, 42, 0.05);
+        cursor: pointer;
+        color: #64748b;
+    }
+    .tpl-modal-close:hover { background: rgba(15, 23, 42, 0.1); color: #0f172a; }
+
+    .tpl-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 8px 16px 0;
+        overflow-x: auto;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .tpl-tab {
+        padding: 10px 14px;
+        border: none;
+        background: transparent;
+        font-weight: 600;
+        font-size: 0.86rem;
+        color: #64748b;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .tpl-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+
+    .tpl-tab-body { padding: 22px 24px; max-height: 60vh; overflow-y: auto; }
+    .tpl-tab-body[hidden] { display: none; }
+
+    .tpl-tab-body label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #475569;
+        margin: 12px 0 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .tpl-tab-body label .opt {
+        font-weight: 500;
+        color: #94a3b8;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+    .tpl-tab-body input[type="text"],
+    .tpl-tab-body input[type="tel"],
+    .tpl-tab-body input[type="url"],
+    .tpl-tab-body textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 10px;
+        font-size: 0.92rem;
+        font-family: inherit;
+        background: #fff;
+        color: #0f172a;
+    }
+    .tpl-tab-body input:focus, .tpl-tab-body textarea:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .repeater-item {
+        background: #f8fafc;
+        border: 1px solid rgba(15, 23, 42, 0.05);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        position: relative;
+    }
+    .repeater-item .remove {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: #fef2f2;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 0.78rem;
+    }
+    .repeater-add {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1px dashed rgba(79, 70, 229, 0.4);
+        background: rgba(79, 70, 229, 0.04);
+        color: #4f46e5;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+    .repeater-add:hover { background: rgba(79, 70, 229, 0.08); }
+
+    .tpl-modal-footer {
+        padding: 14px 24px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    .btn-cancel {
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.92rem;
+        background: rgba(15, 23, 42, 0.05);
+        color: #64748b;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-cancel:hover { background: rgba(15, 23, 42, 0.1); color: #0f172a; }
+
+    /* Toast */
+    #toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #0f172a;
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.88rem;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+        transform: translateX(120%);
+        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        z-index: 10000;
+    }
+    #toast.show { transform: translateX(0); }
+    #toast.success { background: linear-gradient(135deg, #16a34a, #22c55e); }
+    #toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+</style>
+</head>
+
+<body>
+
+<main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <header class="mb-8">
+        <div class="flex items-center justify-between gap-4 mb-2">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fas fa-file-invoice text-indigo-500"></i> Templates de Propostas
+            </h1>
+            <a href="./Dashboard.html"
+                class="hidden sm:inline-flex items-center gap-2 bg-white/60 hover:bg-white/80 text-slate-600 px-4 py-2 rounded-xl border border-white/40 shadow-sm transition-all">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+        <p class="text-slate-500 text-sm">Configure os textos, perguntas e imagem padrão usados nas propostas geradas para seus clientes.</p>
+    </header>
+
+    <div class="flex justify-end mb-4">
+        <button id="btn-new-template" class="btn-primary">
+            <i class="fas fa-plus"></i> Novo template
+        </button>
+    </div>
+
+    <section id="tpl-list" class="space-y-3">
+        <div style="text-align:center;color:#94a3b8;padding:40px 0;">Carregando templates…</div>
+    </section>
+</main>
+
+<!-- Modal de edição -->
+<div id="tpl-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="tpl-modal-box">
+        <header class="tpl-modal-header">
+            <h2 id="tpl-modal-title">Novo template</h2>
+            <button type="button" class="tpl-modal-close" id="tpl-modal-close" aria-label="Fechar">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </header>
+
+        <nav class="tpl-tabs" role="tablist">
+            <button type="button" class="tpl-tab active" data-tab="hero">Hero & Marca</button>
+            <button type="button" class="tpl-tab" data-tab="why">Por que Aero</button>
+            <button type="button" class="tpl-tab" data-tab="how">Como funciona</button>
+            <button type="button" class="tpl-tab" data-tab="faq">FAQ</button>
+            <button type="button" class="tpl-tab" data-tab="whatsapp">WhatsApp</button>
+        </nav>
+
+        <!-- Tab: Hero & Marca -->
+        <div class="tpl-tab-body" data-tab-body="hero">
+            <label>Nome interno do template *</label>
+            <input id="tpl-nome" type="text" placeholder="Ex.: Padrão Aero Festas, Aniversário Infantil, Corporativo...">
+
+            <label>Texto acima do título (eyebrow) *</label>
+            <input id="tpl-hero-eyebrow" type="text" placeholder="Ex.: Proposta exclusiva">
+
+            <label>Título principal *</label>
+            <input id="tpl-hero-title" type="text" placeholder="Ex.: Atrações para o seu evento">
+
+            <label>Subtítulo *</label>
+            <textarea id="tpl-hero-subtitle" rows="3" placeholder="Texto descritivo logo abaixo do título"></textarea>
+
+            <label>Pill de marca <span class="opt">(canto superior da página)</span></label>
+            <input id="tpl-brand-pill" type="text" placeholder="Ex.: Aero Festas">
+
+            <label>Imagem de capa (OG) <span class="opt">(opcional)</span></label>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <input id="tpl-og-image" type="url" placeholder="https://... (ou faça upload)" style="flex:1;">
+                <label class="repeater-add" style="cursor:pointer;margin:0;">
+                    <i class="fas fa-upload"></i> Upload
+                    <input type="file" id="tpl-og-upload-input" accept="image/*" style="display:none;">
+                </label>
+            </div>
+            <img id="tpl-og-preview" src="" alt="" style="display:none;max-width:100%;margin-top:10px;border-radius:12px;border:1px solid rgba(15,23,42,0.08);">
+        </div>
+
+        <!-- Tab: Por que Aero -->
+        <div class="tpl-tab-body" data-tab-body="why" hidden>
+            <p style="color:#64748b;font-size:0.85rem;margin:0 0 12px;">Cards exibidos na seção "Por que escolher a Aero Festas".</p>
+            <div id="tpl-why-list"></div>
+            <button type="button" class="repeater-add" data-action="add-why">
+                <i class="fas fa-plus"></i> Adicionar card
+            </button>
+        </div>
+
+        <!-- Tab: Como funciona -->
+        <div class="tpl-tab-body" data-tab-body="how" hidden>
+            <p style="color:#64748b;font-size:0.85rem;margin:0 0 12px;">Etapas exibidas na timeline "Como funciona".</p>
+            <div id="tpl-how-list"></div>
+            <button type="button" class="repeater-add" data-action="add-how">
+                <i class="fas fa-plus"></i> Adicionar etapa
+            </button>
+        </div>
+
+        <!-- Tab: FAQ -->
+        <div class="tpl-tab-body" data-tab-body="faq" hidden>
+            <p style="color:#64748b;font-size:0.85rem;margin:0 0 12px;">Perguntas frequentes da proposta. Deixe vazio para ocultar a seção.</p>
+            <div id="tpl-faq-list"></div>
+            <button type="button" class="repeater-add" data-action="add-faq">
+                <i class="fas fa-plus"></i> Adicionar pergunta
+            </button>
+        </div>
+
+        <!-- Tab: WhatsApp -->
+        <div class="tpl-tab-body" data-tab-body="whatsapp" hidden>
+            <label>Número do WhatsApp *</label>
+            <input id="tpl-whatsapp-number" type="tel" placeholder="5562985545046 (com código do país, sem traços)">
+
+            <label>Mensagem inicial padrão *</label>
+            <textarea id="tpl-whatsapp-message" rows="3" placeholder="Olá! Sou {{clientName}} e gostaria de conversar sobre a proposta {{propostaUrl}}."></textarea>
+            <small style="display:block;color:#64748b;font-size:0.78rem;margin-top:4px;">Placeholders disponíveis: <code>{{clientName}}</code>, <code>{{propostaUrl}}</code>, <code>{{eventTitle}}</code>, <code>{{eventDate}}</code></small>
+
+            <div style="margin-top:16px;padding:12px;background:#f8fafc;border-radius:10px;font-size:0.85rem;color:#475569;">
+                <strong style="display:block;margin-bottom:4px;">Pré-visualização:</strong>
+                <span id="tpl-whatsapp-preview" style="white-space:pre-wrap;color:#0f172a;">—</span>
+            </div>
+        </div>
+
+        <footer class="tpl-modal-footer">
+            <label style="display:inline-flex;align-items:center;gap:6px;margin-right:auto;cursor:pointer;font-size:0.85rem;color:#475569;">
+                <input type="checkbox" id="tpl-is-default">
+                Marcar como template padrão
+            </label>
+            <button type="button" class="btn-cancel" id="tpl-cancel">Cancelar</button>
+            <button type="button" class="btn-primary" id="tpl-save"><i class="fas fa-floppy-disk"></i> Salvar</button>
+        </footer>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { api, API_BASE_URL } from './js/api.js';
+
+let templatesCache = [];
+let editingId = null;
+let whyArr = [];
+let howArr = [];
+let faqArr = [];
+
+function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = type;
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function esc(s) {
+    return String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+
+async function loadTemplates() {
+    const list = document.getElementById('tpl-list');
+    list.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:40px 0;">Carregando templates…</div>`;
+    templatesCache = await api.listarTemplatesProposta();
+    if (!Array.isArray(templatesCache) || !templatesCache.length) {
+        list.innerHTML = `
+            <div style="text-align:center;color:#94a3b8;padding:60px 20px;">
+                <i class="fas fa-file-invoice" style="font-size:2.4rem;display:block;margin-bottom:14px;opacity:0.6;"></i>
+                <p style="margin-bottom:8px;">Nenhum template cadastrado ainda.</p>
+                <p style="font-size:0.82rem;">Crie um clicando em "Novo template" acima.</p>
+            </div>
+        `;
+        return;
+    }
+    list.innerHTML = templatesCache.map(t => `
+        <div class="tpl-card" data-id="${esc(t.id)}">
+            <div class="info">
+                <div class="name">
+                    ${esc(t.nome)}
+                    ${t.isDefault ? '<span class="badge"><i class="fas fa-star" style="font-size:0.65rem;"></i> Padrão</span>' : ''}
+                </div>
+                <div class="meta">${esc(t.heroTitle || '')}</div>
+                <div class="meta" style="margin-top:6px;font-size:0.74rem;">Atualizado em ${new Date(t.updatedAt).toLocaleDateString('pt-BR')}</div>
+            </div>
+            <div class="actions">
+                ${!t.isDefault ? `<button class="tpl-action star" data-action="set-default" title="Marcar como padrão"><i class="fas fa-star"></i></button>` : ''}
+                <button class="tpl-action" data-action="edit" title="Editar"><i class="fas fa-pen"></i></button>
+                ${!t.isDefault ? `<button class="tpl-action danger" data-action="delete" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('tpl-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const card = btn.closest('.tpl-card');
+    const id = card.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === 'set-default') {
+        btn.disabled = true;
+        const res = await api.definirTemplatePadrao(id);
+        btn.disabled = false;
+        if (res) {
+            showToast('Template marcado como padrão', 'success');
+            loadTemplates();
+        } else {
+            showToast('Erro ao marcar como padrão', 'error');
+        }
+    } else if (action === 'edit') {
+        openModal(id);
+    } else if (action === 'delete') {
+        const tpl = templatesCache.find(t => t.id === id);
+        if (!confirm(`Excluir o template "${tpl?.nome}"?`)) return;
+        btn.disabled = true;
+        const res = await api.deletarTemplateProposta(id);
+        btn.disabled = false;
+        if (res?.success) {
+            showToast('Template excluído', 'success');
+            loadTemplates();
+        } else {
+            showToast(res?.error || 'Erro ao excluir', 'error');
+        }
+    }
+});
+
+// ============ Modal ============
+const modal = document.getElementById('tpl-modal');
+const modalTitle = document.getElementById('tpl-modal-title');
+const inpNome = document.getElementById('tpl-nome');
+const inpEyebrow = document.getElementById('tpl-hero-eyebrow');
+const inpHTitle = document.getElementById('tpl-hero-title');
+const inpHSub = document.getElementById('tpl-hero-subtitle');
+const inpBrand = document.getElementById('tpl-brand-pill');
+const inpOgImage = document.getElementById('tpl-og-image');
+const ogPreview = document.getElementById('tpl-og-preview');
+const ogUploadInput = document.getElementById('tpl-og-upload-input');
+const inpWaNumber = document.getElementById('tpl-whatsapp-number');
+const inpWaMessage = document.getElementById('tpl-whatsapp-message');
+const waPreview = document.getElementById('tpl-whatsapp-preview');
+const inpDefault = document.getElementById('tpl-is-default');
+
+const whyList = document.getElementById('tpl-why-list');
+const howList = document.getElementById('tpl-how-list');
+const faqList = document.getElementById('tpl-faq-list');
+
+function renderRepeater(container, items, fields) {
+    container.innerHTML = items.map((item, i) => `
+        <div class="repeater-item" data-i="${i}">
+            <button type="button" class="remove" data-i="${i}"><i class="fas fa-xmark"></i></button>
+            ${fields.map(f => `
+                <label>${esc(f.label)}</label>
+                ${f.type === 'textarea'
+                    ? `<textarea rows="2" data-field="${f.key}" data-i="${i}">${esc(item[f.key] || '')}</textarea>`
+                    : `<input type="${f.type || 'text'}" data-field="${f.key}" data-i="${i}" value="${esc(item[f.key] || '')}" placeholder="${esc(f.placeholder || '')}">`
+                }
+            `).join('')}
+        </div>
+    `).join('');
+}
+
+function rerenderWhy() {
+    renderRepeater(whyList, whyArr, [
+        { key: 'title', label: 'Título', placeholder: 'Ex.: Equipamentos certificados' },
+        { key: 'body', label: 'Descrição', placeholder: 'Texto curto explicativo', type: 'textarea' }
+    ]);
+}
+function rerenderHow() {
+    renderRepeater(howList, howArr, [
+        { key: 'num', label: 'Número da etapa', placeholder: '1, 2, 3...' },
+        { key: 'title', label: 'Título da etapa', placeholder: 'Ex.: Confirmação da proposta' },
+        { key: 'body', label: 'Descrição', placeholder: 'Texto curto explicativo', type: 'textarea' }
+    ]);
+}
+function rerenderFaq() {
+    renderRepeater(faqList, faqArr, [
+        { key: 'q', label: 'Pergunta', placeholder: 'Ex.: Vocês fazem a montagem?' },
+        { key: 'a', label: 'Resposta', placeholder: 'Resposta detalhada', type: 'textarea' }
+    ]);
+}
+
+// Tab switching
+document.querySelectorAll('.tpl-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tpl-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.tab;
+        document.querySelectorAll('.tpl-tab-body').forEach(b => {
+            b.hidden = b.dataset.tabBody !== target;
+        });
+    });
+});
+
+// Add buttons
+document.querySelector('[data-action="add-why"]').addEventListener('click', () => {
+    whyArr.push({ title: '', body: '' });
+    rerenderWhy();
+});
+document.querySelector('[data-action="add-how"]').addEventListener('click', () => {
+    howArr.push({ num: String(howArr.length + 1), title: '', body: '' });
+    rerenderHow();
+});
+document.querySelector('[data-action="add-faq"]').addEventListener('click', () => {
+    faqArr.push({ q: '', a: '' });
+    rerenderFaq();
+});
+
+// Repeater item input + remove
+function wireRepeater(container, arr, rerender) {
+    container.addEventListener('input', (e) => {
+        const t = e.target;
+        const key = t.dataset.field;
+        const i = parseInt(t.dataset.i);
+        if (key == null || isNaN(i)) return;
+        if (!arr[i]) arr[i] = {};
+        arr[i][key] = t.value;
+    });
+    container.addEventListener('click', (e) => {
+        const rm = e.target.closest('.remove');
+        if (!rm) return;
+        const i = parseInt(rm.dataset.i);
+        arr.splice(i, 1);
+        rerender();
+    });
+}
+wireRepeater(whyList, whyArr, rerenderWhy);
+wireRepeater(howList, howArr, rerenderHow);
+wireRepeater(faqList, faqArr, rerenderFaq);
+
+// OG preview
+inpOgImage.addEventListener('input', () => {
+    if (inpOgImage.value.trim()) {
+        ogPreview.src = inpOgImage.value;
+        ogPreview.style.display = 'block';
+    } else {
+        ogPreview.style.display = 'none';
+    }
+});
+
+ogUploadInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!editingId) {
+        showToast('Salve o template antes de fazer upload da capa', 'error');
+        e.target.value = '';
+        return;
+    }
+    showToast('Enviando capa...', '');
+    const res = await api.uploadCapaTemplate(editingId, file);
+    if (res?.ok && res.data?.url) {
+        inpOgImage.value = res.data.url;
+        ogPreview.src = res.data.url;
+        ogPreview.style.display = 'block';
+        showToast('Capa enviada!', 'success');
+    } else {
+        showToast(res?.error || 'Erro no upload', 'error');
+    }
+    e.target.value = '';
+});
+
+// WhatsApp preview
+function updateWaPreview() {
+    const msg = inpWaMessage.value || '';
+    waPreview.textContent = msg
+        .replaceAll('{{clientName}}', 'Maria Silva')
+        .replaceAll('{{propostaUrl}}', 'https://agenda-aero-festas.web.app/p/festa-maria-7f3a')
+        .replaceAll('{{eventTitle}}', 'Festa de 5 anos')
+        .replaceAll('{{eventDate}}', '2026-06-15');
+}
+inpWaMessage.addEventListener('input', updateWaPreview);
+
+function openModal(id = null) {
+    editingId = id;
+    modalTitle.textContent = id ? 'Editar template' : 'Novo template';
+    const t = id ? templatesCache.find(x => x.id === id) : null;
+
+    inpNome.value = t?.nome || '';
+    inpEyebrow.value = t?.heroEyebrow || '';
+    inpHTitle.value = t?.heroTitle || '';
+    inpHSub.value = t?.heroSubtitle || '';
+    inpBrand.value = t?.brandPillText || '';
+    inpOgImage.value = t?.ogImageUrl || '';
+    inpWaNumber.value = t?.whatsappNumber || '';
+    inpWaMessage.value = t?.whatsappMessage || 'Olá! Sou {{clientName}} e gostaria de conversar sobre a proposta {{propostaUrl}}.';
+    inpDefault.checked = !!t?.isDefault;
+
+    if (t?.ogImageUrl) { ogPreview.src = t.ogImageUrl; ogPreview.style.display = 'block'; }
+    else { ogPreview.style.display = 'none'; }
+
+    try { whyArr = JSON.parse(t?.whyCards || '[]'); } catch { whyArr = []; }
+    try { howArr = JSON.parse(t?.howItWorks || '[]'); } catch { howArr = []; }
+    try { faqArr = JSON.parse(t?.faq || '[]'); } catch { faqArr = []; }
+    if (!Array.isArray(whyArr)) whyArr = [];
+    if (!Array.isArray(howArr)) howArr = [];
+    if (!Array.isArray(faqArr)) faqArr = [];
+    rerenderWhy(); rerenderHow(); rerenderFaq();
+
+    updateWaPreview();
+
+    // reset to first tab
+    document.querySelectorAll('.tpl-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'hero'));
+    document.querySelectorAll('.tpl-tab-body').forEach(b => b.hidden = b.dataset.tabBody !== 'hero');
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+document.getElementById('tpl-modal-close').addEventListener('click', closeModal);
+document.getElementById('tpl-cancel').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+});
+
+document.getElementById('btn-new-template').addEventListener('click', () => openModal(null));
+
+document.getElementById('tpl-save').addEventListener('click', async () => {
+    const nome = inpNome.value.trim();
+    const heroEyebrow = inpEyebrow.value.trim();
+    const heroTitle = inpHTitle.value.trim();
+    const heroSubtitle = inpHSub.value.trim();
+    const whatsappNumber = inpWaNumber.value.replace(/\D/g, '');
+    const whatsappMessage = inpWaMessage.value.trim();
+
+    if (!nome) { showToast('Nome interno é obrigatório', 'error'); return; }
+    if (!heroEyebrow || !heroTitle || !heroSubtitle) { showToast('Preencha eyebrow, título e subtítulo', 'error'); return; }
+    if (!whatsappNumber) { showToast('Número do WhatsApp é obrigatório', 'error'); return; }
+    if (!whatsappMessage) { showToast('Mensagem do WhatsApp é obrigatória', 'error'); return; }
+
+    const payload = {
+        id: editingId,
+        nome, heroEyebrow, heroTitle, heroSubtitle,
+        brandPillText: inpBrand.value.trim() || null,
+        whatsappNumber, whatsappMessage,
+        ogImageUrl: inpOgImage.value.trim() || null,
+        whyCards: JSON.stringify(whyArr.filter(w => w.title || w.body)),
+        howItWorks: JSON.stringify(howArr.filter(h => h.title || h.body)),
+        faq: JSON.stringify(faqArr.filter(f => f.q || f.a)),
+        isDefault: inpDefault.checked
+    };
+
+    const saveBtn = document.getElementById('tpl-save');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    const result = await api.salvarTemplateProposta(payload);
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Salvar';
+
+    if (result && (result.success || result.data)) {
+        showToast('Template salvo!', 'success');
+        closeModal();
+        loadTemplates();
+    } else {
+        showToast(result?.error || 'Erro ao salvar', 'error');
+    }
+});
+
+// Start
+loadTemplates();
+</script>
+
+<script src="js/protect.js"></script>
+</body>
+</html>
