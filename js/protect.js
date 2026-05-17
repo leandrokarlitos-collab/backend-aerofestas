@@ -224,6 +224,14 @@ function injectPremiumUserMenu(userData) {
     userName.textContent = `(${userData.name.split(' ')[0]})`;
     menuItems.appendChild(userName);
 
+    // Botão Propostas (todos os usuários logados — quem gera, gerencia)
+    const propostasBtn = document.createElement('a');
+    propostasBtn.href = 'Propostas.html';
+    propostasBtn.className = 'user-menu-btn flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 rounded-xl transition-all duration-200 shadow-md hover:shadow-xl hover:scale-110';
+    propostasBtn.innerHTML = '<i class="fas fa-file-invoice text-sm"></i>';
+    propostasBtn.title = "Propostas geradas";
+    menuItems.appendChild(propostasBtn);
+
     // Botão ADMIN (Só aparece se for admin)
     if (userData.isAdmin) {
         const divider = document.createElement('div');
@@ -237,12 +245,12 @@ function injectPremiumUserMenu(userData) {
         adminBtn.title = "Painel Admin";
         menuItems.appendChild(adminBtn);
 
-        // Botão Templates de Propostas
+        // Botão Templates de Propostas (admin-only)
         const tplBtn = document.createElement('a');
         tplBtn.href = 'Configuracoes-Propostas.html';
-        tplBtn.className = 'user-menu-btn flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 rounded-xl transition-all duration-200 shadow-md hover:shadow-xl hover:scale-110';
-        tplBtn.innerHTML = '<i class="fas fa-file-invoice text-sm"></i>';
-        tplBtn.title = "Templates de Propostas";
+        tplBtn.className = 'user-menu-btn flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-700 text-white hover:from-slate-600 hover:to-slate-800 rounded-xl transition-all duration-200 shadow-md hover:shadow-xl hover:scale-110';
+        tplBtn.innerHTML = '<i class="fas fa-sliders text-sm"></i>';
+        tplBtn.title = "Templates de Propostas (configurações)";
         menuItems.appendChild(tplBtn);
     }
 

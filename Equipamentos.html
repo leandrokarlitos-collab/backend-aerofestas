@@ -3779,6 +3779,7 @@
         let propSelections = new Map(); // toyId -> { quantity, unitPrice }
         let propTemplatesCache = [];
         let propGeneratedSlug = null;
+        let editingPropostaId = null; // null = modo criar, número = modo editar
 
         function formatBRLProp(v) {
             if (v == null || isNaN(v)) return 'R$ 0,00';
@@ -3853,29 +3854,55 @@
             if (n === 4 && !propGeneratedSlug) renderPreview();
         }
 
-        function openWizard() {
+        function openWizard(existingProposta = null) {
             // Reset estado
             propStep = 1;
             propSelections.clear();
             propGeneratedSlug = null;
-            propClientName.value = '';
-            propClientPhone.value = '';
-            propEventTitle.value = '';
-            propEventDate.value = '';
-            propEventTime.value = '';
-            propEventLocation.value = '';
-            propEventDetails.value = '';
-            propShowPrices.checked = false;
-            propDiscountType.value = '';
-            propDiscountValue.value = '';
-            propDiscountValue.disabled = true;
-            propHeroEyebrow.value = '';
-            propHeroTitle.value = '';
-            propHeroSubtitle.value = '';
-            propWhatsappMessage.value = '';
-            propObservacoes.value = '';
+            editingPropostaId = existingProposta ? existingProposta.id : null;
+
+            // Preenche com dados existentes (modo editar) ou limpa (modo criar)
+            propClientName.value = existingProposta?.clientName || '';
+            propClientPhone.value = existingProposta?.clientPhone || '';
+            propEventTitle.value = existingProposta?.eventTitle || '';
+            propEventDate.value = existingProposta?.eventDate || '';
+            propEventTime.value = existingProposta?.eventTime || '';
+            propEventLocation.value = existingProposta?.eventLocation || '';
+            propEventDetails.value = existingProposta?.eventDetails || '';
+            propShowPrices.checked = !!existingProposta?.showPrices;
+            propDiscountType.value = existingProposta?.discountType || '';
+            propDiscountValue.value = existingProposta?.discountValue ?? '';
+            propDiscountValue.disabled = !propDiscountType.value;
+            propHeroEyebrow.value = existingProposta?.heroEyebrow || '';
+            propHeroTitle.value = existingProposta?.heroTitle || '';
+            propHeroSubtitle.value = existingProposta?.heroSubtitle || '';
+            propWhatsappMessage.value = existingProposta?.whatsappMessage || '';
+            propObservacoes.value = existingProposta?.observacoes || '';
             propPreviewBlock.hidden = false;
             propSuccessBlock.hidden = true;
+
+            // Pré-carrega seleções de brinquedos da proposta existente
+            if (existingProposta?.items) {
+                for (const item of existingProposta.items) {
+                    if (item.toyId != null) {
+                        propSelections.set(item.toyId, {
+                            quantity: item.quantity || 1,
+                            unitPrice: item.unitPrice ?? null
+                        });
+                    }
+                }
+            }
+
+            // Ajusta título e botão conforme o modo
+            const headerH2 = document.querySelector('#proposta-wizard-modal .prop-wizard-header h2');
+            if (headerH2) {
+                headerH2.innerHTML = editingPropostaId
+                    ? '<i class="fas fa-pen"></i> Editar Proposta'
+                    : '<i class="fas fa-file-invoice"></i> Gerar Proposta';
+            }
+            propGenerateBtn.innerHTML = editingPropostaId
+                ? '<i class="fas fa-floppy-disk"></i> Salvar alterações'
+                : '<i class="fas fa-rocket"></i> Gerar proposta';
 
             // Popula datalist de clientes + templates (paralelo, não bloqueante)
             api.getClientes().then(clientes => {
@@ -3885,8 +3912,12 @@
             }).catch(() => {});
             api.listarTemplatesProposta().then(list => {
                 propTemplatesCache = list || [];
+                const selectedTplId = existingProposta?.templateId || null;
                 propTemplateSelect.innerHTML = propTemplatesCache.length
-                    ? propTemplatesCache.map(t => `<option value="${t.id}" ${t.isDefault ? 'selected' : ''}>${escapeHtml(t.nome)}${t.isDefault ? ' (padrão)' : ''}</option>`).join('')
+                    ? propTemplatesCache.map(t => {
+                        const sel = selectedTplId ? (t.id === selectedTplId) : t.isDefault;
+                        return `<option value="${t.id}" ${sel ? 'selected' : ''}>${escapeHtml(t.nome)}${t.isDefault ? ' (padrão)' : ''}</option>`;
+                    }).join('')
                     : '<option value="">Nenhum template cadastrado — usaremos os textos padrão.</option>';
             }).catch(() => {
                 propTemplateSelect.innerHTML = '<option value="">Erro ao carregar templates</option>';
@@ -3907,7 +3938,41 @@
             propWizardModal.classList.remove('open');
             propWizardModal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
+            editingPropostaId = null;
+
+            // Se veio de Propostas.html (URL tem ?edit-proposta=), limpa o param
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('edit-proposta')) {
+                url.searchParams.delete('edit-proposta');
+                window.history.replaceState({}, '', url.toString());
+            }
         }
+
+        // Abre wizard em modo edição (carrega proposta da API e pré-preenche)
+        async function openWizardForEdit(propostaId) {
+            const proposta = await api.getProposta(propostaId);
+            if (!proposta) {
+                showToast('Proposta não encontrada', 'error');
+                return;
+            }
+            openWizard(proposta);
+        }
+
+        // Se a URL trouxer ?edit-proposta=<id>, abre o wizard após brinquedos carregarem
+        (function maybeOpenEditFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit-proposta');
+            if (!editId) return;
+            // Aguarda allToys ser populado antes de abrir (renderToyGrid depende disso)
+            const waitForToys = setInterval(() => {
+                if (Array.isArray(allToys) && allToys.length > 0) {
+                    clearInterval(waitForToys);
+                    openWizardForEdit(parseFloat(editId));
+                }
+            }, 200);
+            // Timeout de segurança: 8s
+            setTimeout(() => clearInterval(waitForToys), 8000);
+        })();
 
         function renderToyGrid(filter = '') {
             const showPrices = propShowPrices.checked;
@@ -4095,14 +4160,19 @@
                 items
             };
 
+            const isEdit = !!editingPropostaId;
             propGenerateBtn.disabled = true;
-            propGenerateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
-            const result = await api.criarProposta(payload);
+            propGenerateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (isEdit ? 'Salvando...' : 'Gerando...');
+            const result = isEdit
+                ? await api.atualizarProposta(editingPropostaId, payload)
+                : await api.criarProposta(payload);
             propGenerateBtn.disabled = false;
-            propGenerateBtn.innerHTML = '<i class="fas fa-rocket"></i> Gerar proposta';
+            propGenerateBtn.innerHTML = isEdit
+                ? '<i class="fas fa-floppy-disk"></i> Salvar alterações'
+                : '<i class="fas fa-rocket"></i> Gerar proposta';
 
             if (!result || result.success === false || !result.data) {
-                showToast(result?.error || 'Erro ao gerar proposta', 'error');
+                showToast(result?.error || (isEdit ? 'Erro ao salvar alterações' : 'Erro ao gerar proposta'), 'error');
                 return;
             }
 
@@ -4114,13 +4184,21 @@
             const waMsg = encodeURIComponent(`Olá! Segue a proposta da Aero Festas: ${publicUrl}`);
             propShareWhatsapp.href = `https://wa.me/?text=${waMsg}`;
 
+            // Atualiza textos da tela de sucesso conforme o modo
+            const successTitle = propSuccessBlock.querySelector('.prop-step-title');
+            const successSub = propSuccessBlock.querySelector('p');
+            if (successTitle) successTitle.textContent = isEdit ? 'Alterações salvas!' : 'Proposta gerada!';
+            if (successSub) successSub.textContent = isEdit
+                ? 'O link já reflete a nova versão. Compartilhe novamente se quiser.'
+                : 'Compartilhe o link abaixo com seu cliente.';
+
             propPreviewBlock.hidden = true;
             propSuccessBlock.hidden = false;
             propGenerateBtn.hidden = true;
             propPrevBtn.hidden = true;
             propDoneBtn.hidden = false;
 
-            showToast('Proposta gerada!', 'success');
+            showToast(isEdit ? 'Alterações salvas!' : 'Proposta gerada!', 'success');
         }
 
         propCopyUrl.addEventListener('click', async () => {

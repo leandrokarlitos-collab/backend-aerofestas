@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
     '/Sistema%20Gest%C3%A3o%20Financeira.html',
     '/Agenda%20de%20eventos.html',
     '/Equipamentos.html',
+    '/Propostas.html',
     '/Configuracoes-Propostas.html',
     '/WhatsApp.html',
     '/admin.html',
