@@ -224,14 +224,6 @@ function injectPremiumUserMenu(userData) {
     userName.textContent = `(${userData.name.split(' ')[0]})`;
     menuItems.appendChild(userName);
 
-    // Botão Propostas (todos os usuários logados — quem gera, gerencia)
-    const propostasBtn = document.createElement('a');
-    propostasBtn.href = 'Propostas.html';
-    propostasBtn.className = 'user-menu-btn flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 rounded-xl transition-all duration-200 shadow-md hover:shadow-xl hover:scale-110';
-    propostasBtn.innerHTML = '<i class="fas fa-file-invoice text-sm"></i>';
-    propostasBtn.title = "Propostas geradas";
-    menuItems.appendChild(propostasBtn);
-
     // Botão ADMIN (Só aparece se for admin)
     if (userData.isAdmin) {
         const divider = document.createElement('div');

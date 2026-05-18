@@ -21,13 +21,13 @@
 <meta property="og:locale" content="pt_BR">
 <meta name="twitter:card" content="summary_large_image">
 
-<link rel="icon" href="../icons/Logo_Aero_Festas.png" type="image/png">
-<link rel="apple-touch-icon" href="../icons/Logo_Aero_Festas.png">
+<link rel="icon" href="/icons/Logo_Aero_Festas.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/Logo_Aero_Festas.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap">
-<link rel="stylesheet" href="./_shared/styles.css?v=1">
+<link rel="stylesheet" href="/propostas/_shared/styles.css?v=2">
 
 <style>
   .prop-loading,
@@ -210,7 +210,7 @@
 
 <!-- Error state -->
 <div class="prop-error" id="prop-error" style="display:none">
-  <img src="../icons/Logo_Aero_Festas.png" alt="Aero Festas">
+  <img src="/icons/Logo_Aero_Festas.png" alt="Aero Festas">
   <h2>Proposta não encontrada</h2>
   <p id="prop-error-msg">Verifique se o link está correto ou entre em contato com a Aero Festas.</p>
   <a href="https://wa.me/5562985545046" target="_blank" rel="noopener"
@@ -572,7 +572,7 @@
       return `
         <footer class="site-footer">
           <div class="container">
-            <img class="footer-logo" src="../icons/Logo_Aero_Festas.png" alt="Aero Festas" width="56" height="56">
+            <img class="footer-logo" src="/icons/Logo_Aero_Festas.png" alt="Aero Festas" width="56" height="56">
             <p class="footer-line">Aero Festas · Parceira oficial do seu evento</p>
             <p class="footer-meta">© <span id="year">2026</span> Aero Festas Eventos. Todos os direitos reservados.</p>
           </div>
@@ -671,7 +671,7 @@
 
         // Carrega o app.js compartilhado APÓS o DOM estar populado
         const script = document.createElement('script');
-        script.src = './_shared/app.js?v=1';
+        script.src = '/propostas/_shared/app.js?v=2';
         script.defer = true;
         document.body.appendChild(script);
       } catch (err) {
