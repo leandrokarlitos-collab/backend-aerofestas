@@ -952,6 +952,66 @@
 
         // Lógica de Identificação
         let monitorEncontrado = null;
+        let modoLinkPersonalizado = false; // true quando o monitor abriu via ?id=
+
+        // --- Suporte ao link personalizado ?id=<monitorId> ---
+        async function carregarMonitorPorIdNaURL() {
+            const params = new URLSearchParams(window.location.search);
+            const monitorIdFromUrl = params.get('id');
+            if (!monitorIdFromUrl) return;
+
+            const stepId = document.getElementById('step-id');
+            const subtitle = document.getElementById('page-subtitle');
+            const btnText = document.getElementById('btn-iniciar-text');
+            const cpfVerifyWrapper = document.getElementById('cpf-verify-wrapper');
+            const checkNomeInput = document.getElementById('check-nome');
+            const checkNascInput = document.getElementById('check-nascimento');
+
+            // Bloqueia interação durante o load
+            stepId.classList.add('opacity-50', 'pointer-events-none');
+
+            try {
+                const res = await fetch(`${API_BASE}/finance/monitores/${encodeURIComponent(monitorIdFromUrl)}`, {
+                    headers: getAuthHeaders(false)
+                });
+
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        alert('Link inválido: monitor não encontrado. Use o link genérico de cadastro.');
+                    } else {
+                        alert('Não foi possível carregar seus dados. Tente novamente em instantes.');
+                    }
+                    // Remove ?id= da URL e continua no fluxo normal
+                    window.history.replaceState({}, '', window.location.pathname);
+                    return;
+                }
+
+                const monitor = await res.json();
+                monitorEncontrado = monitor;
+                modoLinkPersonalizado = true;
+
+                // Pré-preenche e bloqueia nome/nascimento, mostra apenas o passo do CPF
+                checkNomeInput.value = monitor.nome || '';
+                checkNomeInput.readOnly = true;
+                checkNomeInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+
+                checkNascInput.value = monitor.nascimento || '';
+                checkNascInput.readOnly = true;
+                checkNascInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+
+                subtitle.innerHTML = `Olá, <strong>${(monitor.nome || '').split(' ')[0]}</strong>! Confirme seu CPF para atualizar seus dados.`;
+                cpfVerifyWrapper.classList.remove('hidden');
+                btnText.innerText = 'Confirmar Identidade';
+                document.getElementById('check-cpf').focus();
+            } catch (error) {
+                console.error('Erro ao carregar monitor:', error);
+                alert('Erro de conexão ao validar o link. Verifique sua internet.');
+            } finally {
+                stepId.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        carregarMonitorPorIdNaURL();
 
         document.getElementById('btn-iniciar').addEventListener('click', async function () {
             const nome = document.getElementById('check-nome').value.trim();
@@ -979,6 +1039,10 @@
                         alert('CPF não confere com o cadastro original.');
                         return;
                     }
+                } else if (modoLinkPersonalizado) {
+                    // Link personalizado, mas monitor ainda não tem CPF salvo (cadastro antigo).
+                    // Aceita o CPF informado e salva no próximo update.
+                    console.info('Monitor sem CPF prévio; aceitando o CPF informado como definitivo.');
                 }
 
                 // Se chegou aqui, CPF bate ou monitor não tinha CPF. Procedemos para o formulário.

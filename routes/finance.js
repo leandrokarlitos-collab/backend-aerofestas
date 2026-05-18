@@ -511,10 +511,12 @@ router.post('/monitores/verificar', async (req, res) => {
 router.post('/monitores', async (req, res) => {
     try {
         const m = req.body;
+        const cpfLimpo = m.cpf ? String(m.cpf).trim() : '';
         const novoMonitor = await prisma.monitor.create({
             data: {
                 id: m.id || Date.now().toString(),
                 nome: m.nome,
+                cpf: cpfLimpo || null,
                 nascimento: m.nascimento,
                 telefone: m.telefone,
                 email: m.email,
@@ -540,6 +542,9 @@ router.post('/monitores', async (req, res) => {
                 idiomas: m.idiomas, // Já vem como stringified JSON do front
                 experiencias: m.experiencias,
                 fobias: m.fobias,
+                contatoEmergenciaNome: m.contatoEmergenciaNome,
+                contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
+                contatoEmergenciaTelefone: m.contatoEmergenciaTelefone,
                 instagram: m.instagram,
                 facebook: m.facebook,
                 linkedin: m.linkedin,
@@ -549,6 +554,9 @@ router.post('/monitores', async (req, res) => {
         res.json(novoMonitor);
     } catch (e) {
         console.error("Erro ao criar monitor:", e);
+        if (e.code === 'P2002' && Array.isArray(e.meta?.target) && e.meta.target.includes('cpf')) {
+            return res.status(409).json({ error: "Já existe um monitor cadastrado com este CPF." });
+        }
         res.status(500).json({ error: "Erro ao criar monitor" });
     }
 });
@@ -558,10 +566,12 @@ router.put('/monitores/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const m = req.body;
+        const cpfLimpo = m.cpf !== undefined ? (String(m.cpf).trim() || null) : undefined;
         const updated = await prisma.monitor.update({
             where: { id },
             data: {
                 nome: m.nome,
+                cpf: cpfLimpo,
                 nascimento: m.nascimento,
                 telefone: m.telefone,
                 email: m.email,
@@ -587,6 +597,9 @@ router.put('/monitores/:id', async (req, res) => {
                 idiomas: m.idiomas,
                 experiencias: m.experiencias,
                 fobias: m.fobias,
+                contatoEmergenciaNome: m.contatoEmergenciaNome,
+                contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
+                contatoEmergenciaTelefone: m.contatoEmergenciaTelefone,
                 instagram: m.instagram,
                 facebook: m.facebook,
                 linkedin: m.linkedin,
@@ -596,6 +609,12 @@ router.put('/monitores/:id', async (req, res) => {
         res.json(updated);
     } catch (e) {
         console.error("Erro ao atualizar monitor:", e);
+        if (e.code === 'P2002' && Array.isArray(e.meta?.target) && e.meta.target.includes('cpf')) {
+            return res.status(409).json({ error: "Já existe outro monitor com este CPF." });
+        }
+        if (e.code === 'P2025') {
+            return res.status(404).json({ error: "Monitor não encontrado." });
+        }
         res.status(500).json({ error: "Erro ao atualizar monitor" });
     }
 });
