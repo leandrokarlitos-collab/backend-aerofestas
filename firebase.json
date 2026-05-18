@@ -28,6 +28,10 @@
                 "destination": "/propostas/maple-bear-macae/index.html"
             },
             {
+                "source": "/p/crescer-mais",
+                "destination": "/propostas/crescer-mais/index.html"
+            },
+            {
                 "source": "/p/**",
                 "destination": "/propostas/view.html"
             }

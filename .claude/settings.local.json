@@ -87,7 +87,8 @@
       "Bash(curl -s -o \"C:/temp-liga.png\" \"https://storage.googleapis.com/aerofestas-equipamentos/toys/1772114750411/1779109007801-ef9a030551ee.png\" && ls -la \"C:/temp-liga.png\")",
       "Bash(rm \"C:/Users/Usuário/temp-liga.png\")",
       "Skill(claude-api)",
-      "Skill(claude-api:*)"
+      "Skill(claude-api:*)",
+      "PowerShell(\"---\")"
     ]
   }
 }
