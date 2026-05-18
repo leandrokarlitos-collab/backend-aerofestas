@@ -79,7 +79,15 @@
       "WebFetch(domain:agenda-aero-festas.web.app)",
       "PowerShell($j = Get-Content 'C:\\\\Users\\\\Usuário\\\\Downloads\\\\backup-aero-festas-2026-05-11 \\(1\\).json' -Raw | ConvertFrom-Json; foreach \\($p in $j.PSObject.Properties\\) { if \\($p.Name -ne 'metadata'\\) { $count = if \\($p.Value -is [array]\\) { $p.Value.Count } else { 1 }; Write-Output \\(\"{0}: {1}\" -f $p.Name, $count\\) } })",
       "PowerShell(node -e \"const p = require\\('./prisma/client'\\); \\(async \\(\\) => { const r = await Promise.all\\([p.event.count\\(\\), p.client.count\\(\\), p.company.count\\(\\), p.toy.count\\(\\), p.monitor.count\\(\\), p.transaction.count\\(\\), p.bankAccount.count\\(\\), p.fixedExpense.count\\(\\), p.funcionario.count\\(\\), p.faixaComissao.count\\(\\), p.task.count\\(\\), p.dailyPlan.count\\(\\), p.expenseCategory.count\\(\\), p.fixedExpenseCategory.count\\(\\), p.eventItem.count\\(\\), p.desempenho.count\\(\\), p.pagamentoMonitor.count\\(\\)]\\); console.log\\(JSON.stringify\\({eventos:r[0], clientes:r[1], empresas:r[2], brinquedos:r[3], monitores:r[4], transacoes:r[5], contasBancarias:r[6], contasFixas:r[7], funcionarios:r[8], faixasComissao:r[9], tarefas:r[10], planosDiarios:r[11], categoriasGastos:r[12], categoriasFixas:r[13], eventItems:r[14], desempenhos:r[15], pagamentos:r[16]}, null, 2\\)\\); await p.\\\\$disconnect\\(\\); }\\)\\(\\).catch\\(e => { console.error\\(e.message\\); process.exit\\(1\\); }\\);\")",
-      "Bash(node scripts/check-db-counts.js)"
+      "Bash(node scripts/check-db-counts.js)",
+      "Bash(node \"C:\\\\Users\\\\Usuário\\\\OneDrive\\\\Desktop\\\\Sistema Operante - Aero Festas\\\\scripts\\\\duplicate-maple-bear.js\")",
+      "PowerShell(Copy-Item -Path \"propostas\\\\maple-bear\" -Destination \"propostas\\\\maple-bear-macae\" -Recurse -Force)",
+      "Bash(cd \"C:\\\\Users\\\\Usuário\\\\OneDrive\\\\Desktop\\\\Sistema Operante - Aero Festas\\\\propostas\\\\maple-bear-macae\\\\img\\\\toys\" && rm 02-toboga-toboshark-*.webp 04-multipark-castelo-medieval-*.webp 05-multiplay-jardim-encantado-*.webp 06-combo-3-em-1-girafa-*.webp 07-combo-3-em-1-super-baloes-*.webp 08-disco-play-*.webp 09-cama-dupla-2-unidades-*.webp 10-multipark-safari-*.webp 11-giro-radical-*.webp && ls | sort)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o \"C:/temp-liga.png\" \"https://storage.googleapis.com/aerofestas-equipamentos/toys/1772114750411/1779109007801-ef9a030551ee.png\" && ls -la \"C:/temp-liga.png\")",
+      "Bash(rm \"C:/Users/Usuário/temp-liga.png\")",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)"
     ]
   }
 }

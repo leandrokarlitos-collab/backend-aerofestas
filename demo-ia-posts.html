@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo IA — Posts pro Instagram • Aero Festas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #a855f7;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f3f4f6;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+        h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+            border-radius: 20px;
+        }
+
+        .equip-card {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 18px;
+            overflow: hidden;
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 20px rgba(31, 38, 135, 0.06);
+        }
+        .equip-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(79, 70, 229, 0.18);
+        }
+        .equip-card.selected {
+            border: 2px solid #4f46e5;
+            box-shadow: 0 14px 30px rgba(79, 70, 229, 0.25);
+        }
+        .equip-card .img-wrap {
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 100%);
+            overflow: hidden;
+            position: relative;
+        }
+        .equip-card .img-wrap img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .equip-card .selected-badge {
+            position: absolute; top: 10px; left: 10px;
+            background: #4f46e5; color: white;
+            width: 28px; height: 28px;
+            border-radius: 999px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 18px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5; cursor: not-allowed; transform: none;
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #f59e0b, #ec4899);
+            color: white;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 10px rgba(236, 72, 153, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-ai:hover { transform: scale(1.05); }
+
+        .chip {
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .chip:hover { border-color: #a855f7; }
+        .chip.active {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 1100px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Instagram preview */
+        .ig-post {
+            background: white;
+            border: 1px solid #dbdbdb;
+            border-radius: 12px;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .ig-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px;
+            border-bottom: 1px solid #efefef;
+        }
+        .ig-avatar {
+            width: 32px; height: 32px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+            padding: 2px;
+        }
+        .ig-avatar-inner {
+            width: 100%; height: 100%;
+            border-radius: 999px;
+            background: white;
+            display: flex; align-items: center; justify-content: center;
+            color: #4f46e5;
+            font-weight: 800;
+            font-size: 12px;
+        }
+        .ig-image {
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            background: #fafafa;
+        }
+        .ig-image img { width: 100%; height: 100%; object-fit: cover; }
+        .ig-actions {
+            padding: 10px 12px;
+            display: flex; gap: 14px;
+            color: #262626;
+            font-size: 22px;
+        }
+        .ig-caption {
+            padding: 0 12px 12px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .ig-caption strong { font-weight: 700; }
+        .ig-hashtags {
+            color: #00376b;
+            font-size: 0.8rem;
+            padding: 4px 12px 12px;
+            line-height: 1.5;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 60px; height: 60px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #4f46e5;
+            border-radius: 999px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .pulse-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: #10b981;
+            border-radius: 999px;
+            animation: pulse 1.5s ease infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .demo-banner {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #78350f;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120%);
+            background: #1f2937;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body class="pb-20">
+
+<!-- HEADER -->
+<header class="glass mx-4 mt-4 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg">
+            <i class="fas fa-plane"></i>
+        </div>
+        <div>
+            <h1 class="text-lg font-bold">Aero Festas</h1>
+            <p class="text-xs text-gray-500">Equipamentos</p>
+        </div>
+    </div>
+    <div class="demo-banner">
+        <i class="fas fa-flask"></i>
+        DEMO — Feature de IA pra gerar posts
+    </div>
+</header>
+
+<!-- INTRO -->
+<section class="max-w-6xl mx-auto px-4 mt-8">
+    <h2 class="text-3xl font-bold font-display mb-2">Catálogo de Brinquedos</h2>
+    <p class="text-gray-600 mb-6">Selecione 1 ou mais brinquedos e clique em <strong class="text-indigo-600">"Gerar post com IA"</strong> pra criar publicações prontas pro Instagram.</p>
+
+    <!-- Action bar -->
+    <div class="glass p-4 mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">Selecionados:</span>
+            <span id="count-badge" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold">0</span>
+        </div>
+        <button id="btn-generate" class="btn-primary flex items-center gap-2" disabled>
+            <i class="fas fa-sparkles"></i>
+            Gerar post com IA
+        </button>
+    </div>
+
+    <!-- Grid de brinquedos -->
+    <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+</section>
+
+<!-- MODAL: BRIEFING -->
+<div id="modal-briefing" class="modal-overlay">
+    <div class="modal-box p-8 max-w-2xl">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h2 class="text-2xl font-bold font-display">Briefing do post</h2>
+                <p class="text-sm text-gray-500 mt-1">A IA usa essas info pra escrever a legenda ideal.</p>
+            </div>
+            <button onclick="closeModal('modal-briefing')" class="text-gray-400 hover:text-gray-700 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="space-y-5">
+            <div>
+                <label class="block text-sm font-semibold mb-2">Brinquedos selecionados</label>
+                <div id="selected-preview" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold mb-2">Ocasião</label>
+                <div class="flex flex-wrap gap-2" id="ocasiao-chips">
+                    <span class="chip active" data-value="infantil">🎈 Festa infantil</span>
+                    <span class="chip" data-value="junina">🌽 Festa junina</span>
+                    <span class="chip" data-value="corporativo">🏢 Confraternização corporativa</span>
+                    <span class="chip" data-value="casamento">💍 Casamento</span>
+                    <span class="chip" data-value="escola">🎒 Festa de escola</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold mb-2">Tom de voz</label>
+                <div class="flex flex-wrap gap-2" id="tom-chips">
+                    <span class="chip active" data-value="divertido">😄 Divertido</span>
+                    <span class="chip" data-value="elegante">✨ Elegante</span>
+                    <span class="chip" data-value="urgencia">⚡ Urgência (promoção)</span>
+                    <span class="chip" data-value="educativo">📚 Educativo</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold mb-2">Detalhes extras (opcional)</label>
+                <textarea id="extra" placeholder="Ex: promoção até fim de junho, foco em 4-8 anos, salão de festas..." class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
+                <i class="fas fa-info-circle text-indigo-600 mt-0.5"></i>
+                <div class="text-xs text-indigo-900">
+                    <strong>Como funciona:</strong> a IA recebe o catálogo, fotos e o briefing, e gera 3 variações de post (legenda + hashtags + sugestão de imagem). Custo: ~R$ 0,02 por geração.
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-8">
+            <button onclick="closeModal('modal-briefing')" class="px-5 py-2.5 text-gray-600 font-semibold hover:bg-gray-100 rounded-xl">Cancelar</button>
+            <button onclick="generatePosts()" class="btn-primary flex items-center gap-2">
+                <i class="fas fa-magic-sparkles"></i>
+                Gerar 3 posts
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: LOADING -->
+<div id="modal-loading" class="modal-overlay">
+    <div class="modal-box p-12 max-w-md text-center">
+        <div class="spinner mx-auto mb-6"></div>
+        <h3 class="text-xl font-bold font-display mb-2">Gerando posts...</h3>
+        <p class="text-gray-500 text-sm" id="loading-msg">Analisando catálogo</p>
+        <div class="mt-6 text-xs text-gray-400 flex items-center justify-center gap-2">
+            <span class="pulse-dot"></span>
+            <span>Claude Haiku 4.5</span>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: RESULTADO -->
+<div id="modal-result" class="modal-overlay">
+    <div class="modal-box p-8">
+        <div class="flex justify-between items-start mb-6 flex-wrap gap-3">
+            <div>
+                <h2 class="text-2xl font-bold font-display flex items-center gap-2">
+                    <span>3 posts gerados</span>
+                    <i class="fas fa-sparkles text-amber-500"></i>
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">Clique em <i class="fas fa-copy"></i> pra copiar a legenda. Use o botão da imagem pra baixar.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="regenerate()" class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 flex items-center gap-2">
+                    <i class="fas fa-arrows-rotate"></i>
+                    Regenerar
+                </button>
+                <button onclick="closeModal('modal-result')" class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50">
+                    Fechar
+                </button>
+            </div>
+        </div>
+
+        <div id="results-grid" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast">Copiado pra área de transferência!</div>
+
+<script>
+const brinquedos = [
+    { id: 1, nome: 'Combo 3 em 1 Dino', img: 'fotos_dos_brinquedos/Combo 3 em 1 Dino.png', emoji: '🦕' },
+    { id: 2, nome: 'Combo 3 em 1 Girafa', img: 'fotos_dos_brinquedos/Combo 3 em 1 - Girafa.png', emoji: '🦒' },
+    { id: 3, nome: 'Combo 3 em 1 Super Balões', img: 'fotos_dos_brinquedos/Combo 3 em 1 - Super Balões.png', emoji: '🎈' },
+    { id: 4, nome: 'Touro Mecânico', img: 'fotos_dos_brinquedos/Touro Mecânico (2).jpg', emoji: '🐂' },
+    { id: 5, nome: 'Futebol Inflável', img: 'fotos_dos_brinquedos/Futebol Inflável.jpeg', emoji: '⚽' },
+    { id: 6, nome: 'Multipark Safari', img: 'fotos_dos_brinquedos/Multipark Safari.jpg', emoji: '🦁' },
+    { id: 7, nome: 'Multipark Castelo Park', img: 'fotos_dos_brinquedos/Multipark Castelo Park.jpg', emoji: '🏰' },
+    { id: 8, nome: 'Tobogã Toboshark', img: 'fotos_dos_brinquedos/Tobogã Toboshark.avif', emoji: '🦈' },
+    { id: 9, nome: 'Disco Play', img: 'fotos_dos_brinquedos/Disco Play.png', emoji: '🪩' },
+    { id: 10, nome: 'High Jump - 4 estações', img: 'fotos_dos_brinquedos/High Jump - 4 estações.png', emoji: '🤸' },
+    { id: 11, nome: 'Multiplay Jardim Encantado', img: 'fotos_dos_brinquedos/Multiplay Jardim Encantado.png', emoji: '🧚' },
+    { id: 12, nome: 'Giro Radical', img: 'fotos_dos_brinquedos/Giro Radical.png', emoji: '🎡' }
+];
+
+const selected = new Set();
+let currentOcasiao = 'infantil';
+let currentTom = 'divertido';
+
+function renderGrid() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = brinquedos.map(b => `
+        <div class="equip-card ${selected.has(b.id) ? 'selected' : ''}" onclick="toggleSelect(${b.id})">
+            <div class="img-wrap">
+                <img src="${b.img}" alt="${b.nome}" onerror="this.style.display='none';this.parentElement.innerHTML+='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:white\\'>${b.emoji}</div>'">
+                ${selected.has(b.id) ? '<div class="selected-badge"><i class="fas fa-check"></i></div>' : ''}
+            </div>
+            <div class="p-3">
+                <h3 class="font-bold text-sm leading-tight mb-2">${b.nome}</h3>
+                <button onclick="event.stopPropagation(); quickGenerate(${b.id})" class="btn-ai">
+                    <i class="fas fa-sparkles"></i>
+                    Gerar post
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleSelect(id) {
+    if (selected.has(id)) selected.delete(id);
+    else selected.add(id);
+    document.getElementById('count-badge').textContent = selected.size;
+    document.getElementById('btn-generate').disabled = selected.size === 0;
+    renderGrid();
+}
+
+function quickGenerate(id) {
+    selected.clear();
+    selected.add(id);
+    document.getElementById('count-badge').textContent = 1;
+    document.getElementById('btn-generate').disabled = false;
+    renderGrid();
+    openBriefing();
+}
+
+document.getElementById('btn-generate').addEventListener('click', openBriefing);
+
+function openBriefing() {
+    const preview = document.getElementById('selected-preview');
+    preview.innerHTML = [...selected].map(id => {
+        const b = brinquedos.find(x => x.id === id);
+        return `<span class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold flex items-center gap-1.5">
+            <span>${b.emoji}</span>${b.nome}
+        </span>`;
+    }).join('');
+    openModal('modal-briefing');
+}
+
+// Chips
+document.querySelectorAll('#ocasiao-chips .chip').forEach(c => {
+    c.addEventListener('click', () => {
+        document.querySelectorAll('#ocasiao-chips .chip').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        currentOcasiao = c.dataset.value;
+    });
+});
+document.querySelectorAll('#tom-chips .chip').forEach(c => {
+    c.addEventListener('click', () => {
+        document.querySelectorAll('#tom-chips .chip').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        currentTom = c.dataset.value;
+    });
+});
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+const API_BASE = 'https://backend-aerofestas-production.up.railway.app';
+
+async function generatePosts() {
+    closeModal('modal-briefing');
+    openModal('modal-loading');
+    const msgs = ['Analisando catálogo', 'Estudando o briefing', 'Escrevendo legendas', 'Selecionando hashtags', 'Quase lá...'];
+    let i = 0;
+    const interval = setInterval(() => {
+        i++;
+        if (i < msgs.length) document.getElementById('loading-msg').textContent = msgs[i];
+    }, 800);
+
+    const selectedBrinquedos = [...selected].map(id => brinquedos.find(b => b.id === id));
+    const detalhes = document.getElementById('extra').value || '';
+    const token = localStorage.getItem('authToken');
+
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/ai/instagram-posts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : '',
+            },
+            body: JSON.stringify({
+                brinquedos: selectedBrinquedos.map(b => ({ nome: b.nome, emoji: b.emoji })),
+                ocasiao: currentOcasiao,
+                tom: currentTom,
+                detalhes,
+            }),
+        });
+
+        clearInterval(interval);
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+            closeModal('modal-loading');
+            if (res.status === 401) {
+                alert('Você precisa estar logado no Sistema Operante pra usar a IA. Abra qualquer tela do sistema (Dashboard, CRM…) e tente de novo.');
+            } else if (res.status === 503) {
+                if (confirm(`${err.error}\n\nMostrar exemplos pré-gerados (modo demo)?`)) {
+                    renderResultsFromMock();
+                    openModal('modal-result');
+                }
+            } else {
+                alert(`Erro ao gerar posts: ${err.error || res.statusText}`);
+            }
+            return;
+        }
+
+        const json = await res.json();
+        closeModal('modal-loading');
+        renderResultsFromAPI(json.data, selectedBrinquedos);
+        openModal('modal-result');
+    } catch (e) {
+        clearInterval(interval);
+        closeModal('modal-loading');
+        if (confirm(`Não foi possível conectar à IA (${e.message}).\n\nMostrar exemplos pré-gerados (modo demo)?`)) {
+            renderResultsFromMock();
+            openModal('modal-result');
+        }
+    }
+}
+
+function regenerate() {
+    closeModal('modal-result');
+    setTimeout(() => generatePosts(), 200);
+}
+
+// Templates de posts por (ocasiao, tom)
+const templates = {
+    infantil_divertido: [
+        {
+            titulo: 'Lançamento empolgante',
+            legenda: `{emoji} **A festa da criançada vai virar AVENTURA!**
+
+Chegou {nomes} pro seu evento — o brinquedo que vai fazer os pequenos pularem de alegria (literalmente 😄).
+
+✅ Ideal pra crianças de 3 a 10 anos
+✅ Cabe em quintal ou salão de festas
+✅ Monitor incluso pra segurança total
+
+📅 Datas voando! Chama no direct ou WhatsApp pra garantir a sua.`,
+            hashtags: '#AeroFestas #FestaInfantil #BrinquedoInflavel #BH #AluguelDeBrinquedos #FestaDeCrianca #Aniversario'
+        },
+        {
+            titulo: 'Pergunta de engajamento',
+            legenda: `Quem aí já viveu aquela festa que a criança não quer ir embora? 🙋‍♀️
+
+A gente entrega exatamente isso. {nomes} já em ação no nosso catálogo — diversão garantida do começo ao fim.
+
+Comenta aqui qual seria o brinquedo dos sonhos do seu pequeno! 👇`,
+            hashtags: '#AeroFestas #FestaInfantilBH #DiversaoGarantida #BrinquedosInflaveis #MaesDeBH'
+        },
+        {
+            titulo: 'Behind the scenes',
+            legenda: `Bastidores de uma festa Aero Festas: 🎬
+
+Nossa equipe chega, monta {nomes}, faz a monitoria do começo ao fim, e desmonta. Você só curte com a família.
+
+Festa pronta, sem dor de cabeça. É pra isso que existimos. 🎈`,
+            hashtags: '#AeroFestas #BastidoresAeroFestas #EventosBH #FestaInfantil #TimeDeMonitoria'
+        }
+    ],
+    junina_divertido: [
+        {
+            titulo: 'Arraiá temático',
+            legenda: `🌽 **Arraiá da firma? Festa da escola? Confraternização?**
+
+Junho é o mês de soltar a alegria! E a gente tem o combo perfeito: {nomes}.
+
+Pacote junino com desconto até 30/05. Bora marcar? 🎶`,
+            hashtags: '#FestaJunina #ArraiaCorporativo #AeroFestas #BeloHorizonte #JunhoNoArraia #FestaJuninaBH'
+        },
+        {
+            titulo: 'Lista de motivos',
+            legenda: `5 motivos pra contratar {nomes} no seu arraiá:
+
+🌽 Atração que para o evento
+🎶 Diversão pra todas as idades
+📸 Foto épica garantida
+✅ Equipe nossa cuida de tudo
+🎁 Pacote junino com desconto
+
+Junho voa — fecha logo!`,
+            hashtags: '#FestaJunina #ArraiaTop #AeroFestasBH #JunhoFestivo #ConfraternizacaoJunina'
+        },
+        {
+            titulo: 'Urgência leve',
+            legenda: `⏰ Calendário de junho fechando rápido!
+
+{nomes} ainda tem algumas datas livres. Se você tá planejando arraiá pra empresa, escola ou família — agora é a hora de garantir.
+
+Direct aberto. 🎯`,
+            hashtags: '#FestaJunina2026 #AeroFestas #BH #UltimasVagas #ArraiaJa'
+        }
+    ],
+    corporativo_elegante: [
+        {
+            titulo: 'Confraternização corporativa',
+            legenda: `Sua empresa merece mais que um buffet e um som ambiente. ✨
+
+{nomes} transforma confraternização em experiência: integração entre times, fotos pra rede social da empresa, e aquele clima de "festa que ficou marcada".
+
+Atendemos eventos corporativos em toda Belo Horizonte e região.`,
+            hashtags: '#EventosCorporativos #ConfraternizacaoBH #TeamBuilding #AeroFestas #EventosBH #EndOfYearParty'
+        },
+        {
+            titulo: 'Foco em resultado',
+            legenda: `Engajamento de equipe não nasce em reunião. Nasce em momentos compartilhados.
+
+{nomes} é a peça que falta na sua próxima confraternização — divertida o suficiente pra quebrar o gelo, e estruturada pra acomodar dezenas de pessoas com segurança.
+
+Orçamento sem compromisso no direct.`,
+            hashtags: '#RHCriativo #ConfraternizacaoCorporativa #AeroFestas #EventosCorporativosBH #CulturaOrganizacional'
+        },
+        {
+            titulo: 'Case-style',
+            legenda: `"Pessoal não parou de comentar a semana inteira."
+
+É o que a gente mais escuta depois de uma confraternização com {nomes}.
+
+Atendemos desde startups com 30 pessoas até grandes empresas. Estrutura, equipe e logística por nossa conta.`,
+            hashtags: '#EventosCorporativos #AeroFestas #BeloHorizonte #ConfraternizacaoDeFimDeAno #RH'
+        }
+    ]
+};
+
+function pickTemplate(ocasiao, tom) {
+    const key = `${ocasiao}_${tom}`;
+    if (templates[key]) return templates[key];
+    // Fallback: usa infantil_divertido como padrão
+    return templates.infantil_divertido;
+}
+
+function renderPostCard(tpl, idx, mainImg, labelExtra) {
+    const legendaHtml = tpl.legenda
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    return `
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Variação ${idx + 1}${labelExtra || ''}</span>
+                <span class="text-xs text-amber-600 font-semibold flex items-center gap-1">
+                    <i class="fas fa-tag text-[10px]"></i>
+                    ${tpl.titulo}
+                </span>
+            </div>
+            <div class="ig-post">
+                <div class="ig-header">
+                    <div class="ig-avatar"><div class="ig-avatar-inner">AF</div></div>
+                    <div class="flex-1">
+                        <div class="text-sm font-semibold">aerofestas</div>
+                        <div class="text-[10px] text-gray-500">Belo Horizonte, MG</div>
+                    </div>
+                    <i class="fas fa-ellipsis text-gray-500"></i>
+                </div>
+                <div class="ig-image">
+                    <img src="${mainImg}" alt="" onerror="this.style.display='none'">
+                </div>
+                <div class="ig-actions">
+                    <i class="far fa-heart"></i>
+                    <i class="far fa-comment"></i>
+                    <i class="far fa-paper-plane"></i>
+                    <i class="far fa-bookmark ml-auto"></i>
+                </div>
+                <div class="ig-caption">
+                    <strong>aerofestas</strong> ${legendaHtml}
+                </div>
+                <div class="ig-hashtags">${tpl.hashtags}</div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick='copyCaption(${idx})' class="flex-1 bg-gray-900 text-white text-xs font-semibold py-2.5 rounded-xl hover:bg-gray-800 flex items-center justify-center gap-2">
+                    <i class="fas fa-copy"></i>
+                    Copiar legenda
+                </button>
+                <button class="px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold hover:bg-gray-50">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderResultsFromAPI(data, selectedBrinquedos) {
+    const grid = document.getElementById('results-grid');
+    const mainImg = selectedBrinquedos[0].img;
+    const posts = data.posts || [];
+
+    grid.innerHTML = posts.map((tpl, idx) => renderPostCard(tpl, idx, mainImg)).join('');
+
+    window.__captions = posts.map(tpl => tpl.legenda.replace(/\*\*(.+?)\*\*/g, '$1') + '\n\n' + tpl.hashtags);
+
+    if (data.usage) {
+        const tokens = data.usage.input_tokens + data.usage.output_tokens;
+        const cached = data.usage.cache_read_input_tokens || 0;
+        console.log(`[IA] ${data.model} • ${tokens} tokens (${cached} cacheados)`);
+    }
+}
+
+function renderResultsFromMock() {
+    const grid = document.getElementById('results-grid');
+    const items = pickTemplate(currentOcasiao, currentTom);
+    const selectedBrinquedos = [...selected].map(id => brinquedos.find(b => b.id === id));
+    const nomes = selectedBrinquedos.map(b => b.nome).join(' + ');
+    const emoji = selectedBrinquedos[0].emoji;
+    const mainImg = selectedBrinquedos[0].img;
+
+    const filled = items.map(tpl => ({
+        titulo: tpl.titulo,
+        legenda: tpl.legenda.replace(/\{nomes\}/g, nomes).replace(/\{emoji\}/g, emoji),
+        hashtags: tpl.hashtags,
+    }));
+
+    grid.innerHTML = filled.map((tpl, idx) => renderPostCard(tpl, idx, mainImg, ' (mock)')).join('');
+
+    window.__captions = filled.map(tpl => tpl.legenda.replace(/\*\*(.+?)\*\*/g, '$1') + '\n\n' + tpl.hashtags);
+}
+
+function copyCaption(idx) {
+    const text = window.__captions[idx];
+    navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+}
+
+// init
+renderGrid();
+</script>
+
+</body>
+</html>

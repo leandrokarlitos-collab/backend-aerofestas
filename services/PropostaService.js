@@ -10,7 +10,7 @@ const TRACKED_FIELDS = [
     'whatsappMessage', 'brandPillText', 'ogImageUrl', 'status'
 ];
 
-const RESERVED_SLUGS = new Set(['maple-bear', 'view', 'preview', 'admin', 'api', 'p', 'propostas', 'index', 'login']);
+const RESERVED_SLUGS = new Set(['maple-bear', 'maple-bear-macae', 'view', 'preview', 'admin', 'api', 'p', 'propostas', 'index', 'login']);
 
 function safeAudit(payload) {
     try {

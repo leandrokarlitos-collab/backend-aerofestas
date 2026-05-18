@@ -24,6 +24,10 @@
                 "destination": "/propostas/maple-bear/index.html"
             },
             {
+                "source": "/p/maple-bear-macae",
+                "destination": "/propostas/maple-bear-macae/index.html"
+            },
+            {
                 "source": "/p/**",
                 "destination": "/propostas/view.html"
             }
@@ -71,6 +75,15 @@
                     {
                         "key": "Cache-Control",
                         "value": "no-cache, must-revalidate"
+                    }
+                ]
+            },
+            {
+                "source": "/p/**",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "public, max-age=60, must-revalidate"
                     }
                 ]
             }
