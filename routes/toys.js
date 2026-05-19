@@ -29,13 +29,27 @@ router.get('/', authenticate, async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-// POST — semântica upsert (backward-compat com salvarBrinquedo do frontend)
+// POST — semântica upsert (backward-compat com salvarBrinquedo do frontend).
+// O frontend sempre envia id: Date.now() no fluxo de criação, então tentar update
+// direto resultava em 404. Se o id não existe, cai pra createToy.
 router.post('/', authenticate, async (req, res, next) => {
     try {
         const { id, name, quantity, imageUrl, defaultPrice } = req.body;
-        const saved = id
-            ? await ToyService.updateToy(id, { name, quantity, imageUrl, defaultPrice }, req.user)
-            : await ToyService.createToy({ name, quantity, imageUrl, defaultPrice }, req.user);
+        const payload = { name, quantity, imageUrl, defaultPrice };
+        let saved;
+        if (id) {
+            try {
+                saved = await ToyService.updateToy(id, payload, req.user);
+            } catch (err) {
+                if (err.status === 404) {
+                    saved = await ToyService.createToy(payload, req.user);
+                } else {
+                    throw err;
+                }
+            }
+        } else {
+            saved = await ToyService.createToy(payload, req.user);
+        }
         res.json({ success: true, data: saved });
     } catch (err) { next(err); }
 });
