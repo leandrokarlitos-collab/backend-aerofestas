@@ -20,6 +20,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
     <style>
         * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #ede9fe 100%); min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
@@ -48,10 +50,24 @@
         .status-pending { background: #fef3c7; color: #b45309; }
         .status-error { background: #fee2e2; color: #b91c1c; }
         .status-checking { background: #e0e7ff; color: #4338ca; }
+        /* Banner de escassez (aparece após primeira edição) */
+        .urgency-banner { position: sticky; top: 0; z-index: 30; background: linear-gradient(90deg, #f59e0b, #ef4444); color: white; font-weight: 600; font-size: 0.8rem; padding: 0.5rem 1rem; text-align: center; box-shadow: 0 2px 10px rgba(239,68,68,0.25); }
+        /* Indicador de auto-save */
+        .save-indicator { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: #6b7280; transition: all 0.25s; }
+        .save-indicator.saving { color: #4338ca; }
+        .save-indicator.saved { color: #047857; }
+        .save-indicator.error { color: #b91c1c; }
+        /* Minimapa */
+        #event-map { height: 220px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #d1d5db; }
+        .leaflet-container { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="px-4 py-6 md:p-8">
-    <div class="max-w-2xl mx-auto">
+<body class="md:p-8" style="padding-left:1rem;padding-right:1rem">
+    <div id="urgency-banner" class="urgency-banner hidden">
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+        As datas próximas estão acabando — finalize seu cadastro para garantir!
+    </div>
+    <div class="max-w-2xl mx-auto pt-6">
         <!-- Header -->
         <div class="text-center mb-6 animate-[fadeIn_0.5s_ease-out]">
             <div class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4">
@@ -129,7 +145,7 @@
             <button type="button" id="add-toy-btn"
                 class="w-full py-2.5 rounded-xl border-2 border-dashed border-indigo-300 text-indigo-600 font-semibold text-sm hover:bg-indigo-50 active:scale-[0.98] transition flex items-center justify-center gap-2"
                 style="min-height: 48px">
-                <i class="fa-solid fa-plus-circle"></i> Adicionar mais um brinquedo
+                <i class="fa-solid fa-plus-circle"></i> Adicionar atração
             </button>
 
             <!-- Resumo financeiro -->
@@ -255,6 +271,18 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Ponto de referência</label>
                     <input type="text" id="ev-referencia" class="form-input w-full px-3 py-2 rounded-lg" placeholder="Ex: Próximo ao posto Shell, em frente à escola...">
                 </div>
+
+                <!-- Minimapa: aparece após CEP localizado -->
+                <div id="map-section" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fa-solid fa-map-pin mr-1 text-accent"></i> Ajuste o pin no local exato do evento
+                        <span class="font-normal text-xs text-gray-500 block mt-0.5">Arraste o marcador para a posição correta — opcional</span>
+                    </label>
+                    <div id="event-map"></div>
+                    <p id="map-helper" class="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> Pin pré-fixado na rua do CEP. Toque e arraste para ajustar.
+                    </p>
+                </div>
             </div>
 
             <!-- Aniversariante -->
@@ -271,6 +299,14 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Data de nascimento</label>
                         <input type="date" id="bday-data" class="form-input w-full px-3 py-2 rounded-lg">
                     </div>
+                </div>
+            </div>
+
+            <!-- Indicador de auto-save -->
+            <div class="flex justify-center">
+                <div id="save-indicator" class="save-indicator">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span id="save-indicator-text">Rascunho salvo automaticamente</span>
                 </div>
             </div>
 
@@ -338,7 +374,17 @@
             discountType: null,
             discountValue: 0,
             deliveryFee: 0,
-            availability: null   // { available, reason }
+            availability: null,  // { available, reason }
+            // Auto-save / proteção de saída
+            formDirty: false,
+            submitted: false,
+            eventLat: null,
+            eventLng: null,
+            // Mapa
+            map: null,
+            mapMarker: null,
+            geocodedFor: null,   // CEP que já foi geocodado (para não repetir)
+            loaded: false        // só dispara auto-save depois do load inicial
         };
 
         // ===== MÁSCARAS =====
@@ -410,6 +456,12 @@
                     $('ev-bairro').value = data.bairro || '';
                     $('ev-cidade').value = data.localidade || '';
                     $('ev-uf').value = (data.uf || '').toUpperCase();
+                    // Tenta abrir o mapa com a rua geocoded.
+                    // Reset eventLat/Lng para que o pin seja recalculado pelo CEP novo.
+                    state.eventLat = null;
+                    state.eventLng = null;
+                    state.geocodedFor = null;
+                    tryShowMap(true);
                 }
             } catch (e) { console.error('Erro CEP:', e); }
         };
@@ -418,6 +470,221 @@
 
         // ===== Personalização =====
         function firstName(full) { return full ? full.trim().split(/\s+/)[0] : ''; }
+
+        // ===== Auto-save =====
+        function buildDraftPayload() {
+            const isPJ = document.querySelector('input[name="client-type"]:checked')?.value === 'PJ';
+            return {
+                clientType: isPJ ? 'PJ' : 'PF',
+                clientName: isPJ ? $('pj-razao').value.trim() || null : $('pf-nome').value.trim() || null,
+                clientCpf: isPJ ? null : ($('pf-cpf').value.trim() || null),
+                clientRg: isPJ ? null : ($('pf-rg').value.trim() || null),
+                clientDob: isPJ ? null : ($('pf-nascimento').value || null),
+                clientPhone: isPJ ? null : ($('pf-telefone').value.trim() || null),
+                clientPhoneBackup: isPJ ? null : ($('pf-telefone-reserva').value.trim() || null),
+                cnpj: isPJ ? ($('pj-cnpj').value.trim() || null) : null,
+                repName: isPJ ? ($('pj-rep-nome').value.trim() || null) : null,
+                repPhone: isPJ ? ($('pj-rep-telefone').value.trim() || null) : null,
+                clientAddress: $('ev-logradouro').value.trim() || null,
+                cep: $('ev-cep').value.trim() || null,
+                complemento: $('ev-complemento').value.trim() || null,
+                referencia: $('ev-referencia').value.trim() || null,
+                bairro: $('ev-bairro').value.trim() || null,
+                cidade: $('ev-cidade').value.trim() || null,
+                uf: $('ev-uf').value.trim().toUpperCase() || null,
+                eventLat: state.eventLat,
+                eventLng: state.eventLng,
+                isBirthday: !$('birthday-section').classList.contains('hidden'),
+                birthdayPersonName: $('bday-nome').value.trim() || null,
+                birthdayPersonDob: $('bday-data').value || null,
+                date: $('event-date').value || null,
+                startTime: $('event-start').value || null,
+                endTime: $('event-end').value || null
+            };
+        }
+
+        function setSaveIndicator(mode) {
+            const ind = $('save-indicator');
+            const txt = $('save-indicator-text');
+            ind.classList.remove('saving', 'saved', 'error');
+            if (mode === 'saving') {
+                ind.classList.add('saving');
+                txt.textContent = 'Salvando rascunho...';
+                ind.querySelector('i').className = 'fa-solid fa-spinner fa-spin';
+            } else if (mode === 'saved') {
+                ind.classList.add('saved');
+                txt.textContent = 'Rascunho salvo';
+                ind.querySelector('i').className = 'fa-solid fa-cloud-check';
+            } else if (mode === 'error') {
+                ind.classList.add('error');
+                txt.textContent = 'Erro ao salvar rascunho';
+                ind.querySelector('i').className = 'fa-solid fa-triangle-exclamation';
+            } else {
+                txt.textContent = 'Rascunho salvo automaticamente';
+                ind.querySelector('i').className = 'fa-solid fa-cloud-arrow-up';
+            }
+        }
+
+        let saveTimer = null;
+        let saveInFlight = false;
+        async function flushAutoSave() {
+            if (!eventId || !state.loaded || state.submitted) return;
+            if (saveInFlight) { scheduleAutoSave(1500); return; }
+            saveInFlight = true;
+            setSaveIndicator('saving');
+            try {
+                const payload = buildDraftPayload();
+                const res = await fetch(`${API_BASE}/public/events/${eventId}/draft`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    keepalive: true
+                });
+                if (!res.ok) throw new Error('http ' + res.status);
+                state.formDirty = false;
+                setSaveIndicator('saved');
+            } catch (e) {
+                console.warn('Auto-save falhou (vamos tentar novamente):', e);
+                setSaveIndicator('error');
+            } finally {
+                saveInFlight = false;
+            }
+        }
+        function scheduleAutoSave(delay = 2000) {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(flushAutoSave, delay);
+        }
+
+        // Marca o form como sujo na primeira interação relevante
+        function markDirty() {
+            if (!state.loaded) return;
+            state.formDirty = true;
+            scheduleAutoSave();
+        }
+
+        // ===== Exit intent — mostra o banner só quando o usuário sinaliza saída =====
+        function showUrgencyBanner() {
+            if (state.submitted) return;
+            if (!state.formDirty) return;
+            $('urgency-banner').classList.remove('hidden');
+        }
+
+        // Desktop: mouse saindo pela parte de cima da janela (em direção aos botões da aba).
+        document.addEventListener('mouseleave', (e) => {
+            if (e.clientY <= 0) showUrgencyBanner();
+        });
+        // Mobile/desktop: aba ficou oculta (troca de app, minimização). Mostra para quando voltar.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) showUrgencyBanner();
+        });
+
+        // ===== beforeunload — avisa antes de fechar a aba =====
+        window.addEventListener('beforeunload', (e) => {
+            if (!state.formDirty || state.submitted) return;
+            // Tenta um último flush via sendBeacon (não bloqueia o navegador).
+            try {
+                if (eventId && navigator.sendBeacon) {
+                    const blob = new Blob([JSON.stringify(buildDraftPayload())], { type: 'application/json' });
+                    // sendBeacon não suporta PATCH — fazemos fetch keepalive em paralelo como fallback.
+                    fetch(`${API_BASE}/public/events/${eventId}/draft`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(buildDraftPayload()),
+                        keepalive: true
+                    }).catch(() => { });
+                }
+            } catch (_) { }
+            e.preventDefault();
+            e.returnValue = 'As datas próximas estão acabando. Tem certeza que quer sair sem finalizar?';
+            return e.returnValue;
+        });
+
+        // ===== Mapa (Leaflet + Nominatim) =====
+        async function geocodeAddress(query) {
+            try {
+                const url = new URL('https://nominatim.openstreetmap.org/search');
+                url.searchParams.set('format', 'jsonv2');
+                url.searchParams.set('limit', '1');
+                url.searchParams.set('q', query);
+                url.searchParams.set('countrycodes', 'br');
+                const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+                if (!res.ok) return null;
+                const arr = await res.json();
+                if (!Array.isArray(arr) || arr.length === 0) return null;
+                return { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) };
+            } catch (e) {
+                console.warn('Geocode falhou:', e);
+                return null;
+            }
+        }
+
+        function initMap(lat, lng) {
+            if (typeof L === 'undefined') return;
+            $('map-section').classList.remove('hidden');
+            const center = [lat, lng];
+            if (state.map) {
+                state.map.setView(center, 17);
+                state.mapMarker.setLatLng(center);
+                state.map.invalidateSize();
+                return;
+            }
+            state.map = L.map('event-map', { zoomControl: true, attributionControl: false }).setView(center, 17);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(state.map);
+            state.mapMarker = L.marker(center, { draggable: true }).addTo(state.map);
+            state.mapMarker.on('dragend', (ev) => {
+                const ll = ev.target.getLatLng();
+                state.eventLat = ll.lat;
+                state.eventLng = ll.lng;
+                $('map-helper').innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> Posição ajustada pelo cliente.';
+                markDirty();
+            });
+            // Click no mapa também move o pin
+            state.map.on('click', (ev) => {
+                state.mapMarker.setLatLng(ev.latlng);
+                state.eventLat = ev.latlng.lat;
+                state.eventLng = ev.latlng.lng;
+                $('map-helper').innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> Posição ajustada pelo cliente.';
+                markDirty();
+            });
+            // Quando o container muda de tamanho/visibilidade, leaflet precisa recalcular.
+            setTimeout(() => state.map.invalidateSize(), 200);
+        }
+
+        async function tryShowMap(force = false) {
+            const cep = onlyDigits($('ev-cep').value);
+            // Se cliente já tinha lat/lng salvos, usa direto.
+            if (state.eventLat != null && state.eventLng != null && !force) {
+                initMap(state.eventLat, state.eventLng);
+                return;
+            }
+            if (cep.length !== 8) return;
+            if (state.geocodedFor === cep && !force) return;
+            const logradouro = $('ev-logradouro').value.trim();
+            const bairro = $('ev-bairro').value.trim();
+            const cidade = $('ev-cidade').value.trim();
+            const uf = $('ev-uf').value.trim();
+            const parts = [logradouro, bairro, cidade, uf].filter(Boolean);
+            if (parts.length < 2) return;
+            const query = parts.join(', ') + ', Brasil';
+            const geo = await geocodeAddress(query);
+            if (!geo) {
+                // Fallback: geocoda só pelo CEP
+                const geo2 = await geocodeAddress(`${cep}, Brasil`);
+                if (!geo2) return;
+                state.geocodedFor = cep;
+                state.eventLat = geo2.lat;
+                state.eventLng = geo2.lng;
+                initMap(geo2.lat, geo2.lng);
+                return;
+            }
+            state.geocodedFor = cep;
+            state.eventLat = geo.lat;
+            state.eventLng = geo.lng;
+            initMap(geo.lat, geo.lng);
+        }
 
         // ===== Renderização dos itens =====
         function renderItems() {
@@ -466,6 +733,7 @@
                     state.extraItems.splice(i, 1);
                     renderItems();
                     renderTotals();
+                    if (typeof markDirty === 'function') markDirty();
                 });
             });
         }
@@ -554,6 +822,7 @@
                     renderItems();
                     renderTotals();
                     closeToyModal();
+                    if (typeof markDirty === 'function') markDirty();
                 });
             });
         }
@@ -579,7 +848,7 @@
             const el = $('availability-status');
             el.classList.remove('hidden');
             if (state === 'unchanged') {
-                el.innerHTML = `<div class="status-pill status-ok"><i class="fa-solid fa-check"></i> Data e horário originais</div>`;
+                el.innerHTML = `<div class="status-pill status-ok"><i class="fa-solid fa-check"></i> Data e horário disponíveis</div>`;
             } else if (state === 'checking') {
                 el.innerHTML = `<div class="status-pill status-checking"><i class="fa-solid fa-spinner fa-spin"></i> Verificando disponibilidade...</div>`;
             } else if (state === 'available') {
@@ -642,7 +911,7 @@
                 const fname = firstName(ev.clientName);
                 if (fname) {
                     $('greeting-text').textContent = `Oi, ${fname}! Vamos confirmar seu evento`;
-                    $('header-subtitle').textContent = `Faltam só alguns detalhes, ${fname} — preenche aí!`;
+                    $('header-subtitle').textContent = `Faltam só alguns detalhes, ${fname}`;
                 } else {
                     $('greeting-text').textContent = 'Vamos confirmar seu evento';
                 }
@@ -702,9 +971,28 @@
                 $('bday-nome').value = ev.birthdayPersonName || '';
                 $('bday-data').value = ev.birthdayPersonDob || '';
 
+                // Geo: se o cliente já marcou um pin antes, restaura.
+                state.eventLat = ev.eventLat != null ? Number(ev.eventLat) : null;
+                state.eventLng = ev.eventLng != null ? Number(ev.eventLng) : null;
+                if (state.eventLat != null && state.eventLng != null) {
+                    initMap(state.eventLat, state.eventLng);
+                    $('map-helper').innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> Posição salva anteriormente. Ajuste se necessário.';
+                } else if (ev.cep) {
+                    // Tenta abrir o mapa pré-fixando o pin na rua do CEP existente.
+                    setTimeout(() => tryShowMap(false), 100);
+                }
+
                 $('loading-state').classList.add('hidden');
                 $('event-summary').classList.remove('hidden');
                 $('event-form').classList.remove('hidden');
+                state.loaded = true;
+                setSaveIndicator('idle');
+
+                // Liga o auto-save em todos os inputs/selects/radios do form e do resumo.
+                document.querySelectorAll('#event-form input, #event-form select, #event-summary input').forEach(el => {
+                    el.addEventListener('input', markDirty);
+                    el.addEventListener('change', markDirty);
+                });
             } catch (e) {
                 console.error('Erro ao carregar evento:', e);
                 $('loading-state').classList.add('hidden');
@@ -746,6 +1034,8 @@
                 bairro: $('ev-bairro').value.trim(),
                 cidade: $('ev-cidade').value.trim(),
                 uf: $('ev-uf').value.trim().toUpperCase(),
+                eventLat: state.eventLat,
+                eventLng: state.eventLng,
                 isBirthday: !$('birthday-section').classList.contains('hidden'),
                 birthdayPersonName: $('bday-nome').value.trim() || null,
                 birthdayPersonDob: $('bday-data').value || null,
@@ -764,6 +1054,8 @@
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
+                    state.submitted = true;
+                    state.formDirty = false;
                     const fname = firstName(payload.clientName);
                     const hadChanges = dateTimeChanged() || state.extraItems.length > 0;
                     const msg = hadChanges
@@ -773,6 +1065,7 @@
                     $('event-form').classList.add('hidden');
                     $('event-summary').classList.add('hidden');
                     $('greeting-card').classList.add('hidden');
+                    $('urgency-banner').classList.add('hidden');
                     $('success-state').classList.remove('hidden');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {

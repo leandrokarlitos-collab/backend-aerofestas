@@ -3949,7 +3949,10 @@
                         toysHtml += '</ul>';
                         const yourCompany = companies.find(c => c.id === event.yourCompanyId);
                         const isPending = event.status === 'pendente_cadastro';
-                        const fallbackName = isPending ? 'Aguardando cliente preencher' : '—';
+                        const isInProgress = event.status === 'cadastro_em_andamento';
+                        const fallbackName = isPending
+                            ? 'Aguardando cliente preencher'
+                            : (isInProgress ? 'Cliente está preenchendo…' : '—');
                         const clientNameDisplay = event.clientType === 'PJ'
                             ? `${event.clientName || fallbackName} (PJ)`
                             : (event.clientName || fallbackName);
@@ -3973,6 +3976,10 @@
                         let cadastroStatusBadge = '';
                         if (event.status === 'pendente_cadastro') {
                             cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-300 text-amber-700 text-xs font-semibold flex items-center gap-1.5"><i class="fas fa-hourglass-half"></i> Aguardando cadastro do cliente</div>`;
+                        } else if (event.status === 'cadastro_em_andamento') {
+                            // Indica que o cliente abriu o link e está preenchendo (auto-save em andamento).
+                            const fieldsFilled = [event.clientName, event.clientPhone, event.clientCpf, event.cep, event.clientAddress].filter(Boolean).length;
+                            cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-sky-50 border border-sky-300 text-sky-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer review-event-btn" data-id="${event.id}"><i class="fas fa-keyboard"></i> Cliente está preenchendo… <span class="ml-1 text-sky-600">(${fieldsFilled}/5 campos)</span></div>`;
                         } else if (event.status === 'cadastro_completo') {
                             cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-green-50 border border-green-400 text-green-700 text-xs font-semibold flex items-center gap-1.5 animate-pulse cursor-pointer review-event-btn" data-id="${event.id}"><i class="fas fa-clipboard-check"></i> Cadastro preenchido — Revisar</div>`;
                         }

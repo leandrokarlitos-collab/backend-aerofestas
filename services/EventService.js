@@ -232,6 +232,9 @@ async function getPublicEvent(id) {
         bairro: event.bairro,
         cidade: event.cidade,
         uf: event.uf,
+        eventLat: event.eventLat,
+        eventLng: event.eventLng,
+        status: event.status,
         isBirthday: event.isBirthday,
         birthdayPersonName: event.birthdayPersonName,
         birthdayPersonDob: event.birthdayPersonDob
@@ -271,6 +274,8 @@ async function updatePublicEvent(id, d) {
     if (d.date) updateData.date = d.date;
     if (d.startTime) updateData.startTime = d.startTime;
     if (d.endTime) updateData.endTime = d.endTime;
+    if (d.eventLat !== undefined) updateData.eventLat = d.eventLat;
+    if (d.eventLng !== undefined) updateData.eventLng = d.eventLng;
 
     const updated = await prisma.event.update({ where: { id: eventId }, data: updateData });
 
@@ -293,6 +298,50 @@ async function updatePublicEvent(id, d) {
     notifyAdminsCadastroCompleto(d.clientName).catch(err =>
         console.error('Erro ao enviar notificação push:', err)
     );
+
+    return updated;
+}
+
+// Auto-save parcial — cliente preenchendo. Não dispara notificação,
+// não exige campos obrigatórios. Marca status como cadastro_em_andamento
+// se o status atual for pendente_cadastro/null/em_andamento (não regride
+// de cadastro_completo).
+async function saveDraftPublicEvent(id, d) {
+    const eventId = parseFloat(id);
+    const existing = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { status: true }
+    });
+    if (!existing) {
+        const err = new Error('Evento não encontrado');
+        err.status = 404;
+        throw err;
+    }
+
+    const ALLOWED = [
+        'clientType', 'clientName', 'clientCpf', 'clientRg', 'clientDob',
+        'clientPhone', 'clientPhoneBackup',
+        'cnpj', 'companyAddress', 'repName', 'repPhone',
+        'clientAddress', 'cep', 'complemento', 'referencia', 'bairro', 'cidade', 'uf',
+        'eventLat', 'eventLng',
+        'isBirthday', 'birthdayPersonName', 'birthdayPersonDob',
+        'date', 'startTime', 'endTime'
+    ];
+    const updateData = {};
+    for (const k of ALLOWED) {
+        if (d[k] !== undefined) updateData[k] = d[k];
+    }
+
+    // Só promove status para "em_andamento" se ainda não foi finalizado.
+    const lockedStatuses = ['cadastro_completo', 'cancelado', 'concluido'];
+    if (!lockedStatuses.includes(existing.status)) {
+        updateData.status = 'cadastro_em_andamento';
+    }
+
+    const updated = await prisma.event.update({
+        where: { id: eventId },
+        data: updateData
+    });
 
     return updated;
 }
@@ -376,6 +425,7 @@ module.exports = {
     listEventsFull,
     getPublicEvent,
     updatePublicEvent,
+    saveDraftPublicEvent,
     listPublicToys,
     checkAvailability
 };

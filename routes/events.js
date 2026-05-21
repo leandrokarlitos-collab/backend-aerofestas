@@ -45,6 +45,17 @@ publicRouter.put('/events/:id', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+// Auto-save parcial enquanto o cliente preenche.
+publicRouter.patch('/events/:id/draft', async (req, res, next) => {
+    try {
+        const updated = await EventService.saveDraftPublicEvent(req.params.id, req.body);
+        res.json({ success: true, data: { id: updated.id, status: updated.status } });
+    } catch (err) {
+        if (err.status === 404) return res.status(404).json({ error: err.message });
+        next(err);
+    }
+});
+
 // Lista pública de brinquedos (sem preço — apenas catálogo para o cliente escolher mais itens).
 publicRouter.get('/toys', async (req, res, next) => {
     try {

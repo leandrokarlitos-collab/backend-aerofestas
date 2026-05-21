@@ -142,6 +142,8 @@ model Event {
   bairro           String?
   cidade           String?
   uf               String?
+  eventLat         Float?    // Latitude do pin marcado pelo cliente no minimapa
+  eventLng         Float?    // Longitude do pin marcado pelo cliente no minimapa
   
   // Financeiro
   price            Float?
