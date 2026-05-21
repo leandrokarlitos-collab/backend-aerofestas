@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
     <style>
         * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #ede9fe 100%); min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
@@ -96,7 +97,13 @@
                 <i class="fa-solid fa-circle-check text-5xl text-emerald-500"></i>
             </div>
             <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-2">Recebemos seus dados!</h2>
-            <p id="success-message" class="text-gray-500">A equipe Aero Festas entrará em contato em breve para confirmar.</p>
+            <p id="success-message" class="text-gray-500 mb-5">A equipe Aero Festas entrará em contato em breve para confirmar.</p>
+            <button type="button" id="success-download-btn"
+                class="w-full max-w-xs mx-auto py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
+                style="min-height: 48px">
+                <i class="fa-solid fa-file-arrow-down"></i> Baixar minha cópia do contrato
+            </button>
+            <p class="text-xs text-gray-400 mt-3">Você pode salvar este PDF como comprovante.</p>
         </div>
 
         <!-- Saudação -->
@@ -165,9 +172,17 @@
 
         <!-- Form -->
         <form id="event-form" class="glass-card rounded-2xl p-5 md:p-6 space-y-5 hidden animate-[slideUp_0.6s_ease-out]">
-            <h2 class="section-title text-base">
-                <i class="fa-solid fa-user-pen text-accent"></i> Seus dados
-            </h2>
+            <!-- Stepper -->
+            <div id="stepper" class="flex items-center gap-2 text-xs">
+                <div id="step-1-pill" class="flex-1 py-2 px-3 rounded-full bg-indigo-100 text-indigo-700 font-bold text-center">1 · Dados</div>
+                <div id="step-2-pill" class="flex-1 py-2 px-3 rounded-full bg-gray-100 text-gray-400 font-bold text-center">2 · Contrato</div>
+            </div>
+
+            <!-- ETAPA 1: Dados -->
+            <div id="step-1" class="space-y-5">
+                <h2 class="section-title text-base">
+                    <i class="fa-solid fa-user-pen text-accent"></i> Seus dados
+                </h2>
 
             <!-- Tipo Cliente (chips) -->
             <div class="grid grid-cols-2 gap-3 chip-radio">
@@ -307,23 +322,91 @@
                 </div>
             </div>
 
-            <!-- Indicador de auto-save -->
-            <div class="flex justify-center">
-                <div id="save-indicator" class="save-indicator">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span id="save-indicator-text">Rascunho salvo automaticamente</span>
-                </div>
+                <!-- Botão Avançar -->
+                <button type="button" id="advance-btn"
+                    class="submit-btn w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl active:scale-95 transition-all">
+                    Avançar <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+
+                <p class="text-center text-xs text-gray-400 mt-2">
+                    <i class="fa-solid fa-lock mr-1"></i> Seus dados são usados apenas para confirmar este evento.
+                </p>
             </div>
 
-            <!-- Submit -->
-            <button type="submit" id="submit-btn"
-                class="submit-btn w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl active:scale-95 transition-all">
-                <i class="fa-solid fa-paper-plane mr-2"></i> Enviar dados
-            </button>
+            <!-- ETAPA 2: Contrato -->
+            <div id="step-2" class="hidden space-y-5">
+                <h2 class="section-title text-base">
+                    <i class="fa-solid fa-file-contract text-accent"></i> Contrato de prestação de serviço
+                </h2>
+                <p class="text-sm text-gray-600 leading-snug">
+                    Leia com atenção. Ao assinar, você concorda com os termos abaixo.
+                </p>
 
-            <p class="text-center text-xs text-gray-400 mt-2">
-                <i class="fa-solid fa-lock mr-1"></i> Seus dados são usados apenas para confirmar este evento.
-            </p>
+                <div id="contract-body" class="bg-white border border-gray-200 rounded-xl p-4 md:p-5 max-h-[60vh] overflow-y-auto text-[13px] text-gray-800 leading-relaxed space-y-3">
+                    <!-- preenchido por renderContract() -->
+                </div>
+
+                <button type="button" id="download-pdf-btn"
+                    class="w-full py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    style="min-height: 48px">
+                    <i class="fa-solid fa-file-arrow-down"></i> Baixar contrato em PDF
+                </button>
+
+                <!-- Assinatura -->
+                <div class="border-t pt-5 space-y-3">
+                    <h3 class="section-title text-base">
+                        <i class="fa-solid fa-pen-nib text-accent"></i> Assinatura do contratante
+                    </h3>
+                    <p class="text-sm text-gray-600 leading-snug">
+                        Ao clicar em "Assinar", você confirma que leu, entendeu e aceita todos os termos do contrato acima.
+                    </p>
+
+                    <div id="signature-pending">
+                        <button type="button" id="sign-btn"
+                            class="w-full py-3 bg-white border-2 border-indigo-500 text-indigo-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 active:scale-95 transition-all"
+                            style="min-height: 56px">
+                            <i class="fa-solid fa-pen-nib"></i> Assinar agora
+                        </button>
+                    </div>
+
+                    <div id="signature-signed" class="hidden bg-emerald-50 border border-emerald-300 rounded-xl p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-check text-white text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-emerald-800 text-sm">Assinado por <span id="signature-name">—</span></p>
+                                <p class="text-xs text-emerald-700 mt-0.5"><i class="fa-solid fa-clock mr-1"></i> <span id="signature-time">—</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicador de auto-save -->
+                <div class="flex justify-center">
+                    <div id="save-indicator" class="save-indicator">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span id="save-indicator-text">Rascunho salvo automaticamente</span>
+                    </div>
+                </div>
+
+                <!-- Voltar + Enviar -->
+                <div class="flex gap-3">
+                    <button type="button" id="back-btn"
+                        class="flex-1 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 active:scale-95 transition-all"
+                        style="min-height: 56px">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Voltar
+                    </button>
+                    <button type="submit" id="submit-btn"
+                        class="flex-[2] submit-btn py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> Enviar
+                    </button>
+                </div>
+
+                <p class="text-center text-xs text-gray-400 mt-2">
+                    <i class="fa-solid fa-lock mr-1"></i> Cópia do contrato assinado ficará registrada com seus dados.
+                </p>
+            </div>
         </form>
     </div>
 
@@ -380,6 +463,13 @@
             discountValue: 0,
             deliveryFee: 0,
             availability: null,  // { available, reason }
+            // Wizard
+            step: 1,
+            company: null,
+            // Assinatura simples
+            signed: false,
+            signedAt: null,
+            signedName: null,
             // Auto-save / proteção de saída
             formDirty: false,
             submitted: false,
@@ -475,6 +565,353 @@
 
         // ===== Personalização =====
         function firstName(full) { return full ? full.trim().split(/\s+/)[0] : ''; }
+
+        // ===== Helpers do contrato =====
+        const NAO_DECLARADO = 'NÃO DECLARADO';
+        function nd(v) { return v && String(v).trim() ? String(v).trim() : NAO_DECLARADO; }
+        function formatBRL(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+        function formatDateLong(dateStr) {
+            if (!dateStr) return NAO_DECLARADO;
+            try {
+                const d = new Date(dateStr + 'T00:00:00');
+                return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(d);
+            } catch (_) { return NAO_DECLARADO; }
+        }
+        function joinAddress({ logradouro, complemento, bairro, cidade, uf }) {
+            const parts = [logradouro, complemento, bairro, cidade, uf].map(p => (p || '').trim()).filter(Boolean);
+            return parts.length ? parts.join(', ') : NAO_DECLARADO;
+        }
+
+        // ===== Wizard =====
+        function goToStep(n) {
+            state.step = n;
+            const s1 = document.getElementById('step-1');
+            const s2 = document.getElementById('step-2');
+            const p1 = document.getElementById('step-1-pill');
+            const p2 = document.getElementById('step-2-pill');
+            if (n === 1) {
+                s1.classList.remove('hidden');
+                s2.classList.add('hidden');
+                p1.className = 'flex-1 py-2 px-3 rounded-full bg-indigo-100 text-indigo-700 font-bold text-center';
+                p2.className = 'flex-1 py-2 px-3 rounded-full bg-gray-100 text-gray-400 font-bold text-center';
+            } else {
+                s1.classList.add('hidden');
+                s2.classList.remove('hidden');
+                p1.className = 'flex-1 py-2 px-3 rounded-full bg-emerald-100 text-emerald-700 font-bold text-center';
+                p2.className = 'flex-1 py-2 px-3 rounded-full bg-indigo-100 text-indigo-700 font-bold text-center';
+                renderContract();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function validateStep1() {
+            const isPJ = document.querySelector('input[name="client-type"]:checked')?.value === 'PJ';
+            const name = isPJ ? $('pj-razao').value.trim() : $('pf-nome').value.trim();
+            if (!name) {
+                alert(isPJ ? 'Informe a razão social.' : 'Informe seu nome completo.');
+                (isPJ ? $('pj-razao') : $('pf-nome')).focus();
+                return false;
+            }
+            if (!isPJ) {
+                const phone = $('pf-telefone').value.trim();
+                if (!phone) { alert('Informe um telefone para contato.'); $('pf-telefone').focus(); return false; }
+            }
+            return true;
+        }
+
+        // ===== Renderizador do contrato =====
+        function renderContract() {
+            const isPJ = document.querySelector('input[name="client-type"]:checked')?.value === 'PJ';
+            const clientName = isPJ ? $('pj-razao').value.trim() : $('pf-nome').value.trim();
+            const company = state.company || {};
+
+            // Bloco do contratante
+            const contratanteIntro = isPJ
+                ? `<strong>${nd(clientName).toUpperCase()}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob nº <strong>${nd($('pj-cnpj').value)}</strong>, neste ato representada por <strong>${nd($('pj-rep-nome').value)}</strong>, com telefone de contato <strong>${nd($('pj-rep-telefone').value)}</strong>, situada à <strong>${joinAddress({ logradouro: $('ev-logradouro').value, complemento: $('ev-complemento').value, bairro: $('ev-bairro').value, cidade: $('ev-cidade').value, uf: $('ev-uf').value })}</strong>, doravante denominada <strong>CONTRATANTE</strong>.`
+                : `<strong>${nd(clientName).toUpperCase()}</strong>, pessoa física, inscrita no CPF sob nº <strong>${nd($('pf-cpf').value)}</strong> e RG <strong>${nd($('pf-rg').value)}</strong>, situada à <strong>${joinAddress({ logradouro: $('ev-logradouro').value, complemento: $('ev-complemento').value, bairro: $('ev-bairro').value, cidade: $('ev-cidade').value, uf: $('ev-uf').value })}</strong>, doravante denominada <strong>CONTRATANTE</strong>.`;
+
+            // Bloco da contratada (empresa)
+            const contratadaIntro = `<strong>${nd(company.name).toUpperCase()}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob nº <strong>${nd(company.cnpj)}</strong>, situada à <strong>${nd(company.address)}</strong>, neste ato representada por <strong>${nd(company.repName)}</strong>, inscrito(a) sob o CPF nº <strong>${nd(company.repDoc)}</strong>, doravante denominada <strong>CONTRATADA</strong>.`;
+
+            // Endereço do evento
+            const eventAddress = joinAddress({
+                logradouro: $('ev-logradouro').value, complemento: $('ev-complemento').value,
+                bairro: $('ev-bairro').value, cidade: $('ev-cidade').value, uf: $('ev-uf').value
+            });
+            const eventDate = formatDateLong($('event-date').value);
+            const startTime = $('event-start').value || NAO_DECLARADO;
+            const endTime = $('event-end').value || NAO_DECLARADO;
+
+            // Itens (originais + extras)
+            const allItems = [
+                ...state.originalItems.map(i => `${i.quantidade} ${i.nome}`),
+                ...state.extraItems.map(i => `${i.quantidade} ${i.nome} (a confirmar)`)
+            ];
+            const itemsList = allItems.length ? allItems.join(', ') : NAO_DECLARADO;
+
+            // Valores
+            const subtotal = Number(state.subtotal || 0);
+            const discountVal = Number(state.discountValue || 0);
+            const discountAmount = state.discountType === 'percent' ? subtotal * discountVal / 100 : discountVal;
+            const deliveryFee = Number(state.deliveryFee || 0);
+            const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
+
+            const paymentBlock = company.paymentInfo
+                ? `O pagamento será realizado conforme dados informados pela CONTRATADA: ${company.paymentInfo}.`
+                : 'Forma de pagamento a ser combinada diretamente com a CONTRATADA.';
+
+            // Cidade e data do contrato
+            const signCity = ($('ev-cidade').value || 'Goiânia').trim();
+            const signDate = formatDateLong(new Date().toISOString().slice(0, 10));
+
+            const html = `
+                <div class="text-center font-bold uppercase text-[13px] mb-2">Contrato de Prestação de Serviço com Fornecimento de Mão de Obra e Equipamentos para Eventos</div>
+                <p>${contratanteIntro}</p>
+                <p>${contratadaIntro}</p>
+                <p>As partes acima nomeadas e qualificadas resolvem celebrar este <strong>CONTRATO DE PRESTAÇÃO DE SERVIÇO, COM FORNECIMENTO DE BRINQUEDOS, MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS</strong>, de acordo com as cláusulas seguintes:</p>
+                <p><strong>CLÁUSULA PRIMEIRA</strong> — O presente contrato tem por objetivo a locação de brinquedos recreativos no evento da contratante no endereço: <strong>${eventAddress}</strong>. A ser realizado no dia <strong>${eventDate}</strong>, com início previsto para às <strong>${startTime}</strong> e término às <strong>${endTime}</strong>, no local do evento.</p>
+                <p><strong>CLÁUSULA SEGUNDA</strong> — Consistem em serviços necessários para a execução do objeto deste contrato:</p>
+                <p class="pl-4">a) Fornecimento dos equipamentos necessários para execução dos serviços;<br>
+                b) Montagem e desmontagem dos equipamentos;<br>
+                c) Fornecimento de mão de obra;<br>
+                d) <strong>${itemsList}</strong>, sob o regime de locação.</p>
+                <p><strong>CLÁUSULA TERCEIRA</strong> — O presente contrato será por prazo determinado de 01 (um) dia, isto é, em <strong>${eventDate}</strong>, com início às <strong>${startTime}</strong> e término às <strong>${endTime}</strong>, ou seja, somente durante o período de realização do evento.</p>
+                <p><strong>CLÁUSULA QUARTA</strong> — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de <strong>${formatBRL(total)}</strong>${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}. ${paymentBlock}</p>
+                <p><strong>CLÁUSULA QUINTA</strong> — O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.</p>
+                <p><strong>CLÁUSULA SEXTA</strong> — Fica condicionada à anuência da CONTRATANTE a escolha dos horários para utilização dos equipamentos dentro do período contratado.</p>
+                <p><strong>CLÁUSULA SÉTIMA</strong> — A CONTRATADA não se responsabiliza pelo controle de caixa dos brinquedos locados. Quando aplicável, fabricação e venda das fichas fica sob responsabilidade da CONTRATADA.</p>
+                <p><strong>CLÁUSULA OITAVA</strong> — A CONTRATADA não se responsabiliza por mau funcionamento de seus equipamentos em decorrência de problemas de energia, queda ou falta da mesma, condições naturais do tempo e depredação por terceiros.</p>
+                <p><strong>CLÁUSULA NONA</strong> — O presente contrato prevalece sobre quaisquer outras negociações, sejam verbais, escritas ou realizadas por qualquer outro meio de comunicação.</p>
+                <p><strong>CLÁUSULA DÉCIMA</strong> — As partes elegem o Foro da Comarca de Aparecida de Goiânia — Goiás, para dirimir quaisquer questões decorrentes deste contrato, com privilégio sobre qualquer outro por mais especial que seja.</p>
+                <p>E por estarem as partes em pleno acordo em tudo quanto se encontra disposto neste instrumento, assinam-no, em 02 (duas) vias de igual teor e forma.</p>
+                <p class="text-center font-semibold mt-3">${signCity}, ${signDate}</p>
+            `;
+            document.getElementById('contract-body').innerHTML = html;
+        }
+
+        // ===== Gerar PDF do contrato =====
+        function buildContractTextData() {
+            const isPJ = document.querySelector('input[name="client-type"]:checked')?.value === 'PJ';
+            const clientName = isPJ ? $('pj-razao').value.trim() : $('pf-nome').value.trim();
+            const company = state.company || {};
+
+            const addr = joinAddress({
+                logradouro: $('ev-logradouro').value, complemento: $('ev-complemento').value,
+                bairro: $('ev-bairro').value, cidade: $('ev-cidade').value, uf: $('ev-uf').value
+            });
+            const eventDate = formatDateLong($('event-date').value);
+            const startTime = $('event-start').value || NAO_DECLARADO;
+            const endTime = $('event-end').value || NAO_DECLARADO;
+
+            const contratante = isPJ
+                ? `${nd(clientName).toUpperCase()}, pessoa jurídica de direito privado, inscrita no CNPJ sob nº ${nd($('pj-cnpj').value)}, neste ato representada por ${nd($('pj-rep-nome').value)}, com telefone de contato ${nd($('pj-rep-telefone').value)}, situada à ${addr}, doravante denominada CONTRATANTE.`
+                : `${nd(clientName).toUpperCase()}, pessoa física, inscrita no CPF sob nº ${nd($('pf-cpf').value)} e RG ${nd($('pf-rg').value)}, situada à ${addr}, doravante denominada CONTRATANTE.`;
+
+            const contratada = `${nd(company.name).toUpperCase()}, pessoa jurídica de direito privado, inscrita no CNPJ/MF sob nº ${nd(company.cnpj)}, situada à ${nd(company.address)}, neste ato representada por ${nd(company.repName)}, inscrito(a) sob o CPF nº ${nd(company.repDoc)}, doravante denominada CONTRATADA.`;
+
+            const allItems = [
+                ...state.originalItems.map(i => `${i.quantidade} ${i.nome}`),
+                ...state.extraItems.map(i => `${i.quantidade} ${i.nome} (a confirmar)`)
+            ];
+            const itemsList = allItems.length ? allItems.join(', ') : NAO_DECLARADO;
+
+            const subtotal = Number(state.subtotal || 0);
+            const discountVal = Number(state.discountValue || 0);
+            const discountAmount = state.discountType === 'percent' ? subtotal * discountVal / 100 : discountVal;
+            const deliveryFee = Number(state.deliveryFee || 0);
+            const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
+
+            const payInfo = company.paymentInfo
+                ? `O pagamento será realizado conforme dados informados pela CONTRATADA: ${company.paymentInfo}.`
+                : 'Forma de pagamento a ser combinada diretamente com a CONTRATADA.';
+
+            const signCity = ($('ev-cidade').value || 'Goiânia').trim();
+            const signDate = formatDateLong(new Date().toISOString().slice(0, 10));
+
+            return {
+                title: 'CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS',
+                paragraphs: [
+                    contratante,
+                    contratada,
+                    'As partes acima nomeadas e qualificadas resolvem celebrar este CONTRATO DE PRESTAÇÃO DE SERVIÇO, COM FORNECIMENTO DE BRINQUEDOS, MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS, de acordo com as cláusulas seguintes:',
+                    `CLÁUSULA PRIMEIRA — O presente contrato tem por objetivo a locação de brinquedos recreativos no evento da contratante no endereço: ${addr}. A ser realizado no dia ${eventDate}, com início previsto para às ${startTime} e término às ${endTime}, no local do evento.`,
+                    'CLÁUSULA SEGUNDA — Consistem em serviços necessários para a execução do objeto deste contrato:',
+                    'a) Fornecimento dos equipamentos necessários para execução dos serviços;',
+                    'b) Montagem e desmontagem dos equipamentos;',
+                    'c) Fornecimento de mão de obra;',
+                    `d) ${itemsList}, sob o regime de locação.`,
+                    `CLÁUSULA TERCEIRA — O presente contrato será por prazo determinado de 01 (um) dia, isto é, em ${eventDate}, com início às ${startTime} e término às ${endTime}, ou seja, somente durante o período de realização do evento.`,
+                    `CLÁUSULA QUARTA — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de ${formatBRL(total)}${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}. ${payInfo}`,
+                    'CLÁUSULA QUINTA — O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.',
+                    'CLÁUSULA SEXTA — Fica condicionada à anuência da CONTRATANTE a escolha dos horários para utilização dos equipamentos dentro do período contratado.',
+                    'CLÁUSULA SÉTIMA — A CONTRATADA não se responsabiliza pelo controle de caixa dos brinquedos locados. Quando aplicável, fabricação e venda das fichas fica sob responsabilidade da CONTRATADA.',
+                    'CLÁUSULA OITAVA — A CONTRATADA não se responsabiliza por mau funcionamento de seus equipamentos em decorrência de problemas de energia, queda ou falta da mesma, condições naturais do tempo e depredação por terceiros.',
+                    'CLÁUSULA NONA — O presente contrato prevalece sobre quaisquer outras negociações, sejam verbais, escritas ou realizadas por qualquer outro meio de comunicação.',
+                    'CLÁUSULA DÉCIMA — As partes elegem o Foro da Comarca de Aparecida de Goiânia — Goiás, para dirimir quaisquer questões decorrentes deste contrato, com privilégio sobre qualquer outro por mais especial que seja.',
+                    'E por estarem as partes em pleno acordo em tudo quanto se encontra disposto neste instrumento, assinam-no, em 02 (duas) vias de igual teor e forma.'
+                ],
+                signatures: {
+                    contratante: clientName || NAO_DECLARADO,
+                    contratada: company.name || NAO_DECLARADO,
+                    repName: company.repName || NAO_DECLARADO
+                },
+                signCity, signDate
+            };
+        }
+
+        function downloadContractPDF() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('Não foi possível gerar o PDF agora. Recarregue a página e tente de novo.');
+                return;
+            }
+            const data = buildContractTextData();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            const ml = 20, mr = 20, mt = 22, mb = 22;
+            const usableW = pageW - ml - mr;
+            let y = mt;
+
+            const needBreak = (need) => {
+                if (y + need > pageH - mb) { doc.addPage(); y = mt; }
+            };
+
+            // Título
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            const titleLines = doc.splitTextToSize(data.title, usableW);
+            for (const ln of titleLines) {
+                needBreak(7);
+                doc.text(ln, pageW / 2, y, { align: 'center' });
+                y += 6;
+            }
+            y += 4;
+
+            // Parágrafos
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10.5);
+            for (const p of data.paragraphs) {
+                const lines = doc.splitTextToSize(p, usableW);
+                needBreak(lines.length * 5 + 2);
+                for (const ln of lines) {
+                    needBreak(5);
+                    doc.text(ln, ml, y, { align: 'justify', maxWidth: usableW });
+                    y += 5;
+                }
+                y += 3;
+            }
+
+            // Assinaturas — precisa de espaço; quebra página se não couber.
+            const signBlockHeight = 60;
+            needBreak(signBlockHeight);
+            y += 10;
+
+            // Bloco do CONTRATANTE
+            doc.setLineWidth(0.3);
+            doc.line(pageW / 2 - 50, y, pageW / 2 + 50, y);
+            y += 5;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.text(data.signatures.contratante.toUpperCase(), pageW / 2, y, { align: 'center' });
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.text('Contratante', pageW / 2, y, { align: 'center' });
+            y += 3;
+            if (state.signed && state.signedAt) {
+                let when = '';
+                try { when = new Date(state.signedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }); } catch (_) {}
+                doc.setFontSize(8.5);
+                doc.setTextColor(80);
+                doc.text(`Assinado eletronicamente em ${when}`, pageW / 2, y + 4, { align: 'center' });
+                doc.setTextColor(0);
+            }
+            y += 18;
+
+            // Bloco da CONTRATADA
+            needBreak(35);
+            doc.setLineWidth(0.3);
+            doc.line(pageW / 2 - 50, y, pageW / 2 + 50, y);
+            y += 5;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.text(data.signatures.contratada.toUpperCase(), pageW / 2, y, { align: 'center' });
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.text('Contratada', pageW / 2, y, { align: 'center' });
+
+            y += 12;
+            needBreak(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text(`${data.signCity.toUpperCase()}, ${data.signDate.toUpperCase()}`, pageW / 2, y, { align: 'center' });
+
+            // Numeração de páginas (rodapé)
+            const total = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= total; i++) {
+                doc.setPage(i);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(140);
+                doc.text(`Página ${i} de ${total}`, pageW - mr, pageH - 10, { align: 'right' });
+                doc.setTextColor(0);
+            }
+
+            const safeClient = (data.signatures.contratante || 'contrato').replace(/[^a-z0-9\-]+/gi, '_').slice(0, 40);
+            doc.save(`Contrato_${safeClient}.pdf`);
+        }
+
+        // Listeners do wizard + download
+        document.addEventListener('DOMContentLoaded', () => {
+            const adv = document.getElementById('advance-btn');
+            const back = document.getElementById('back-btn');
+            const dlBtn = document.getElementById('download-pdf-btn');
+            const sucDl = document.getElementById('success-download-btn');
+            if (adv) adv.addEventListener('click', () => { if (validateStep1()) goToStep(2); });
+            if (back) back.addEventListener('click', () => goToStep(1));
+            if (dlBtn) dlBtn.addEventListener('click', downloadContractPDF);
+            if (sucDl) sucDl.addEventListener('click', downloadContractPDF);
+        });
+
+        // ===== Assinatura =====
+        function renderSignature() {
+            if (state.signed) {
+                $('signature-pending').classList.add('hidden');
+                $('signature-signed').classList.remove('hidden');
+                $('signature-name').textContent = state.signedName || '—';
+                if (state.signedAt) {
+                    try {
+                        const d = new Date(state.signedAt);
+                        $('signature-time').textContent = d.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' });
+                    } catch (_) { $('signature-time').textContent = '—'; }
+                }
+                $('submit-btn').disabled = false;
+            } else {
+                $('signature-pending').classList.remove('hidden');
+                $('signature-signed').classList.add('hidden');
+                $('submit-btn').disabled = true;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('sign-btn');
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                const isPJ = document.querySelector('input[name="client-type"]:checked')?.value === 'PJ';
+                const name = (isPJ ? $('pj-razao').value : $('pf-nome').value).trim();
+                if (!name) {
+                    alert('Preencha seu nome antes de assinar.');
+                    (isPJ ? $('pj-razao') : $('pf-nome')).focus();
+                    return;
+                }
+                state.signed = true;
+                state.signedAt = new Date().toISOString();
+                state.signedName = name;
+                renderSignature();
+                if (typeof markDirty === 'function') markDirty();
+            });
+        });
 
         // ===== Auto-save =====
         function buildDraftPayload() {
@@ -944,6 +1381,7 @@
                 state.discountType = ev.discountType;
                 state.discountValue = ev.discountValue;
                 state.deliveryFee = ev.deliveryFee;
+                state.company = ev.company || null;
 
                 renderItems();
                 renderTotals();
@@ -989,6 +1427,14 @@
                     setTimeout(() => tryShowMap(false), 100);
                 }
 
+                // Restaura assinatura, se já houver
+                if (ev.signedAt) {
+                    state.signed = true;
+                    state.signedAt = ev.signedAt;
+                    state.signedName = ev.signedName || ev.clientName;
+                }
+                renderSignature();
+
                 $('loading-state').classList.add('hidden');
                 $('event-summary').classList.remove('hidden');
                 $('event-form').classList.remove('hidden');
@@ -1010,6 +1456,13 @@
         // ===== Submit =====
         $('event-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // Exige assinatura antes de enviar.
+            if (!state.signed) {
+                alert('Clique em "Assinar agora" antes de enviar.');
+                document.getElementById('sign-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
 
             // Se cliente alterou data/horário e o sistema marcou indisponível, bloqueia.
             if (dateTimeChanged() && state.availability && state.availability.available === false) {
@@ -1052,7 +1505,9 @@
                 startTime: $('event-start').value || null,
                 endTime: $('event-end').value || null,
                 // Brinquedos extras
-                newItems: state.extraItems.map(it => ({ id: it.id, quantity: it.quantidade }))
+                newItems: state.extraItems.map(it => ({ id: it.id, quantity: it.quantidade })),
+                // Assinatura (backend só registra se ainda não houver)
+                signed: !!state.signed
             };
 
             try {

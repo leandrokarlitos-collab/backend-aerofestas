@@ -646,6 +646,31 @@
             background: linear-gradient(to top right, rgba(59, 130, 246, 0.92), rgba(139, 92, 246, 0.92));
         }
 
+        /* Aguardando cadastro do cliente — dia pulsa em âmbar */
+        @keyframes pulse-pending-cadastro {
+            0%, 100% {
+                background-color: rgba(251, 191, 36, 0.18);
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
+            }
+            50% {
+                background-color: rgba(251, 191, 36, 0.42);
+                box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+            }
+        }
+        .day-cell.has-pending-cadastro {
+            animation: pulse-pending-cadastro 1.8s ease-in-out infinite;
+            border-color: rgba(245, 158, 11, 0.5) !important;
+        }
+        /* Dot amarelo sobrepõe o azul padrão do has-event */
+        .day-cell.has-pending-cadastro.has-event::after {
+            background-color: #f59e0b;
+            box-shadow: 0 0 6px #f59e0b, 0 0 10px #fbbf24;
+        }
+        /* Hover: contador amarelo/laranja */
+        .day-cell.has-pending-cadastro .event-count-container {
+            background: linear-gradient(to top right, rgba(245, 158, 11, 0.95), rgba(251, 146, 60, 0.95)) !important;
+        }
+
         .rotate-180 {
             transform: rotate(180deg);
         }
@@ -2320,6 +2345,13 @@
                     <input type="text" id="link-cadastro-date" class="form-input w-full px-3 py-2 rounded-md bg-gray-100" readonly>
                 </div>
                 <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Empresa Contratada <span class="text-red-500">*</span></label>
+                    <select id="link-cadastro-company" class="form-input w-full px-3 py-2 rounded-md">
+                        <option value="">Selecione a empresa</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Será usada para gerar o contrato do cliente.</p>
+                </div>
+                <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
                     <input type="text" id="link-cadastro-client-name" class="form-input w-full px-3 py-2 rounded-md" placeholder="Ex: Maria Oliveira">
                 </div>
@@ -3764,6 +3796,7 @@
                     const dayItems = events.filter(e => eventOccursOnDate(e, dateStr));
                     const meetingsOnDay = dayItems.filter(e => e.eventType === 'meeting').length;
                     const eventsOnDay = dayItems.length - meetingsOnDay;
+                    const pendingOnDay = dayItems.filter(e => e.status === 'pendente_cadastro').length;
 
                     const dayCell = document.createElement('div');
                     const classes = ['day-cell', 'p-1.5', 'border', 'border-transparent', 'flex', 'flex-col', 'items-start', 'cursor-pointer', 'text-gray-700'];
@@ -3771,6 +3804,7 @@
                     else classes.push('bg-white/40', 'hover:bg-white/80');
                     if (eventsOnDay > 0) classes.push('has-event');
                     if (meetingsOnDay > 0) classes.push('has-meeting');
+                    if (pendingOnDay > 0) classes.push('has-pending-cadastro');
                     dayCell.className = classes.join(' ');
                     dayCell.dataset.date = dateStr;
 
@@ -6587,6 +6621,21 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 document.getElementById('link-delivery-fee').value = 0;
                 document.getElementById('link-cadastro-config').classList.remove('hidden');
                 document.getElementById('link-cadastro-share').classList.add('hidden');
+
+                // Popula select de empresas
+                const selCompany = document.getElementById('link-cadastro-company');
+                selCompany.innerHTML = '<option value="">Selecione a empresa</option>';
+                (companies || []).slice()
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                    .forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.name;
+                        selCompany.appendChild(opt);
+                    });
+                // Pré-seleciona se só houver uma empresa
+                if ((companies || []).length === 1) selCompany.value = companies[0].id;
+
                 renderLinkToysList();
                 updateLinkTotalPrice();
 
@@ -6696,6 +6745,8 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
 
             document.getElementById('link-cadastro-generate-btn').addEventListener('click', async () => {
                 if (linkCadastroToys.length === 0) { showToast('Adicione ao menos um brinquedo.', true); return; }
+                const selectedCompanyId = document.getElementById('link-cadastro-company').value;
+                if (!selectedCompanyId) { showToast('Selecione a empresa contratada.', true); return; }
                 const subtotal = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
                 const discountType = document.getElementById('link-discount-type').value;
                 const discountValue = parseFloat(document.getElementById('link-discount-value').value) || 0;
@@ -6713,6 +6764,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     id: eventId,
                     date: linkCadastroDateStr,
                     clientName: clientNameInput || null,
+                    yourCompanyId: parseFloat(selectedCompanyId),
                     startTime: startTimeInput || null,
                     endTime: endTimeInput || null,
                     items: linkCadastroToys.map(t => ({ id: t.id, quantity: t.quantity, price: t.price })),

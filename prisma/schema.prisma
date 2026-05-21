@@ -144,6 +144,12 @@ model Event {
   uf               String?
   eventLat         Float?    // Latitude do pin marcado pelo cliente no minimapa
   eventLng         Float?    // Longitude do pin marcado pelo cliente no minimapa
+
+  // Assinatura simples do cliente (evidências de aceite)
+  signedAt         DateTime? // Carimbo do tempo quando o cliente clicou "Assinar"
+  signedName       String?   // Nome informado no momento da assinatura
+  signedIp         String?   // IP do cliente (capturado pelo backend)
+  signedUserAgent  String?   // User-Agent do navegador
   
   // Financeiro
   price            Float?

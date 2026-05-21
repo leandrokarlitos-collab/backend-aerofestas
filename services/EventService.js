@@ -202,6 +202,17 @@ async function getPublicEvent(id) {
         startTime: event.startTime,
         endTime: event.endTime,
         companyName: event.company?.name || '',
+        company: event.company ? {
+            id: event.company.id,
+            name: event.company.name,
+            cnpj: event.company.cnpj,
+            address: event.company.address,
+            phone: event.company.phone,
+            email: event.company.email,
+            paymentInfo: event.company.paymentInfo,
+            repName: event.company.repName,
+            repDoc: event.company.repDoc
+        } : null,
         items: event.items.map(i => ({
             id: i.toyId,
             nome: i.toy?.name || 'Item',
@@ -235,13 +246,15 @@ async function getPublicEvent(id) {
         eventLat: event.eventLat,
         eventLng: event.eventLng,
         status: event.status,
+        signedAt: event.signedAt,
+        signedName: event.signedName,
         isBirthday: event.isBirthday,
         birthdayPersonName: event.birthdayPersonName,
         birthdayPersonDob: event.birthdayPersonDob
     };
 }
 
-async function updatePublicEvent(id, d) {
+async function updatePublicEvent(id, d, meta = {}) {
     const eventId = parseFloat(id);
 
     const updateData = {
@@ -277,6 +290,20 @@ async function updatePublicEvent(id, d) {
     if (d.endTime) updateData.endTime = d.endTime;
     if (d.eventLat !== undefined) updateData.eventLat = d.eventLat;
     if (d.eventLng !== undefined) updateData.eventLng = d.eventLng;
+
+    // Assinatura simples: só registra se chegou signed=true E ainda não foi assinado.
+    if (d.signed === true) {
+        const existing = await prisma.event.findUnique({
+            where: { id: eventId },
+            select: { signedAt: true }
+        });
+        if (existing && !existing.signedAt) {
+            updateData.signedAt = new Date();
+            updateData.signedName = d.clientName || null;
+            updateData.signedIp = meta.ip || null;
+            updateData.signedUserAgent = meta.userAgent || null;
+        }
+    }
 
     const updated = await prisma.event.update({ where: { id: eventId }, data: updateData });
 

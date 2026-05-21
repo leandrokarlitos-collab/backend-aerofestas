@@ -40,7 +40,9 @@ publicRouter.get('/events/:id', async (req, res, next) => {
 
 publicRouter.put('/events/:id', async (req, res, next) => {
     try {
-        const updated = await EventService.updatePublicEvent(req.params.id, req.body);
+        const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
+        const userAgent = req.get('user-agent') || null;
+        const updated = await EventService.updatePublicEvent(req.params.id, req.body, { ip, userAgent });
         res.json({ success: true, data: updated });
     } catch (err) { next(err); }
 });
