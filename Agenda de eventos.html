@@ -2314,10 +2314,24 @@
                     <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-link mr-2 text-amber-500"></i>Link de Cadastro</h2>
                     <button id="close-link-cadastro-btn" class="text-gray-500 hover:text-gray-700 text-xl"><i class="fas fa-times"></i></button>
                 </div>
-                <p class="text-sm text-gray-500 mb-4">Defina os brinquedos e valor. O cliente preencherá o restante.</p>
+                <p class="text-sm text-gray-500 mb-4">Pré-preencha o que já sabe — o cliente completa o restante.</p>
                 <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Data do Evento</label>
                     <input type="text" id="link-cadastro-date" class="form-input w-full px-3 py-2 rounded-md bg-gray-100" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+                    <input type="text" id="link-cadastro-client-name" class="form-input w-full px-3 py-2 rounded-md" placeholder="Ex: Maria Oliveira">
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Início</label>
+                        <input type="time" id="link-cadastro-start-time" class="form-input w-full px-3 py-2 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fim</label>
+                        <input type="time" id="link-cadastro-end-time" class="form-input w-full px-3 py-2 rounded-md">
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Brinquedos</label>
@@ -6507,6 +6521,9 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 linkCadastroToys = [];
                 const [y, m, d] = dateStr.split('-');
                 document.getElementById('link-cadastro-date').value = `${d}/${m}/${y}`;
+                document.getElementById('link-cadastro-client-name').value = '';
+                document.getElementById('link-cadastro-start-time').value = '';
+                document.getElementById('link-cadastro-end-time').value = '';
                 document.getElementById('link-cadastro-config').classList.remove('hidden');
                 document.getElementById('link-cadastro-share').classList.add('hidden');
                 renderLinkToysList();
@@ -6586,9 +6603,15 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 if (linkCadastroToys.length === 0) { showToast('Adicione ao menos um brinquedo.', true); return; }
                 const totalPrice = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
                 const eventId = Date.now();
+                const clientNameInput = document.getElementById('link-cadastro-client-name').value.trim();
+                const startTimeInput = document.getElementById('link-cadastro-start-time').value;
+                const endTimeInput = document.getElementById('link-cadastro-end-time').value;
                 const eventData = {
                     id: eventId,
                     date: linkCadastroDateStr,
+                    clientName: clientNameInput || null,
+                    startTime: startTimeInput || null,
+                    endTime: endTimeInput || null,
                     items: linkCadastroToys.map(t => ({ id: t.id, quantity: t.quantity, price: t.price })),
                     price: totalPrice,
                     subtotal: totalPrice,

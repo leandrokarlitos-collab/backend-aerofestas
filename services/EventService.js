@@ -202,7 +202,17 @@ async function getPublicEvent(id) {
         startTime: event.startTime,
         endTime: event.endTime,
         companyName: event.company?.name || '',
-        items: event.items.map(i => ({ nome: i.toy?.name || 'Item', quantidade: i.quantity })),
+        items: event.items.map(i => ({
+            id: i.toyId,
+            nome: i.toy?.name || 'Item',
+            quantidade: i.quantity,
+            precoUnitario: i.price,
+            adicionadoPeloCliente: i.price === null || i.price === undefined
+        })),
+        subtotal: event.subtotal,
+        discountType: event.discountType,
+        discountValue: event.discountValue,
+        deliveryFee: event.deliveryFee,
         price: event.price,
         clientType: event.clientType,
         clientName: event.clientName,
@@ -230,34 +240,54 @@ async function getPublicEvent(id) {
 
 async function updatePublicEvent(id, d) {
     const eventId = parseFloat(id);
-    const updated = await prisma.event.update({
-        where: { id: eventId },
-        data: {
-            clientType: d.clientType,
-            clientName: d.clientName,
-            clientCpf: d.clientCpf,
-            clientRg: d.clientRg,
-            clientDob: d.clientDob,
-            clientPhone: d.clientPhone,
-            clientPhoneBackup: d.clientPhoneBackup,
-            cnpj: d.cnpj,
-            companyAddress: d.companyAddress,
-            repName: d.repName,
-            repPhone: d.repPhone,
-            clientAddress: d.clientAddress,
-            contractAddress: d.contractAddress,
-            cep: d.cep,
-            complemento: d.complemento,
-            referencia: d.referencia,
-            bairro: d.bairro,
-            cidade: d.cidade,
-            uf: d.uf,
-            isBirthday: d.isBirthday || false,
-            birthdayPersonName: d.birthdayPersonName,
-            birthdayPersonDob: d.birthdayPersonDob,
-            status: 'cadastro_completo'
+
+    const updateData = {
+        clientType: d.clientType,
+        clientName: d.clientName,
+        clientCpf: d.clientCpf,
+        clientRg: d.clientRg,
+        clientDob: d.clientDob,
+        clientPhone: d.clientPhone,
+        clientPhoneBackup: d.clientPhoneBackup,
+        cnpj: d.cnpj,
+        companyAddress: d.companyAddress,
+        repName: d.repName,
+        repPhone: d.repPhone,
+        clientAddress: d.clientAddress,
+        contractAddress: d.contractAddress,
+        cep: d.cep,
+        complemento: d.complemento,
+        referencia: d.referencia,
+        bairro: d.bairro,
+        cidade: d.cidade,
+        uf: d.uf,
+        isBirthday: d.isBirthday || false,
+        birthdayPersonName: d.birthdayPersonName,
+        birthdayPersonDob: d.birthdayPersonDob,
+        status: 'cadastro_completo'
+    };
+
+    // Cliente pode propor nova data/horário — admin confirma depois.
+    if (d.date) updateData.date = d.date;
+    if (d.startTime) updateData.startTime = d.startTime;
+    if (d.endTime) updateData.endTime = d.endTime;
+
+    const updated = await prisma.event.update({ where: { id: eventId }, data: updateData });
+
+    // Brinquedos extras pedidos pelo cliente (sem preço — admin define depois).
+    if (Array.isArray(d.newItems) && d.newItems.length > 0) {
+        const items = d.newItems
+            .map(it => ({
+                eventId,
+                toyId: it.id ? parseFloat(it.id) : null,
+                quantity: parseInt(it.quantity) || 1,
+                price: null
+            }))
+            .filter(it => it.toyId !== null);
+        if (items.length > 0) {
+            await prisma.eventItem.createMany({ data: items });
         }
-    });
+    }
 
     // Fire-and-forget: notificação nunca quebra o update.
     notifyAdminsCadastroCompleto(d.clientName).catch(err =>
@@ -265,6 +295,56 @@ async function updatePublicEvent(id, d) {
     );
 
     return updated;
+}
+
+async function listPublicToys() {
+    return prisma.toy.findMany({
+        select: { id: true, name: true, imageUrl: true },
+        orderBy: { name: 'asc' }
+    });
+}
+
+// Verifica se há conflito com outro evento confirmado no mesmo dia/horário.
+// Retorna { available: boolean, reason?: string } — nunca confirma de forma definitiva,
+// apenas indica se *aparenta* estar livre.
+async function checkAvailability({ date, startTime, endTime, excludeEventId }) {
+    if (!date) return { available: false, reason: 'Data obrigatória' };
+
+    const sameDayEvents = await prisma.event.findMany({
+        where: {
+            date,
+            status: { not: 'cancelado' },
+            ...(excludeEventId ? { id: { not: parseFloat(excludeEventId) } } : {})
+        },
+        select: { id: true, startTime: true, endTime: true, eventType: true }
+    });
+
+    if (sameDayEvents.length === 0) return { available: true };
+
+    // Sem horário informado — qualquer evento no dia bloqueia.
+    if (!startTime || !endTime) {
+        return { available: false, reason: 'Já existem outros eventos neste dia' };
+    }
+
+    const toMin = (t) => {
+        const [h, m] = String(t || '').split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+    };
+    const reqStart = toMin(startTime);
+    const reqEnd = toMin(endTime);
+
+    for (const ev of sameDayEvents) {
+        if (!ev.startTime || !ev.endTime) {
+            return { available: false, reason: 'Há outro evento no dia sem horário definido' };
+        }
+        const evStart = toMin(ev.startTime);
+        const evEnd = toMin(ev.endTime);
+        if (reqStart < evEnd && reqEnd > evStart) {
+            return { available: false, reason: 'Horário sobrepõe outro evento' };
+        }
+    }
+
+    return { available: true };
 }
 
 async function notifyAdminsCadastroCompleto(clientName) {
@@ -295,5 +375,7 @@ module.exports = {
     deleteEvent,
     listEventsFull,
     getPublicEvent,
-    updatePublicEvent
+    updatePublicEvent,
+    listPublicToys,
+    checkAvailability
 };

@@ -45,4 +45,24 @@ publicRouter.put('/events/:id', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+// Lista pública de brinquedos (sem preço — apenas catálogo para o cliente escolher mais itens).
+publicRouter.get('/toys', async (req, res, next) => {
+    try {
+        const toys = await EventService.listPublicToys();
+        res.json(toys);
+    } catch (err) { next(err); }
+});
+
+// Checa se data/horário aparentam estar livres na agenda.
+// GET /api/public/availability?date=YYYY-MM-DD&startTime=HH:MM&endTime=HH:MM&excludeId=...
+publicRouter.get('/availability', async (req, res, next) => {
+    try {
+        const { date, startTime, endTime, excludeId } = req.query;
+        const result = await EventService.checkAvailability({
+            date, startTime, endTime, excludeEventId: excludeId
+        });
+        res.json(result);
+    } catch (err) { next(err); }
+});
+
 module.exports = { adminRouter, publicRouter };
