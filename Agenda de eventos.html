@@ -2343,9 +2343,34 @@
                     </div>
                     <div id="link-toys-list" class="mt-3 space-y-2 max-h-32 overflow-y-auto"></div>
                 </div>
-                <div class="mb-4 p-3 bg-gray-50 rounded-md">
-                    <span class="text-sm text-gray-600">Valor Total:</span>
-                    <span id="link-total-price" class="text-lg font-bold text-emerald-600 ml-2">R$ 0,00</span>
+
+                <!-- Desconto -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Desconto</label>
+                        <div class="flex">
+                            <select id="link-discount-type" class="form-input px-2 py-2 rounded-l-md text-sm border-r-0">
+                                <option value="fixed">R$</option>
+                                <option value="percent">%</option>
+                            </select>
+                            <input type="number" id="link-discount-value" min="0" step="0.01" value="0" class="form-input flex-1 w-full px-2 py-2 rounded-r-md text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Taxa de Entrega</label>
+                        <input type="number" id="link-delivery-fee" min="0" step="0.01" value="0" placeholder="R$" class="form-input w-full px-2 py-2 rounded-md text-sm">
+                    </div>
+                </div>
+
+                <!-- Totais -->
+                <div class="mb-4 p-3 bg-gray-50 rounded-md space-y-1 text-sm">
+                    <div class="flex justify-between text-gray-600"><span>Subtotal:</span><span id="link-subtotal" class="font-medium tabular-nums">R$ 0,00</span></div>
+                    <div id="link-discount-row" class="flex justify-between text-red-500 hidden"><span id="link-discount-label">Desconto:</span><span id="link-discount-amount" class="font-medium tabular-nums">- R$ 0,00</span></div>
+                    <div id="link-delivery-row" class="flex justify-between text-gray-600 hidden"><span>Taxa de Entrega:</span><span id="link-delivery-amount" class="font-medium tabular-nums">+ R$ 0,00</span></div>
+                    <div class="flex justify-between items-center pt-2 mt-1 border-t border-gray-300">
+                        <span class="font-bold text-gray-800">Valor Total:</span>
+                        <span id="link-total-price" class="text-lg font-bold text-emerald-600 tabular-nums">R$ 0,00</span>
+                    </div>
                 </div>
                 <div class="flex gap-3">
                     <button id="link-cadastro-cancel-btn" class="flex-1 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold">Cancelar</button>
@@ -3706,6 +3731,15 @@
                 if (selectedDate) renderDayEvents(selectedDate);
             };
 
+            // Reuniões ocupam um único dia; eventos multi-dia ocupam o intervalo [date, endDate].
+            const eventOccursOnDate = (event, dateStr) => {
+                if (!event || !event.date) return false;
+                if (event.eventType === 'meeting') return event.date === dateStr;
+                const start = event.date;
+                const end = event.endDate && event.endDate >= event.date ? event.endDate : start;
+                return dateStr >= start && dateStr <= end;
+            };
+
             const renderCalendar = () => {
                 calendarBody.innerHTML = '';
 
@@ -3727,7 +3761,7 @@
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const today = new Date();
                     const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                    const dayItems = events.filter(e => e.date === dateStr);
+                    const dayItems = events.filter(e => eventOccursOnDate(e, dateStr));
                     const meetingsOnDay = dayItems.filter(e => e.eventType === 'meeting').length;
                     const eventsOnDay = dayItems.length - meetingsOnDay;
 
@@ -3880,7 +3914,7 @@
             };
 
             const renderDayEvents = (dateStr) => {
-                const dayEvents = events.filter(e => e.date === dateStr);
+                const dayEvents = events.filter(e => eventOccursOnDate(e, dateStr));
                 dayEventsList.innerHTML = '';
                 if (dayEvents.length === 0) {
                     dayEventsList.innerHTML = '<p class="text-sm text-gray-500">Nada agendado para este dia.</p>';
@@ -3959,6 +3993,21 @@
                         const contactPhone = event.clientType === 'PJ' ? event.repPhone : event.clientPhone;
                         const hasTime = event.startTime || event.endTime;
 
+                        // Indicador de evento multi-dia
+                        let multiDayBadge = '';
+                        if (event.endDate && event.endDate > event.date) {
+                            const fmtBR = (iso) => {
+                                const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                                return m ? `${m[3]}/${m[2]}` : iso;
+                            };
+                            const start = new Date(event.date + 'T00:00:00');
+                            const end = new Date(event.endDate + 'T00:00:00');
+                            const totalDays = Math.round((end - start) / 86400000) + 1;
+                            const current = new Date(dateStr + 'T00:00:00');
+                            const dayIdx = Math.round((current - start) / 86400000) + 1;
+                            multiDayBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-indigo-50 border border-indigo-300 text-indigo-700 text-xs font-semibold flex items-center gap-1.5"><i class="fas fa-calendar-week"></i> Evento multi-dia: ${fmtBR(event.date)} → ${fmtBR(event.endDate)} (dia ${dayIdx}/${totalDays})</div>`;
+                        }
+
                         // INÍCIO DA MODIFICAÇÃO: Endereço Completo para Card
                         const eventAddressFull = [event.clientAddress, event.complemento, event.bairro, event.cidade]
                             .filter(Boolean) // Remove itens vazios
@@ -4000,6 +4049,7 @@
                         <div class="${isCancelled ? 'opacity-60' : ''}">
                             ${cancelledBadge}
                             ${cadastroStatusBadge}
+                            ${multiDayBadge}
                             ${toysHtml}
                             <div class="mt-2 space-y-1 text-sm text-gray-500">
                                 <!-- INÍCIO DA MODIFICAÇÃO: Status de Pagamento -->
@@ -5905,6 +5955,7 @@
                     // INÍCIO DA MODIFICAÇÃO: Preencher campo de data visível com a data do evento
                     document.getElementById('event-date-visible').value = eventToEdit.date;
                     document.getElementById('event-date').value = eventToEdit.date;
+                    document.getElementById('event-end-date').value = eventToEdit.endDate || '';
                     // FIM DA MODIFICAÇÃO
                     document.getElementById('your-company-select').value = eventToEdit.yourCompanyId || '';
                     document.getElementById('client-address').value = eventToEdit.clientAddress || '';
@@ -6531,6 +6582,9 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 document.getElementById('link-cadastro-client-name').value = '';
                 document.getElementById('link-cadastro-start-time').value = '';
                 document.getElementById('link-cadastro-end-time').value = '';
+                document.getElementById('link-discount-type').value = 'fixed';
+                document.getElementById('link-discount-value').value = 0;
+                document.getElementById('link-delivery-fee').value = 0;
                 document.getElementById('link-cadastro-config').classList.remove('hidden');
                 document.getElementById('link-cadastro-share').classList.add('hidden');
                 renderLinkToysList();
@@ -6573,9 +6627,43 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             };
 
             const updateLinkTotalPrice = () => {
-                const total = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                const subtotal = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                const discountType = document.getElementById('link-discount-type').value;
+                const discountValue = parseFloat(document.getElementById('link-discount-value').value) || 0;
+                const deliveryFee = parseFloat(document.getElementById('link-delivery-fee').value) || 0;
+                const discountAmount = discountType === 'percent'
+                    ? (subtotal * discountValue / 100)
+                    : discountValue;
+                const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
+
+                document.getElementById('link-subtotal').textContent = formatCurrency(subtotal);
+
+                const discRow = document.getElementById('link-discount-row');
+                if (discountValue > 0) {
+                    document.getElementById('link-discount-label').textContent =
+                        discountType === 'percent' ? `Desconto (${discountValue}%):` : 'Desconto:';
+                    document.getElementById('link-discount-amount').textContent = `- ${formatCurrency(discountAmount)}`;
+                    discRow.classList.remove('hidden');
+                } else {
+                    discRow.classList.add('hidden');
+                }
+
+                const delRow = document.getElementById('link-delivery-row');
+                if (deliveryFee > 0) {
+                    document.getElementById('link-delivery-amount').textContent = `+ ${formatCurrency(deliveryFee)}`;
+                    delRow.classList.remove('hidden');
+                } else {
+                    delRow.classList.add('hidden');
+                }
+
                 document.getElementById('link-total-price').textContent = formatCurrency(total);
             };
+
+            // Recalcula quando desconto/frete mudam
+            ['link-discount-type', 'link-discount-value', 'link-delivery-fee'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateLinkTotalPrice);
+                document.getElementById(id).addEventListener('change', updateLinkTotalPrice);
+            });
 
             document.getElementById('link-add-toy-btn').addEventListener('click', () => {
                 const sel = document.getElementById('link-toy-select');
@@ -6608,7 +6696,15 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
 
             document.getElementById('link-cadastro-generate-btn').addEventListener('click', async () => {
                 if (linkCadastroToys.length === 0) { showToast('Adicione ao menos um brinquedo.', true); return; }
-                const totalPrice = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                const subtotal = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                const discountType = document.getElementById('link-discount-type').value;
+                const discountValue = parseFloat(document.getElementById('link-discount-value').value) || 0;
+                const deliveryFee = parseFloat(document.getElementById('link-delivery-fee').value) || 0;
+                const discountAmount = discountType === 'percent'
+                    ? (subtotal * discountValue / 100)
+                    : discountValue;
+                const totalPrice = Math.max(0, subtotal - discountAmount) + deliveryFee;
+
                 const eventId = Date.now();
                 const clientNameInput = document.getElementById('link-cadastro-client-name').value.trim();
                 const startTimeInput = document.getElementById('link-cadastro-start-time').value;
@@ -6621,7 +6717,10 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     endTime: endTimeInput || null,
                     items: linkCadastroToys.map(t => ({ id: t.id, quantity: t.quantity, price: t.price })),
                     price: totalPrice,
-                    subtotal: totalPrice,
+                    subtotal: subtotal,
+                    discountType,
+                    discountValue,
+                    deliveryFee,
                     status: 'pendente_cadastro'
                 };
                 try {

@@ -123,7 +123,12 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 <div class="bg-indigo-50/70 p-3 rounded-xl">
                     <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block mb-1">Data</label>
-                    <input type="date" id="event-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px">
+                    <div class="flex items-center gap-1">
+                        <input type="date" id="event-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px">
+                        <span class="text-gray-400">–</span>
+                        <input type="date" id="event-end-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px" placeholder="Mesmo dia">
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-1">Segunda data só para evento multi-dia (opcional).</p>
                 </div>
                 <div class="bg-indigo-50/70 p-3 rounded-xl">
                     <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block mb-1">Horário</label>
@@ -498,6 +503,7 @@
                 birthdayPersonName: $('bday-nome').value.trim() || null,
                 birthdayPersonDob: $('bday-data').value || null,
                 date: $('event-date').value || null,
+                endDate: $('event-end-date').value || null,
                 startTime: $('event-start').value || null,
                 endTime: $('event-end').value || null
             };
@@ -922,6 +928,7 @@
                 state.originalStart = ev.startTime || null;
                 state.originalEnd = ev.endTime || null;
                 $('event-date').value = ev.date || '';
+                $('event-end-date').value = ev.endDate || '';
                 $('event-start').value = ev.startTime || '';
                 $('event-end').value = ev.endTime || '';
 
@@ -1041,6 +1048,7 @@
                 birthdayPersonDob: $('bday-data').value || null,
                 // Data/horário (apenas se cliente mudou)
                 date: $('event-date').value || null,
+                endDate: $('event-end-date').value || null,
                 startTime: $('event-start').value || null,
                 endTime: $('event-end').value || null,
                 // Brinquedos extras

@@ -272,6 +272,7 @@ async function updatePublicEvent(id, d) {
 
     // Cliente pode propor nova data/horário — admin confirma depois.
     if (d.date) updateData.date = d.date;
+    if (d.endDate !== undefined) updateData.endDate = d.endDate || null;
     if (d.startTime) updateData.startTime = d.startTime;
     if (d.endTime) updateData.endTime = d.endTime;
     if (d.eventLat !== undefined) updateData.eventLat = d.eventLat;
@@ -325,7 +326,7 @@ async function saveDraftPublicEvent(id, d) {
         'clientAddress', 'cep', 'complemento', 'referencia', 'bairro', 'cidade', 'uf',
         'eventLat', 'eventLng',
         'isBirthday', 'birthdayPersonName', 'birthdayPersonDob',
-        'date', 'startTime', 'endTime'
+        'date', 'endDate', 'startTime', 'endTime'
     ];
     const updateData = {};
     for (const k of ALLOWED) {
