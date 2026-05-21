@@ -40,6 +40,8 @@
     <!-- Bibliotecas para Geração de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <!-- QR Code (client-side) para o link de cadastro premium -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --glow-color: hsl(224, 88%, 66%);
@@ -725,6 +727,393 @@
             background-position: right center;
             transform: translateY(-3px);
             box-shadow: 0 8px 25px 0 rgba(220, 38, 38, 0.6);
+        }
+
+        /* Botão amber/dourado premium (Link de Cadastro) */
+        .shiny-btn-amber {
+            position: relative;
+            border: 2px solid transparent;
+            background-image: linear-gradient(to right, #f59e0b 0%, #fbbf24 51%, #f59e0b 100%);
+            background-size: 200% auto;
+            color: white;
+            box-shadow: 0 4px 15px 0 rgba(245, 158, 11, 0.45);
+            transition: all 0.4s ease;
+            font-weight: 600;
+        }
+
+        .shiny-btn-amber:hover {
+            background-position: right center;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px 0 rgba(245, 158, 11, 0.6);
+        }
+
+        /* Botão verde WhatsApp premium */
+        .shiny-btn-whatsapp {
+            position: relative;
+            border: 2px solid transparent;
+            background-image: linear-gradient(to right, #16a34a 0%, #22c55e 51%, #16a34a 100%);
+            background-size: 200% auto;
+            color: white;
+            box-shadow: 0 4px 15px 0 rgba(22, 163, 74, 0.45);
+            transition: all 0.4s ease;
+            font-weight: 600;
+        }
+
+        .shiny-btn-whatsapp:hover {
+            background-position: right center;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px 0 rgba(22, 163, 74, 0.6);
+        }
+
+        /* ===== Link de Cadastro — Premium styles ===== */
+        .link-modal-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.18);
+        }
+
+        .link-modal-badge {
+            flex: 0 0 auto;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 20px;
+            background-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 60%, #fcd34d 100%);
+            box-shadow: 0 8px 22px -6px rgba(245, 158, 11, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+
+        .link-modal-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+            line-height: 1.15;
+        }
+
+        .link-modal-subtitle {
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .link-modal-close {
+            margin-left: auto;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            background: rgba(15, 23, 42, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .link-modal-close:hover {
+            color: #0f172a;
+            background: rgba(15, 23, 42, 0.08);
+        }
+
+        .link-field-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #475569;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .link-input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 0.92rem;
+            transition: all 0.18s ease;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+        }
+
+        .link-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .link-input:focus {
+            outline: none;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+        }
+
+        .link-input[readonly] {
+            background: #f8fafc;
+            color: #475569;
+        }
+
+        .link-totals-card {
+            background: linear-gradient(135deg, rgba(255, 251, 235, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 6px 20px -10px rgba(245, 158, 11, 0.25);
+        }
+
+        .link-totals-card .link-grand-total {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #047857;
+            letter-spacing: -0.01em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .link-totals-card .link-grand-prefix {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #047857;
+            opacity: 0.7;
+            margin-right: 4px;
+        }
+
+        /* Etapa 2 — sucesso/compartilhamento */
+        .link-share-card {
+            position: relative;
+            padding: 28px 24px 22px;
+            border-radius: 18px;
+            background:
+                radial-gradient(140% 80% at 0% 0%, rgba(252, 211, 77, 0.22) 0%, rgba(252, 211, 77, 0) 55%),
+                radial-gradient(120% 80% at 100% 0%, rgba(167, 243, 208, 0.25) 0%, rgba(167, 243, 208, 0) 55%),
+                linear-gradient(180deg, #ffffff 0%, #fffdf7 100%);
+            border: 1px solid rgba(245, 158, 11, 0.22);
+            box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.25);
+        }
+
+        .link-success-badge {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 30px;
+            background-image: linear-gradient(135deg, #10b981 0%, #34d399 50%, #f59e0b 100%);
+            box-shadow:
+                0 18px 40px -12px rgba(16, 185, 129, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            animation: link-badge-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        .link-success-badge::before,
+        .link-success-badge::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid rgba(16, 185, 129, 0.35);
+            opacity: 0;
+            animation: link-badge-ring 2.4s ease-out infinite;
+        }
+
+        .link-success-badge::after {
+            animation-delay: 1.2s;
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        @keyframes link-badge-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes link-badge-ring {
+            0% { transform: scale(0.95); opacity: 0.6; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .link-success-title {
+            text-align: center;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+
+        .link-success-subtitle {
+            text-align: center;
+            font-size: 0.88rem;
+            color: #475569;
+            margin-top: 4px;
+        }
+
+        .link-section-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #92400e;
+            margin-bottom: 8px;
+        }
+
+        .link-url-pill {
+            display: flex;
+            align-items: stretch;
+            background: #ffffff;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 12px;
+            padding: 4px 4px 4px 14px;
+            box-shadow: 0 6px 18px -10px rgba(245, 158, 11, 0.4);
+            overflow: hidden;
+        }
+
+        .link-url-pill input {
+            flex: 1 1 auto;
+            border: none;
+            background: transparent;
+            font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 0.82rem;
+            color: #1e293b;
+            outline: none;
+            min-width: 0;
+            padding: 8px 6px;
+        }
+
+        .link-copy-inline {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 9px;
+            background-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.82rem;
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 14px -6px rgba(245, 158, 11, 0.6);
+            white-space: nowrap;
+        }
+
+        .link-copy-inline:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px -8px rgba(245, 158, 11, 0.7);
+        }
+
+        .link-copy-inline.copy-success {
+            background-image: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            box-shadow: 0 6px 14px -6px rgba(16, 185, 129, 0.6);
+            animation: link-copy-pop 0.4s ease;
+        }
+
+        @keyframes link-copy-pop {
+            0% { transform: scale(1); }
+            45% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        .link-qr-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        .link-qr-frame {
+            position: relative;
+            padding: 14px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 16px 40px -18px rgba(15, 23, 42, 0.25);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .link-qr-frame::before,
+        .link-qr-frame::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #f59e0b;
+            border-radius: 4px;
+        }
+
+        .link-qr-frame::before {
+            top: -2px;
+            left: -2px;
+            border-right: none;
+            border-bottom: none;
+            border-top-left-radius: 12px;
+        }
+
+        .link-qr-frame::after {
+            bottom: -2px;
+            right: -2px;
+            border-left: none;
+            border-top: none;
+            border-bottom-right-radius: 12px;
+        }
+
+        .link-qr-frame > div,
+        .link-qr-frame canvas,
+        .link-qr-frame img {
+            display: block;
+        }
+
+        .link-qr-hint {
+            font-size: 0.78rem;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .link-cta-grid {
+            margin-top: 22px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        @media (min-width: 480px) {
+            .link-cta-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .link-cta-grid .link-cta-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .link-footer-note {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .link-footer-note i {
+            color: #f59e0b;
         }
 
         .glassmorphism {
@@ -2332,96 +2721,119 @@
     <!-- MODAL: Configurar Link de Cadastro -->
     <div id="modal-link-cadastro" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-[60]"
         role="dialog" aria-modal="true">
-        <div class="modal-box glassmorphism p-6 rounded-lg shadow-xl w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
+        <div class="modal-box glassmorphism p-6 sm:p-7 rounded-2xl shadow-xl w-full max-w-lg m-4 max-h-[92vh] overflow-y-auto">
             <!-- Etapa 1: Configuração -->
             <div id="link-cadastro-config">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-link mr-2 text-amber-500"></i>Link de Cadastro</h2>
-                    <button id="close-link-cadastro-btn" class="text-gray-500 hover:text-gray-700 text-xl"><i class="fas fa-times"></i></button>
+                <div class="link-modal-head">
+                    <div class="link-modal-badge"><i class="fas fa-link"></i></div>
+                    <div class="min-w-0">
+                        <h2 class="link-modal-title">Link de Cadastro</h2>
+                        <p class="link-modal-subtitle">Pré-preencha o que já sabe — o cliente completa o restante.</p>
+                    </div>
+                    <button id="close-link-cadastro-btn" class="link-modal-close" aria-label="Fechar"><i class="fas fa-times"></i></button>
                 </div>
-                <p class="text-sm text-gray-500 mb-4">Pré-preencha o que já sabe — o cliente completa o restante.</p>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Data do Evento</label>
-                    <input type="text" id="link-cadastro-date" class="form-input w-full px-3 py-2 rounded-md bg-gray-100" readonly>
+
+                <div class="mb-4">
+                    <label class="link-field-label">Data do Evento</label>
+                    <input type="text" id="link-cadastro-date" class="link-input" readonly>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Empresa Contratada <span class="text-red-500">*</span></label>
-                    <select id="link-cadastro-company" class="form-input w-full px-3 py-2 rounded-md">
+                <div class="mb-4">
+                    <label class="link-field-label">Empresa Contratada <span class="text-red-500">*</span></label>
+                    <select id="link-cadastro-company" class="link-input">
                         <option value="">Selecione a empresa</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Será usada para gerar o contrato do cliente.</p>
+                    <p class="text-xs text-gray-500 mt-1.5">Será usada para gerar o contrato do cliente.</p>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
-                    <input type="text" id="link-cadastro-client-name" class="form-input w-full px-3 py-2 rounded-md" placeholder="Ex: Maria Oliveira">
+                <div class="mb-4">
+                    <label class="link-field-label">Nome do Cliente</label>
+                    <input type="text" id="link-cadastro-client-name" class="link-input" placeholder="Ex: Maria Oliveira">
                 </div>
-                <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Início</label>
-                        <input type="time" id="link-cadastro-start-time" class="form-input w-full px-3 py-2 rounded-md">
+                        <label class="link-field-label">Início</label>
+                        <input type="time" id="link-cadastro-start-time" class="link-input">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Fim</label>
-                        <input type="time" id="link-cadastro-end-time" class="form-input w-full px-3 py-2 rounded-md">
+                        <label class="link-field-label">Fim</label>
+                        <input type="time" id="link-cadastro-end-time" class="link-input">
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Brinquedos</label>
+                <div class="mb-4">
+                    <label class="link-field-label">Brinquedos</label>
                     <div class="grid grid-cols-12 gap-2">
-                        <select id="link-toy-select" class="form-input col-span-5 px-3 py-2 rounded-md text-sm"></select>
-                        <input type="number" id="link-toy-qty" min="1" value="1" class="form-input col-span-2 px-2 py-2 rounded-md text-sm" title="Qtd">
-                        <input type="number" id="link-toy-price" min="0" step="0.01" placeholder="R$" class="form-input col-span-3 px-2 py-2 rounded-md text-sm" title="Valor">
-                        <button type="button" id="link-add-toy-btn" class="col-span-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 text-sm font-bold">+</button>
+                        <select id="link-toy-select" class="link-input col-span-5 text-sm"></select>
+                        <input type="number" id="link-toy-qty" min="1" value="1" class="link-input col-span-2 text-sm text-center" title="Qtd">
+                        <input type="number" id="link-toy-price" min="0" step="0.01" placeholder="R$" class="link-input col-span-3 text-sm" title="Valor">
+                        <button type="button" id="link-add-toy-btn" class="col-span-2 shiny-btn-amber rounded-lg text-sm font-bold" aria-label="Adicionar brinquedo"><i class="fas fa-plus"></i></button>
                     </div>
                     <div id="link-toys-list" class="mt-3 space-y-2 max-h-32 overflow-y-auto"></div>
                 </div>
 
                 <!-- Desconto -->
-                <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Desconto</label>
+                        <label class="link-field-label">Desconto</label>
                         <div class="flex">
-                            <select id="link-discount-type" class="form-input px-2 py-2 rounded-l-md text-sm border-r-0">
+                            <select id="link-discount-type" class="link-input text-sm" style="border-top-right-radius:0;border-bottom-right-radius:0;border-right:none;max-width:78px;">
                                 <option value="fixed">R$</option>
                                 <option value="percent">%</option>
                             </select>
-                            <input type="number" id="link-discount-value" min="0" step="0.01" value="0" class="form-input flex-1 w-full px-2 py-2 rounded-r-md text-sm">
+                            <input type="number" id="link-discount-value" min="0" step="0.01" value="0" class="link-input flex-1 w-full text-sm" style="border-top-left-radius:0;border-bottom-left-radius:0;">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Taxa de Entrega</label>
-                        <input type="number" id="link-delivery-fee" min="0" step="0.01" value="0" placeholder="R$" class="form-input w-full px-2 py-2 rounded-md text-sm">
+                        <label class="link-field-label">Taxa de Entrega</label>
+                        <input type="number" id="link-delivery-fee" min="0" step="0.01" value="0" placeholder="R$" class="link-input w-full text-sm">
                     </div>
                 </div>
 
                 <!-- Totais -->
-                <div class="mb-4 p-3 bg-gray-50 rounded-md space-y-1 text-sm">
-                    <div class="flex justify-between text-gray-600"><span>Subtotal:</span><span id="link-subtotal" class="font-medium tabular-nums">R$ 0,00</span></div>
-                    <div id="link-discount-row" class="flex justify-between text-red-500 hidden"><span id="link-discount-label">Desconto:</span><span id="link-discount-amount" class="font-medium tabular-nums">- R$ 0,00</span></div>
-                    <div id="link-delivery-row" class="flex justify-between text-gray-600 hidden"><span>Taxa de Entrega:</span><span id="link-delivery-amount" class="font-medium tabular-nums">+ R$ 0,00</span></div>
-                    <div class="flex justify-between items-center pt-2 mt-1 border-t border-gray-300">
-                        <span class="font-bold text-gray-800">Valor Total:</span>
-                        <span id="link-total-price" class="text-lg font-bold text-emerald-600 tabular-nums">R$ 0,00</span>
+                <div class="mb-5 link-totals-card space-y-1.5 text-sm">
+                    <div class="flex justify-between text-gray-600"><span>Subtotal</span><span id="link-subtotal" class="font-medium tabular-nums">R$ 0,00</span></div>
+                    <div id="link-discount-row" class="flex justify-between text-red-500 hidden"><span id="link-discount-label">Desconto</span><span id="link-discount-amount" class="font-medium tabular-nums">- R$ 0,00</span></div>
+                    <div id="link-delivery-row" class="flex justify-between text-gray-600 hidden"><span>Taxa de Entrega</span><span id="link-delivery-amount" class="font-medium tabular-nums">+ R$ 0,00</span></div>
+                    <div class="flex justify-between items-baseline pt-2.5 mt-2 border-t border-amber-200/70">
+                        <span class="font-semibold text-gray-700 text-sm">Valor Total</span>
+                        <span id="link-total-price" class="link-grand-total">R$ 0,00</span>
                     </div>
                 </div>
                 <div class="flex gap-3">
-                    <button id="link-cadastro-cancel-btn" class="flex-1 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold">Cancelar</button>
-                    <button id="link-cadastro-generate-btn" class="flex-1 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold"><i class="fas fa-link mr-1"></i>Gerar Link</button>
+                    <button id="link-cadastro-cancel-btn" class="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold transition-colors">Cancelar</button>
+                    <button id="link-cadastro-generate-btn" class="flex-1 px-4 py-2.5 rounded-lg shiny-btn-amber"><i class="fas fa-link mr-2"></i>Gerar Link</button>
                 </div>
             </div>
-            <!-- Etapa 2: Compartilhamento -->
+            <!-- Etapa 2: Compartilhamento (premium) -->
             <div id="link-cadastro-share" class="hidden">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-check-circle mr-2 text-green-500"></i>Link Gerado!</h2>
-                    <button id="close-link-share-btn" class="text-gray-500 hover:text-gray-700 text-xl"><i class="fas fa-times"></i></button>
+                <div class="flex justify-end mb-1">
+                    <button id="close-link-share-btn" class="link-modal-close" aria-label="Fechar"><i class="fas fa-times"></i></button>
                 </div>
-                <p class="text-sm text-gray-500 mb-4">Envie este link para o cliente preencher os dados.</p>
-                <div class="mb-4">
-                    <input type="text" id="link-cadastro-url" class="form-input w-full px-3 py-2 rounded-md bg-gray-100 text-sm" readonly>
-                </div>
-                <div class="flex gap-3">
-                    <button id="link-copy-btn" class="flex-1 px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"><i class="fas fa-copy mr-1"></i>Copiar Link</button>
-                    <button id="link-share-btn" class="flex-1 px-4 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"><i class="fab fa-whatsapp mr-1"></i>Compartilhar</button>
+                <div class="link-share-card">
+                    <div class="link-success-badge"><i class="fas fa-check"></i></div>
+                    <h2 class="link-success-title">Link gerado com sucesso!</h2>
+                    <p class="link-success-subtitle">Envie ao cliente para concluir o cadastro em poucos minutos.</p>
+
+                    <div class="mt-6">
+                        <label class="link-section-label">Link do cadastro</label>
+                        <div class="link-url-pill">
+                            <input type="text" id="link-cadastro-url" readonly>
+                            <button type="button" id="link-copy-btn" class="link-copy-inline" aria-label="Copiar link"><i class="fas fa-copy"></i><span class="link-copy-label">Copiar</span></button>
+                        </div>
+                    </div>
+
+                    <div class="link-qr-wrap">
+                        <span class="link-section-label" style="text-align:center;">ou escaneie o QR code</span>
+                        <div class="link-qr-frame">
+                            <div id="link-cadastro-qr" aria-label="QR code do link de cadastro"></div>
+                        </div>
+                        <span class="link-qr-hint">Aponte a câmera para abrir o cadastro no celular</span>
+                    </div>
+
+                    <div class="link-cta-grid">
+                        <button type="button" id="link-share-btn" class="link-cta-btn shiny-btn-whatsapp"><i class="fab fa-whatsapp"></i> Enviar pelo WhatsApp</button>
+                        <button type="button" id="link-preview-btn" class="link-cta-btn shiny-btn"><i class="fas fa-arrow-up-right-from-square"></i> Abrir prévia</button>
+                    </div>
+
+                    <p class="link-footer-note"><i class="fas fa-shield-halved"></i> Link seguro — pode ser reaberto a qualquer momento nos detalhes do evento.</p>
                 </div>
             </div>
         </div>
@@ -4163,7 +4575,7 @@
 
                 const linkCadastroBtn = document.createElement('button');
                 linkCadastroBtn.innerHTML = '<i class="fas fa-link mr-2"></i>Link para cadastro de Agendamento';
-                linkCadastroBtn.className = 'mt-2 w-full px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors';
+                linkCadastroBtn.className = 'mt-2 w-full px-4 py-2 rounded-md shiny-btn-amber';
                 linkCadastroBtn.onclick = () => openLinkCadastroModal(dateStr);
                 dayEventsList.appendChild(linkCadastroBtn);
 
@@ -6607,6 +7019,43 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             // ===== LINK DE CADASTRO: Modal + Lógica =====
             let linkCadastroToys = [];
             let linkCadastroDateStr = '';
+            let linkCadastroUrl = '';
+            let linkCadastroShareMessage = '';
+            let linkCopySuccessTimer = null;
+
+            const renderLinkCadastroQr = (url) => {
+                const container = document.getElementById('link-cadastro-qr');
+                if (!container) return;
+                container.innerHTML = '';
+                if (typeof QRCode === 'undefined') return;
+                try {
+                    new QRCode(container, {
+                        text: url,
+                        width: 184,
+                        height: 184,
+                        colorDark: '#0f172a',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } catch (err) {
+                    console.warn('Falha ao gerar QR code do link:', err);
+                }
+            };
+
+            const buildLinkShareMessage = (url, clientName, dateStr) => {
+                const firstName = (clientName || '').trim().split(/\s+/)[0];
+                const saudacao = firstName ? `Olá, ${firstName}!` : 'Olá!';
+                let dateBR = '';
+                if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    try {
+                        dateBR = new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
+                            day: '2-digit', month: '2-digit', year: 'numeric'
+                        });
+                    } catch (_) { dateBR = ''; }
+                }
+                const trecho = dateBR ? ` em ${dateBR}` : '';
+                return `${saudacao} Para confirmar seu evento${trecho}, complete seu cadastro neste link seguro:\n${url}`;
+            };
 
             const openLinkCadastroModal = (dateStr) => {
                 linkCadastroDateStr = dateStr;
@@ -6621,6 +7070,21 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 document.getElementById('link-delivery-fee').value = 0;
                 document.getElementById('link-cadastro-config').classList.remove('hidden');
                 document.getElementById('link-cadastro-share').classList.add('hidden');
+
+                // Limpa estado da etapa 2 (QR, animação de cópia, mensagem do WhatsApp)
+                const qrContainer = document.getElementById('link-cadastro-qr');
+                if (qrContainer) qrContainer.innerHTML = '';
+                const copyBtn = document.getElementById('link-copy-btn');
+                if (copyBtn) {
+                    copyBtn.classList.remove('copy-success');
+                    const label = copyBtn.querySelector('.link-copy-label');
+                    const icon = copyBtn.querySelector('i');
+                    if (label) label.textContent = 'Copiar';
+                    if (icon) { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }
+                }
+                if (linkCopySuccessTimer) { clearTimeout(linkCopySuccessTimer); linkCopySuccessTimer = null; }
+                linkCadastroShareMessage = '';
+                linkCadastroUrl = '';
 
                 // Popula select de empresas
                 const selCompany = document.getElementById('link-cadastro-company');
@@ -6657,13 +7121,16 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             const renderLinkToysList = () => {
                 const list = document.getElementById('link-toys-list');
                 if (linkCadastroToys.length === 0) {
-                    list.innerHTML = '<p class="text-sm text-center text-gray-400 py-2">Nenhum brinquedo adicionado.</p>';
+                    list.innerHTML = '<p class="text-xs text-center text-gray-400 py-2 italic">Nenhum brinquedo adicionado.</p>';
                     return;
                 }
                 list.innerHTML = linkCadastroToys.map((t, i) => `
-                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded-md text-sm">
-                        <span>${t.name} (x${t.quantity}) - ${formatCurrency(t.price)}</span>
-                        <button type="button" data-idx="${i}" class="link-remove-toy text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                    <div class="flex justify-between items-center p-2.5 rounded-lg text-sm bg-amber-50/60 border border-amber-200/60">
+                        <div class="min-w-0 flex-1 flex items-center gap-2">
+                            <i class="fas fa-cube text-amber-500 text-xs"></i>
+                            <span class="truncate text-gray-700"><span class="font-medium">${t.name}</span> <span class="text-gray-400">·</span> ${t.quantity}× <span class="text-gray-400">·</span> <span class="tabular-nums">${formatCurrency(t.price)}</span></span>
+                        </div>
+                        <button type="button" data-idx="${i}" class="link-remove-toy ml-2 w-7 h-7 inline-flex items-center justify-center rounded-md text-red-500 hover:text-white hover:bg-red-500 transition-colors" aria-label="Remover"><i class="fas fa-times text-xs"></i></button>
                     </div>
                 `).join('');
                 list.querySelectorAll('.link-remove-toy').forEach(btn => {
@@ -6784,9 +7251,12 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
 
                     // Mostra seção de compartilhamento
                     const url = `${window.location.origin}/cadastro-evento.html?id=${savedEvent.id}`;
+                    linkCadastroUrl = url;
+                    linkCadastroShareMessage = buildLinkShareMessage(url, clientNameInput, linkCadastroDateStr);
                     document.getElementById('link-cadastro-url').value = url;
                     document.getElementById('link-cadastro-config').classList.add('hidden');
                     document.getElementById('link-cadastro-share').classList.remove('hidden');
+                    renderLinkCadastroQr(url);
                     showToast('Evento criado! Compartilhe o link com o cliente.', false);
                 } catch (err) {
                     console.error('Erro ao gerar link:', err);
@@ -6794,29 +7264,71 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 }
             });
 
+            const flashLinkCopySuccess = () => {
+                const btn = document.getElementById('link-copy-btn');
+                if (!btn) return;
+                const label = btn.querySelector('.link-copy-label');
+                const icon = btn.querySelector('i');
+                btn.classList.add('copy-success');
+                if (icon) { icon.classList.remove('fa-copy'); icon.classList.add('fa-check'); }
+                if (label) label.textContent = 'Copiado!';
+                if (linkCopySuccessTimer) clearTimeout(linkCopySuccessTimer);
+                linkCopySuccessTimer = setTimeout(() => {
+                    btn.classList.remove('copy-success');
+                    if (icon) { icon.classList.remove('fa-check'); icon.classList.add('fa-copy'); }
+                    if (label) label.textContent = 'Copiar';
+                    linkCopySuccessTimer = null;
+                }, 1500);
+            };
+
             document.getElementById('link-copy-btn').addEventListener('click', () => {
                 const url = document.getElementById('link-cadastro-url').value;
-                navigator.clipboard.writeText(url).then(() => {
-                    showToast('Link copiado!', false);
-                }).catch(() => {
+                if (!url) return;
+                const onSuccess = () => { flashLinkCopySuccess(); showToast('Link copiado!', false); };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(onSuccess).catch(() => {
+                        const ta = document.createElement('textarea');
+                        ta.value = url;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        onSuccess();
+                    });
+                } else {
                     const ta = document.createElement('textarea');
                     ta.value = url;
                     document.body.appendChild(ta);
                     ta.select();
                     document.execCommand('copy');
                     document.body.removeChild(ta);
-                    showToast('Link copiado!', false);
-                });
+                    onSuccess();
+                }
             });
 
             document.getElementById('link-share-btn').addEventListener('click', () => {
-                const url = document.getElementById('link-cadastro-url').value;
+                const url = document.getElementById('link-cadastro-url').value || linkCadastroUrl;
+                if (!url) return;
+                const message = linkCadastroShareMessage || buildLinkShareMessage(url, '', linkCadastroDateStr);
                 if (navigator.share) {
-                    navigator.share({ title: 'Cadastro de Evento - Aero Festas', text: 'Preencha seus dados para confirmar o evento:', url });
+                    navigator.share({
+                        title: 'Cadastro de Evento — Aero Festas',
+                        text: message,
+                        url
+                    }).catch(() => { /* usuário cancelou */ });
                 } else {
-                    window.open(`https://wa.me/?text=${encodeURIComponent('Preencha seus dados para confirmar o evento: ' + url)}`, '_blank');
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
                 }
             });
+
+            const linkPreviewBtn = document.getElementById('link-preview-btn');
+            if (linkPreviewBtn) {
+                linkPreviewBtn.addEventListener('click', () => {
+                    const url = document.getElementById('link-cadastro-url').value || linkCadastroUrl;
+                    if (!url) return;
+                    window.open(url, '_blank', 'noopener');
+                });
+            }
 
             // Auto-atualização via Service Worker
             const reloadEventsFromServer = async () => {
