@@ -91,6 +91,8 @@ function buildEventFields(evt, userId) {
         birthdayPersonName: evt.birthdayPersonName,
         birthdayPersonDob: evt.birthdayPersonDob,
 
+        status: evt.status,
+
         eventType: evt.eventType === 'meeting' ? 'meeting' : 'event',
 
         updatedBy: userId
@@ -200,7 +202,7 @@ async function getPublicEvent(id) {
         startTime: event.startTime,
         endTime: event.endTime,
         companyName: event.company?.name || '',
-        items: event.items.map(i => ({ nome: i.toy?.nome || 'Item', quantidade: i.quantity })),
+        items: event.items.map(i => ({ nome: i.toy?.name || 'Item', quantidade: i.quantity })),
         price: event.price,
         clientType: event.clientType,
         clientName: event.clientName,

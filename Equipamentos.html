@@ -2085,6 +2085,214 @@
         #equip-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         #equip-toast.error { background: #b91c1c; }
         #equip-toast.success { background: #047857; }
+
+        /* === IA: Gerar post pra Instagram === */
+        .ai-post-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #f59e0b 0%, #ec4899 50%, #a855f7 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.3);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .ai-post-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(168, 85, 247, 0.4); }
+        .ai-post-btn:active { transform: translateY(0); }
+        .ai-post-btn .ai-badge {
+            background: rgba(255,255,255,0.25);
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 999px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Modais IA (briefing + resultado) */
+        .ai-modal {
+            position: fixed; inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 16px;
+        }
+        .ai-modal.open { display: flex; }
+        .ai-modal .ai-box {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 640px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            padding: 28px;
+            animation: aiSlideUp 0.25s ease;
+        }
+        .ai-modal.wide .ai-box { max-width: 1100px; padding: 24px; }
+        .dark .ai-modal .ai-box { background: #0f172a; color: #f1f5f9; }
+        @keyframes aiSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .ai-modal h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+        }
+        .ai-modal .ai-subtitle { font-size: 0.85rem; color: #64748b; margin-top: 4px; }
+        .ai-modal .ai-close {
+            background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;
+            width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+        }
+        .ai-modal .ai-close:hover { background: #f1f5f9; color: #1e293b; }
+        .ai-modal .ai-section { margin-top: 18px; }
+        .ai-modal .ai-section label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; color: #334155; }
+        .dark .ai-modal .ai-section label { color: #cbd5e1; }
+        .ai-modal .ai-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ai-modal .ai-chip {
+            padding: 7px 14px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: #475569;
+        }
+        .dark .ai-modal .ai-chip { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+        .ai-modal .ai-chip:hover { border-color: #a855f7; }
+        .ai-modal .ai-chip.active {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: white;
+            border-color: transparent;
+        }
+        .ai-modal textarea {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 70px;
+        }
+        .dark .ai-modal textarea { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        .ai-modal textarea:focus { outline: none; border-color: #a855f7; box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15); }
+        .ai-modal .ai-toy-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(168, 85, 247, 0.1); color: #6b21a8;
+            padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+        }
+        .dark .ai-modal .ai-toy-chip { background: rgba(168, 85, 247, 0.25); color: #e9d5ff; }
+        .ai-modal .ai-info-box {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.78rem;
+            color: #4338ca;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .dark .ai-modal .ai-info-box { color: #c7d2fe; background: rgba(99, 102, 241, 0.18); }
+        .ai-modal .ai-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+        .ai-modal .ai-btn-cancel {
+            padding: 10px 18px; background: none; border: none;
+            font-weight: 600; color: #64748b; cursor: pointer; border-radius: 10px;
+        }
+        .ai-modal .ai-btn-cancel:hover { background: #f1f5f9; }
+        .dark .ai-modal .ai-btn-cancel:hover { background: #1e293b; }
+        .ai-modal .ai-btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #a855f7);
+            color: white; font-weight: 600;
+            padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+            transition: transform 0.15s;
+        }
+        .ai-modal .ai-btn-primary:hover { transform: translateY(-1px); }
+        .ai-modal .ai-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Loading */
+        .ai-spinner {
+            width: 56px; height: 56px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #a855f7;
+            border-radius: 999px;
+            animation: aiSpin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes aiSpin { to { transform: rotate(360deg); } }
+
+        /* Instagram preview cards (resultado) */
+        .ai-results-grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: 1fr;
+            margin-top: 18px;
+        }
+        @media (min-width: 768px) { .ai-results-grid { grid-template-columns: repeat(3, 1fr); } }
+
+        .ig-post {
+            background: white;
+            border: 1px solid #dbdbdb;
+            border-radius: 12px;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .dark .ig-post { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        .ig-post-header { display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 1px solid #efefef; }
+        .dark .ig-post-header { border-color: #334155; }
+        .ig-avatar {
+            width: 32px; height: 32px; border-radius: 999px;
+            background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #bc1888);
+            padding: 2px;
+        }
+        .ig-avatar-inner {
+            width: 100%; height: 100%; border-radius: 999px;
+            background: white; display: flex; align-items: center; justify-content: center;
+            color: #4f46e5; font-weight: 800; font-size: 12px;
+        }
+        .ig-image { aspect-ratio: 1/1; overflow: hidden; background: #fafafa; }
+        .ig-image img { width: 100%; height: 100%; object-fit: cover; }
+        .ig-actions { padding: 10px 12px; display: flex; gap: 14px; color: #262626; font-size: 20px; }
+        .dark .ig-actions { color: #cbd5e1; }
+        .ig-caption {
+            padding: 0 12px 10px;
+            font-size: 0.83rem; line-height: 1.5;
+            white-space: pre-wrap; word-wrap: break-word;
+        }
+        .ig-hashtags { color: #00376b; font-size: 0.78rem; padding: 4px 12px 12px; line-height: 1.5; }
+        .dark .ig-hashtags { color: #93c5fd; }
+        .ai-variation-head {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+        }
+        .ai-variation-head .ai-var-num {
+            font-size: 0.7rem; font-weight: 800; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .ai-variation-head .ai-var-title {
+            font-size: 0.75rem; font-weight: 700; color: #b45309;
+            background: rgba(245, 158, 11, 0.12); padding: 3px 10px; border-radius: 999px;
+        }
+        .ai-copy-btn {
+            margin-top: 10px; width: 100%;
+            background: #1f2937; color: white; font-weight: 600; font-size: 0.8rem;
+            padding: 10px; border-radius: 10px; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .ai-copy-btn:hover { background: #111827; }
     </style>
 </head>
 
@@ -2199,6 +2407,14 @@
                 </section>
 
                 <section class="modal-section">
+                    <button type="button" class="ai-post-btn" id="equip-modal-ai-post">
+                        <i class="fas fa-sparkles"></i>
+                        <span>Gerar post pra Instagram com IA</span>
+                        <span class="ai-badge">NOVO</span>
+                    </button>
+                </section>
+
+                <section class="modal-section">
                     <div class="section-title">
                         <i class="fas fa-images"></i>
                         <span>Galeria de fotos</span>
@@ -2274,6 +2490,96 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal IA: Briefing -->
+    <div class="ai-modal" id="ai-briefing-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="ai-box">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <h2><i class="fas fa-sparkles" style="color:#a855f7;"></i> Gerar post pro Instagram</h2>
+                    <p class="ai-subtitle">A IA escreve 3 variações pra você escolher.</p>
+                </div>
+                <button type="button" class="ai-close" data-ai-close="ai-briefing-modal" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="ai-section">
+                <label>Brinquedo</label>
+                <div id="ai-brinquedo-preview"></div>
+            </div>
+
+            <div class="ai-section">
+                <label>Ocasião</label>
+                <div class="ai-chips" id="ai-ocasiao-chips">
+                    <span class="ai-chip active" data-value="infantil">🎈 Festa infantil</span>
+                    <span class="ai-chip" data-value="junina">🌽 Festa junina</span>
+                    <span class="ai-chip" data-value="corporativo">🏢 Corporativo</span>
+                    <span class="ai-chip" data-value="casamento">💍 Casamento</span>
+                    <span class="ai-chip" data-value="escola">🎒 Escola</span>
+                </div>
+            </div>
+
+            <div class="ai-section">
+                <label>Tom de voz</label>
+                <div class="ai-chips" id="ai-tom-chips">
+                    <span class="ai-chip active" data-value="divertido">😄 Divertido</span>
+                    <span class="ai-chip" data-value="elegante">✨ Elegante</span>
+                    <span class="ai-chip" data-value="urgencia">⚡ Urgência</span>
+                    <span class="ai-chip" data-value="educativo">📚 Educativo</span>
+                </div>
+            </div>
+
+            <div class="ai-section">
+                <label>Detalhes extras <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
+                <textarea id="ai-extra" placeholder="Ex: promoção até 30/06, foco em 4-8 anos, salão de festas..."></textarea>
+            </div>
+
+            <div class="ai-section">
+                <div class="ai-info-box">
+                    <i class="fas fa-info-circle" style="margin-top:2px;"></i>
+                    <div>A IA usa essas info pra escrever 3 variações de legenda. Custo: ~R$ 0,02 por geração.</div>
+                </div>
+            </div>
+
+            <div class="ai-actions">
+                <button type="button" class="ai-btn-cancel" data-ai-close="ai-briefing-modal">Cancelar</button>
+                <button type="button" class="ai-btn-primary" id="ai-generate-btn">
+                    <i class="fas fa-magic-wand-sparkles"></i>
+                    Gerar 3 posts
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal IA: Loading -->
+    <div class="ai-modal" id="ai-loading-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="ai-box" style="max-width:380px;text-align:center;padding:48px 32px;">
+            <div class="ai-spinner"></div>
+            <h2 style="margin-top:24px;font-size:1.15rem;">Gerando posts...</h2>
+            <p class="ai-subtitle" id="ai-loading-msg" style="margin-top:8px;">Analisando catálogo</p>
+            <p style="margin-top:18px;font-size:0.7rem;color:#94a3b8;">Claude Haiku 4.5</p>
+        </div>
+    </div>
+
+    <!-- Modal IA: Resultado -->
+    <div class="ai-modal wide" id="ai-result-modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="ai-box">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h2><i class="fas fa-sparkles" style="color:#f59e0b;"></i> 3 posts gerados</h2>
+                    <p class="ai-subtitle">Clique em <i class="fas fa-copy"></i> Copiar pra usar a legenda no Instagram.</p>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="ai-btn-cancel" id="ai-regenerate-btn" style="border:1px solid #e2e8f0;">
+                        <i class="fas fa-arrows-rotate"></i> Regenerar
+                    </button>
+                    <button type="button" class="ai-btn-cancel" data-ai-close="ai-result-modal" style="border:1px solid #e2e8f0;">Fechar</button>
+                </div>
+            </div>
+            <div class="ai-results-grid" id="ai-results-grid"></div>
         </div>
     </div>
 
@@ -4249,6 +4555,210 @@
                 openWizard();
             });
         }
+
+        /* ============================================================
+         * IA: Gerar post pra Instagram
+         * ============================================================ */
+        (function setupAIPostFeature() {
+            const AI_API_BASE = (window.API_BASE_URL || 'https://backend-aerofestas-production.up.railway.app');
+            const aiBriefingModal = document.getElementById('ai-briefing-modal');
+            const aiLoadingModal = document.getElementById('ai-loading-modal');
+            const aiResultModal = document.getElementById('ai-result-modal');
+            const aiGenerateBtn = document.getElementById('ai-generate-btn');
+            const aiRegenerateBtn = document.getElementById('ai-regenerate-btn');
+            const aiResultsGrid = document.getElementById('ai-results-grid');
+            const aiLoadingMsg = document.getElementById('ai-loading-msg');
+            const aiBrinquedoPreview = document.getElementById('ai-brinquedo-preview');
+            const aiExtraInput = document.getElementById('ai-extra');
+            const aiPostBtn = document.getElementById('equip-modal-ai-post');
+
+            let aiCurrentToy = null;
+            let aiCurrentOcasiao = 'infantil';
+            let aiCurrentTom = 'divertido';
+            let aiLastCaptions = [];
+
+            function openAi(modal) { modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); }
+            function closeAi(modal) { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
+
+            // Fechar via [data-ai-close]
+            document.querySelectorAll('[data-ai-close]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-ai-close');
+                    const m = document.getElementById(id);
+                    if (m) closeAi(m);
+                });
+            });
+
+            // Fechar clicando no backdrop
+            [aiBriefingModal, aiResultModal].forEach(m => {
+                m.addEventListener('click', (e) => { if (e.target === m) closeAi(m); });
+            });
+
+            // Chips
+            document.querySelectorAll('#ai-ocasiao-chips .ai-chip').forEach(c => {
+                c.addEventListener('click', () => {
+                    document.querySelectorAll('#ai-ocasiao-chips .ai-chip').forEach(x => x.classList.remove('active'));
+                    c.classList.add('active');
+                    aiCurrentOcasiao = c.dataset.value;
+                });
+            });
+            document.querySelectorAll('#ai-tom-chips .ai-chip').forEach(c => {
+                c.addEventListener('click', () => {
+                    document.querySelectorAll('#ai-tom-chips .ai-chip').forEach(x => x.classList.remove('active'));
+                    c.classList.add('active');
+                    aiCurrentTom = c.dataset.value;
+                });
+            });
+
+            // Botão dentro do modal de detalhes
+            if (aiPostBtn) {
+                aiPostBtn.addEventListener('click', () => {
+                    if (openedToyId == null) return;
+                    const toy = allToys.find(t => t.id === openedToyId);
+                    if (!toy) return;
+                    aiCurrentToy = toy;
+                    aiBrinquedoPreview.innerHTML = `<span class="ai-toy-chip">🎈 ${escapeHtml(toy.name)}</span>`;
+                    aiExtraInput.value = '';
+                    openAi(aiBriefingModal);
+                });
+            }
+
+            // Gerar
+            aiGenerateBtn.addEventListener('click', generateAiPosts);
+            aiRegenerateBtn.addEventListener('click', () => {
+                closeAi(aiResultModal);
+                setTimeout(() => generateAiPosts(), 150);
+            });
+
+            async function generateAiPosts() {
+                if (!aiCurrentToy) return;
+                closeAi(aiBriefingModal);
+                openAi(aiLoadingModal);
+
+                const msgs = ['Analisando catálogo', 'Estudando o briefing', 'Escrevendo legendas', 'Selecionando hashtags', 'Quase lá...'];
+                let i = 0;
+                const interval = setInterval(() => {
+                    i++;
+                    if (i < msgs.length) aiLoadingMsg.textContent = msgs[i];
+                }, 800);
+
+                const token = localStorage.getItem('authToken');
+
+                try {
+                    const res = await fetch(`${AI_API_BASE}/api/admin/ai/instagram-posts`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': token ? `Bearer ${token}` : '',
+                        },
+                        body: JSON.stringify({
+                            brinquedos: [{ nome: aiCurrentToy.name, emoji: '🎈' }],
+                            ocasiao: aiCurrentOcasiao,
+                            tom: aiCurrentTom,
+                            detalhes: aiExtraInput.value || '',
+                        }),
+                    });
+
+                    clearInterval(interval);
+                    closeAi(aiLoadingModal);
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+                        if (res.status === 401) {
+                            showAiToast('Sessão expirada. Faça login novamente.', 'error');
+                        } else if (res.status === 503) {
+                            showAiToast(err.error || 'IA temporariamente indisponível.', 'error');
+                        } else if (res.status === 429) {
+                            showAiToast('Limite atingido. Tente em alguns minutos.', 'error');
+                        } else {
+                            showAiToast(err.error || 'Erro ao gerar posts.', 'error');
+                        }
+                        return;
+                    }
+
+                    const json = await res.json();
+                    renderAiResults(json.data);
+                    openAi(aiResultModal);
+                } catch (e) {
+                    clearInterval(interval);
+                    closeAi(aiLoadingModal);
+                    showAiToast('Sem conexão com o servidor da IA.', 'error');
+                }
+            }
+
+            function renderAiResults(data) {
+                const posts = data.posts || [];
+                const url = getPrimaryUrl(aiCurrentToy);
+                const imgHtml = url
+                    ? `<img src="${escapeHtml(url)}" alt="" onerror="this.style.display='none'">`
+                    : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:#cbd5e1;"><i class="fas fa-cubes"></i></div>';
+
+                aiResultsGrid.innerHTML = posts.map((p, idx) => {
+                    const legendaHtml = (p.legenda || '')
+                        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\n/g, '<br>');
+                    return `
+                        <div>
+                            <div class="ai-variation-head">
+                                <span class="ai-var-num">Variação ${idx + 1}</span>
+                                <span class="ai-var-title"><i class="fas fa-tag" style="font-size:10px;"></i> ${escapeHtml(p.titulo || '')}</span>
+                            </div>
+                            <div class="ig-post">
+                                <div class="ig-post-header">
+                                    <div class="ig-avatar"><div class="ig-avatar-inner">AF</div></div>
+                                    <div style="flex:1;">
+                                        <div style="font-size:0.85rem;font-weight:600;">aerofestas</div>
+                                        <div style="font-size:10px;color:#94a3b8;">Belo Horizonte, MG</div>
+                                    </div>
+                                    <i class="fas fa-ellipsis" style="color:#94a3b8;"></i>
+                                </div>
+                                <div class="ig-image">${imgHtml}</div>
+                                <div class="ig-actions">
+                                    <i class="far fa-heart"></i>
+                                    <i class="far fa-comment"></i>
+                                    <i class="far fa-paper-plane"></i>
+                                    <i class="far fa-bookmark" style="margin-left:auto;"></i>
+                                </div>
+                                <div class="ig-caption"><strong>aerofestas</strong> ${legendaHtml}</div>
+                                <div class="ig-hashtags">${escapeHtml(p.hashtags || '')}</div>
+                            </div>
+                            <button type="button" class="ai-copy-btn" data-ai-copy="${idx}">
+                                <i class="fas fa-copy"></i> Copiar legenda
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+                aiLastCaptions = posts.map(p => (p.legenda || '').replace(/\*\*(.+?)\*\*/g, '$1') + '\n\n' + (p.hashtags || ''));
+
+                aiResultsGrid.querySelectorAll('[data-ai-copy]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const idx = parseInt(btn.getAttribute('data-ai-copy'), 10);
+                        const text = aiLastCaptions[idx];
+                        if (!text) return;
+                        navigator.clipboard.writeText(text).then(() => {
+                            showAiToast('Legenda copiada! Cola no Instagram.', 'success');
+                        }).catch(() => showAiToast('Não foi possível copiar.', 'error'));
+                    });
+                });
+
+                if (data.usage) {
+                    const tokens = (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
+                    const cached = data.usage.cache_read_input_tokens || 0;
+                    console.log(`[IA] ${data.model} • ${tokens} tokens (${cached} cacheados)`);
+                }
+            }
+
+            function showAiToast(msg, type) {
+                if (typeof showToast === 'function') { showToast(msg, type); return; }
+                const t = document.getElementById('equip-toast');
+                if (!t) { alert(msg); return; }
+                t.textContent = msg;
+                t.className = type === 'error' ? 'error show' : (type === 'success' ? 'success show' : 'show');
+                setTimeout(() => t.classList.remove('show'), 2800);
+            }
+        })();
     </script>
 
     <script src="js/protect.js"></script>

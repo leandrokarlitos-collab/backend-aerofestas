@@ -88,7 +88,16 @@
       "Bash(rm \"C:/Users/Usuário/temp-liga.png\")",
       "Skill(claude-api)",
       "Skill(claude-api:*)",
-      "PowerShell(\"---\")"
+      "PowerShell(\"---\")",
+      "Bash(claude mcp *)",
+      "Bash(findstr /i \"Windows-MCP uv\")",
+      "PowerShell(Get-Content \"$env:APPDATA\\\\Claude\\\\claude_desktop_config.json\" -ErrorAction SilentlyContinue; Write-Output \"---SEPARADOR---\"; Get-Content \"$env:USERPROFILE\\\\.claude.json\" -ErrorAction SilentlyContinue | Select-String -Pattern \"Windows-MCP\" -Context 5,10)",
+      "PowerShell(powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\")",
+      "PowerShell(python --version 2>&1)",
+      "PowerShell(py --version 2>&1)",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\Usuário\\\\.local\\\\bin;$env:Path\"; & \"$env:USERPROFILE\\\\.local\\\\bin\\\\uv.exe\" python list --only-installed 2>&1; Write-Output \"---\"; Get-ChildItem \"$env:APPDATA\\\\uv\\\\python\" -ErrorAction SilentlyContinue | Select-Object Name, LastWriteTime)",
+      "PowerShell($link = Get-Item \"$env:APPDATA\\\\uv\\\\python\\\\cpython-3.13-windows-x86_64-none\" -Force; Write-Output \"Link mode: $\\($link.Mode\\)\"; Write-Output \"LinkType: $\\($link.LinkType\\)\"; Write-Output \"Target: $\\($link.Target\\)\"; Write-Output \"---testing link---\"; Test-Path \"$env:APPDATA\\\\uv\\\\python\\\\cpython-3.13-windows-x86_64-none\\\\python.exe\")",
+      "PowerShell($base = \"propostas\\\\maple-bear-aguas-claras\"; New-Item -ItemType Directory -Path \"$base\\\\img\\\\toys\" -Force | Out-Null; Copy-Item \"propostas\\\\crescer-mais\\\\styles.css\" \"$base\\\\styles.css\" -Force; Copy-Item \"propostas\\\\crescer-mais\\\\app.js\" \"$base\\\\app.js\" -Force; \"Setup OK\"; Get-ChildItem $base | Select-Object Name)"
     ]
   }
 }

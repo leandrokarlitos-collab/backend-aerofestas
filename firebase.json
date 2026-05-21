@@ -32,6 +32,10 @@
                 "destination": "/propostas/crescer-mais/index.html"
             },
             {
+                "source": "/p/maple-bear-aguas-claras",
+                "destination": "/propostas/maple-bear-aguas-claras/index.html"
+            },
+            {
                 "source": "/p/**",
                 "destination": "/propostas/view.html"
             }

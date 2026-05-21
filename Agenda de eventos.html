@@ -3934,8 +3934,13 @@
 
                         toysHtml += '</ul>';
                         const yourCompany = companies.find(c => c.id === event.yourCompanyId);
-                        const clientNameDisplay = event.clientType === 'PJ' ? `${event.clientName} (PJ)` : event.clientName;
+                        const isPending = event.status === 'pendente_cadastro';
+                        const fallbackName = isPending ? 'Aguardando cliente preencher' : '—';
+                        const clientNameDisplay = event.clientType === 'PJ'
+                            ? `${event.clientName || fallbackName} (PJ)`
+                            : (event.clientName || fallbackName);
                         const contactPhone = event.clientType === 'PJ' ? event.repPhone : event.clientPhone;
+                        const hasTime = event.startTime || event.endTime;
 
                         // INÍCIO DA MODIFICAÇÃO: Endereço Completo para Card
                         const eventAddressFull = [event.clientAddress, event.complemento, event.bairro, event.cidade]
@@ -3982,7 +3987,7 @@
                                 <p><i class="fas fa-user fa-fw mr-1 text-gray-400"></i>Cliente: <strong>${clientNameDisplay}</strong></p>
                                 ${contactPhone ? `<p><i class="fas fa-phone fa-fw mr-1 text-gray-400"></i>Contato: <strong>${contactPhone}</strong></p>` : ''}
                                 ${eventAddressFull ? `<p><i class="fas fa-map-marker-alt fa-fw mr-1 text-gray-400"></i>Endereço: <strong class="break-all">${eventAddressFull}</strong></p>` : ''}
-                                <p><i class="fas fa-clock fa-fw mr-1 text-gray-400"></i>Horário: <strong>${event.startTime} às ${event.endTime}</strong></p>
+                                ${hasTime ? `<p><i class="fas fa-clock fa-fw mr-1 text-gray-400"></i>Horário: <strong>${event.startTime || '—'} às ${event.endTime || '—'}</strong></p>` : ''}
                                 ${yourCompany ? `<p><i class="fas fa-building fa-fw mr-1 text-gray-400"></i>Por: <strong>${yourCompany.name}</strong></p>` : ''}
                                 <!-- INÍCIO DA MODIFICAÇÃO: Monitor -->
                                 ${event.monitor ? `<p><i class="fas fa-user-shield fa-fw mr-1 text-gray-400"></i>Monitor: <strong>${event.monitor}</strong></p>` : ''}

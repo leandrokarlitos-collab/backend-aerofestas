@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 735" role="img" aria-label="Layout da projeção dos brinquedos">
+  <defs>
+    <pattern id="grass" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+      <rect width="14" height="14" fill="#3DA258"/>
+      <circle cx="3" cy="3" r="0.8" fill="rgba(255,255,255,0.06)"/>
+      <circle cx="10" cy="9" r="0.8" fill="rgba(0,0,0,0.06)"/>
+    </pattern>
+    <filter id="boxShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo: grama -->
+  <rect width="500" height="735" fill="url(#grass)" rx="14"/>
+  <rect width="500" height="735" fill="none" stroke="#256637" stroke-width="3" rx="14"/>
+
+  <g font-family="'Outfit','Inter',system-ui,sans-serif" font-weight="700" fill="#1a1a1a">
+
+    <!-- High Jump -->
+    <g filter="url(#boxShadow)">
+      <rect x="14" y="18" width="180" height="160" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text x="104" y="98" text-anchor="middle" font-size="22">High Jump</text>
+    </g>
+
+    <!-- Combo 3 em 1 Girafa (vertical) -->
+    <g filter="url(#boxShadow)">
+      <rect x="216" y="18" width="98" height="175" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text transform="translate(265 105) rotate(-90)" text-anchor="middle" font-size="19">
+        <tspan x="0" dy="-10">Combo 3 em 1</tspan>
+        <tspan x="0" dy="26">Girafa</tspan>
+      </text>
+    </g>
+
+    <!-- Touro Mecânico -->
+    <g filter="url(#boxShadow)">
+      <rect x="335" y="18" width="150" height="160" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text x="410" y="90" text-anchor="middle" font-size="21">Touro</text>
+      <text x="410" y="118" text-anchor="middle" font-size="21">Mecânico</text>
+    </g>
+
+    <!-- Futebol Inflável (vertical) -->
+    <g filter="url(#boxShadow)">
+      <rect x="14" y="208" width="112" height="260" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text transform="translate(70 338) rotate(-90)" text-anchor="middle" font-size="22">
+        <tspan x="0" dy="-12">Futebol</tspan>
+        <tspan x="0" dy="28">Inflável</tspan>
+      </text>
+    </g>
+
+    <!-- Multiplay Jardim Encantado (vertical) -->
+    <g filter="url(#boxShadow)">
+      <rect x="160" y="270" width="112" height="208" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text transform="translate(216 374) rotate(-90)" text-anchor="middle" font-size="19">
+        <tspan x="0" dy="-10">Multiplay</tspan>
+        <tspan x="0" dy="24">Jardim Encantado</tspan>
+      </text>
+    </g>
+
+    <!-- Giro Radical (círculo) -->
+    <g filter="url(#boxShadow)">
+      <circle cx="395" cy="320" r="85" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text x="395" y="312" text-anchor="middle" font-size="22">Giro</text>
+      <text x="395" y="340" text-anchor="middle" font-size="22">Radical</text>
+    </g>
+
+    <!-- Cama 2 módulos -->
+    <g filter="url(#boxShadow)">
+      <rect x="345" y="430" width="115" height="60" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text x="402" y="455" text-anchor="middle" font-size="16">Cama</text>
+      <text x="402" y="475" text-anchor="middle" font-size="16">2 módulos</text>
+    </g>
+
+    <!-- Multipark Liga da Justiça -->
+    <g filter="url(#boxShadow)">
+      <rect x="70" y="510" width="240" height="210" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text x="190" y="605" text-anchor="middle" font-size="22">Multipark</text>
+      <text x="190" y="635" text-anchor="middle" font-size="22">Liga da Justiça</text>
+    </g>
+
+    <!-- Multipark Safari (vertical) -->
+    <g filter="url(#boxShadow)">
+      <rect x="355" y="510" width="125" height="215" rx="6" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text transform="translate(417 617) rotate(-90)" text-anchor="middle" font-size="20">Multipark Safari</text>
+    </g>
+
+  </g>
+</svg>
