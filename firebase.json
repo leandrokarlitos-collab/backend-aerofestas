@@ -36,6 +36,14 @@
                 "destination": "/propostas/maple-bear-aguas-claras/index.html"
             },
             {
+                "source": "/p/maple-bear-uberaba",
+                "destination": "/propostas/maple-bear-uberaba/index.html"
+            },
+            {
+                "source": "/p/salesianos-bsb",
+                "destination": "/propostas/salesianos/index.html"
+            },
+            {
                 "source": "/p/**",
                 "destination": "/propostas/view.html"
             }

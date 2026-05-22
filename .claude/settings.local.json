@@ -99,7 +99,8 @@
       "PowerShell($link = Get-Item \"$env:APPDATA\\\\uv\\\\python\\\\cpython-3.13-windows-x86_64-none\" -Force; Write-Output \"Link mode: $\\($link.Mode\\)\"; Write-Output \"LinkType: $\\($link.LinkType\\)\"; Write-Output \"Target: $\\($link.Target\\)\"; Write-Output \"---testing link---\"; Test-Path \"$env:APPDATA\\\\uv\\\\python\\\\cpython-3.13-windows-x86_64-none\\\\python.exe\")",
       "PowerShell($base = \"propostas\\\\maple-bear-aguas-claras\"; New-Item -ItemType Directory -Path \"$base\\\\img\\\\toys\" -Force | Out-Null; Copy-Item \"propostas\\\\crescer-mais\\\\styles.css\" \"$base\\\\styles.css\" -Force; Copy-Item \"propostas\\\\crescer-mais\\\\app.js\" \"$base\\\\app.js\" -Force; \"Setup OK\"; Get-ChildItem $base | Select-Object Name)",
       "Bash(node -c services/EventService.js)",
-      "Bash(node -c routes/events.js)"
+      "Bash(node -c routes/events.js)",
+      "Bash(git -C \"C:\\\\Users\\\\Usuário\\\\OneDrive\\\\Desktop\\\\Sistema Operante - Aero Festas\" status --short)"
     ]
   }
 }
