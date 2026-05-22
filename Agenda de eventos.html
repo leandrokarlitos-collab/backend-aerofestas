@@ -3763,13 +3763,56 @@
                 if (selectedDate) renderDayEvents(selectedDate);
             };
 
-            // Reuniões ocupam um único dia; eventos multi-dia ocupam o intervalo [date, endDate].
+            // Parser tolerante: aceita string JSON, array/objeto já parseado, null/undefined.
+            const parseExcludedDates = (event) => {
+                if (!event || !event.excludedDates) return [];
+                if (Array.isArray(event.excludedDates)) return event.excludedDates;
+                try { return JSON.parse(event.excludedDates) || []; } catch { return []; }
+            };
+            const parseDateOverrides = (event) => {
+                if (!event || !event.dateOverrides) return {};
+                if (typeof event.dateOverrides === 'object') return event.dateOverrides;
+                try { return JSON.parse(event.dateOverrides) || {}; } catch { return {}; }
+            };
+            // Horário a exibir para um dia específico — usa override do dia se houver, senão o padrão do evento.
+            const getEventTimesForDate = (event, dateStr) => {
+                const overrides = parseDateOverrides(event);
+                const o = overrides[dateStr];
+                if (o && (o.startTime || o.endTime)) {
+                    return {
+                        startTime: o.startTime || event.startTime || '',
+                        endTime: o.endTime || event.endTime || '',
+                        isOverridden: true
+                    };
+                }
+                return { startTime: event.startTime || '', endTime: event.endTime || '', isOverridden: false };
+            };
+            // Lista de datas ativas (entre date e endDate, descontando excludedDates).
+            const getEventActiveDates = (event) => {
+                if (!event || !event.date) return [];
+                const start = event.date;
+                const end = event.endDate && event.endDate >= event.date ? event.endDate : start;
+                const excluded = new Set(parseExcludedDates(event));
+                const out = [];
+                const sd = new Date(start + 'T00:00:00');
+                const ed = new Date(end + 'T00:00:00');
+                for (let d = new Date(sd); d <= ed; d.setDate(d.getDate() + 1)) {
+                    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    if (!excluded.has(iso)) out.push(iso);
+                }
+                return out;
+            };
+
+            // Reuniões ocupam um único dia; eventos multi-dia ocupam o intervalo [date, endDate]
+            // exceto dias listados em excludedDates.
             const eventOccursOnDate = (event, dateStr) => {
                 if (!event || !event.date) return false;
                 if (event.eventType === 'meeting') return event.date === dateStr;
                 const start = event.date;
                 const end = event.endDate && event.endDate >= event.date ? event.endDate : start;
-                return dateStr >= start && dateStr <= end;
+                if (dateStr < start || dateStr > end) return false;
+                const excluded = parseExcludedDates(event);
+                return !excluded.includes(dateStr);
             };
 
             const renderCalendar = () => {
@@ -4025,22 +4068,27 @@
                             ? `${event.clientName || fallbackName} (PJ)`
                             : (event.clientName || fallbackName);
                         const contactPhone = event.clientType === 'PJ' ? event.repPhone : event.clientPhone;
-                        const hasTime = event.startTime || event.endTime;
 
-                        // Indicador de evento multi-dia
+                        // Indicador de evento multi-dia (considera excludedDates)
                         let multiDayBadge = '';
-                        if (event.endDate && event.endDate > event.date) {
+                        const isMultiDay = !!(event.endDate && event.endDate > event.date);
+                        const activeDates = isMultiDay ? getEventActiveDates(event) : [event.date];
+                        if (isMultiDay) {
                             const fmtBR = (iso) => {
                                 const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
                                 return m ? `${m[3]}/${m[2]}` : iso;
                             };
-                            const start = new Date(event.date + 'T00:00:00');
-                            const end = new Date(event.endDate + 'T00:00:00');
-                            const totalDays = Math.round((end - start) / 86400000) + 1;
-                            const current = new Date(dateStr + 'T00:00:00');
-                            const dayIdx = Math.round((current - start) / 86400000) + 1;
+                            const totalDays = activeDates.length;
+                            const dayIdx = activeDates.indexOf(dateStr) + 1;
                             multiDayBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-indigo-50 border border-indigo-300 text-indigo-700 text-xs font-semibold flex items-center gap-1.5"><i class="fas fa-calendar-week"></i> Evento multi-dia: ${fmtBR(event.date)} → ${fmtBR(event.endDate)} (dia ${dayIdx}/${totalDays})</div>`;
                         }
+                        // Horário deste dia específico (pode ter override)
+                        const dayTimes = getEventTimesForDate(event, dateStr);
+                        const dayHasTime = dayTimes.startTime || dayTimes.endTime;
+                        const overrideBadge = dayTimes.isOverridden
+                            ? `<span class="ml-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide" title="Horário customizado apenas para este dia"><i class="fas fa-clock"></i> custom</span>`
+                            : '';
+                        const hasTime = dayHasTime;
 
                         // INÍCIO DA MODIFICAÇÃO: Endereço Completo para Card
                         const eventAddressFull = [event.clientAddress, event.complemento, event.bairro, event.cidade]
@@ -4092,7 +4140,7 @@
                                 <p><i class="fas fa-user fa-fw mr-1 text-gray-400"></i>Cliente: <strong>${clientNameDisplay}</strong></p>
                                 ${contactPhone ? `<p><i class="fas fa-phone fa-fw mr-1 text-gray-400"></i>Contato: <strong>${contactPhone}</strong></p>` : ''}
                                 ${eventAddressFull ? `<p><i class="fas fa-map-marker-alt fa-fw mr-1 text-gray-400"></i>Endereço: <strong class="break-all">${eventAddressFull}</strong></p>` : ''}
-                                ${hasTime ? `<p><i class="fas fa-clock fa-fw mr-1 text-gray-400"></i>Horário: <strong>${event.startTime || '—'} às ${event.endTime || '—'}</strong></p>` : ''}
+                                ${hasTime ? `<p><i class="fas fa-clock fa-fw mr-1 text-gray-400"></i>Horário: <strong>${dayTimes.startTime || '—'} às ${dayTimes.endTime || '—'}</strong>${overrideBadge}</p>` : ''}
                                 ${yourCompany ? `<p><i class="fas fa-building fa-fw mr-1 text-gray-400"></i>Por: <strong>${yourCompany.name}</strong></p>` : ''}
                                 <!-- INÍCIO DA MODIFICAÇÃO: Monitor -->
                                 ${event.monitor ? `<p><i class="fas fa-user-shield fa-fw mr-1 text-gray-400"></i>Monitor: <strong>${event.monitor}</strong></p>` : ''}
@@ -4104,6 +4152,10 @@
                         </div>
                         <div class="flex flex-col space-y-2 items-center">
                              <button data-id="${event.id}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
+                            ${isMultiDay ? `
+                                <button data-id="${event.id}" data-date="${dateStr}" class="edit-day-time-btn text-indigo-500 hover:text-indigo-700 text-lg shrink-0" title="Editar horário apenas deste dia"><i class="fas fa-clock"></i></button>
+                                <button data-id="${event.id}" data-date="${dateStr}" class="delete-day-btn text-amber-600 hover:text-amber-800 text-lg shrink-0" title="Remover apenas este dia do evento"><i class="fas fa-calendar-minus"></i></button>
+                            ` : ''}
                             ${isCancelled
                                 ? `<button data-id="${event.id}" class="reactivate-event-btn text-emerald-500 hover:text-emerald-700 text-lg shrink-0" title="Reativar evento"><i class="fas fa-rotate-left"></i></button>`
                                 : `<button data-id="${event.id}" class="cancel-event-btn text-orange-500 hover:text-orange-700 text-lg shrink-0" title="Cancelar evento (sem excluir)"><i class="fas fa-ban"></i></button>`
@@ -4172,6 +4224,8 @@
                 document.querySelectorAll('.cancel-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleCancelEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.reactivate-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleReactivateEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.delete-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteEvent(parseInt(e.currentTarget.dataset.id))));
+                document.querySelectorAll('.edit-day-time-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditDayTime(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date)));
+                document.querySelectorAll('.delete-day-btn').forEach(btn => btn.addEventListener('click', (e) => handleRemoveSingleDay(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date)));
                 document.querySelectorAll('.generate-message-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateMessage(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
                 // <!-- LISTENER DO BOTÃO INDIVIDUAL REMOVIDO -->
                 document.querySelectorAll('.generate-contract-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateContract(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
@@ -5050,6 +5104,334 @@
             const handleEditEvent = (eventId) => {
                 const event = events.find(e => e.id === eventId);
                 if (event) showEventModal(event.date, event);
+            };
+
+            // === Helpers para edição por dia em eventos multi-dia ===
+
+            // Reformata items vindos da API para o formato esperado por api.salvarEvento.
+            // (No banco, item.id é o id do EventItem; o backend precisa receber o id do brinquedo.)
+            const itemsForSave = (event) => (event.items || event.toys || []).map(i => ({
+                id: i.toyId || (i.toy && i.toy.id) || i.id,
+                quantity: i.quantity || 1,
+                price: i.price
+            }));
+            const externalRentalsForSave = (event) => (event.externalRentals || []).map(r => ({
+                description: r.description,
+                supplier: r.supplier || null,
+                quantity: r.quantity || 1,
+                cost: Number(r.cost) || 0
+            }));
+
+            // Monta payload completo do evento para enviar ao backend (preserva todos os campos atuais),
+            // mesclando overrides parciais.
+            const buildEventPayload = (event, overrides = {}) => ({
+                id: event.id,
+                eventType: event.eventType || 'event',
+                date: event.date,
+                endDate: event.endDate || null,
+                excludedDates: event.excludedDates,
+                dateOverrides: event.dateOverrides,
+                clientType: event.clientType,
+                clientName: event.clientName,
+                clientCpf: event.clientCpf,
+                clientRg: event.clientRg,
+                clientDob: event.clientDob,
+                clientPhone: event.clientPhone,
+                clientPhoneBackup: event.clientPhoneBackup,
+                cnpj: event.cnpj,
+                companyAddress: event.companyAddress,
+                repName: event.repName,
+                repCpf: event.repCpf,
+                repPhone: event.repPhone,
+                repPhoneBackup: event.repPhoneBackup,
+                yourCompanyId: event.yourCompanyId,
+                clientAddress: event.clientAddress,
+                contractAddress: event.contractAddress,
+                cep: event.cep,
+                complemento: event.complemento,
+                referencia: event.referencia,
+                bairro: event.bairro,
+                cidade: event.cidade,
+                uf: event.uf,
+                eventLat: event.eventLat,
+                eventLng: event.eventLng,
+                startTime: event.startTime,
+                endTime: event.endTime,
+                monitor: event.monitor,
+                eventObservations: event.eventObservations,
+                paymentDetails: event.paymentDetails,
+                subtotal: event.subtotal,
+                discountType: event.discountType,
+                discountValue: event.discountValue,
+                deliveryFee: event.deliveryFee,
+                price: event.price,
+                paymentStatus: event.paymentStatus,
+                signalAmount: event.signalAmount,
+                signalReceived: event.signalReceived,
+                isBirthday: event.isBirthday,
+                birthdayPersonName: event.birthdayPersonName,
+                birthdayPersonDob: event.birthdayPersonDob,
+                status: event.status,
+                items: itemsForSave(event),
+                externalRentals: externalRentalsForSave(event),
+                ...overrides
+            });
+
+            const fmtDateBR = (iso) => {
+                const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+            };
+
+            // Abre overlay glassmorphism; resolve com { confirmed: bool, data?: ... } no submit.
+            const openConfirmOverlay = ({ title, subtitle, bodyHtml, confirmLabel, confirmIcon, onConfirm }) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'conclude-overlay';
+                overlay.innerHTML = `
+                    <div class="conclude-box" role="document" style="max-width:560px;">
+                        <div class="conclude-header">
+                            <div>
+                                <h3>${title}</h3>
+                                ${subtitle ? `<div class="subtitle">${subtitle}</div>` : ''}
+                            </div>
+                            <button class="close-x" data-action="close" aria-label="Fechar">&times;</button>
+                        </div>
+                        <div class="conclude-body">${bodyHtml}</div>
+                        <div class="conclude-footer">
+                            <button type="button" class="btn-cancel" data-action="close">Cancelar</button>
+                            <button type="button" class="btn-confirm" id="overlay-confirm">
+                                <i class="fas ${confirmIcon || 'fa-check'}"></i>
+                                <span>${confirmLabel || 'Confirmar'}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                const close = () => overlay.remove();
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) close();
+                    const a = e.target.closest('[data-action="close"]');
+                    if (a) close();
+                });
+                overlay.querySelector('#overlay-confirm').addEventListener('click', async () => {
+                    const btn = overlay.querySelector('#overlay-confirm');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Salvando...</span>';
+                    try {
+                        const result = await onConfirm(overlay);
+                        if (result !== false) close();
+                        else { btn.disabled = false; btn.innerHTML = `<i class="fas ${confirmIcon || 'fa-check'}"></i><span>${confirmLabel || 'Confirmar'}</span>`; }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('Erro ao salvar. Tente novamente.', true);
+                        btn.disabled = false;
+                        btn.innerHTML = `<i class="fas ${confirmIcon || 'fa-check'}"></i><span>${confirmLabel || 'Confirmar'}</span>`;
+                    }
+                });
+                return overlay;
+            };
+
+            // Editar horário de um dia específico de evento multi-dia.
+            const handleEditDayTime = (eventId, dateStr) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return showToast('Evento não encontrado.', true);
+                const currentTimes = getEventTimesForDate(event, dateStr);
+                const overrides = parseDateOverrides(event);
+                const hasOverride = !!overrides[dateStr];
+                const defaultStart = event.startTime || '';
+                const defaultEnd = event.endTime || '';
+
+                const bodyHtml = `
+                    <div class="conclude-section">
+                        <h4><i class="fas fa-info-circle text-indigo-500"></i> Informações</h4>
+                        <p style="font-size:0.85rem;color:#475569;margin:0 0 6px;">
+                            Você está editando o horário <strong>apenas do dia ${fmtDateBR(dateStr)}</strong>.
+                            Os outros dias do evento não serão afetados.
+                        </p>
+                        <p style="font-size:0.78rem;color:#64748b;margin:0;">
+                            Horário padrão do evento: <strong>${defaultStart || '—'} às ${defaultEnd || '—'}</strong>
+                        </p>
+                    </div>
+                    <div class="conclude-section">
+                        <h4><i class="fas fa-clock text-indigo-500"></i> Novo horário para este dia</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label style="font-size:0.72rem;color:#475569;font-weight:600;">Início</label>
+                                <input type="time" id="day-start-time" value="${currentTimes.startTime || ''}" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:0.9rem;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem;color:#475569;font-weight:600;">Término</label>
+                                <input type="time" id="day-end-time" value="${currentTimes.endTime || ''}" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:0.9rem;">
+                            </div>
+                        </div>
+                        ${hasOverride ? `
+                            <button type="button" id="restore-default-time" style="margin-top:10px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:6px 12px;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;">
+                                <i class="fas fa-rotate-left"></i> Restaurar horário padrão neste dia
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="conclude-section">
+                        <h4><i class="fas fa-dollar-sign text-emerald-500"></i> Balanço financeiro</h4>
+                        <div class="conclude-payment-grid">
+                            <div class="conclude-payment-cell">
+                                <div class="label">Valor total do evento</div>
+                                <div class="value">${formatCurrency(event.price)}</div>
+                            </div>
+                            <div class="conclude-payment-cell">
+                                <div class="label">Dias ativos</div>
+                                <div class="value">${getEventActiveDates(event).length}</div>
+                            </div>
+                            <div class="conclude-payment-cell">
+                                <div class="label">Impacto no valor</div>
+                                <div class="value" style="color:#0f766e;">Nenhum</div>
+                            </div>
+                        </div>
+                        <p style="font-size:0.72rem;color:#64748b;margin:6px 0 0;">Alteração de horário não altera o valor do evento.</p>
+                    </div>
+                `;
+
+                const overlay = openConfirmOverlay({
+                    title: 'Editar horário deste dia',
+                    subtitle: fmtDateBR(dateStr),
+                    bodyHtml,
+                    confirmLabel: 'Confirmar alteração',
+                    confirmIcon: 'fa-check',
+                    onConfirm: async (ov) => {
+                        const newStart = ov.querySelector('#day-start-time').value;
+                        const newEnd = ov.querySelector('#day-end-time').value;
+                        if (!newStart && !newEnd) {
+                            showToast('Informe ao menos um horário.', true);
+                            return false;
+                        }
+                        if (newStart && newEnd && newEnd < newStart) {
+                            showToast('O horário de término deve ser igual ou após o início.', true);
+                            return false;
+                        }
+                        const newOverrides = { ...overrides };
+                        newOverrides[dateStr] = { startTime: newStart, endTime: newEnd };
+                        const payload = buildEventPayload(event, {
+                            dateOverrides: JSON.stringify(newOverrides)
+                        });
+                        const response = await api.salvarEvento(payload);
+                        if (!response || !response.success) throw new Error('Falha ao salvar');
+                        const saved = response.data;
+                        const idx = events.findIndex(ev => ev.id === saved.id);
+                        if (idx !== -1) events[idx] = saved; else events.push(saved);
+                        showToast('Horário deste dia atualizado!', false);
+                        renderAll();
+                        if (selectedDate) renderDayEvents(selectedDate);
+                    }
+                });
+
+                const restoreBtn = overlay.querySelector('#restore-default-time');
+                if (restoreBtn) {
+                    restoreBtn.addEventListener('click', async () => {
+                        const newOverrides = { ...overrides };
+                        delete newOverrides[dateStr];
+                        const payload = buildEventPayload(event, {
+                            dateOverrides: Object.keys(newOverrides).length ? JSON.stringify(newOverrides) : null
+                        });
+                        restoreBtn.disabled = true;
+                        try {
+                            const response = await api.salvarEvento(payload);
+                            if (!response || !response.success) throw new Error('Falha ao salvar');
+                            const saved = response.data;
+                            const idx = events.findIndex(ev => ev.id === saved.id);
+                            if (idx !== -1) events[idx] = saved; else events.push(saved);
+                            showToast('Horário padrão restaurado para este dia.', false);
+                            overlay.remove();
+                            renderAll();
+                            if (selectedDate) renderDayEvents(selectedDate);
+                        } catch (err) {
+                            console.error(err);
+                            showToast('Erro ao restaurar horário.', true);
+                            restoreBtn.disabled = false;
+                        }
+                    });
+                }
+            };
+
+            // Remover apenas UM dia de um evento multi-dia.
+            const handleRemoveSingleDay = (eventId, dateStr) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return showToast('Evento não encontrado.', true);
+                const activeDates = getEventActiveDates(event);
+                if (activeDates.length <= 1) {
+                    showToast('Este evento só tem 1 dia ativo. Use "Excluir evento" para removê-lo por completo.', true);
+                    return;
+                }
+                const currentPrice = Number(event.price) || 0;
+                const daysCount = activeDates.length;
+                const valuePerDay = daysCount > 0 ? currentPrice / daysCount : 0;
+                const priceAfter = Math.max(currentPrice - valuePerDay, 0);
+
+                const bodyHtml = `
+                    <div class="conclude-section">
+                        <h4><i class="fas fa-exclamation-triangle text-amber-500"></i> Atenção</h4>
+                        <p style="font-size:0.85rem;color:#475569;margin:0;">
+                            Você está removendo <strong>somente o dia ${fmtDateBR(dateStr)}</strong> deste evento.
+                            Os demais ${daysCount - 1} dia(s) permanecerão agendados.
+                        </p>
+                    </div>
+                    <div class="conclude-section">
+                        <h4><i class="fas fa-dollar-sign text-emerald-500"></i> Balanço financeiro</h4>
+                        <div class="conclude-payment-grid">
+                            <div class="conclude-payment-cell">
+                                <div class="label">Valor total atual</div>
+                                <div class="value">${formatCurrency(currentPrice)}</div>
+                            </div>
+                            <div class="conclude-payment-cell">
+                                <div class="label">Valor por dia (${daysCount}d)</div>
+                                <div class="value">${formatCurrency(valuePerDay)}</div>
+                            </div>
+                            <div class="conclude-payment-cell remaining">
+                                <div class="label">Valor se descontar</div>
+                                <div class="value">${formatCurrency(priceAfter)}</div>
+                            </div>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;background:#f8fafc;padding:10px 12px;border-radius:10px;border:1px solid #e2e8f0;cursor:pointer;">
+                            <input type="checkbox" id="discount-value-check" style="width:16px;height:16px;">
+                            <span style="font-size:0.85rem;color:#1e293b;font-weight:600;">Descontar o valor proporcional deste dia do total</span>
+                        </label>
+                        <p style="font-size:0.72rem;color:#64748b;margin:6px 0 0;">Por padrão o valor total é mantido — marque a opção acima para descontar proporcionalmente.</p>
+                    </div>
+                `;
+
+                openConfirmOverlay({
+                    title: 'Remover apenas este dia',
+                    subtitle: fmtDateBR(dateStr),
+                    bodyHtml,
+                    confirmLabel: 'Remover dia',
+                    confirmIcon: 'fa-calendar-minus',
+                    onConfirm: async (ov) => {
+                        const shouldDiscount = ov.querySelector('#discount-value-check').checked;
+                        const excluded = parseExcludedDates(event);
+                        const newExcluded = excluded.includes(dateStr) ? excluded : [...excluded, dateStr];
+
+                        // Remove override do dia removido (se houvesse).
+                        const overrides = parseDateOverrides(event);
+                        delete overrides[dateStr];
+                        const overridesPayload = Object.keys(overrides).length ? JSON.stringify(overrides) : null;
+
+                        const overridesObj = {
+                            excludedDates: JSON.stringify(newExcluded),
+                            dateOverrides: overridesPayload
+                        };
+                        if (shouldDiscount) {
+                            overridesObj.price = priceAfter;
+                            overridesObj.subtotal = Math.max((Number(event.subtotal) || 0) - valuePerDay, 0);
+                        }
+
+                        const payload = buildEventPayload(event, overridesObj);
+                        const response = await api.salvarEvento(payload);
+                        if (!response || !response.success) throw new Error('Falha ao salvar');
+                        const saved = response.data;
+                        const idx = events.findIndex(ev => ev.id === saved.id);
+                        if (idx !== -1) events[idx] = saved; else events.push(saved);
+                        showToast(`Dia ${fmtDateBR(dateStr)} removido do evento.`, false);
+                        renderAll();
+                        if (selectedDate) renderDayEvents(selectedDate);
+                    }
+                });
             };
 
             // === Concluir evento: modal de fechamento ===

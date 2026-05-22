@@ -3,10 +3,26 @@ const { logAudit, computeChanges } = require('./audit');
 const webpush = require('../config/webpush');
 
 const TRACKED_FIELDS = [
-    'date', 'endDate', 'clientName', 'price', 'subtotal', 'paymentStatus',
+    'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType'
 ];
+
+// Serializa campo JSON do evento (excludedDates, dateOverrides) — aceita string já serializada,
+// array/objeto, null ou undefined. Retorna string JSON ou null.
+function serializeJsonField(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed === '' || trimmed === 'null') return null;
+        return trimmed;
+    }
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return null;
+    }
+}
 
 const toFloatOr = (v, fallback) =>
     (v !== undefined && v !== null) ? parseFloat(v) : fallback;
@@ -47,6 +63,8 @@ function buildEventFields(evt, userId) {
     return {
         date: evt.date,
         endDate: evt.endDate || null,
+        excludedDates: evt.excludedDates !== undefined ? serializeJsonField(evt.excludedDates) : undefined,
+        dateOverrides: evt.dateOverrides !== undefined ? serializeJsonField(evt.dateOverrides) : undefined,
         clientName: evt.clientName,
         yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
         startTime: evt.startTime,

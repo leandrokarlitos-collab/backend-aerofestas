@@ -104,6 +104,8 @@ model Event {
   id           Float    @id
   date         String   // Data de início
   endDate      String?  // Data de término (para eventos multi-dia)
+  excludedDates  String?  // JSON: ["YYYY-MM-DD", ...] — dias removidos de um evento multi-dia
+  dateOverrides  String?  // JSON: { "YYYY-MM-DD": { startTime, endTime } } — horários custom por dia
   clientName   String?
   
   // Ligação com a Empresa
