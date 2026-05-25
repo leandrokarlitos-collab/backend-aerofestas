@@ -163,6 +163,10 @@ model Event {
   signalAmount     Float?
   signalReceived   Boolean?
   paymentDetails   String?
+
+  // Evento vendido por ingresso (sem locação fixa) — apenas projeção
+  isTicketSale     Boolean?
+  estimatedValue   Float?
   
   // Outros
   monitor              String?

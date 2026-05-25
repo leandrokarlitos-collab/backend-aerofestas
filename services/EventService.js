@@ -5,7 +5,8 @@ const webpush = require('../config/webpush');
 const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
-    'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType'
+    'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
+    'isTicketSale', 'estimatedValue'
 ];
 
 // Serializa campo JSON do evento (excludedDates, dateOverrides) — aceita string já serializada,
@@ -102,6 +103,9 @@ function buildEventFields(evt, userId) {
         signalAmount: toFloatOr(evt.signalAmount, 0),
         signalReceived: evt.signalReceived || false,
         paymentDetails: evt.paymentDetails,
+
+        isTicketSale: evt.isTicketSale === true,
+        estimatedValue: evt.isTicketSale === true ? toFloatOr(evt.estimatedValue, 0) : null,
 
         monitor: evt.monitor,
         eventObservations: evt.eventObservations,

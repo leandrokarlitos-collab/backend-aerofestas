@@ -1628,10 +1628,21 @@
         </header>
 
         <div class="text-center mb-8 fade-in" style="animation-delay: 0.1s;">
-            <div id="monthly-total-container" class="glassmorphism p-4 rounded-lg shadow-md max-w-sm mx-auto">
-                <h2 class="text-lg text-gray-600 font-semibold">Faturamento do Mês</h2>
-                <p id="monthly-total" class="text-4xl font-bold text-emerald-600"
-                    style="text-shadow: 0 0 10px rgba(5, 150, 105, 0.2);">R$ 0,00</p>
+            <div class="flex flex-wrap items-stretch justify-center gap-4">
+                <div id="monthly-total-container" class="glassmorphism p-4 rounded-lg shadow-md w-full max-w-sm">
+                    <h2 class="text-lg text-gray-600 font-semibold">Faturamento do Mês</h2>
+                    <p id="monthly-total" class="text-4xl font-bold text-emerald-600"
+                        style="text-shadow: 0 0 10px rgba(5, 150, 105, 0.2);">R$ 0,00</p>
+                </div>
+                <div id="monthly-estimated-container" class="glassmorphism p-4 rounded-lg shadow-md w-full max-w-sm hidden border border-amber-200">
+                    <h2 class="text-lg text-gray-600 font-semibold">
+                        <i class="fas fa-chart-line text-amber-600 mr-1"></i>
+                        Valor Estimado do Mês
+                    </h2>
+                    <p id="monthly-estimated" class="text-4xl font-bold text-amber-600"
+                        style="text-shadow: 0 0 10px rgba(217, 119, 6, 0.2);">R$ 0,00</p>
+                    <p class="text-xs text-gray-500 mt-1">Projeção de eventos vendidos por ingresso</p>
+                </div>
             </div>
         </div>
 
@@ -2049,6 +2060,23 @@
                     <div id="step-3" class="step-content hidden space-y-4">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Valores e Pagamento</h3>
 
+                        <!-- Toggle: Evento vendido por ingresso (sem locação fixa) -->
+                        <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
+                            <label class="flex items-start cursor-pointer">
+                                <input type="checkbox" id="is-ticket-sale"
+                                    class="form-checkbox h-5 w-5 mt-0.5 text-amber-600 border-gray-300 rounded focus:ring-amber-500 shrink-0">
+                                <span class="ml-2">
+                                    <span class="block text-sm font-semibold text-gray-800">
+                                        <i class="fas fa-ticket-alt text-amber-600 mr-1"></i>
+                                        Evento vendido por ingresso (sem locação fixa)
+                                    </span>
+                                    <span class="block text-xs text-gray-500 mt-0.5">
+                                        Marque quando não houver valor de locação — só uma projeção do que o evento renderá. O valor estimado aparece à parte na agenda.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Brinquedos</label>
                             <div class="grid grid-cols-12 gap-2">
@@ -2083,7 +2111,8 @@
                             <div id="selected-external-rentals-list" class="mt-3 space-y-2 max-h-24 overflow-y-auto"></div>
                         </div>
 
-                        <div class="bg-gray-100/80 p-3 rounded-md space-y-2">
+                        <!-- Bloco normal: cálculo do Valor Final -->
+                        <div id="regular-pricing-box" class="bg-gray-100/80 p-3 rounded-md space-y-2">
                             <div class="flex justify-between items-center text-md">
                                 <span class="font-medium text-gray-600">Subtotal (brinquedos):</span>
                                 <span id="event-subtotal" class="font-semibold text-gray-800">R$ 0,00</span>
@@ -2120,6 +2149,20 @@
                                 <input type="text" id="event-price" readonly
                                     class="w-32 text-right bg-transparent font-bold text-emerald-600 border-none focus:ring-0"
                                     value="R$ 0,00">
+                            </div>
+                        </div>
+
+                        <!-- Bloco alternativo: Valor Estimado (quando vendido por ingresso) -->
+                        <div id="ticket-sale-box" class="hidden bg-amber-50/70 border border-amber-200 p-3 rounded-md">
+                            <label for="estimated-value" class="block text-sm font-semibold text-gray-800 mb-1">
+                                <i class="fas fa-chart-line text-amber-600 mr-1"></i>
+                                Valor Estimado de Locação
+                            </label>
+                            <p class="text-xs text-gray-500 mb-2">Projeção do faturamento deste evento. Não substitui o Valor Final — é só uma estimativa exibida à parte na agenda.</p>
+                            <div class="flex items-center">
+                                <span class="px-3 py-2 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md text-sm font-medium text-gray-600">R$</span>
+                                <input type="number" id="estimated-value" min="0" step="0.01" value="0"
+                                    class="form-input flex-1 px-3 py-2 rounded-r-md text-lg font-bold text-amber-700">
                             </div>
                         </div>
 
@@ -2676,6 +2719,10 @@
             const eventSubtotalEl = document.getElementById('event-subtotal');
             const discountAmountEl = document.getElementById('discount-amount');
             const eventPriceEl = document.getElementById('event-price');
+            const isTicketSaleEl = document.getElementById('is-ticket-sale');
+            const estimatedValueEl = document.getElementById('estimated-value');
+            const regularPricingBoxEl = document.getElementById('regular-pricing-box');
+            const ticketSaleBoxEl = document.getElementById('ticket-sale-box');
             const geminiModal = document.getElementById('gemini-modal');
             const geminiModalTitle = document.getElementById('gemini-modal-title');
             const geminiModalContent = document.getElementById('gemini-modal-content');
@@ -2989,6 +3036,22 @@
                 });
                 const total = monthlyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
                 monthlyTotalEl.textContent = formatCurrency(total);
+
+                // Valor estimado: soma apenas eventos vendidos por ingresso
+                const estimatedTotal = monthlyEvents.reduce((sum, event) => {
+                    if (!event.isTicketSale) return sum;
+                    return sum + (Number(event.estimatedValue) || 0);
+                }, 0);
+                const estimatedContainer = document.getElementById('monthly-estimated-container');
+                const estimatedEl = document.getElementById('monthly-estimated');
+                if (estimatedContainer && estimatedEl) {
+                    if (estimatedTotal > 0) {
+                        estimatedEl.textContent = formatCurrency(estimatedTotal);
+                        estimatedContainer.classList.remove('hidden');
+                    } else {
+                        estimatedContainer.classList.add('hidden');
+                    }
+                }
             };
 
             // --- FUNÇÃO PARA GESTÃO DE INVENTÁRIO COM HORÁRIO ---
@@ -4145,7 +4208,10 @@
                                 <!-- INÍCIO DA MODIFICAÇÃO: Monitor -->
                                 ${event.monitor ? `<p><i class="fas fa-user-shield fa-fw mr-1 text-gray-400"></i>Monitor: <strong>${event.monitor}</strong></p>` : ''}
                                 <!-- FIM DA MODIFICAÇÃO -->
-                                <p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>Valor: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>
+                                ${event.isTicketSale
+                                    ? `<p class="font-medium"><i class="fas fa-ticket-alt fa-fw mr-1 text-amber-500"></i>Vendido por ingresso — Estimado: <strong class="text-amber-600">${formatCurrency(event.estimatedValue || 0)}</strong></p>`
+                                    : `<p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>Valor: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>`
+                                }
                                 ${event.paymentDetails ? `<p><i class="fas fa-credit-card fa-fw mr-1 text-gray-400"></i>Pagamento: <strong class="text-xs">${event.paymentDetails.replace(/\n/g, '<br>')}</strong></p>` : ''}
                                 ${birthdayInfoHtml} <!-- ADICIONADO AQUI -->
                             </div>
@@ -4670,6 +4736,16 @@
                 eventPriceEl.value = formatCurrency(finalPrice);
                 // FIM DA MODIFICAÇÃO
             };
+
+            // Alterna entre cálculo normal (Valor Final) e Valor Estimado (eventos por ingresso).
+            const applyTicketSaleMode = () => {
+                const isTicket = !!(isTicketSaleEl && isTicketSaleEl.checked);
+                if (regularPricingBoxEl) regularPricingBoxEl.classList.toggle('hidden', isTicket);
+                if (ticketSaleBoxEl) ticketSaleBoxEl.classList.toggle('hidden', !isTicket);
+            };
+            if (isTicketSaleEl) {
+                isTicketSaleEl.addEventListener('change', applyTicketSaleMode);
+            }
 
             const handleDayClick = (dateStr) => {
                 selectedDate = dateStr;
@@ -6224,6 +6300,11 @@
                     isBirthday: isBirthdayCheckbox.checked,
                     birthdayPersonName: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-name').value.trim() : '',
                     birthdayPersonDob: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-dob').value : '',
+
+                    isTicketSale: !!(isTicketSaleEl && isTicketSaleEl.checked),
+                    estimatedValue: (isTicketSaleEl && isTicketSaleEl.checked)
+                        ? (parseFloat(estimatedValueEl.value) || 0)
+                        : null,
                 };
 
                 // DEBUG: Verificar campos de endereço
@@ -6258,6 +6339,11 @@
                     ? eventData.discountValue
                     : (eventData.subtotal * eventData.discountValue / 100);
                 eventData.price = (eventData.subtotal - discountAmount) + eventData.deliveryFee;
+
+                // Vendido por ingresso: não há valor de locação, só o estimado (que vai à parte).
+                if (eventData.isTicketSale) {
+                    eventData.price = 0;
+                }
 
                 // Feedback visual imediato
                 const saveBtn = document.getElementById('save-step-btn');
@@ -6435,6 +6521,10 @@
                     document.getElementById('birthday-person-dob').value = eventToEdit.birthdayPersonDob || '';
                     // --- FIM DA MODIFICAÇÃO ---
 
+                    // Preencher venda por ingresso / valor estimado
+                    if (isTicketSaleEl) isTicketSaleEl.checked = !!eventToEdit.isTicketSale;
+                    if (estimatedValueEl) estimatedValueEl.value = eventToEdit.estimatedValue || 0;
+
                     if (eventToEdit.clientType === 'PJ') {
                         clientTypePjRadio.checked = true;
                         document.getElementById('pj-company-name').value = eventToEdit.clientName || '';
@@ -6462,6 +6552,8 @@
                     // INÍCIO DA MODIFICAÇÃO: Limpar novo campo (garantia)
                     document.getElementById('contract-address').value = '';
                     // FIM DA MODIFICAÇÃO
+                    if (isTicketSaleEl) isTicketSaleEl.checked = false;
+                    if (estimatedValueEl) estimatedValueEl.value = 0;
                 }
 
                 toggleClientTypeFields();
@@ -6469,6 +6561,7 @@
                 renderSelectedToysInModal();
                 renderSelectedExternalRentals();
                 updateFinalPrice();
+                applyTicketSaleMode();
 
                 // --- AUDITORIA: Mostra info de quem criou/modificou ---
                 const auditInfo = document.getElementById('audit-info');
