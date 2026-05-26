@@ -879,11 +879,11 @@
         }
         #equip-modal .unit-row {
             display: grid;
-            grid-template-columns: 80px 1fr auto;
-            align-items: center;
+            grid-template-columns: 1fr auto;
+            align-items: start;
             gap: 8px;
-            padding: 8px 10px;
-            border-radius: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
             background: rgba(148, 163, 184, 0.08);
             font-size: 0.8rem;
             transition: background 0.2s ease;
@@ -896,9 +896,9 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            grid-column: 1 / 2;
         }
         .dark #equip-modal .unit-label { color: #f1f5f9; }
-        #equip-modal .unit-row select,
         #equip-modal .unit-row input[type="text"] {
             background: rgba(255, 255, 255, 0.85);
             border: 1px solid rgba(15, 23, 42, 0.08);
@@ -909,18 +909,95 @@
             color: #1e293b;
             width: 100%;
         }
-        .dark #equip-modal .unit-row select,
         .dark #equip-modal .unit-row input[type="text"] {
             background: rgba(15, 23, 42, 0.6);
             border-color: rgba(255, 255, 255, 0.08);
             color: #f1f5f9;
         }
         #equip-modal .unit-row .unit-fields {
-            display: grid;
-            grid-template-columns: 1fr 1.4fr;
+            display: flex;
+            flex-direction: column;
             gap: 6px;
+            grid-column: 1 / -1;
         }
-        #equip-modal .unit-row.compact .unit-fields { grid-template-columns: 1fr; }
+        #equip-modal .unit-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        #equip-modal .cond-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        #equip-modal .cond-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            color: #475569;
+            border-radius: 999px;
+            padding: 3px 9px 3px 7px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .dark #equip-modal .cond-chip {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+        }
+        #equip-modal .cond-chip:hover { transform: translateY(-1px); }
+        #equip-modal .cond-chip .chip-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+        #equip-modal .cond-chip[data-state="OK"]            .chip-dot { background: #10b981; }
+        #equip-modal .cond-chip[data-state="DESCONHECIDO"]  .chip-dot { background: #f59e0b; }
+        #equip-modal .cond-chip[data-state="MOLHADO"]       .chip-dot { background: #3b82f6; }
+        #equip-modal .cond-chip[data-state="UMIDO"]         .chip-dot { background: #06b6d4; }
+        #equip-modal .cond-chip[data-state="SUJO"]          .chip-dot { background: #eab308; }
+        #equip-modal .cond-chip[data-state="MOFADO"]        .chip-dot { background: #dc2626; }
+        #equip-modal .cond-chip[data-state="DANIFICADO"]    .chip-dot { background: #b91c1c; }
+        #equip-modal .cond-chip[data-state="EM_MANUTENCAO"] .chip-dot { background: #f97316; }
+        #equip-modal .cond-chip[data-state="OUTROS"]        .chip-dot { background: #6b7280; }
+        #equip-modal .cond-chip.is-selected {
+            background: rgba(79, 70, 229, 0.12);
+            border-color: rgba(79, 70, 229, 0.45);
+            color: #4338ca;
+        }
+        .dark #equip-modal .cond-chip.is-selected {
+            background: rgba(99, 102, 241, 0.22);
+            border-color: rgba(165, 180, 252, 0.55);
+            color: #c7d2fe;
+        }
+        #equip-modal .cond-chip.is-selected[data-state="MOFADO"],
+        #equip-modal .cond-chip.is-selected[data-state="DANIFICADO"] {
+            background: rgba(220, 38, 38, 0.14);
+            border-color: rgba(220, 38, 38, 0.5);
+            color: #b91c1c;
+        }
+        .dark #equip-modal .cond-chip.is-selected[data-state="MOFADO"],
+        .dark #equip-modal .cond-chip.is-selected[data-state="DANIFICADO"] {
+            background: rgba(248, 113, 113, 0.18);
+            border-color: rgba(252, 165, 165, 0.55);
+            color: #fecaca;
+        }
+        #equip-modal .cond-chip.is-selected[data-state="OK"] {
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #047857;
+        }
+        .dark #equip-modal .cond-chip.is-selected[data-state="OK"] {
+            background: rgba(16, 185, 129, 0.22);
+            border-color: rgba(110, 231, 183, 0.5);
+            color: #6ee7b7;
+        }
         #equip-modal .unit-row .save-btn {
             background: #4f46e5;
             color: #fff;
@@ -2970,10 +3047,23 @@
             return toy.imageUrl || null;
         }
 
+        // Retorna a lista de estados de uma unidade.
+        // Prefere u.conditions[] (novo); cai para [u.condition] (legado).
+        function getUnitConditions(u) {
+            if (Array.isArray(u?.conditions) && u.conditions.length) return u.conditions;
+            return [u?.condition || 'OK'];
+        }
+
         function unitsSummary(toy) {
             const active = (toy.units || []).filter(u => u.unitNumber <= toy.quantity);
-            const issues = active.filter(u => u.condition && u.condition !== 'OK');
-            const severe = active.filter(u => u.condition && SEVERE_CONDITIONS.has(u.condition));
+            const issues = active.filter(u => {
+                const cs = getUnitConditions(u);
+                return cs.some(c => c && c !== 'OK');
+            });
+            const severe = active.filter(u => {
+                const cs = getUnitConditions(u);
+                return cs.some(c => SEVERE_CONDITIONS.has(c));
+            });
             return {
                 total: active.length,
                 ok: active.length - issues.length,
@@ -2987,9 +3077,20 @@
             OK: 0, OUTROS: 1, SUJO: 2, UMIDO: 3, MOLHADO: 4, DESCONHECIDO: 4,
             EM_MANUTENCAO: 5, MOFADO: 7, DANIFICADO: 7
         };
+        function worstOf(list) {
+            return list.reduce((worst, c) => {
+                const sev = CONDITION_SEVERITY[c] ?? 0;
+                const ws = CONDITION_SEVERITY[worst] ?? 0;
+                return sev > ws ? c : worst;
+            }, 'OK');
+        }
         function worstConditionScore(toy) {
             const active = (toy.units || []).filter(u => u.unitNumber <= toy.quantity);
-            return active.reduce((max, u) => Math.max(max, CONDITION_SEVERITY[u.condition] ?? 0), 0);
+            return active.reduce((max, u) => {
+                const cs = getUnitConditions(u);
+                const sev = cs.reduce((m, c) => Math.max(m, CONDITION_SEVERITY[c] ?? 0), 0);
+                return Math.max(max, sev);
+            }, 0);
         }
 
         function sortToys(list) {
@@ -3335,6 +3436,15 @@
             }
         });
 
+        function renderUnitDots(conditions) {
+            const list = (conditions && conditions.length) ? conditions : ['OK'];
+            return list.map(c => `<span class="unit-dot" data-state="${c}" title="${CONDITION_LABELS[c] || c}"></span>`).join('');
+        }
+
+        function getRowConditions(row) {
+            return [...row.querySelectorAll('.cond-chip.is-selected')].map(el => el.dataset.state);
+        }
+
         function renderUnits(toy) {
             const units = (toy.units || []).filter(u => u.unitNumber <= toy.quantity)
                 .sort((a, b) => a.unitNumber - b.unitNumber);
@@ -3345,36 +3455,69 @@
             }
 
             modalUnits.innerHTML = units.map(u => {
-                const opts = CONDITIONS_ORDER.map(c =>
-                    `<option value="${c}" ${u.condition === c ? 'selected' : ''}>${CONDITION_LABELS[c]}</option>`
-                ).join('');
+                const conds = getUnitConditions(u);
+                const origJson = escapeHtml(JSON.stringify(conds));
+                const chips = CONDITIONS_ORDER.map(c => {
+                    const sel = conds.includes(c) ? 'is-selected' : '';
+                    return `<span class="cond-chip ${sel}" data-state="${c}" role="button" tabindex="0" aria-pressed="${conds.includes(c)}">
+                        <span class="chip-dot"></span>${CONDITION_LABELS[c]}
+                    </span>`;
+                }).join('');
                 return `
-                    <div class="unit-row" data-unit-id="${u.id}" data-original-condition="${u.condition || 'OK'}" data-original-details="${escapeHtml(u.conditionDetails || '')}">
+                    <div class="unit-row" data-unit-id="${u.id}" data-original-conditions='${origJson}' data-original-details="${escapeHtml(u.conditionDetails || '')}">
                         <div class="unit-label">
-                            <span class="unit-dot" data-state="${u.condition || 'OK'}"></span>
+                            <span class="unit-dots">${renderUnitDots(conds)}</span>
                             Unidade ${u.unitNumber}
                         </div>
+                        <button type="button" class="save-btn" data-action="save-unit" disabled aria-label="Salvar unidade ${u.unitNumber}"><i class="fas fa-check"></i></button>
                         <div class="unit-fields">
-                            <select class="unit-cond" aria-label="Estado da unidade ${u.unitNumber}">${opts}</select>
+                            <div class="cond-chips" role="group" aria-label="Estados da unidade ${u.unitNumber}">${chips}</div>
                             <input type="text" class="unit-details" value="${escapeHtml(u.conditionDetails || '')}" placeholder="Mais detalhes..." aria-label="Detalhes da unidade ${u.unitNumber}">
                         </div>
-                        <button type="button" class="save-btn" data-action="save-unit" disabled aria-label="Salvar unidade ${u.unitNumber}"><i class="fas fa-check"></i></button>
                     </div>
                 `;
             }).join('');
         }
 
         function refreshUnitDirty(row) {
-            const condEl = row.querySelector('.unit-cond');
             const detEl = row.querySelector('.unit-details');
-            const dotEl = row.querySelector('.unit-dot');
+            const dotsEl = row.querySelector('.unit-dots');
             const saveBtn = row.querySelector('.save-btn');
-            const origCond = row.dataset.originalCondition;
+            const orig = JSON.parse(row.dataset.originalConditions || '["OK"]');
             const origDet = row.dataset.originalDetails || '';
-            const dirty = condEl.value !== origCond || (detEl.value || '') !== origDet;
+            const current = getRowConditions(row);
+            const sameConds = current.length === orig.length && current.every(c => orig.includes(c));
+            const dirty = !sameConds || (detEl.value || '') !== origDet;
             row.classList.toggle('dirty', dirty);
             saveBtn.disabled = !dirty;
-            dotEl.dataset.state = condEl.value;
+            dotsEl.innerHTML = renderUnitDots(current.length ? current : ['OK']);
+        }
+
+        function toggleChip(chip) {
+            const row = chip.closest('.unit-row');
+            if (!row) return;
+            const state = chip.dataset.state;
+            const wasSelected = chip.classList.contains('is-selected');
+
+            if (state === 'OK') {
+                row.querySelectorAll('.cond-chip').forEach(c => c.classList.remove('is-selected'));
+                if (!wasSelected) chip.classList.add('is-selected');
+            } else {
+                const okChip = row.querySelector('.cond-chip[data-state="OK"]');
+                if (okChip) okChip.classList.remove('is-selected');
+                chip.classList.toggle('is-selected');
+            }
+
+            // Se nada ficou marcado, volta para OK
+            if (!row.querySelector('.cond-chip.is-selected')) {
+                row.querySelector('.cond-chip[data-state="OK"]')?.classList.add('is-selected');
+            }
+
+            row.querySelectorAll('.cond-chip').forEach(c => {
+                c.setAttribute('aria-pressed', c.classList.contains('is-selected'));
+            });
+
+            refreshUnitDirty(row);
         }
 
         function openModal(toy) {
@@ -3633,19 +3776,20 @@
             const row = e.target.closest('.unit-row');
             if (row) refreshUnitDirty(row);
         });
-        modalUnits.addEventListener('change', (e) => {
-            const row = e.target.closest('.unit-row');
-            if (row) refreshUnitDirty(row);
-        });
         modalUnits.addEventListener('click', async (e) => {
+            const chip = e.target.closest('.cond-chip');
+            if (chip) {
+                toggleChip(chip);
+                return;
+            }
             const btn = e.target.closest('[data-action="save-unit"]');
             if (!btn) return;
             const row = btn.closest('.unit-row');
             const unitId = parseInt(row.dataset.unitId);
-            const condition = row.querySelector('.unit-cond').value;
+            const conditions = getRowConditions(row);
             const conditionDetails = row.querySelector('.unit-details').value.trim();
 
-            if (condition === 'OUTROS' && !conditionDetails) {
+            if (conditions.includes('OUTROS') && !conditionDetails) {
                 showToast('Quando o estado é "Outros", os detalhes são obrigatórios.', 'error');
                 row.querySelector('.unit-details').focus();
                 return;
@@ -3653,7 +3797,7 @@
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            const result = await api.atualizarEstadoUnidade(openedToyId, unitId, { condition, conditionDetails });
+            const result = await api.atualizarEstadoUnidade(openedToyId, unitId, { conditions, conditionDetails });
             btn.innerHTML = '<i class="fas fa-check"></i>';
 
             if (result.ok) {
@@ -3664,6 +3808,14 @@
             } else {
                 btn.disabled = false;
                 showToast(result.error || 'Erro ao salvar', 'error');
+            }
+        });
+        modalUnits.addEventListener('keydown', (e) => {
+            const chip = e.target.closest('.cond-chip');
+            if (!chip) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleChip(chip);
             }
         });
 
@@ -3905,7 +4057,7 @@
                 const photos = (t.photos || []).map(p => `${p.id}:${p.isPrimary ? 'P' : ''}`).join(',');
                 const units = (t.units || [])
                     .filter(u => u.unitNumber <= t.quantity)
-                    .map(u => `${u.unitNumber}:${u.condition || 'OK'}:${u.conditionDetails || ''}`)
+                    .map(u => `${u.unitNumber}:${getUnitConditions(u).join('|')}:${u.conditionDetails || ''}`)
                     .join(',');
                 const maint = (t.maintenances || []).map(m => `${m.id}:${m.date}`).join(',');
                 const last = t.lastRental ? t.lastRental.date : '';

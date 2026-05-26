@@ -47,6 +47,7 @@ model ToyUnit {
   toy                Toy      @relation(fields: [toyId], references: [id], onDelete: Cascade)
   unitNumber         Int
   condition          String   @default("OK")
+  conditions         String[] @default([])
   conditionDetails   String?
   conditionUpdatedAt DateTime @default(now()) @updatedAt
   conditionUpdatedBy String?

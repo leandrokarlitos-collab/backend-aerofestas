@@ -1106,22 +1106,16 @@
             border-radius: 999px;
             font-weight: 700;
         }
-        .conclude-units { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+        .conclude-units { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
         .conclude-unit-row {
             display: grid;
-            grid-template-columns: 90px 1fr 1.2fr auto;
+            grid-template-columns: 1fr auto;
             gap: 6px;
-            align-items: center;
+            align-items: start;
             font-size: 0.78rem;
-            padding: 4px 6px;
-            border-radius: 6px;
+            padding: 8px 10px;
+            border-radius: 10px;
             background: #fff;
-        }
-        @media (max-width: 540px) {
-            .conclude-unit-row { grid-template-columns: 1fr auto; }
-            .conclude-unit-row .conc-cond,
-            .conclude-unit-row .conc-det { grid-column: 1; }
-            .conclude-unit-row .conc-save { grid-column: 2; }
         }
         .conclude-unit-row .conc-label {
             font-weight: 700;
@@ -1129,11 +1123,68 @@
             display: flex;
             align-items: center;
             gap: 5px;
+            grid-column: 1 / 2;
         }
-        .conclude-unit-row .conc-dot {
-            width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #10b981;
+        .conclude-unit-row .conc-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
         }
-        .conclude-unit-row .conc-cond,
+        .conclude-unit-row .conc-fields {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .conclude-unit-row .conc-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .conclude-unit-row .conc-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            border-radius: 999px;
+            padding: 3px 9px 3px 7px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .conclude-unit-row .conc-chip:hover { transform: translateY(-1px); }
+        .conclude-unit-row .conc-chip .chip-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+        }
+        .conclude-unit-row .conc-chip[data-state="OK"]            .chip-dot { background: #10b981; }
+        .conclude-unit-row .conc-chip[data-state="DESCONHECIDO"]  .chip-dot { background: #f59e0b; }
+        .conclude-unit-row .conc-chip[data-state="MOLHADO"]       .chip-dot { background: #3b82f6; }
+        .conclude-unit-row .conc-chip[data-state="UMIDO"]         .chip-dot { background: #06b6d4; }
+        .conclude-unit-row .conc-chip[data-state="SUJO"]          .chip-dot { background: #eab308; }
+        .conclude-unit-row .conc-chip[data-state="MOFADO"]        .chip-dot { background: #dc2626; }
+        .conclude-unit-row .conc-chip[data-state="DANIFICADO"]    .chip-dot { background: #b91c1c; }
+        .conclude-unit-row .conc-chip[data-state="EM_MANUTENCAO"] .chip-dot { background: #f97316; }
+        .conclude-unit-row .conc-chip[data-state="OUTROS"]        .chip-dot { background: #6b7280; }
+        .conclude-unit-row .conc-chip.is-selected {
+            background: rgba(79,70,229,0.12);
+            border-color: rgba(79,70,229,0.45);
+            color: #4338ca;
+        }
+        .conclude-unit-row .conc-chip.is-selected[data-state="OK"] {
+            background: rgba(16,185,129,0.14);
+            border-color: rgba(16,185,129,0.5);
+            color: #047857;
+        }
+        .conclude-unit-row .conc-chip.is-selected[data-state="MOFADO"],
+        .conclude-unit-row .conc-chip.is-selected[data-state="DANIFICADO"] {
+            background: rgba(220,38,38,0.14);
+            border-color: rgba(220,38,38,0.5);
+            color: #b91c1c;
+        }
         .conclude-unit-row .conc-det {
             border: 1px solid #cbd5e1;
             border-radius: 6px;
@@ -4907,6 +4958,17 @@
                 SUJO: '#eab308', MOFADO: '#dc2626', DANIFICADO: '#b91c1c',
                 EM_MANUTENCAO: '#f97316', OUTROS: '#6b7280'
             };
+            const TOY_UNIT_SEVERITY = {
+                OK: 0, OUTROS: 1, SUJO: 2, UMIDO: 3, MOLHADO: 4, DESCONHECIDO: 4,
+                EM_MANUTENCAO: 5, MOFADO: 7, DANIFICADO: 7
+            };
+            const getUnitConds = (u) => {
+                if (Array.isArray(u?.conditions) && u.conditions.length) return u.conditions;
+                return [u?.condition || 'OK'];
+            };
+            const renderUnitDotsAg = (list, size = 8) => list.map(c =>
+                `<span style="width:${size}px;height:${size}px;border-radius:50%;background:${TOY_UNIT_COLORS[c] || '#6b7280'};display:inline-block;" title="${TOY_UNIT_LABELS[c] || c}"></span>`
+            ).join('<span style="display:inline-block;width:2px;"></span>');
             const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
             const handleEditToyUnits = async (toyId) => {
@@ -4939,26 +5001,36 @@
                     padding: 22px;
                 `;
 
-                const buildRow = (u) => `
-                    <div class="agenda-unit-row" data-unit-id="${u.id}" data-orig-cond="${u.condition || 'OK'}" data-orig-det="${escAttr(u.conditionDetails || '')}"
-                         style="display:grid;grid-template-columns:auto 1fr 1.4fr auto;gap:8px;align-items:center;padding:8px;border-radius:10px;background:#f8fafc;margin-bottom:6px;">
-                        <span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:0.82rem;color:#1e293b;min-width:90px;">
-                            <span class="agenda-unit-dot" style="width:8px;height:8px;border-radius:50%;background:${TOY_UNIT_COLORS[u.condition || 'OK']};"></span>
+                const buildChip = (c, selected) => `
+                    <span class="agenda-unit-chip" data-state="${c}" role="button" tabindex="0" aria-pressed="${selected}"
+                        style="display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px 3px 7px;font-size:0.7rem;font-weight:600;cursor:pointer;user-select:none;border:1px solid ${selected ? 'rgba(79,70,229,0.45)' : '#e2e8f0'};background:${selected ? 'rgba(79,70,229,0.12)' : '#fff'};color:${selected ? '#4338ca' : '#475569'};transition:transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;">
+                        <span style="width:8px;height:8px;border-radius:50%;background:${TOY_UNIT_COLORS[c] || '#6b7280'};"></span>${TOY_UNIT_LABELS[c]}
+                    </span>
+                `;
+
+                const buildRow = (u) => {
+                    const conds = getUnitConds(u);
+                    return `
+                    <div class="agenda-unit-row" data-unit-id="${u.id}" data-orig-conds='${escAttr(JSON.stringify(conds))}' data-orig-det="${escAttr(u.conditionDetails || '')}"
+                         style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 12px;border-radius:12px;background:#f8fafc;margin-bottom:6px;">
+                        <span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:0.82rem;color:#1e293b;">
+                            <span class="agenda-unit-dots">${renderUnitDotsAg(conds)}</span>
                             Unidade ${u.unitNumber}
                         </span>
-                        <select class="agenda-unit-cond" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:0.78rem;font-family:inherit;color:#1e293b;">
-                            ${TOY_UNIT_CONDITIONS.map(c =>
-                                `<option value="${c}" ${u.condition === c ? 'selected' : ''}>${TOY_UNIT_LABELS[c]}</option>`
-                            ).join('')}
-                        </select>
-                        <input type="text" class="agenda-unit-details" value="${escAttr(u.conditionDetails || '')}" placeholder="Mais detalhes..."
-                            style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:0.78rem;font-family:inherit;color:#1e293b;">
                         <button type="button" class="agenda-unit-save" disabled
-                            style="background:#4f46e5;color:#fff;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;">
+                            style="background:#4f46e5;color:#fff;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;opacity:0.4;">
                             <i class="fas fa-check"></i>
                         </button>
+                        <div style="grid-column:1 / -1;display:flex;flex-direction:column;gap:6px;">
+                            <div class="agenda-unit-chips" style="display:flex;flex-wrap:wrap;gap:4px;">
+                                ${TOY_UNIT_CONDITIONS.map(c => buildChip(c, conds.includes(c))).join('')}
+                            </div>
+                            <input type="text" class="agenda-unit-details" value="${escAttr(u.conditionDetails || '')}" placeholder="Mais detalhes..."
+                                style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:0.78rem;font-family:inherit;color:#1e293b;">
+                        </div>
                     </div>
                 `;
+                };
 
                 box.innerHTML = `
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -4983,25 +5055,64 @@
                 overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
                 box.querySelector('#agenda-units-close').addEventListener('click', close);
 
+                const getRowConds = (row) => [...row.querySelectorAll('.agenda-unit-chip[aria-pressed="true"]')].map(el => el.dataset.state);
+
+                const styleChip = (chip, selected) => {
+                    chip.setAttribute('aria-pressed', selected);
+                    chip.style.background = selected ? 'rgba(79,70,229,0.12)' : '#fff';
+                    chip.style.borderColor = selected ? 'rgba(79,70,229,0.45)' : '#e2e8f0';
+                    chip.style.color = selected ? '#4338ca' : '#475569';
+                };
+
                 const refreshDirty = (row) => {
-                    const cond = row.querySelector('.agenda-unit-cond').value;
                     const det = row.querySelector('.agenda-unit-details').value || '';
-                    const dot = row.querySelector('.agenda-unit-dot');
+                    const dotsEl = row.querySelector('.agenda-unit-dots');
                     const btn = row.querySelector('.agenda-unit-save');
-                    const dirty = cond !== row.dataset.origCond || det !== (row.dataset.origDet || '');
+                    const orig = JSON.parse(row.dataset.origConds || '["OK"]');
+                    const current = getRowConds(row);
+                    const same = current.length === orig.length && current.every(c => orig.includes(c));
+                    const dirty = !same || det !== (row.dataset.origDet || '');
                     btn.disabled = !dirty;
                     btn.style.opacity = dirty ? '1' : '0.4';
-                    dot.style.background = TOY_UNIT_COLORS[cond] || '#6b7280';
+                    dotsEl.innerHTML = renderUnitDotsAg(current.length ? current : ['OK']);
+                };
+
+                const toggleChip = (chip) => {
+                    const row = chip.closest('.agenda-unit-row');
+                    if (!row) return;
+                    const state = chip.dataset.state;
+                    const isSelected = chip.getAttribute('aria-pressed') === 'true';
+
+                    if (state === 'OK') {
+                        row.querySelectorAll('.agenda-unit-chip').forEach(c => styleChip(c, false));
+                        if (!isSelected) styleChip(chip, true);
+                    } else {
+                        const okChip = row.querySelector('.agenda-unit-chip[data-state="OK"]');
+                        if (okChip) styleChip(okChip, false);
+                        styleChip(chip, !isSelected);
+                    }
+
+                    if (![...row.querySelectorAll('.agenda-unit-chip')].some(c => c.getAttribute('aria-pressed') === 'true')) {
+                        const okChip = row.querySelector('.agenda-unit-chip[data-state="OK"]');
+                        if (okChip) styleChip(okChip, true);
+                    }
+
+                    refreshDirty(row);
                 };
 
                 box.querySelectorAll('.agenda-unit-row').forEach(row => {
-                    row.querySelector('.agenda-unit-cond').addEventListener('change', () => refreshDirty(row));
+                    row.querySelectorAll('.agenda-unit-chip').forEach(chip => {
+                        chip.addEventListener('click', () => toggleChip(chip));
+                        chip.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleChip(chip); }
+                        });
+                    });
                     row.querySelector('.agenda-unit-details').addEventListener('input', () => refreshDirty(row));
                     row.querySelector('.agenda-unit-save').addEventListener('click', async () => {
                         const unitId = parseInt(row.dataset.unitId);
-                        const condition = row.querySelector('.agenda-unit-cond').value;
+                        const conditions = getRowConds(row);
                         const conditionDetails = row.querySelector('.agenda-unit-details').value.trim();
-                        if (condition === 'OUTROS' && !conditionDetails) {
+                        if (conditions.includes('OUTROS') && !conditionDetails) {
                             showToast('Quando o estado é "Outros", os detalhes são obrigatórios.', true);
                             row.querySelector('.agenda-unit-details').focus();
                             return;
@@ -5009,17 +5120,20 @@
                         const btn = row.querySelector('.agenda-unit-save');
                         btn.disabled = true;
                         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                        const result = await api.atualizarEstadoUnidade(toyId, unitId, { condition, conditionDetails });
+                        const result = await api.atualizarEstadoUnidade(toyId, unitId, { conditions, conditionDetails });
                         btn.innerHTML = '<i class="fas fa-check"></i>';
                         if (result.ok) {
-                            row.dataset.origCond = condition;
+                            row.dataset.origConds = JSON.stringify(conditions);
                             row.dataset.origDet = conditionDetails;
                             refreshDirty(row);
                             showToast('Estado atualizado!');
                             notifyToysChanged();
-                            // Atualiza objeto local sem fechar modal
                             const u = (toy.units || []).find(x => x.id === unitId);
-                            if (u) { u.condition = condition; u.conditionDetails = conditionDetails || null; }
+                            if (u) {
+                                u.conditions = conditions;
+                                u.condition = conditions.reduce((w, c) => (TOY_UNIT_SEVERITY[c] ?? 0) > (TOY_UNIT_SEVERITY[w] ?? 0) ? c : w, 'OK');
+                                u.conditionDetails = conditionDetails || null;
+                            }
                         } else {
                             btn.disabled = false;
                             showToast(result.error || 'Erro ao salvar.', true);
@@ -5618,21 +5732,28 @@
                         .filter(u => u.unitNumber <= toy.quantity)
                         .sort((a, b) => a.unitNumber - b.unitNumber);
 
-                    const unitRows = units.map(u => `
-                        <div class="conclude-unit-row" data-unit-id="${u.id}" data-orig-cond="${u.condition || 'OK'}" data-orig-det="${escAttr(u.conditionDetails || '')}">
+                    const unitRows = units.map(u => {
+                        const conds = getUnitConds(u);
+                        const chips = TOY_UNIT_CONDITIONS.map(c => {
+                            const sel = conds.includes(c) ? 'is-selected' : '';
+                            return `<span class="conc-chip ${sel}" data-state="${c}" role="button" tabindex="0" aria-pressed="${conds.includes(c)}">
+                                <span class="chip-dot"></span>${TOY_UNIT_LABELS[c]}
+                            </span>`;
+                        }).join('');
+                        return `
+                        <div class="conclude-unit-row" data-unit-id="${u.id}" data-orig-conds='${escAttr(JSON.stringify(conds))}' data-orig-det="${escAttr(u.conditionDetails || '')}">
                             <span class="conc-label">
-                                <span class="conc-dot" style="background:${TOY_UNIT_COLORS[u.condition || 'OK']};"></span>
+                                <span class="conc-dots">${renderUnitDotsAg(conds)}</span>
                                 Unidade ${u.unitNumber}
                             </span>
-                            <select class="conc-cond" aria-label="Estado da unidade ${u.unitNumber}">
-                                ${TOY_UNIT_CONDITIONS.map(c =>
-                                    `<option value="${c}" ${u.condition === c ? 'selected' : ''}>${TOY_UNIT_LABELS[c]}</option>`
-                                ).join('')}
-                            </select>
-                            <input type="text" class="conc-det" value="${escAttr(u.conditionDetails || '')}" placeholder="Mais detalhes...">
                             <button type="button" class="conc-save" disabled aria-label="Salvar"><i class="fas fa-check"></i></button>
+                            <div class="conc-fields">
+                                <div class="conc-chips" role="group" aria-label="Estados da unidade ${u.unitNumber}">${chips}</div>
+                                <input type="text" class="conc-det" value="${escAttr(u.conditionDetails || '')}" placeholder="Mais detalhes...">
+                            </div>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
 
                     const existingPhotos = (eventPhotosByToy[toy.id] || [])
                         .map(p => `<img src="${escAttr(p.url)}" alt="" class="photo-thumb" loading="lazy">`)
@@ -5825,26 +5946,61 @@
                 });
                 overlay.querySelectorAll('[data-action="close"]').forEach(b => b.addEventListener('click', close));
 
-                // === Unidades: lógica de save (idêntica à do handleEditToyUnits) ===
+                // === Unidades: lógica de save com chips multi-seleção ===
+                const concGetRowConds = (row) => [...row.querySelectorAll('.conc-chip.is-selected')].map(el => el.dataset.state);
+
                 const refreshDirty = (row) => {
-                    const cond = row.querySelector('.conc-cond').value;
                     const det = row.querySelector('.conc-det').value || '';
-                    const dot = row.querySelector('.conc-dot');
+                    const dotsEl = row.querySelector('.conc-dots');
                     const btn = row.querySelector('.conc-save');
-                    const dirty = cond !== row.dataset.origCond || det !== (row.dataset.origDet || '');
+                    const orig = JSON.parse(row.dataset.origConds || '["OK"]');
+                    const current = concGetRowConds(row);
+                    const same = current.length === orig.length && current.every(c => orig.includes(c));
+                    const dirty = !same || det !== (row.dataset.origDet || '');
                     btn.disabled = !dirty;
-                    dot.style.background = TOY_UNIT_COLORS[cond] || '#6b7280';
+                    dotsEl.innerHTML = renderUnitDotsAg(current.length ? current : ['OK']);
                 };
+
+                const concToggleChip = (chip) => {
+                    const row = chip.closest('.conclude-unit-row');
+                    if (!row) return;
+                    const state = chip.dataset.state;
+                    const wasSelected = chip.classList.contains('is-selected');
+
+                    if (state === 'OK') {
+                        row.querySelectorAll('.conc-chip').forEach(c => c.classList.remove('is-selected'));
+                        if (!wasSelected) chip.classList.add('is-selected');
+                    } else {
+                        const okChip = row.querySelector('.conc-chip[data-state="OK"]');
+                        if (okChip) okChip.classList.remove('is-selected');
+                        chip.classList.toggle('is-selected');
+                    }
+
+                    if (!row.querySelector('.conc-chip.is-selected')) {
+                        row.querySelector('.conc-chip[data-state="OK"]')?.classList.add('is-selected');
+                    }
+
+                    row.querySelectorAll('.conc-chip').forEach(c => {
+                        c.setAttribute('aria-pressed', c.classList.contains('is-selected'));
+                    });
+                    refreshDirty(row);
+                };
+
                 overlay.querySelectorAll('.conclude-unit-row').forEach(row => {
                     const toyBlock = row.closest('.conclude-toy-block');
                     const toyId = parseFloat(toyBlock.dataset.toyId);
-                    row.querySelector('.conc-cond').addEventListener('change', () => refreshDirty(row));
+                    row.querySelectorAll('.conc-chip').forEach(chip => {
+                        chip.addEventListener('click', () => concToggleChip(chip));
+                        chip.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); concToggleChip(chip); }
+                        });
+                    });
                     row.querySelector('.conc-det').addEventListener('input', () => refreshDirty(row));
                     row.querySelector('.conc-save').addEventListener('click', async () => {
                         const unitId = parseInt(row.dataset.unitId);
-                        const condition = row.querySelector('.conc-cond').value;
+                        const conditions = concGetRowConds(row);
                         const conditionDetails = row.querySelector('.conc-det').value.trim();
-                        if (condition === 'OUTROS' && !conditionDetails) {
+                        if (conditions.includes('OUTROS') && !conditionDetails) {
                             showToast('Quando o estado é "Outros", os detalhes são obrigatórios.', true);
                             row.querySelector('.conc-det').focus();
                             return;
@@ -5852,19 +6008,22 @@
                         const btn = row.querySelector('.conc-save');
                         btn.disabled = true;
                         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                        const result = await api.atualizarEstadoUnidade(toyId, unitId, { condition, conditionDetails });
+                        const result = await api.atualizarEstadoUnidade(toyId, unitId, { conditions, conditionDetails });
                         btn.innerHTML = '<i class="fas fa-check"></i>';
                         if (result.ok) {
-                            row.dataset.origCond = condition;
+                            row.dataset.origConds = JSON.stringify(conditions);
                             row.dataset.origDet = conditionDetails;
                             refreshDirty(row);
                             showToast('Estado atualizado!');
                             notifyToysChanged();
-                            // Atualiza array local de toys para que próximos opens vejam o novo estado
                             const localToy = toys.find(t => t.id === toyId);
                             if (localToy) {
                                 const u = (localToy.units || []).find(x => x.id === unitId);
-                                if (u) { u.condition = condition; u.conditionDetails = conditionDetails || null; }
+                                if (u) {
+                                    u.conditions = conditions;
+                                    u.condition = conditions.reduce((w, c) => (TOY_UNIT_SEVERITY[c] ?? 0) > (TOY_UNIT_SEVERITY[w] ?? 0) ? c : w, 'OK');
+                                    u.conditionDetails = conditionDetails || null;
+                                }
                             }
                         } else {
                             btn.disabled = false;
@@ -7749,13 +7908,15 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 // antes de incluir no evento. Permite escolher continuar mesmo assim.
                 const issueUnits = (selectedToy.units || [])
                     .filter(u => u.unitNumber <= selectedToy.quantity)
-                    .filter(u => u.condition && u.condition !== 'OK');
+                    .filter(u => getUnitConds(u).some(c => c && c !== 'OK'));
 
                 if (issueUnits.length > 0) {
-                    // Conta por estado e ordena por severidade (mais grave primeiro)
+                    // Conta por estado (cada unidade soma 1 em cada estado não-OK que tiver)
                     const counts = {};
                     for (const u of issueUnits) {
-                        counts[u.condition] = (counts[u.condition] || 0) + 1;
+                        for (const c of getUnitConds(u)) {
+                            if (c && c !== 'OK') counts[c] = (counts[c] || 0) + 1;
+                        }
                     }
                     const severityRank = {
                         DANIFICADO: 100, MOFADO: 90, EM_MANUTENCAO: 70,

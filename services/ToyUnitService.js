@@ -2,7 +2,15 @@ const prisma = require('../prisma/client');
 const { logAudit, computeChanges } = require('./audit');
 
 const VALID_CONDITIONS = ['OK', 'DESCONHECIDO', 'MOLHADO', 'UMIDO', 'SUJO', 'MOFADO', 'DANIFICADO', 'EM_MANUTENCAO', 'OUTROS'];
-const TRACKED_FIELDS = ['condition', 'conditionDetails'];
+
+// Severidade: 0 = OK, 7 = pior. Usada para derivar o "condition" (string única, legado)
+// a partir do array "conditions".
+const CONDITION_SEVERITY = {
+    OK: 0, OUTROS: 1, SUJO: 2, UMIDO: 3, MOLHADO: 4, DESCONHECIDO: 4,
+    EM_MANUTENCAO: 5, MOFADO: 7, DANIFICADO: 7
+};
+
+const TRACKED_FIELDS = ['condition', 'conditions', 'conditionDetails'];
 
 function safeAudit(payload) {
     try {
@@ -12,6 +20,55 @@ function safeAudit(payload) {
     } catch (err) {
         console.error('[audit] falha sincrona silenciosa:', err);
     }
+}
+
+/**
+ * Normaliza um payload de estado vindo do cliente.
+ * Aceita:
+ *   - conditions: ['SUJO', 'MOLHADO']  (preferido)
+ *   - condition: 'SUJO'                 (legado / fallback)
+ * Regras:
+ *   - 'OK' é mutuamente exclusivo: se aparecer junto com outros, prevalecem os outros.
+ *   - Sem nada selecionado => ['OK'].
+ *   - Sem duplicados, todos em UPPERCASE, validados contra VALID_CONDITIONS.
+ *   - Ordena pelo VALID_CONDITIONS (estável para diffs/auditoria).
+ */
+function normalizeConditions(payload) {
+    let list = [];
+
+    if (Array.isArray(payload.conditions)) {
+        list = payload.conditions;
+    } else if (payload.condition != null) {
+        list = [payload.condition];
+    }
+
+    list = list
+        .map(c => String(c || '').toUpperCase().trim())
+        .filter(Boolean);
+
+    // Dedup preservando primeira ocorrência
+    list = [...new Set(list)];
+
+    // Se há outros estados além de OK, remove OK
+    if (list.length > 1 && list.includes('OK')) {
+        list = list.filter(c => c !== 'OK');
+    }
+
+    // Vazio => OK
+    if (!list.length) list = ['OK'];
+
+    // Ordena pelo VALID_CONDITIONS (mantém ordem canônica)
+    list.sort((a, b) => VALID_CONDITIONS.indexOf(a) - VALID_CONDITIONS.indexOf(b));
+
+    return list;
+}
+
+function worstOf(list) {
+    return list.reduce((worst, c) => {
+        const sev = CONDITION_SEVERITY[c] ?? 0;
+        const worstSev = CONDITION_SEVERITY[worst] ?? 0;
+        return sev > worstSev ? c : worst;
+    }, 'OK');
 }
 
 /**
@@ -41,6 +98,7 @@ async function syncUnitsToQuantity(toyId, qty) {
             toyId: id,
             unitNumber: next++,
             condition: 'OK',
+            conditions: ['OK'],
             conditionDetails: null
         });
     }
@@ -74,7 +132,8 @@ async function listUnitsByToy(toyId) {
 
 /**
  * Atualiza condição de uma unidade.
- * Valida estado e exige conditionDetails quando 'OUTROS'.
+ * Aceita array (conditions) ou string única (condition, legado).
+ * Salva ambos os campos: conditions[] = lista normalizada; condition = pior estado.
  */
 async function updateCondition(toyId, unitId, payload, user) {
     const id = parseInt(unitId);
@@ -85,18 +144,20 @@ async function updateCondition(toyId, unitId, payload, user) {
         throw err;
     }
 
-    const condition = String(payload.condition || '').toUpperCase().trim();
-    const conditionDetails = payload.conditionDetails != null
-        ? String(payload.conditionDetails).trim()
-        : null;
+    const conditions = normalizeConditions(payload);
 
-    if (!VALID_CONDITIONS.includes(condition)) {
-        const err = new Error(`Estado inválido. Valores aceitos: ${VALID_CONDITIONS.join(', ')}`);
+    const invalid = conditions.find(c => !VALID_CONDITIONS.includes(c));
+    if (invalid) {
+        const err = new Error(`Estado inválido: ${invalid}. Valores aceitos: ${VALID_CONDITIONS.join(', ')}`);
         err.status = 400;
         throw err;
     }
 
-    if (condition === 'OUTROS' && !conditionDetails) {
+    const conditionDetails = payload.conditionDetails != null
+        ? String(payload.conditionDetails).trim()
+        : null;
+
+    if (conditions.includes('OUTROS') && !conditionDetails) {
         const err = new Error('Quando o estado é "OUTROS", o campo "Mais detalhes" é obrigatório.');
         err.status = 400;
         throw err;
@@ -109,10 +170,13 @@ async function updateCondition(toyId, unitId, payload, user) {
         throw err;
     }
 
+    const condition = worstOf(conditions);
+
     const saved = await prisma.toyUnit.update({
         where: { id },
         data: {
             condition,
+            conditions,
             conditionDetails: conditionDetails || null,
             conditionUpdatedBy: user?.name || user?.email || null
         }
@@ -130,6 +194,7 @@ async function updateCondition(toyId, unitId, payload, user) {
                 toyId: saved.toyId,
                 unitNumber: saved.unitNumber,
                 condition: saved.condition,
+                conditions: saved.conditions,
                 conditionDetails: saved.conditionDetails
             }
         });
@@ -142,5 +207,8 @@ module.exports = {
     syncUnitsToQuantity,
     listUnitsByToy,
     updateCondition,
-    VALID_CONDITIONS
+    VALID_CONDITIONS,
+    CONDITION_SEVERITY,
+    normalizeConditions,
+    worstOf
 };
