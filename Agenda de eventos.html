@@ -967,8 +967,65 @@
             background: linear-gradient(135deg, #4f46e5, #a855f7);
             color: #fff;
         }
+        .conclude-header.is-review {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
         .conclude-header h3 { font-size: 1.05rem; font-weight: 700; margin: 0; }
         .conclude-header .subtitle { font-size: 0.78rem; opacity: 0.85; margin-top: 2px; }
+        /* Resumo do evento encerrado (modo revisão) */
+        .concluded-summary {
+            background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(4,120,87,0.04));
+            border: 1px solid rgba(16,185,129,0.25);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+        }
+        .concluded-summary-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #10b981;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+            border-radius: 999px;
+            margin-bottom: 10px;
+        }
+        .concluded-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px 14px;
+        }
+        .concluded-summary-grid > div { display: flex; flex-direction: column; }
+        .concluded-summary .cs-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #047857;
+            margin-bottom: 2px;
+        }
+        .concluded-summary .cs-value {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #1e293b;
+            word-break: break-word;
+        }
+        .concluded-summary-toys {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(16,185,129,0.3);
+        }
+        .concluded-summary-toys ul {
+            margin: 4px 0 0;
+            padding-left: 18px;
+            font-size: 0.85rem;
+            color: #1e293b;
+        }
+        .concluded-summary-toys li { font-weight: 600; }
         .conclude-header .close-x {
             background: rgba(255,255,255,0.2);
             border: none;
@@ -5603,17 +5660,47 @@
                     ? eventToys.map(buildToyBlock).join('')
                     : '<p style="color:#94a3b8;font-style:italic;">Este evento não tem equipamentos vinculados.</p>';
 
+                const alreadyConcluded = event.status === 'concluido';
+                const dateBREnd = (() => {
+                    const m = (event.endDate || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+                })();
+                const isMultiDayConc = !!(event.endDate && event.endDate > event.date);
+                const dateRangeText = isMultiDayConc ? `${dateBR} → ${dateBREnd}` : dateBR;
+                const timeText = (event.startTime || event.endTime)
+                    ? `${event.startTime || '—'} às ${event.endTime || '—'}`
+                    : '';
+                const toysSummaryHtml = eventToys.length
+                    ? eventToys.map(t => `<li>${escAttr(t.toy.name)}${t.qtyRented > 1 ? ` <span style="color:#64748b;">(x${t.qtyRented})</span>` : ''}</li>`).join('')
+                    : '<li style="color:#94a3b8;font-style:italic;">Sem equipamentos vinculados</li>';
+                const concludedSummaryHtml = alreadyConcluded ? `
+                    <section class="conclude-section concluded-summary">
+                        <div class="concluded-summary-badge"><i class="fas fa-circle-check"></i> Evento encerrado</div>
+                        <div class="concluded-summary-grid">
+                            ${event.clientName ? `<div><span class="cs-label">Cliente</span><span class="cs-value">${escAttr(event.clientName)}</span></div>` : ''}
+                            <div><span class="cs-label">${isMultiDayConc ? 'Período' : 'Data'}</span><span class="cs-value">${dateRangeText}</span></div>
+                            ${timeText ? `<div><span class="cs-label">Horário</span><span class="cs-value">${timeText}</span></div>` : ''}
+                            ${event.monitor ? `<div><span class="cs-label">Monitor</span><span class="cs-value">${escAttr(event.monitor)}</span></div>` : ''}
+                            <div><span class="cs-label">Valor</span><span class="cs-value">${formatCurrency(total)}</span></div>
+                        </div>
+                        <div class="concluded-summary-toys">
+                            <span class="cs-label">Equipamentos</span>
+                            <ul>${toysSummaryHtml}</ul>
+                        </div>
+                    </section>
+                ` : '';
+
                 overlay.innerHTML = `
-                    <div class="conclude-box" role="document" style="position:relative;">
-                        <header class="conclude-header">
+                    <div class="conclude-box ${alreadyConcluded ? 'is-review' : ''}" role="document" style="position:relative;">
+                        <header class="conclude-header ${alreadyConcluded ? 'is-review' : ''}">
                             <div>
-                                <h3><i class="fas fa-clipboard-check"></i> Concluir evento</h3>
-                                <div class="subtitle">${dateBR}${event.clientName ? ' — ' + escAttr(event.clientName) : ''}${event.status === 'concluido' ? ' · <strong>Já concluído</strong> (revisão)' : ''}</div>
+                                <h3><i class="fas ${alreadyConcluded ? 'fa-circle-check' : 'fa-clipboard-check'}"></i> ${alreadyConcluded ? 'Detalhes do evento encerrado' : 'Concluir evento'}</h3>
+                                <div class="subtitle">${dateBR}${event.clientName ? ' — ' + escAttr(event.clientName) : ''}${alreadyConcluded ? ' · <strong>Já concluído</strong> (revisão)' : ''}</div>
                             </div>
                             <button type="button" class="close-x" data-action="close" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
                         </header>
                         <div class="conclude-body">
-
+                            ${concludedSummaryHtml}
                             <section class="conclude-section">
                                 <h4><i class="fas fa-money-bill-wave"></i> Pagamento</h4>
                                 <div class="conclude-payment-grid" id="conclude-payment-grid">
