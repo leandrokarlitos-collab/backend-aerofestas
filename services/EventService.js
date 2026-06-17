@@ -6,7 +6,7 @@ const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
-    'isTicketSale', 'estimatedValue'
+    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal'
 ];
 
 // Serializa campo JSON do evento (excludedDates, dateOverrides) — aceita string já serializada,
@@ -27,6 +27,14 @@ function serializeJsonField(value) {
 
 const toFloatOr = (v, fallback) =>
     (v !== undefined && v !== null) ? parseFloat(v) : fallback;
+
+// Converte para número ou null, preservando "vazio" — usado nos campos opcionais
+// do pós-evento de venda por ficha (às vezes só o líquido é informado).
+const toFloatOrNull = (v) => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+};
 
 // Fire-and-forget: auditoria nunca deve quebrar o fluxo principal.
 function safeAudit(payload) {
@@ -106,6 +114,10 @@ function buildEventFields(evt, userId) {
 
         isTicketSale: evt.isTicketSale === true,
         estimatedValue: evt.isTicketSale === true ? toFloatOr(evt.estimatedValue, 0) : null,
+        // Resultado pós-evento (venda por ficha): opcionais — null quando não informados.
+        ticketGrossSold: evt.isTicketSale === true ? toFloatOrNull(evt.ticketGrossSold) : null,
+        ticketSchoolPercent: evt.isTicketSale === true ? toFloatOrNull(evt.ticketSchoolPercent) : null,
+        ticketNetTotal: evt.isTicketSale === true ? toFloatOrNull(evt.ticketNetTotal) : null,
 
         monitor: evt.monitor,
         eventObservations: evt.eventObservations,

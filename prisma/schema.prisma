@@ -168,7 +168,11 @@ model Event {
   // Evento vendido por ingresso (sem locação fixa) — apenas projeção
   isTicketSale     Boolean?
   estimatedValue   Float?
-  
+  // Resultado pós-evento da venda por ficha/ingresso (todos opcionais; líquido é o que importa)
+  ticketGrossSold     Float?  // valor bruto vendido (saldo de fichas)
+  ticketSchoolPercent Float?  // % repassada à escola (0–100)
+  ticketNetTotal      Float?  // líquido total que fica para a empresa
+
   // Outros
   monitor              String?
   eventObservations    String?
