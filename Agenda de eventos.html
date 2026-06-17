@@ -70,6 +70,60 @@
             color: #f8fafc;
         }
 
+        /* === Seletor de dias (eventos multi-dia / dias alternados) === */
+        .day-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 56px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            border: 2px solid #6366f1;
+            background: #eef2ff;
+            color: #3730a3;
+            font-weight: 600;
+            line-height: 1.15;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+
+        .day-chip:hover {
+            transform: translateY(-1px);
+        }
+
+        .day-chip .day-chip-wd {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            opacity: 0.85;
+        }
+
+        .day-chip .day-chip-dm {
+            font-size: 13px;
+        }
+
+        .day-chip-off {
+            border-color: #e2e8f0;
+            background: #f1f5f9;
+            color: #94a3b8;
+            text-decoration: line-through;
+            opacity: 0.75;
+        }
+
+        .dark .day-chip {
+            border-color: #4f46e5;
+            background: rgba(79, 70, 229, 0.18);
+            color: #c7d2fe;
+        }
+
+        .dark .day-chip-off {
+            border-color: #334155;
+            background: rgba(51, 65, 85, 0.45);
+            color: #64748b;
+        }
+
         #particles-js {
             position: fixed;
             top: 0;
@@ -2028,6 +2082,33 @@
                             </div>
                         </div>
                         <!-- FIM: Campos de Data -->
+
+                        <!-- INÍCIO: Seletor de dias (multi-dia / dias alternados) -->
+                        <div id="multi-day-selector" class="hidden mt-3 bg-indigo-50/70 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/50 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <p class="text-sm font-semibold text-indigo-800 dark:text-indigo-200 flex items-center gap-1.5">
+                                    <i class="fas fa-calendar-week"></i> Dias do evento
+                                </p>
+                                <span id="multi-day-count" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300"></span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-slate-400 mb-2.5">
+                                Toque nos dias para <strong>incluir</strong> ou <strong>remover</strong>. Use para eventos em
+                                <strong>dias alternados</strong> (ex.: sábado e domingo, pulando os dias de semana).
+                            </p>
+                            <div id="multi-day-chips" class="flex flex-wrap gap-2"></div>
+                            <div class="flex flex-wrap gap-2 mt-2.5">
+                                <button type="button" id="multi-day-select-all"
+                                    class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">
+                                    <i class="fas fa-check-double mr-1"></i>Todos os dias
+                                </button>
+                                <span class="text-gray-300 dark:text-slate-600">|</span>
+                                <button type="button" id="multi-day-weekends-only"
+                                    class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">
+                                    <i class="fas fa-umbrella-beach mr-1"></i>Só fins de semana
+                                </button>
+                            </div>
+                        </div>
+                        <!-- FIM: Seletor de dias -->
 
                         <!-- INÍCIO: Seção Aniversariante -->
                         <div class="mt-4">
@@ -6500,12 +6581,39 @@
                     return;
                 }
 
+                // === Dias alternados / multi-dia: deriva date, endDate e excludedDates do seletor de dias ===
+                // Os dias do intervalo que o usuário desmarcou viram excludedDates, permitindo
+                // agendar dias não-contínuos (ex.: sáb + dom, pulando a semana).
+                let finalDate = eventDate;
+                let finalEndDate = eventEndDate || null;
+                let excludedDates = [];
+                const dayChipEls = Array.from(document.querySelectorAll('#multi-day-chips .day-chip'));
+                if (eventEndDate && dayChipEls.length >= 2) {
+                    const selectedDays = dayChipEls
+                        .filter(c => !c.classList.contains('day-chip-off'))
+                        .map(c => c.dataset.date)
+                        .sort();
+                    if (selectedDays.length === 0) {
+                        showToast('Selecione pelo menos 1 dia para o evento.', true);
+                        return;
+                    }
+                    // O intervalo passa a começar/terminar nos extremos efetivamente selecionados...
+                    finalDate = selectedDays[0];
+                    finalEndDate = selectedDays.length > 1 ? selectedDays[selectedDays.length - 1] : null;
+                    // ...e os dias internos não selecionados vão para excludedDates.
+                    if (finalEndDate) {
+                        const selectedSet = new Set(selectedDays);
+                        excludedDates = listDatesInRange(finalDate, finalEndDate).filter(iso => !selectedSet.has(iso));
+                    }
+                }
+
                 // Objeto base para envio à API
                 const eventData = {
                     id: eventId, // Se for nulo, a API cria novo. Se tiver ID, a API atualiza.
                     eventType: 'event',
-                    date: eventDate,
-                    endDate: eventEndDate || null, // Data de término para eventos multi-dia
+                    date: finalDate,
+                    endDate: finalEndDate, // null = evento de um único dia
+                    excludedDates: excludedDates, // dias removidos do intervalo (eventos em dias alternados)
                     clientType: clientType,
                     yourCompanyId: parseInt(document.getElementById('your-company-select').value),
                     clientAddress: document.getElementById('client-address').value,
@@ -6705,6 +6813,8 @@
                     document.getElementById('event-date').value = eventToEdit.date;
                     document.getElementById('event-end-date').value = eventToEdit.endDate || '';
                     // FIM DA MODIFICAÇÃO
+                    // Reconstrói o seletor de dias refletindo as datas já removidas (dias alternados)
+                    renderMultiDaySelector(parseExcludedDates(eventToEdit));
                     document.getElementById('your-company-select').value = eventToEdit.yourCompanyId || '';
                     document.getElementById('client-address').value = eventToEdit.clientAddress || '';
                     // INÍCIO DA MODIFICAÇÃO: Preencher novo campo
@@ -6800,6 +6910,8 @@
                     // FIM DA MODIFICAÇÃO
                     if (isTicketSaleEl) isTicketSaleEl.checked = false;
                     if (estimatedValueEl) estimatedValueEl.value = 0;
+                    // Novo evento: sem data de término ainda → seletor de dias começa oculto/limpo
+                    renderMultiDaySelector([]);
                 }
 
                 toggleClientTypeFields();
@@ -7833,12 +7945,108 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
             clientTypePjRadio.addEventListener('change', toggleClientTypeFields);
             isBirthdayCheckbox.addEventListener('change', toggleBirthdayFields); // <-- ADICIONADO
 
+            // === INÍCIO: Seletor de dias para eventos multi-dia / dias alternados ===
+            // Lista todas as datas ISO (YYYY-MM-DD) no intervalo [start, end], inclusive.
+            const listDatesInRange = (startIso, endIso) => {
+                const out = [];
+                if (!startIso || !endIso || endIso < startIso) return out;
+                const sd = new Date(startIso + 'T00:00:00');
+                const ed = new Date(endIso + 'T00:00:00');
+                for (let d = new Date(sd); d <= ed; d.setDate(d.getDate() + 1)) {
+                    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                }
+                return out;
+            };
+
+            const WEEKDAY_ABBR = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const multiDaySelectorEl = document.getElementById('multi-day-selector');
+            const multiDayChipsEl = document.getElementById('multi-day-chips');
+            const multiDayCountEl = document.getElementById('multi-day-count');
+
+            // Datas atualmente marcadas como removidas (line-through) lidas direto dos chips.
+            const getExcludedFromChips = () =>
+                Array.from(multiDayChipsEl.querySelectorAll('.day-chip.day-chip-off')).map(c => c.dataset.date);
+
+            const updateMultiDayCount = () => {
+                const total = multiDayChipsEl.querySelectorAll('.day-chip').length;
+                const selected = multiDayChipsEl.querySelectorAll('.day-chip:not(.day-chip-off)').length;
+                multiDayCountEl.textContent = total ? `${selected} de ${total} dias` : '';
+            };
+
+            // (Re)desenha os chips a partir do intervalo atual de datas, preservando as exclusões informadas.
+            // Só aparece quando o intervalo tem 2+ dias (ou seja, é de fato multi-dia).
+            const renderMultiDaySelector = (excludedArr = []) => {
+                const start = document.getElementById('event-date-visible').value;
+                const end = document.getElementById('event-end-date').value;
+                const dates = listDatesInRange(start, end);
+                if (dates.length < 2) {
+                    multiDaySelectorEl.classList.add('hidden');
+                    multiDayChipsEl.innerHTML = '';
+                    multiDayCountEl.textContent = '';
+                    return;
+                }
+                const excludedSet = new Set(excludedArr || []);
+                multiDayChipsEl.innerHTML = dates.map(iso => {
+                    const d = new Date(iso + 'T00:00:00');
+                    const off = excludedSet.has(iso);
+                    const wd = WEEKDAY_ABBR[d.getDay()];
+                    const dm = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    return `<button type="button" data-date="${iso}" class="day-chip${off ? ' day-chip-off' : ''}" aria-pressed="${!off}">
+                                <span class="day-chip-wd">${wd}</span>
+                                <span class="day-chip-dm">${dm}</span>
+                            </button>`;
+                }).join('');
+                multiDaySelectorEl.classList.remove('hidden');
+                updateMultiDayCount();
+            };
+
+            // Toggle de um dia (mantém pelo menos 1 dia ativo).
+            multiDayChipsEl.addEventListener('click', (e) => {
+                const chip = e.target.closest('.day-chip');
+                if (!chip) return;
+                const turningOff = !chip.classList.contains('day-chip-off');
+                if (turningOff) {
+                    const selected = multiDayChipsEl.querySelectorAll('.day-chip:not(.day-chip-off)').length;
+                    if (selected <= 1) {
+                        showToast('O evento precisa ter pelo menos 1 dia ativo.', true);
+                        return;
+                    }
+                }
+                chip.classList.toggle('day-chip-off');
+                chip.setAttribute('aria-pressed', String(!chip.classList.contains('day-chip-off')));
+                updateMultiDayCount();
+            });
+
+            document.getElementById('multi-day-select-all').addEventListener('click', () => {
+                multiDayChipsEl.querySelectorAll('.day-chip').forEach(c => {
+                    c.classList.remove('day-chip-off');
+                    c.setAttribute('aria-pressed', 'true');
+                });
+                updateMultiDayCount();
+            });
+
+            document.getElementById('multi-day-weekends-only').addEventListener('click', () => {
+                multiDayChipsEl.querySelectorAll('.day-chip').forEach(c => {
+                    const wd = new Date(c.dataset.date + 'T00:00:00').getDay();
+                    const isWeekend = wd === 0 || wd === 6;
+                    c.classList.toggle('day-chip-off', !isWeekend);
+                    c.setAttribute('aria-pressed', String(isWeekend));
+                });
+                updateMultiDayCount();
+            });
+            // === FIM: Seletor de dias ===
+
             // INÍCIO DA MODIFICAÇÃO: Sincronizar campo de data visível com campo hidden
             const eventDateVisibleEl = document.getElementById('event-date-visible');
             if (eventDateVisibleEl) {
                 eventDateVisibleEl.addEventListener('change', () => {
                     document.getElementById('event-date').value = eventDateVisibleEl.value;
+                    renderMultiDaySelector(getExcludedFromChips());
                 });
+            }
+            const eventEndDateEl = document.getElementById('event-end-date');
+            if (eventEndDateEl) {
+                eventEndDateEl.addEventListener('change', () => renderMultiDaySelector(getExcludedFromChips()));
             }
             // FIM DA MODIFICAÇÃO
 
