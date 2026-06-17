@@ -2303,8 +2303,13 @@
                         <!-- Bloco normal: cálculo do Valor Final -->
                         <div id="regular-pricing-box" class="bg-gray-100/80 p-3 rounded-md space-y-2">
                             <div class="flex justify-between items-center text-md">
-                                <span class="font-medium text-gray-600">Subtotal (brinquedos):</span>
+                                <span id="subtotal-label" class="font-medium text-gray-600">Subtotal (brinquedos):</span>
                                 <span id="event-subtotal" class="font-semibold text-gray-800">R$ 0,00</span>
+                            </div>
+                            <!-- Multiplicação por dias (só atrações) — aparece em eventos multi-dia -->
+                            <div class="flex justify-between items-center text-sm" id="days-multiplier-row" style="display:none;">
+                                <span class="font-medium text-indigo-600"><i class="fas fa-calendar-week mr-1"></i><span id="days-multiplier-label">× dias</span></span>
+                                <span id="days-multiplier-amount" class="font-semibold text-indigo-700">R$ 0,00</span>
                             </div>
                             <div class="flex justify-between items-center text-sm" id="external-rentals-row" style="display:none;">
                                 <span class="font-medium text-gray-600"><i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i> Locações externas:</span>
@@ -4919,48 +4924,80 @@
                 desc.focus();
             });
 
-            const updateFinalPrice = () => {
-                const subtotal = toysForCurrentEvent.reduce((acc, toy) => {
+            // Nº de dias ATIVOS do evento, lido do seletor de dias (respeita dias alternados).
+            // Eventos de um único dia → 1.
+            const getActiveDaysForPricing = () => {
+                const chips = document.querySelectorAll('#multi-day-chips .day-chip');
+                if (chips.length >= 2) {
+                    const selected = document.querySelectorAll('#multi-day-chips .day-chip:not(.day-chip-off)').length;
+                    return Math.max(selected, 1);
+                }
+                return 1;
+            };
+
+            // Cálculo único do preço do evento (usado pelo display e pelo submit, evitando divergência).
+            // Modelo: SÓ AS ATRAÇÕES multiplicam pelo nº de dias; frete e locações externas contam uma vez.
+            const computeEventPricing = () => {
+                const perDaySubtotal = toysForCurrentEvent.reduce((acc, toy) => {
                     const price = (toy.price !== undefined && toy.price !== null) ? toy.price : (toy.valor || 0);
                     return acc + (price * (toy.quantity || 1));
                 }, 0);
-                eventSubtotalEl.textContent = formatCurrency(subtotal);
+                const activeDays = getActiveDaysForPricing();
+                const attractionsTotal = perDaySubtotal * activeDays;
 
-                // Locações externas: somam direto no preço final (custo repassado ao cliente)
                 const externalRentalsTotal = externalRentalsForCurrentEvent.reduce(
                     (acc, r) => acc + (Number(r.cost) || 0), 0
                 );
+                const deliveryFee = parseFloat(deliveryFeeEl.value) || 0;
+
+                const discountType = discountTypeEl.value;
+                const discountValue = parseFloat(discountValueEl.value) || 0;
+                const discount = discountType === 'fixed'
+                    ? discountValue
+                    : (attractionsTotal * discountValue) / 100;
+
+                // Subtotal armazenado = total das atrações (já multiplicado), mantendo a relação
+                // price = (subtotal - desconto) + locações + frete usada no resto do sistema.
+                const finalPrice = (attractionsTotal - discount) + externalRentalsTotal + deliveryFee;
+                return { perDaySubtotal, activeDays, attractionsTotal, externalRentalsTotal, deliveryFee, discountType, discountValue, discount, finalPrice };
+            };
+
+            const updateFinalPrice = () => {
+                const p = computeEventPricing();
+
+                // Subtotal (por dia quando multi-dia) + linha de multiplicação pelos dias
+                const subtotalLabelEl = document.getElementById('subtotal-label');
+                if (subtotalLabelEl) subtotalLabelEl.textContent = p.activeDays > 1 ? 'Subtotal (brinquedos/dia):' : 'Subtotal (brinquedos):';
+                eventSubtotalEl.textContent = formatCurrency(p.perDaySubtotal);
+
+                const daysRow = document.getElementById('days-multiplier-row');
+                const daysLabel = document.getElementById('days-multiplier-label');
+                const daysAmount = document.getElementById('days-multiplier-amount');
+                if (daysRow && daysLabel && daysAmount) {
+                    if (p.activeDays > 1) {
+                        daysLabel.textContent = `× ${p.activeDays} dias (atrações)`;
+                        daysAmount.textContent = formatCurrency(p.attractionsTotal);
+                        daysRow.style.display = '';
+                    } else {
+                        daysRow.style.display = 'none';
+                    }
+                }
+
+                // Locações externas: somam direto no preço final (custo repassado ao cliente)
                 const externalRentalsRow = document.getElementById('external-rentals-row');
                 const externalRentalsAmountEl = document.getElementById('external-rentals-amount');
                 if (externalRentalsRow && externalRentalsAmountEl) {
-                    if (externalRentalsTotal > 0) {
+                    if (p.externalRentalsTotal > 0) {
                         externalRentalsRow.style.display = '';
-                        externalRentalsAmountEl.textContent = `+ ${formatCurrency(externalRentalsTotal)}`;
+                        externalRentalsAmountEl.textContent = `+ ${formatCurrency(p.externalRentalsTotal)}`;
                     } else {
                         externalRentalsRow.style.display = 'none';
                     }
                 }
 
-                // INÍCIO DA MODIFICAÇÃO: Incluir Frete no Cálculo
-                const deliveryFee = parseFloat(deliveryFeeEl.value) || 0;
-                deliveryFeeAmountEl.textContent = `+ ${formatCurrency(deliveryFee)}`;
-
-                const discountType = discountTypeEl.value;
-                const discountValue = parseFloat(discountValueEl.value) || 0;
-                let discount = 0;
-
-                if (discountType === 'fixed') {
-                    discount = discountValue;
-                } else { // percent
-                    discount = (subtotal * discountValue) / 100;
-                }
-
-                // Preço final = (Subtotal brinquedos - Desconto) + Locações externas + Frete
-                const finalPrice = (subtotal - discount) + externalRentalsTotal + deliveryFee;
-
-                discountAmountEl.textContent = `- ${formatCurrency(discount)}`;
-                eventPriceEl.value = formatCurrency(finalPrice);
-                // FIM DA MODIFICAÇÃO
+                deliveryFeeAmountEl.textContent = `+ ${formatCurrency(p.deliveryFee)}`;
+                discountAmountEl.textContent = `- ${formatCurrency(p.discount)}`;
+                eventPriceEl.value = formatCurrency(p.finalPrice);
             };
 
             // Alterna entre cálculo normal (Valor Final) e Valor Estimado (eventos por ingresso).
@@ -6731,6 +6768,10 @@
                     }
                 }
 
+                // Cálculo de preço unificado (mesma lógica do display): atrações × dias ativos;
+                // frete e locações externas contam uma vez.
+                const pricing = computeEventPricing();
+
                 // Objeto base para envio à API
                 const eventData = {
                     id: eventId, // Se for nulo, a API cria novo. Se tiver ID, a API atualiza.
@@ -6758,7 +6799,7 @@
                         cost: Number(r.cost) || 0
                     })),
 
-                    subtotal: toysForCurrentEvent.reduce((acc, toy) => acc + (toy.price * toy.quantity), 0),
+                    subtotal: pricing.attractionsTotal, // total das atrações já multiplicado pelos dias
                     discountType: discountTypeEl.value,
                     discountValue: parseFloat(discountValueEl.value) || 0,
                     deliveryFee: parseFloat(deliveryFeeEl.value) || 0,
@@ -6819,11 +6860,8 @@
                     eventData.repPhoneBackup = document.getElementById('pj-rep-phone-backup').value;
                 }
 
-                // Cálculo do preço final (importante enviar calculado ou deixar o back calcular)
-                const discountAmount = eventData.discountType === 'fixed'
-                    ? eventData.discountValue
-                    : (eventData.subtotal * eventData.discountValue / 100);
-                eventData.price = (eventData.subtotal - discountAmount) + eventData.deliveryFee;
+                // Preço final unificado (inclui locações externas e a multiplicação das atrações pelos dias)
+                eventData.price = pricing.finalPrice;
 
                 // Vendido por ingresso: não há valor de locação, só o estimado (que vai à parte).
                 if (eventData.isTicketSale) {
@@ -8109,6 +8147,8 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 const total = multiDayChipsEl.querySelectorAll('.day-chip').length;
                 const selected = multiDayChipsEl.querySelectorAll('.day-chip:not(.day-chip-off)').length;
                 multiDayCountEl.textContent = total ? `${selected} de ${total} dias` : '';
+                // Nº de dias ativos mudou → recalcula o Valor Final (atrações × dias)
+                updateFinalPrice();
             };
 
             // (Re)desenha os chips a partir do intervalo atual de datas, preservando as exclusões informadas.
@@ -8121,6 +8161,7 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                     multiDaySelectorEl.classList.add('hidden');
                     multiDayChipsEl.innerHTML = '';
                     multiDayCountEl.textContent = '';
+                    updateFinalPrice(); // voltou a 1 dia → recalcula sem multiplicação
                     return;
                 }
                 const excludedSet = new Set(excludedArr || []);
