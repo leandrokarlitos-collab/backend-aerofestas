@@ -44,6 +44,10 @@
                 "destination": "/propostas/salesianos/index.html"
             },
             {
+                "source": "/p/disponiveis-20-06-2026",
+                "destination": "/propostas/disponiveis-20-06-2026/index.html"
+            },
+            {
                 "source": "/p/**",
                 "destination": "/propostas/view.html"
             }
