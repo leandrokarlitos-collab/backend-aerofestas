@@ -4444,6 +4444,8 @@
                                     : `<p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>Valor: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>`
                                 }
                                 ${event.paymentDetails ? `<p><i class="fas fa-credit-card fa-fw mr-1 text-gray-400"></i>Pagamento: <strong class="text-xs">${event.paymentDetails.replace(/\n/g, '<br>')}</strong></p>` : ''}
+                                ${(event.paymentScheduled && event.scheduledPaymentDate) ? `<p><i class="fas fa-calendar-day fa-fw mr-1 text-amber-500"></i>Pagamento agendado: <strong class="text-amber-600">${event.scheduledPaymentDate.split('-').reverse().join('/')}</strong>${event.scheduledPaymentReason ? ` <span class="text-xs text-gray-500">(${event.scheduledPaymentReason})</span>` : ''}</p>` : ''}
+                                ${(event.signalReceiptUrl || event.finalReceiptUrl) ? `<p><i class="fas fa-paperclip fa-fw mr-1 text-gray-400"></i>Comprovantes: ${event.signalReceiptUrl ? `<a href="${event.signalReceiptUrl}" target="_blank" rel="noopener" class="text-indigo-600 underline">entrada</a>` : ''}${(event.signalReceiptUrl && event.finalReceiptUrl) ? ' · ' : ''}${event.finalReceiptUrl ? `<a href="${event.finalReceiptUrl}" target="_blank" rel="noopener" class="text-indigo-600 underline">final</a>` : ''}</p>` : ''}
                                 ${birthdayInfoHtml} <!-- ADICIONADO AQUI -->
                             </div>
                         </div>
@@ -6033,6 +6035,60 @@
                     </section>
                 ` : '';
 
+                // === Comprovantes de pagamento (sinal / final) ===
+                const receiptEmptyHtml = () => `<span style="color:#94a3b8;font-style:italic;font-size:0.8rem;">Nenhum comprovante anexado</span>`;
+                const receiptLinkHtml = (url) => {
+                    const isPdf = /\.pdf($|\?)/i.test(url);
+                    return `<a href="${escAttr(url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:#047857;font-size:0.82rem;font-weight:600;text-decoration:none;">
+                                <i class="fas ${isPdf ? 'fa-file-pdf' : 'fa-image'}"></i> Ver comprovante anexado
+                            </a>
+                            <button type="button" data-action="remove-receipt" title="Remover comprovante"
+                                style="margin-left:8px;background:none;border:none;color:#dc2626;cursor:pointer;font-size:0.85rem;"><i class="fas fa-trash"></i></button>`;
+                };
+                const receiptSlotHtml = (kind, label, url) => `
+                    <div data-receipt-slot="${kind}" style="border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;background:#fff;">
+                        <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:0.85rem;color:#334155;margin-bottom:8px;">
+                            <i class="fas fa-receipt" style="color:#6366f1;"></i> ${label}
+                        </div>
+                        <div data-receipt-body="${kind}">${url ? receiptLinkHtml(url) : receiptEmptyHtml()}</div>
+                        <button type="button" data-action="attach-receipt" data-kind="${kind}"
+                            style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:8px;padding:6px 12px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-paperclip"></i> <span data-attach-label>${url ? 'Trocar comprovante' : 'Anexar comprovante'}</span>
+                        </button>
+                    </div>
+                `;
+                const receiptsHtml = `
+                    <section class="conclude-section">
+                        <h4><i class="fas fa-paperclip"></i> Comprovantes de pagamento</h4>
+                        <p style="font-size:0.78rem;color:#64748b;margin:-6px 0 10px;">Anexe o comprovante da entrada e/ou do valor final (imagem ou PDF). Quando for pago integralmente, anexe só o comprovante do valor integral. Os comprovantes ficam disponíveis também no Financeiro, nas entradas.</p>
+                        <div style="display:grid;gap:10px;">
+                            ${receiptSlotHtml('signal', 'Comprovante da entrada / sinal', event.signalReceiptUrl)}
+                            ${receiptSlotHtml('final', 'Comprovante do valor final / integral', event.finalReceiptUrl)}
+                        </div>
+                    </section>
+                `;
+
+                // === Pagamento agendado para depois do evento ===
+                const isScheduledInit = !!event.paymentScheduled;
+                const scheduleHtml = `
+                    <section class="conclude-section">
+                        <h4><i class="fas fa-calendar-day"></i> Pagamento agendado</h4>
+                        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:0.88rem;color:#334155;line-height:1.3;">
+                            <input type="checkbox" id="conclude-payment-scheduled" ${isScheduledInit ? 'checked' : ''} style="width:18px;height:18px;accent-color:#6366f1;margin-top:1px;flex-shrink:0;">
+                            <span>O pagamento ficou agendado para uma data <strong>posterior</strong> ao evento</span>
+                        </label>
+                        <div id="conclude-schedule-fields" style="margin-top:10px;${isScheduledInit ? '' : 'display:none;'}">
+                            <label class="cs-label" style="display:block;margin-bottom:4px;">Data prevista do pagamento</label>
+                            <input type="date" id="conclude-scheduled-date" value="${escAttr(event.scheduledPaymentDate || '')}"
+                                style="width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;font-size:0.9rem;background:#fff;color:#1e293b;">
+                            <label class="cs-label" style="display:block;margin:10px 0 4px;">Motivo do agendamento</label>
+                            <textarea id="conclude-scheduled-reason" placeholder="Ex.: cliente vai pagar o restante 30 dias após o evento; aguardando repasse da escola; etc."
+                                style="width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:0.85rem;background:#fff;color:#1e293b;resize:vertical;min-height:64px;">${escAttr(event.scheduledPaymentReason || '')}</textarea>
+                            <p style="font-size:0.75rem;color:#64748b;margin-top:6px;"><i class="fas fa-bell"></i> Você receberá uma notificação quando a data chegar.</p>
+                        </div>
+                    </section>
+                `;
+
                 overlay.innerHTML = `
                     <div class="conclude-box ${alreadyConcluded ? 'is-review' : ''}" role="document" style="position:relative;">
                         <header class="conclude-header ${alreadyConcluded ? 'is-review' : ''}">
@@ -6056,6 +6112,10 @@
                                     <option value="Cancelado" ${isCancelled ? 'selected' : ''}>❌ Cancelado</option>
                                 </select>
                             </section>
+
+                            ${receiptsHtml}
+
+                            ${scheduleHtml}
 
                             ${ticketResultHtml}
 
@@ -6155,6 +6215,90 @@
                         overlay.querySelector('#conclude-ticket-net')
                     );
                 }
+
+                // === Pagamento agendado: mostra/oculta os campos conforme o checkbox ===
+                const scheduleCheckbox = overlay.querySelector('#conclude-payment-scheduled');
+                const scheduleFields = overlay.querySelector('#conclude-schedule-fields');
+                scheduleCheckbox?.addEventListener('change', () => {
+                    scheduleFields.style.display = scheduleCheckbox.checked ? '' : 'none';
+                    if (scheduleCheckbox.checked) {
+                        const dateInp = overlay.querySelector('#conclude-scheduled-date');
+                        if (dateInp && !dateInp.value) {
+                            // Sugere a data do próprio evento como ponto de partida.
+                            dateInp.value = (event.endDate && event.endDate > event.date) ? event.endDate : (event.date || '');
+                        }
+                    }
+                });
+
+                // === Comprovantes de pagamento: anexar / trocar / remover ===
+                // Um input oculto por tipo (signal/final), aceitando imagem ou PDF.
+                const receiptInputs = {};
+                ['signal', 'final'].forEach(kind => {
+                    const inp = document.createElement('input');
+                    inp.type = 'file';
+                    inp.accept = 'image/*,application/pdf';
+                    inp.style.cssText = 'position:absolute;left:-9999px;width:0;height:0;opacity:0;';
+                    overlay.appendChild(inp);
+                    receiptInputs[kind] = inp;
+
+                    inp.addEventListener('change', async () => {
+                        const file = inp.files && inp.files[0];
+                        if (!file) return;
+                        const slot = overlay.querySelector(`[data-receipt-slot="${kind}"]`);
+                        const body = slot?.querySelector(`[data-receipt-body="${kind}"]`);
+                        const attachBtn = slot?.querySelector('[data-action="attach-receipt"]');
+                        if (attachBtn) {
+                            attachBtn.disabled = true;
+                            attachBtn.querySelector('[data-attach-label]').textContent = 'Enviando...';
+                        }
+                        const result = await api.uploadComprovanteEvento(event.id, file, kind);
+                        if (attachBtn) attachBtn.disabled = false;
+                        inp.value = '';
+                        if (result.ok && result.data?.url) {
+                            const url = result.data.url;
+                            // Atualiza objeto em memória + array local pra refletir no Financeiro/agenda.
+                            const field = kind === 'signal' ? 'signalReceiptUrl' : 'finalReceiptUrl';
+                            event[field] = url;
+                            const idx = events.findIndex(e => e.id === event.id);
+                            if (idx >= 0) events[idx][field] = url;
+                            if (body) body.innerHTML = receiptLinkHtml(url);
+                            if (attachBtn) attachBtn.querySelector('[data-attach-label]').textContent = 'Trocar comprovante';
+                            showToast('Comprovante anexado!');
+                        } else {
+                            if (attachBtn) attachBtn.querySelector('[data-attach-label]').textContent = 'Anexar comprovante';
+                            showToast(result.error || 'Erro ao anexar comprovante.', true);
+                        }
+                    });
+                });
+
+                overlay.addEventListener('click', async (e) => {
+                    const attachBtn = e.target.closest('[data-action="attach-receipt"]');
+                    if (attachBtn) {
+                        receiptInputs[attachBtn.dataset.kind]?.click();
+                        return;
+                    }
+                    const removeBtn = e.target.closest('[data-action="remove-receipt"]');
+                    if (removeBtn) {
+                        const slot = removeBtn.closest('[data-receipt-slot]');
+                        const kind = slot?.dataset.receiptSlot;
+                        if (!kind) return;
+                        if (!confirm('Remover este comprovante?')) return;
+                        const ok = await api.removerComprovanteEvento(event.id, kind);
+                        if (ok) {
+                            const field = kind === 'signal' ? 'signalReceiptUrl' : 'finalReceiptUrl';
+                            event[field] = null;
+                            const idx = events.findIndex(ev => ev.id === event.id);
+                            if (idx >= 0) events[idx][field] = null;
+                            const body = slot.querySelector(`[data-receipt-body="${kind}"]`);
+                            if (body) body.innerHTML = receiptEmptyHtml();
+                            const lbl = slot.querySelector('[data-attach-label]');
+                            if (lbl) lbl.textContent = 'Anexar comprovante';
+                            showToast('Comprovante removido.');
+                        } else {
+                            showToast('Erro ao remover comprovante.', true);
+                        }
+                    }
+                });
 
                 // Inputs ocultos (um por toy) pra abrir picker e câmera direta
                 const fileInputs = {};
@@ -6352,6 +6496,22 @@
                 confirmBtn.addEventListener('click', async () => {
                     const newStatus = overlay.querySelector('#conclude-payment-status').value;
                     const newObservations = overlay.querySelector('#conclude-event-obs').value.trim();
+
+                    // Pagamento agendado para depois do evento
+                    const scheduledChecked = !!overlay.querySelector('#conclude-payment-scheduled')?.checked;
+                    const scheduledDate = overlay.querySelector('#conclude-scheduled-date')?.value || null;
+                    const scheduledReason = (overlay.querySelector('#conclude-scheduled-reason')?.value || '').trim() || null;
+                    if (scheduledChecked && !scheduledDate) {
+                        showToast('Informe a data prevista do pagamento agendado.', true);
+                        overlay.querySelector('#conclude-scheduled-date')?.focus();
+                        return;
+                    }
+                    const scheduleResult = {
+                        paymentScheduled: scheduledChecked,
+                        scheduledPaymentDate: scheduledChecked ? scheduledDate : null,
+                        scheduledPaymentReason: scheduledChecked ? scheduledReason : null
+                    };
+
                     confirmBtn.disabled = true;
                     confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
@@ -6369,6 +6529,7 @@
                         signalReceived: newStatus === 'Pago Integralmente' || newStatus === 'Sinal Pago' ? true : event.signalReceived,
                         eventObservations: newObservations || null,
                         ...ticketResult,
+                        ...scheduleResult,
                         // Garante que os items estejam no formato aceito pelo salvarEvento (id + quantity + price)
                         items: eventItems.map(it => ({
                             id: it.toyId || it.toy?.id || it.id,
@@ -6387,7 +6548,8 @@
                                 status: 'concluido',
                                 paymentStatus: newStatus,
                                 eventObservations: newObservations || null,
-                                ...ticketResult
+                                ...ticketResult,
+                                ...scheduleResult
                             };
                         }
                         renderAll();

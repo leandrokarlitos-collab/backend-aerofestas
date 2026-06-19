@@ -165,6 +165,16 @@ model Event {
   signalReceived   Boolean?
   paymentDetails   String?
 
+  // Comprovantes de pagamento (anexados na conclusão do evento)
+  signalReceiptUrl String?   // Comprovante do sinal/entrada (imagem ou PDF no Storage)
+  finalReceiptUrl  String?   // Comprovante do valor final/integral (imagem ou PDF no Storage)
+
+  // Pagamento agendado para uma data posterior ao evento
+  paymentScheduled          Boolean?  @default(false) // marca que o pagamento ficou para depois
+  scheduledPaymentDate      String?   // YYYY-MM-DD — quando o pagamento deve cair
+  scheduledPaymentReason    String?   // por que ficou agendado para depois
+  scheduledPaymentNotified  Boolean?  @default(false) // controla a notificação na data agendada
+
   // Evento vendido por ingresso (sem locação fixa) — apenas projeção
   isTicketSale     Boolean?
   estimatedValue   Float?

@@ -327,6 +327,13 @@
                             cancelado,
                             status: evt.status || null,
                             paymentStatus: evt.paymentStatus || null,
+                            // Comprovantes de pagamento anexados na conclusão
+                            signalReceiptUrl: evt.signalReceiptUrl || null,
+                            finalReceiptUrl: evt.finalReceiptUrl || null,
+                            // Pagamento agendado para depois do evento
+                            paymentScheduled: !!evt.paymentScheduled,
+                            scheduledPaymentDate: evt.scheduledPaymentDate || null,
+                            scheduledPaymentReason: evt.scheduledPaymentReason || null,
                             isSynced: true
                         };
                     });
@@ -931,6 +938,11 @@
                             valor: e.valor, // já é 0 quando cancelado
                             valorOriginal: e.valorOriginal,
                             cancelado: e.cancelado,
+                            signalReceiptUrl: e.signalReceiptUrl,
+                            finalReceiptUrl: e.finalReceiptUrl,
+                            paymentScheduled: e.paymentScheduled,
+                            scheduledPaymentDate: e.scheduledPaymentDate,
+                            scheduledPaymentReason: e.scheduledPaymentReason,
                             deletavel: false,
                             editavel: true,
                             eventoId: e.id,
@@ -978,6 +990,18 @@
                                     btnDel = '<span class="text-gray-400 text-xs">-</span>';
                                 }
 
+                                // Comprovantes de pagamento (entrada / final) e agendamento
+                                let extrasHtml = '';
+                                if (entry.signalReceiptUrl || entry.finalReceiptUrl) {
+                                    const links = [];
+                                    if (entry.signalReceiptUrl) links.push(`<a href="${entry.signalReceiptUrl}" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">entrada</a>`);
+                                    if (entry.finalReceiptUrl) links.push(`<a href="${entry.finalReceiptUrl}" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">final</a>`);
+                                    extrasHtml += `<div class="text-xs text-gray-500 mt-0.5"><i class="fa-solid fa-paperclip"></i> Comprovante: ${links.join(' · ')}</div>`;
+                                }
+                                if (entry.paymentScheduled && entry.scheduledPaymentDate) {
+                                    extrasHtml += `<div class="text-xs mt-0.5 inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"><i class="fa-solid fa-calendar-day"></i> Pgto agendado: ${formatarData(entry.scheduledPaymentDate)}${entry.scheduledPaymentReason ? ` — ${entry.scheduledPaymentReason}` : ''}</div>`;
+                                }
+
                                 const rowClass = entry.cancelado ? 'class="bg-red-50 text-gray-500"' : '';
                                 const valorCell = entry.cancelado
                                     ? `<span class="line-through text-gray-400">${formatarMoeda(entry.valorOriginal || 0)}</span>
@@ -989,7 +1013,7 @@
                                     <tr ${rowClass}>
                                         <td>${formatarData(entry.data)}</td>
                                         <td>${entry.empresa}</td>
-                                        <td>${entry.descricao}</td>
+                                        <td>${entry.descricao}${extrasHtml}</td>
                                         <td>${entry.local}</td>
                                         <td>${entry.detalhes}</td>
                                         <td>${valorCell}</td>

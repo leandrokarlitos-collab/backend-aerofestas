@@ -6,8 +6,14 @@ const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
-    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal'
+    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal',
+    'paymentScheduled', 'scheduledPaymentDate', 'scheduledPaymentReason'
 ];
+
+const todayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 // Serializa campo JSON do evento (excludedDates, dateOverrides) — aceita string já serializada,
 // array/objeto, null ou undefined. Retorna string JSON ou null.
@@ -69,6 +75,27 @@ function normalizeExternalRentals(rawList) {
 }
 
 function buildEventFields(evt, userId) {
+    // Pagamento agendado para depois do evento. Usamos a convenção "undefined = não mexe"
+    // para que o formulário normal de edição (que não envia esses campos) não apague o
+    // agendamento definido na conclusão.
+    const scheduledFields = {};
+    if (evt.paymentScheduled !== undefined) {
+        const isScheduled = evt.paymentScheduled === true || evt.paymentScheduled === 'true';
+        scheduledFields.paymentScheduled = isScheduled;
+        scheduledFields.scheduledPaymentDate = isScheduled ? (evt.scheduledPaymentDate || null) : null;
+        scheduledFields.scheduledPaymentReason = isScheduled ? (evt.scheduledPaymentReason || null) : null;
+        // Re-arma a notificação quando há um agendamento futuro; desliga quando não está agendado.
+        if (!isScheduled) {
+            scheduledFields.scheduledPaymentNotified = false;
+        } else if (evt.scheduledPaymentDate && evt.scheduledPaymentDate >= todayStr()) {
+            scheduledFields.scheduledPaymentNotified = false;
+        }
+    } else {
+        // Permite atualizar só a data/motivo sem reenviar o flag.
+        if (evt.scheduledPaymentDate !== undefined) scheduledFields.scheduledPaymentDate = evt.scheduledPaymentDate || null;
+        if (evt.scheduledPaymentReason !== undefined) scheduledFields.scheduledPaymentReason = evt.scheduledPaymentReason || null;
+    }
+
     return {
         date: evt.date,
         endDate: evt.endDate || null,
@@ -111,6 +138,7 @@ function buildEventFields(evt, userId) {
         signalAmount: toFloatOr(evt.signalAmount, 0),
         signalReceived: evt.signalReceived || false,
         paymentDetails: evt.paymentDetails,
+        ...scheduledFields,
 
         isTicketSale: evt.isTicketSale === true,
         estimatedValue: evt.isTicketSale === true ? toFloatOr(evt.estimatedValue, 0) : null,

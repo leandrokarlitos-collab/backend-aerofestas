@@ -1,9 +1,24 @@
 const express = require('express');
+const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
 const EventService = require('../services/EventService');
+const EventReceiptService = require('../services/EventReceiptService');
 
 const adminRouter = express.Router();
 const publicRouter = express.Router();
+
+// Comprovantes de pagamento: imagem ou PDF, 1 arquivo por envio, até 15 MB.
+const receiptUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024, files: 1 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Apenas imagens ou PDF são permitidos'));
+        }
+    }
+});
 
 // ---------------- ADMIN ----------------
 
@@ -25,6 +40,45 @@ adminRouter.delete('/events/:id', authenticate, async (req, res, next) => {
     try {
         await EventService.deleteEvent(req.params.id, req.user);
         res.json({ success: true, message: 'Evento excluído com sucesso!' });
+    } catch (err) { next(err); }
+});
+
+// --- Comprovantes de pagamento (sinal / final) ---
+
+// Upload de comprovante (multipart, campo "file"; kind no body: "signal" | "final")
+adminRouter.post(
+    '/events/:id/receipt',
+    authenticate,
+    (req, res, next) => {
+        receiptUpload.single('file')(req, res, (err) => {
+            if (err) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    err.status = 413;
+                    err.message = 'Arquivo maior que 15 MB. Reduza o arquivo e tente novamente.';
+                } else if (!err.status) {
+                    err.status = 400;
+                }
+                return next(err);
+            }
+            next();
+        });
+    },
+    async (req, res, next) => {
+        try {
+            const kind = req.body?.kind;
+            const result = await EventReceiptService.uploadReceipt(
+                req.params.id, req.file, kind, req.user
+            );
+            res.json({ success: true, data: result });
+        } catch (err) { next(err); }
+    }
+);
+
+// Remove a referência ao comprovante (kind: "signal" | "final")
+adminRouter.delete('/events/:id/receipt/:kind', authenticate, async (req, res, next) => {
+    try {
+        await EventReceiptService.removeReceipt(req.params.id, req.params.kind, req.user);
+        res.json({ success: true });
     } catch (err) { next(err); }
 });
 

@@ -416,6 +416,72 @@ setInterval(checkDueDatesAndNotify, 12 * 60 * 60 * 1000);
 // Executa 1 minuto após iniciar o servidor
 setTimeout(checkDueDatesAndNotify, 60000);
 
+// Função para avisar quando chega a data de um pagamento agendado para depois do evento
+async function checkScheduledPaymentsAndNotify() {
+    console.log("🔍 Verificando pagamentos agendados...");
+    try {
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        // Eventos com pagamento agendado cuja data já chegou (ou passou) e que ainda não foram avisados.
+        const eventsToNotify = await prisma.event.findMany({
+            where: {
+                paymentScheduled: true,
+                scheduledPaymentNotified: { not: true },
+                scheduledPaymentDate: { not: null, lte: today },
+                status: { not: 'cancelado' },
+                paymentStatus: { not: 'Pago Integralmente' }
+            }
+        });
+
+        if (eventsToNotify.length === 0) return;
+
+        const subscriptions = await prisma.pushSubscription.findMany();
+
+        for (const evt of eventsToNotify) {
+            const cliente = evt.clientName || 'Cliente';
+            const venc = (evt.scheduledPaymentDate || '').split('-').reverse().join('/');
+            const restante = Math.max((evt.price || 0) - (evt.signalReceived ? (evt.signalAmount || 0) : 0), 0);
+            const title = '💰 Pagamento agendado venceu';
+            const body = `${cliente}: pagamento previsto para ${venc}`
+                + (restante > 0 ? ` (R$ ${restante.toFixed(2)})` : '')
+                + (evt.scheduledPaymentReason ? ` — ${evt.scheduledPaymentReason}` : '');
+            const payload = JSON.stringify({
+                title,
+                body,
+                url: '/Agenda%20de%20eventos.html',
+                type: 'EVENT_SCHEDULED_PAYMENT'
+            });
+
+            for (const sub of subscriptions) {
+                try {
+                    await webpush.sendNotification(
+                        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                        payload
+                    );
+                } catch (err) {
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                    }
+                }
+            }
+
+            // Marca como avisado para não repetir todo ciclo.
+            await prisma.event.update({
+                where: { id: evt.id },
+                data: { scheduledPaymentNotified: true }
+            });
+        }
+    } catch (error) {
+        console.error('Erro checkScheduledPayments:', error);
+    }
+}
+
+// Verifica a cada 12 horas
+setInterval(checkScheduledPaymentsAndNotify, 12 * 60 * 60 * 1000);
+// Executa ~90 segundos após iniciar o servidor
+setTimeout(checkScheduledPaymentsAndNotify, 90000);
+
 // --- BACKUP DIÁRIO AUTOMÁTICO (03:00) ---
 cron.schedule('0 3 * * *', async () => {
     console.log('⏰ Executando backup diário automático...');

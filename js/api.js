@@ -344,6 +344,54 @@ export const api = {
         }
     },
 
+    /**
+     * Faz upload de um comprovante de pagamento (imagem ou PDF) de um evento.
+     * @param kind 'signal' (entrada/sinal) ou 'final' (valor final/integral)
+     * Retorna { ok, status, data?: { url, kind }, error? }.
+     */
+    uploadComprovanteEvento: (eventId, file, kind, onProgress) => {
+        return new Promise((resolve) => {
+            try {
+                const token = getToken();
+                const fd = new FormData();
+                fd.append('file', file, file.name || 'comprovante');
+                fd.append('kind', kind);
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${BASE_URL}/admin/events/${eventId}/receipt`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.upload.addEventListener('progress', (ev) => {
+                    if (typeof onProgress === 'function' && ev.lengthComputable) {
+                        onProgress(Math.round((ev.loaded / ev.total) * 100));
+                    }
+                });
+                xhr.addEventListener('load', () => {
+                    let json = {};
+                    try { json = JSON.parse(xhr.responseText || '{}'); } catch (_) { /* */ }
+                    resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, ...json });
+                });
+                xhr.addEventListener('error', () => resolve({ ok: false, status: 0, error: 'Erro de rede' }));
+                xhr.send(fd);
+            } catch (error) {
+                resolve({ ok: false, error: 'Erro ao iniciar upload' });
+            }
+        });
+    },
+
+    // Remove o comprovante de pagamento de um evento (kind: 'signal' | 'final')
+    removerComprovanteEvento: async (eventId, kind) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events/${eventId}/receipt/${kind}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) {
+            console.error('Erro ao remover comprovante:', e);
+            return false;
+        }
+    },
+
     // Deletar Evento
     deletarEvento: async (eventoId) => {
         try {
