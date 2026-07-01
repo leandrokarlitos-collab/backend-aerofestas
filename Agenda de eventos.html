@@ -2408,17 +2408,8 @@
                                 </p>
                                 <p class="text-xs text-gray-500 mb-2">Preencha após o evento. Se não tiver o detalhamento, informe só o <strong>líquido</strong> — os demais são opcionais.</p>
 
-                                <!-- Lançamento item a item: por quanto foi vendido × quantas unidades = total -->
-                                <div class="mb-3">
-                                    <label class="block text-xs font-semibold text-gray-700 mb-1"><i class="fas fa-list-ul text-amber-600 mr-1"></i>Itens vendidos <span class="text-gray-400 font-normal">(opcional)</span></label>
-                                    <div class="grid grid-cols-12 gap-1.5">
-                                        <input type="text" id="ticket-item-desc" placeholder="Item (ex.: Pula-pula)" class="form-input col-span-5 px-2 py-2 rounded-md text-sm" title="Descrição do item">
-                                        <input type="number" id="ticket-item-price" min="0" step="0.01" placeholder="Valor un. R$" class="form-input col-span-3 px-2 py-2 rounded-md text-sm" title="Valor unitário">
-                                        <input type="number" id="ticket-item-qty" min="1" value="1" class="form-input col-span-2 px-1 py-2 rounded-md text-sm" title="Quantidade">
-                                        <button type="button" id="add-ticket-item-btn" class="col-span-2 bg-amber-500 text-white shrink-0 rounded-md hover:bg-amber-600 text-sm font-semibold">Add</button>
-                                    </div>
-                                    <div id="ticket-items-list" class="mt-2 space-y-1.5 max-h-28 overflow-y-auto"></div>
-                                </div>
+                                <!-- Detalhamento da venda por ficha: atrações do evento, passaportes e brinquedos juninos -->
+                                <div id="ticket-breakdown-host" class="mb-3"></div>
 
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
@@ -4169,11 +4160,15 @@
                     ? (() => { try { return JSON.parse(event.ticketItems); } catch { return []; } })()
                     : event.ticketItems;
                 if (!Array.isArray(raw)) return [];
-                return raw.map(i => ({
-                    description: String(i.description || '').trim(),
-                    unitPrice: Number(i.unitPrice) || 0,
-                    quantity: parseInt(i.quantity) || 1
-                })).filter(i => i.description);
+                return raw.map(i => {
+                    const category = (i.category === 'passaporte' || i.category === 'junino') ? i.category : 'atracao';
+                    return {
+                        category,
+                        description: category === 'passaporte' ? 'Passaporte' : String(i.description || '').trim(),
+                        unitPrice: Number(i.unitPrice) || 0,
+                        quantity: parseInt(i.quantity) || 0
+                    };
+                }).filter(i => i.description || i.unitPrice > 0 || i.quantity > 0);
             };
             // Horário a exibir para um dia específico — usa override do dia se houver, senão o padrão do evento.
             const getEventTimesForDate = (event, dateStr) => {
@@ -5368,122 +5363,195 @@
             ).join('<span style="display:inline-block;width:2px;"></span>');
             const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            // === Controlador de lançamento item a item da venda por ingresso ===
-            // Usado tanto no modal principal quanto no popup "Concluir evento".
-            // refs: { listEl, descEl, priceEl, qtyEl, addBtn, grossEl, percentEl, netEl, tagEl }
-            // - A soma (valor unitário × qtd) dos itens preenche automaticamente o Bruto vendido.
-            // - O Bruto continua editável; se o valor divergir da soma dos itens, mostra uma tag.
-            // - O Líquido é recalculado a partir do Bruto e da % Escola (mas segue editável).
-            const createTicketItemsController = (refs, initial) => {
-                const items = [];
-                const seed = (arr) => {
-                    items.length = 0;
-                    (Array.isArray(arr) ? arr : []).forEach(i => {
-                        const description = String(i.description || '').trim();
-                        if (!description) return;
-                        items.push({
-                            description,
-                            unitPrice: Number(i.unitPrice) || 0,
-                            quantity: parseInt(i.quantity) || 1
-                        });
-                    });
-                };
-                seed(initial);
+            // Deriva itens de "atração" a partir dos brinquedos do evento (event.items/toys):
+            // cada brinquedo vira uma linha (nome + qtd do agendamento) para a venda por ficha.
+            const deriveAtracaoItems = (rawItems) => (Array.isArray(rawItems) ? rawItems : []).map(item => {
+                const toyId = item.toyId || (item.toy && item.toy.id) || item.id;
+                const toy = (Array.isArray(toys) ? toys : []).find(t => t.id === toyId);
+                const name = (toy && toy.name) || (item.toy && item.toy.name) || item.name || 'Item';
+                return { category: 'atracao', description: name, unitPrice: Number(item.price) || 0, quantity: parseInt(item.quantity) || 1 };
+            }).filter(i => i.description);
+
+            // === Controlador do detalhamento da venda por ficha/ingresso ===
+            // Renderiza tudo dentro de hostEl: itens (atrações do evento), passaportes e brinquedos
+            // juninos — cada linha com valor unitário e quantidade editáveis; a soma preenche o Bruto.
+            // Usado no editor do evento e no popup "Concluir evento".
+            // refs: { grossEl, percentEl, netEl, tagEl }; opts: { getSeedItems, initial }
+            const createTicketItemsController = (hostEl, refs, opts = {}) => {
+                const getSeed = typeof opts.getSeedItems === 'function' ? opts.getSeedItems : () => [];
+                let items = [];
+                const norm = (arr) => (Array.isArray(arr) ? arr : []).map(i => {
+                    const category = (i.category === 'passaporte' || i.category === 'junino') ? i.category : 'atracao';
+                    return {
+                        category,
+                        description: category === 'passaporte' ? 'Passaporte' : String(i.description || '').trim(),
+                        unitPrice: Number(i.unitPrice) || 0,
+                        quantity: parseInt(i.quantity) || 0
+                    };
+                });
+                const setData = (arr) => { items = norm(arr); };
+                setData(opts.initial);
+
+                const CSS_INPUT = 'border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font-size:0.85rem;background:#fff;color:#1e293b;width:100%;box-sizing:border-box;';
+                const CSS_HEAD = 'font-size:0.8rem;font-weight:700;color:#374151;margin:0 0 6px;display:flex;align-items:center;gap:5px;';
+                const CSS_ADD = 'background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:0.8rem;font-weight:600;cursor:pointer;';
+                const CSS_SEED = 'background:#fff;color:#b45309;border:1px solid #fcd34d;border-radius:8px;padding:5px 10px;font-size:0.8rem;font-weight:600;cursor:pointer;';
+                const CSS_SEC = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed #e5e7eb;';
+                const CSS_CHK = 'display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;';
+                const CSS_ROW = 'display:grid;grid-template-columns:minmax(0,1fr) 76px 44px 78px 20px;gap:5px;align-items:center;margin-bottom:6px;';
+                const CSS_TOTAL = 'font-size:0.8rem;font-weight:700;color:#b45309;text-align:right;overflow:hidden;text-overflow:ellipsis;';
 
                 const sumItems = () => items.reduce((a, it) => a + (Number(it.unitPrice) || 0) * (parseInt(it.quantity) || 0), 0);
-
                 const recalcNet = () => {
                     if (!refs.netEl || !refs.grossEl) return;
-                    const net = computeTicketNet(refs.grossEl.value, refs.percentEl ? refs.percentEl.value : 0);
-                    if (net !== null) refs.netEl.value = net.toFixed(2);
+                    const n = computeTicketNet(refs.grossEl.value, refs.percentEl ? refs.percentEl.value : 0);
+                    if (n !== null) refs.netEl.value = n.toFixed(2);
                 };
-
-                // Mostra a tag quando há itens e o Bruto foi editado à mão divergindo da soma.
                 const updateTag = () => {
                     if (!refs.tagEl) return;
                     const sum = sumItems();
-                    const grossVal = parseFloat(refs.grossEl ? refs.grossEl.value : '');
-                    const diverge = items.length > 0 && Number.isFinite(grossVal) && Math.abs(grossVal - sum) > 0.005;
-                    refs.tagEl.classList.toggle('hidden', !diverge);
-                    if (diverge) refs.tagEl.textContent = `✎ editado · soma dos itens ${formatCurrency(sum)}`;
+                    const g = parseFloat(refs.grossEl ? refs.grossEl.value : '');
+                    const d = items.length > 0 && Number.isFinite(g) && Math.abs(g - sum) > 0.005;
+                    refs.tagEl.classList.toggle('hidden', !d);
+                    if (d) refs.tagEl.textContent = `✎ editado · soma dos itens ${formatCurrency(sum)}`;
                 };
-
-                const renderList = () => {
-                    if (!refs.listEl) return;
-                    refs.listEl.innerHTML = '';
-                    if (items.length === 0) {
-                        refs.listEl.innerHTML = '<p class="text-xs text-center text-gray-400 italic pt-1">Nenhum item lançado.</p>';
-                        return;
-                    }
-                    items.forEach((it, idx) => {
-                        const total = (Number(it.unitPrice) || 0) * (parseInt(it.quantity) || 0);
-                        const row = document.createElement('div');
-                        row.className = 'flex justify-between items-center bg-white/70 border border-amber-200 p-2 rounded-md text-sm';
-                        row.innerHTML = `<span><strong>${escAttr(it.description)}</strong> — ${formatCurrency(it.unitPrice)} × ${parseInt(it.quantity) || 0} = <strong class="text-amber-700">${formatCurrency(total)}</strong></span>
-                            <button type="button" data-idx="${idx}" class="ticket-item-remove text-red-500 hover:text-red-700 ml-2 shrink-0"><i class="fas fa-times"></i></button>`;
-                        refs.listEl.appendChild(row);
-                    });
-                    refs.listEl.querySelectorAll('.ticket-item-remove').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            items.splice(parseInt(e.currentTarget.dataset.idx), 1);
-                            afterItemsChange();
-                        });
-                    });
-                };
-
-                // Após adicionar/remover item: soma vai ao Bruto, recalcula Líquido e re-renderiza.
-                const afterItemsChange = () => {
+                // Ao digitar valores: soma vai ao Bruto, recalcula Líquido e a tag (sem re-render, mantém foco).
+                const liveRecalc = () => {
                     if (refs.grossEl && items.length > 0) refs.grossEl.value = sumItems().toFixed(2);
                     recalcNet();
-                    renderList();
                     updateTag();
                 };
 
-                const addItem = () => {
-                    const description = (refs.descEl && refs.descEl.value || '').trim();
-                    const unitPrice = parseFloat(refs.priceEl ? refs.priceEl.value : '');
-                    const quantity = parseInt(refs.qtyEl ? refs.qtyEl.value : '') || 1;
-                    if (!description) { showToast('Informe a descrição do item.', true); refs.descEl && refs.descEl.focus(); return; }
-                    if (!Number.isFinite(unitPrice) || unitPrice < 0) { showToast('Informe um valor unitário válido.', true); refs.priceEl && refs.priceEl.focus(); return; }
-                    if (quantity <= 0) { showToast('Informe uma quantidade válida.', true); refs.qtyEl && refs.qtyEl.focus(); return; }
-                    items.push({ description, unitPrice, quantity });
-                    if (refs.descEl) refs.descEl.value = '';
-                    if (refs.priceEl) refs.priceEl.value = '';
-                    if (refs.qtyEl) refs.qtyEl.value = '1';
-                    refs.descEl && refs.descEl.focus();
-                    afterItemsChange();
+                const mkText = (val, ph) => { const e = document.createElement('input'); e.type = 'text'; e.value = val || ''; e.placeholder = ph || ''; e.style.cssText = CSS_INPUT; return e; };
+                const mkNum = (val, ph, step) => { const e = document.createElement('input'); e.type = 'number'; e.min = '0'; if (step) e.step = step; e.value = (val ? val : ''); e.placeholder = ph || ''; e.style.cssText = CSS_INPUT; return e; };
+                const mkTotal = (it) => { const s = document.createElement('span'); s.style.cssText = CSS_TOTAL; s.textContent = formatCurrency((Number(it.unitPrice) || 0) * (parseInt(it.quantity) || 0)); return s; };
+                const mkRemove = (it) => {
+                    const b = document.createElement('button'); b.type = 'button'; b.innerHTML = '<i class="fas fa-times"></i>';
+                    b.style.cssText = 'color:#ef4444;background:none;border:none;cursor:pointer;font-size:0.9rem;padding:0;';
+                    b.addEventListener('click', () => { const i = items.indexOf(it); if (i >= 0) items.splice(i, 1); render(); liveRecalc(); });
+                    return b;
+                };
+                // Linha editável (atração/junino): nome + valor + qtd + total + remover.
+                const editableRow = (it) => {
+                    const row = document.createElement('div'); row.style.cssText = CSS_ROW;
+                    const desc = mkText(it.description, 'Item');
+                    const price = mkNum(it.unitPrice, 'Valor un.', '0.01');
+                    const qty = mkNum(it.quantity, 'Qtd', '1');
+                    const total = mkTotal(it);
+                    desc.addEventListener('input', () => { it.description = desc.value; });
+                    const onNum = () => { it.unitPrice = parseFloat(price.value) || 0; it.quantity = parseInt(qty.value) || 0; total.textContent = formatCurrency(it.unitPrice * it.quantity); liveRecalc(); };
+                    price.addEventListener('input', onNum);
+                    qty.addEventListener('input', onNum);
+                    row.append(desc, price, qty, total, mkRemove(it));
+                    return row;
+                };
+                const mkHeader = (iconCls, text) => { const h = document.createElement('div'); h.style.cssText = CSS_HEAD; h.innerHTML = `<i class="fas ${iconCls}" style="color:#d97706;"></i><span>${text}</span>`; return h; };
+                const mkButton = (label, css, onClick) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.style.cssText = css; b.addEventListener('click', onClick); return b; };
+
+                // --- Seção: Atrações do evento ---
+                const renderAtracao = () => {
+                    const sec = document.createElement('div'); sec.style.cssText = CSS_SEC;
+                    sec.appendChild(mkHeader('fa-list-ul', 'Itens vendidos (atrações do evento)'));
+                    const list = document.createElement('div');
+                    const atr = items.filter(i => i.category === 'atracao');
+                    if (!atr.length) { const p = document.createElement('p'); p.style.cssText = 'font-size:0.78rem;color:#94a3b8;font-style:italic;margin:2px 0 8px;'; p.textContent = 'Nenhum item. Adicione ou puxe as atrações do evento.'; list.appendChild(p); }
+                    atr.forEach(it => list.appendChild(editableRow(it)));
+                    sec.appendChild(list);
+                    const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+                    btns.appendChild(mkButton('+ Adicionar item', CSS_ADD, () => { items.push({ category: 'atracao', description: '', unitPrice: 0, quantity: 1 }); render(); }));
+                    btns.appendChild(mkButton('Puxar atrações do evento', CSS_SEED, () => {
+                        items = items.filter(i => i.category !== 'atracao').concat(norm(getSeed()));
+                        render(); liveRecalc();
+                    }));
+                    sec.appendChild(btns);
+                    return sec;
                 };
 
-                if (refs.addBtn) refs.addBtn.addEventListener('click', addItem);
-                [refs.descEl, refs.priceEl, refs.qtyEl].forEach(el => el && el.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); addItem(); }
-                }));
-                // Edição manual de Bruto/% → recalcula Líquido e atualiza a tag.
-                refs.grossEl && refs.grossEl.addEventListener('input', () => { recalcNet(); updateTag(); });
-                refs.percentEl && refs.percentEl.addEventListener('input', () => { recalcNet(); updateTag(); });
+                // --- Seção: Passaportes (Houve? Se sim, quantos e qual valor) ---
+                const renderPassaporte = () => {
+                    const sec = document.createElement('div'); sec.style.cssText = CSS_SEC;
+                    const has = items.some(i => i.category === 'passaporte');
+                    const label = document.createElement('label'); label.style.cssText = CSS_CHK;
+                    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = has; chk.style.cssText = 'width:16px;height:16px;';
+                    label.append(chk, document.createTextNode(' Houve venda de passaportes?'));
+                    sec.appendChild(label);
+                    chk.addEventListener('change', () => {
+                        if (chk.checked) { if (!items.some(i => i.category === 'passaporte')) items.push({ category: 'passaporte', description: 'Passaporte', unitPrice: 0, quantity: 0 }); }
+                        else { items = items.filter(i => i.category !== 'passaporte'); }
+                        render(); liveRecalc();
+                    });
+                    if (has) {
+                        const it = items.find(i => i.category === 'passaporte');
+                        const row = document.createElement('div'); row.style.cssText = CSS_ROW + 'margin-top:8px;';
+                        const lab = document.createElement('span'); lab.style.cssText = 'font-size:0.85rem;font-weight:600;color:#1e293b;'; lab.textContent = 'Passaporte';
+                        const price = mkNum(it.unitPrice, 'Valor un.', '0.01');
+                        const qty = mkNum(it.quantity, 'Quantos', '1');
+                        const total = mkTotal(it);
+                        const onNum = () => { it.unitPrice = parseFloat(price.value) || 0; it.quantity = parseInt(qty.value) || 0; total.textContent = formatCurrency(it.unitPrice * it.quantity); liveRecalc(); };
+                        price.addEventListener('input', onNum); qty.addEventListener('input', onNum);
+                        row.append(lab, price, qty, total, document.createElement('span'));
+                        sec.appendChild(row);
+                    }
+                    return sec;
+                };
 
-                renderList();
+                // --- Seção: Brinquedos juninos (Houve? Se sim, quais e qual valor) ---
+                const renderJunino = () => {
+                    const sec = document.createElement('div'); sec.style.cssText = 'margin-bottom:4px;';
+                    const has = items.some(i => i.category === 'junino');
+                    const label = document.createElement('label'); label.style.cssText = CSS_CHK;
+                    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = has; chk.style.cssText = 'width:16px;height:16px;';
+                    label.append(chk, document.createTextNode(' Houve brinquedos juninos?'));
+                    sec.appendChild(label);
+                    chk.addEventListener('change', () => {
+                        if (chk.checked) { if (!items.some(i => i.category === 'junino')) items.push({ category: 'junino', description: '', unitPrice: 0, quantity: 1 }); }
+                        else { items = items.filter(i => i.category !== 'junino'); }
+                        render(); liveRecalc();
+                    });
+                    if (has) {
+                        const wrap = document.createElement('div'); wrap.style.cssText = 'margin-top:8px;';
+                        items.filter(i => i.category === 'junino').forEach(it => wrap.appendChild(editableRow(it)));
+                        wrap.appendChild(mkButton('+ Adicionar brinquedo junino', CSS_ADD, () => { items.push({ category: 'junino', description: '', unitPrice: 0, quantity: 1 }); render(); }));
+                        sec.appendChild(wrap);
+                    }
+                    return sec;
+                };
+
+                const render = () => {
+                    if (!hostEl) return;
+                    hostEl.innerHTML = '';
+                    hostEl.appendChild(renderAtracao());
+                    hostEl.appendChild(renderPassaporte());
+                    hostEl.appendChild(renderJunino());
+                };
+
+                // Bruto/% manuais → recalcula Líquido e tag.
+                if (refs.grossEl) refs.grossEl.addEventListener('input', () => { recalcNet(); updateTag(); });
+                if (refs.percentEl) refs.percentEl.addEventListener('input', () => { recalcNet(); updateTag(); });
+
+                render();
                 updateTag();
 
                 return {
-                    getItems: () => items.map(i => ({ ...i })),
+                    getItems: () => items
+                        .filter(it => (it.description && it.description.trim()) || Number(it.unitPrice) > 0 || parseInt(it.quantity) > 0)
+                        .map(it => ({ category: it.category, description: it.category === 'passaporte' ? 'Passaporte' : it.description, unitPrice: Number(it.unitPrice) || 0, quantity: parseInt(it.quantity) || 0 })),
                     // Recarrega os itens (não mexe no Bruto — o valor salvo é autoritativo ao editar).
-                    setItems: (arr) => { seed(arr); renderList(); updateTag(); }
+                    setItems: (arr) => { setData(arr); render(); updateTag(); }
                 };
             };
 
-            // Instância do modal principal (elementos estáticos do formulário).
-            const ticketItemsMainCtrl = createTicketItemsController({
-                listEl: document.getElementById('ticket-items-list'),
-                descEl: document.getElementById('ticket-item-desc'),
-                priceEl: document.getElementById('ticket-item-price'),
-                qtyEl: document.getElementById('ticket-item-qty'),
-                addBtn: document.getElementById('add-ticket-item-btn'),
-                grossEl: document.getElementById('ticket-gross-sold'),
-                percentEl: document.getElementById('ticket-school-percent'),
-                netEl: document.getElementById('ticket-net-total'),
-                tagEl: document.getElementById('ticket-gross-tag')
-            }, []);
+            // Instância do editor do evento (host estático). "Puxar atrações" lê os brinquedos atuais.
+            const ticketItemsMainCtrl = createTicketItemsController(
+                document.getElementById('ticket-breakdown-host'),
+                {
+                    grossEl: document.getElementById('ticket-gross-sold'),
+                    percentEl: document.getElementById('ticket-school-percent'),
+                    netEl: document.getElementById('ticket-net-total'),
+                    tagEl: document.getElementById('ticket-gross-tag')
+                },
+                { getSeedItems: () => deriveAtracaoItems(toysForCurrentEvent), initial: [] }
+            );
 
             const handleEditToyUnits = async (toyId) => {
                 // Re-fetch para garantir units atualizadas
@@ -6390,17 +6458,8 @@
                         <h4><i class="fas fa-ticket-alt"></i> Resultado da venda por ficha</h4>
                         <p style="font-size:0.78rem;color:#64748b;margin:-6px 0 10px;">Se não tiver o detalhamento, informe só o <strong>líquido</strong> — os demais são opcionais.</p>
 
-                        <!-- Lançamento item a item: por quanto foi vendido × unidades = total -->
-                        <div style="margin-bottom:12px;">
-                            <label class="cs-label" style="display:block;margin-bottom:4px;font-weight:600;"><i class="fas fa-list-ul" style="color:#d97706;margin-right:4px;"></i>Itens vendidos <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
-                            <div style="display:grid;grid-template-columns:1fr 90px 60px 52px;gap:6px;">
-                                <input type="text" id="conclude-ticket-item-desc" placeholder="Item (ex.: Pula-pula)" style="border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;font-size:0.85rem;background:#fff;color:#1e293b;">
-                                <input type="number" id="conclude-ticket-item-price" min="0" step="0.01" placeholder="Valor un." style="border:1px solid #cbd5e1;border-radius:10px;padding:8px;font-size:0.85rem;background:#fff;color:#1e293b;">
-                                <input type="number" id="conclude-ticket-item-qty" min="1" value="1" placeholder="Qtd" style="border:1px solid #cbd5e1;border-radius:10px;padding:8px;font-size:0.85rem;background:#fff;color:#1e293b;">
-                                <button type="button" id="conclude-add-ticket-item" style="background:#f59e0b;color:#fff;border:none;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;">Add</button>
-                            </div>
-                            <div id="conclude-ticket-items-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:130px;overflow-y:auto;"></div>
-                        </div>
+                        <!-- Detalhamento da venda por ficha: atrações do evento, passaportes e brinquedos juninos -->
+                        <div id="conclude-ticket-breakdown-host" style="margin-bottom:12px;"></div>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                             <div>
@@ -6736,18 +6795,22 @@
                     });
                 });
 
-                // Controlador de lançamento item a item (venda por ingresso) — só quando aplicável.
-                const concludeTicketCtrl = event.isTicketSale ? createTicketItemsController({
-                    listEl: overlay.querySelector('#conclude-ticket-items-list'),
-                    descEl: overlay.querySelector('#conclude-ticket-item-desc'),
-                    priceEl: overlay.querySelector('#conclude-ticket-item-price'),
-                    qtyEl: overlay.querySelector('#conclude-ticket-item-qty'),
-                    addBtn: overlay.querySelector('#conclude-add-ticket-item'),
-                    grossEl: overlay.querySelector('#conclude-ticket-gross'),
-                    percentEl: overlay.querySelector('#conclude-ticket-percent'),
-                    netEl: overlay.querySelector('#conclude-ticket-net'),
-                    tagEl: overlay.querySelector('#conclude-ticket-gross-tag')
-                }, parseTicketItems(event)) : null;
+                // Controlador do detalhamento da venda por ficha — só quando aplicável.
+                // Se já houver itens salvos, usa-os; senão, pré-carrega as atrações do evento.
+                const concludeTicketCtrl = event.isTicketSale ? (() => {
+                    const saved = parseTicketItems(event);
+                    const initial = saved.length ? saved : deriveAtracaoItems(event.items || event.toys);
+                    return createTicketItemsController(
+                        overlay.querySelector('#conclude-ticket-breakdown-host'),
+                        {
+                            grossEl: overlay.querySelector('#conclude-ticket-gross'),
+                            percentEl: overlay.querySelector('#conclude-ticket-percent'),
+                            netEl: overlay.querySelector('#conclude-ticket-net'),
+                            tagEl: overlay.querySelector('#conclude-ticket-gross-tag')
+                        },
+                        { getSeedItems: () => deriveAtracaoItems(event.items || event.toys), initial }
+                    );
+                })() : null;
 
                 // === Confirmar conclusão ===
                 const confirmBtn = overlay.querySelector('#conclude-confirm');
