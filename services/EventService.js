@@ -86,6 +86,8 @@ function buildEventFields(evt, userId) {
         clientDob: evt.clientDob,
         clientPhone: evt.clientPhone,
         clientPhoneBackup: evt.clientPhoneBackup,
+        clientSocial: evt.clientSocial,
+        clientSocialChecked: typeof evt.clientSocialChecked === 'boolean' ? evt.clientSocialChecked : null,
 
         cnpj: evt.cnpj,
         companyAddress: evt.companyAddress,

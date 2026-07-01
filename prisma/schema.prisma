@@ -127,7 +127,11 @@ model Event {
   clientDob    String?
   clientPhone  String?
   clientPhoneBackup String?
-  
+
+  // Redes sociais do cliente (PF ou PJ) + conferência
+  clientSocial        String?
+  clientSocialChecked Boolean?
+
   // Dados do Cliente PJ
   cnpj         String?
   companyAddress String?

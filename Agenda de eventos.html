@@ -1987,6 +1987,25 @@
                                         class="form-input w-full px-3 py-2 rounded-md">
                                 </div>
                             </div>
+                            <!-- INÍCIO: Redes Sociais com conferência (PF) -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                <div class="md:col-span-2">
+                                    <label for="client-social"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Redes Sociais
+                                        (Opcional)</label>
+                                    <input type="text" id="client-social"
+                                        class="form-input w-full px-3 py-2 rounded-md"
+                                        placeholder="@instagram, Facebook, etc.">
+                                </div>
+                                <div>
+                                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 py-2">
+                                        <input type="checkbox" id="client-social-checked"
+                                            class="form-checkbox h-4 w-4 text-indigo-600 rounded">
+                                        Conferido
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- FIM: Redes Sociais com conferência (PF) -->
                             <!-- INÍCIO DA MODIFICAÇÃO: Mover campo de Endereço de Contrato -->
                             <div class="mt-4"> <!-- Adicionado mt-4 para espaçamento -->
                                 <label for="contract-address"
@@ -2057,6 +2076,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- INÍCIO: Redes Sociais com conferência (PJ) -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                <div class="md:col-span-2">
+                                    <label for="pj-social"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Redes Sociais
+                                        (Opcional)</label>
+                                    <input type="text" id="pj-social"
+                                        class="form-input w-full px-3 py-2 rounded-md"
+                                        placeholder="@instagram, Facebook, etc.">
+                                </div>
+                                <div>
+                                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 py-2">
+                                        <input type="checkbox" id="pj-social-checked"
+                                            class="form-checkbox h-4 w-4 text-indigo-600 rounded">
+                                        Conferido
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- FIM: Redes Sociais com conferência (PJ) -->
                         </div>
                         <!-- END: NEW CLIENT SECTION -->
                     </div>
@@ -5573,6 +5611,8 @@
                 clientDob: event.clientDob,
                 clientPhone: event.clientPhone,
                 clientPhoneBackup: event.clientPhoneBackup,
+                clientSocial: event.clientSocial,
+                clientSocialChecked: event.clientSocialChecked,
                 cnpj: event.cnpj,
                 companyAddress: event.companyAddress,
                 repName: event.repName,
@@ -6850,6 +6890,8 @@
                     eventData.clientDob = document.getElementById('client-dob').value;
                     eventData.clientPhone = document.getElementById('client-phone').value;
                     eventData.clientPhoneBackup = document.getElementById('client-phone-backup').value;
+                    eventData.clientSocial = document.getElementById('client-social').value.trim();
+                    eventData.clientSocialChecked = document.getElementById('client-social-checked').checked;
                 } else {
                     eventData.clientName = document.getElementById('pj-company-name').value.trim();
                     eventData.cnpj = document.getElementById('pj-cnpj').value;
@@ -6858,6 +6900,8 @@
                     eventData.repCpf = document.getElementById('pj-rep-cpf').value;
                     eventData.repPhone = document.getElementById('pj-rep-phone').value;
                     eventData.repPhoneBackup = document.getElementById('pj-rep-phone-backup').value;
+                    eventData.clientSocial = document.getElementById('pj-social').value.trim();
+                    eventData.clientSocialChecked = document.getElementById('pj-social-checked').checked;
                 }
 
                 // Preço final unificado (inclui locações externas e a multiplicação das atrações pelos dias)
@@ -7063,6 +7107,8 @@
                         document.getElementById('pj-rep-cpf').value = eventToEdit.repCpf || '';
                         document.getElementById('pj-rep-phone').value = eventToEdit.repPhone || '';
                         document.getElementById('pj-rep-phone-backup').value = eventToEdit.repPhoneBackup || '';
+                        document.getElementById('pj-social').value = eventToEdit.clientSocial || '';
+                        document.getElementById('pj-social-checked').checked = !!eventToEdit.clientSocialChecked;
                     } else { // PF or old event without type
                         clientTypePfRadio.checked = true;
                         document.getElementById('client-name').value = eventToEdit.clientName || '';
@@ -7071,6 +7117,8 @@
                         document.getElementById('client-dob').value = eventToEdit.clientDob || ''; // <-- ADICIONADO
                         document.getElementById('client-phone').value = eventToEdit.clientPhone || '';
                         document.getElementById('client-phone-backup').value = eventToEdit.clientPhoneBackup || '';
+                        document.getElementById('client-social').value = eventToEdit.clientSocial || '';
+                        document.getElementById('client-social-checked').checked = !!eventToEdit.clientSocialChecked;
                     }
 
                 } else {
@@ -7302,6 +7350,12 @@
                 const referenciaOS = event.referencia ? `<p><strong>Referência:</strong> ${event.referencia}</p>` : '';
                 // FIM DA MODIFICAÇÃO
 
+                // Redes sociais + selo de conferência para a O.S.
+                const socialCheck = event.clientSocialChecked ? ' <span style="color:#059669;">✔ conferido</span>' : '';
+                const socialOS = event.clientSocial
+                    ? `<p><strong>Redes Sociais:</strong> ${event.clientSocial}${socialCheck}</p>`
+                    : '';
+
                 let clientDetailsHtml = '';
                 if (event.clientType === 'PJ') {
                     clientDetailsHtml = `
@@ -7309,6 +7363,7 @@
                 <p><strong>CNPJ:</strong> ${event.cnpj || 'N/A'}</p>
                 <p><strong>Representante:</strong> ${event.repName || 'N/A'}</p>
                 <p><strong>Contato:</strong> ${event.repPhone || 'N/A'}</p>
+                ${socialOS}
                 <p><strong>Endereço do Evento:</strong> ${fullEventAddressOS || 'N/A'}</p>
                 ${referenciaOS}
             `;
@@ -7319,6 +7374,7 @@
                 <p><strong>Telefone Reserva:</strong> ${event.clientPhoneBackup || 'N/A'}</p>
                 <p><strong>CPF:</strong> ${event.clientCpf || 'N/A'}</p>
                 <p><strong>RG:</strong> ${event.clientRg || 'N/A'}</p>
+                ${socialOS}
                 <p><strong>Endereço:</strong> ${fullEventAddressOS || 'N/A'}</p>
                 ${referenciaOS}
             `;
