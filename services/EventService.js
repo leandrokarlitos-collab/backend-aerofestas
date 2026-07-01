@@ -6,7 +6,7 @@ const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
-    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal'
+    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems'
 ];
 
 // Serializa campo JSON do evento (excludedDates, dateOverrides) — aceita string já serializada,
@@ -120,6 +120,8 @@ function buildEventFields(evt, userId) {
         ticketGrossSold: evt.isTicketSale === true ? toFloatOrNull(evt.ticketGrossSold) : null,
         ticketSchoolPercent: evt.isTicketSale === true ? toFloatOrNull(evt.ticketSchoolPercent) : null,
         ticketNetTotal: evt.isTicketSale === true ? toFloatOrNull(evt.ticketNetTotal) : null,
+        // Itens lançados da venda por ingresso — JSON string (ou null quando não é venda por ingresso).
+        ticketItems: evt.isTicketSale === true ? serializeJsonField(evt.ticketItems) : null,
 
         monitor: evt.monitor,
         eventObservations: evt.eventObservations,
