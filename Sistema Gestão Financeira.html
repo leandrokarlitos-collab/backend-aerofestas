@@ -314,7 +314,10 @@
                     // Reuniões (eventType='meeting') são filtradas — não geram receita.
                     state.eventos = eventosCloud.filter(evt => evt.eventType !== 'meeting').map(evt => {
                         const cancelado = evt.status === 'cancelado' || evt.paymentStatus === 'Cancelado';
-                        const valorOriginal = evt.price || 0;
+                        // Eventos por ingresso têm price = 0; a receita é o líquido realizado (ticketNetTotal),
+                        // que passa a compor o faturamento assim que informado no fechamento.
+                        const liquidoIngresso = (evt.isTicketSale && evt.ticketNetTotal != null) ? (Number(evt.ticketNetTotal) || 0) : 0;
+                        const valorOriginal = (evt.price || 0) + liquidoIngresso;
                         return {
                             id: evt.id.toString(),
                             data: evt.date,

@@ -3349,12 +3349,20 @@
                     const eventDate = new Date(event.date + 'T00:00:00');
                     return eventDate.getFullYear() === year && eventDate.getMonth() === month;
                 });
-                const total = monthlyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+                // Faturamento do mês: preço dos eventos normais + líquido realizado dos eventos por ingresso.
+                // (Eventos por ingresso têm price = 0; o líquido só entra depois de concluído/informado.)
+                const total = monthlyEvents.reduce((sum, event) => {
+                    let v = Number(event.price) || 0;
+                    if (event.isTicketSale && event.ticketNetTotal != null) v += Number(event.ticketNetTotal) || 0;
+                    return sum + v;
+                }, 0);
                 monthlyTotalEl.textContent = formatCurrency(total);
 
-                // Valor estimado: soma apenas eventos vendidos por ingresso
+                // Estimado do mês: só eventos por ingresso AINDA não realizados (sem líquido informado).
+                // Quando o líquido é lançado, o evento sai do estimado e passa ao faturamento acima.
                 const estimatedTotal = monthlyEvents.reduce((sum, event) => {
                     if (!event.isTicketSale) return sum;
+                    if (event.ticketNetTotal != null) return sum;
                     return sum + (Number(event.estimatedValue) || 0);
                 }, 0);
                 const estimatedContainer = document.getElementById('monthly-estimated-container');

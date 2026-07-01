@@ -26,9 +26,15 @@ router.get('/dashboard', async (req, res) => {
             where: { date: { gte: startStr, lte: endStr } },
             include: { externalRentals: true }
         });
+        // Eventos vendidos por ingresso têm price = 0; sua receita é o líquido realizado
+        // (ticketNetTotal), que entra no faturamento assim que informado no fechamento.
         const receitaEventos = events
             .filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado')
-            .reduce((acc, evt) => acc + (evt.price || 0), 0);
+            .reduce((acc, evt) => {
+                let v = evt.price || 0;
+                if (evt.isTicketSale && evt.ticketNetTotal != null) v += Number(evt.ticketNetTotal) || 0;
+                return acc + v;
+            }, 0);
 
         // 1.2 Locações externas (custo de equipamentos de terceiros usados em eventos)
         // - Só contam de eventos não-cancelados
