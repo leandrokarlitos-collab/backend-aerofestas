@@ -3097,6 +3097,9 @@
             let toysForCurrentEvent = [];
             // Locações externas (equipamentos de terceiros) do evento atual em edição
             let externalRentalsForCurrentEvent = [];
+            // Quando ≠ null, o modal está editando SOMENTE um dia de um evento multi-dia.
+            // Formato: { eventId, dateStr }
+            let dayEditContext = null;
 
             // INÍCIO: Estado do Wizard
             let currentStep = 1;
@@ -4174,6 +4177,51 @@
                 return out;
             };
 
+            // === Helpers para itens/valores por dia (eventos multi-dia) ===
+            // Soma o subtotal (brinquedos) de uma lista de itens (aceita {price|valor, quantity}).
+            const subtotalOfItems = (items) => (items || []).reduce((acc, i) => {
+                const price = (i.price !== undefined && i.price !== null) ? Number(i.price) : (Number(i.valor) || 0);
+                return acc + price * (i.quantity || 1);
+            }, 0);
+
+            // Itens efetivos de UM dia: usa o override do dia se houver, senão os itens base do evento.
+            const dayItemsForDate = (event, dateStr) => {
+                const o = parseDateOverrides(event)[dateStr];
+                if (o && Array.isArray(o.items)) return o.items;
+                return event.items || event.toys || [];
+            };
+
+            // Subtotal (brinquedos) de UM dia: override tem prioridade; senão o subtotal base por dia.
+            const daySubtotalForDate = (event, dateStr, basePerDaySubtotal) => {
+                const o = parseDateOverrides(event)[dateStr];
+                if (o && Array.isArray(o.items)) {
+                    return (o.subtotal !== undefined && o.subtotal !== null) ? Number(o.subtotal) : subtotalOfItems(o.items);
+                }
+                return basePerDaySubtotal;
+            };
+
+            // Recalcula os totais do evento somando cada dia ativo (dia customizado usa o próprio subtotal).
+            // Frete, locações externas e desconto continuam a nível de evento (contam uma vez).
+            const recomputeEventTotals = (event) => {
+                const activeDates = getEventActiveDates(event);
+                const basePerDay = subtotalOfItems(event.items || event.toys);
+                let attractionsTotal = 0;
+                activeDates.forEach(d => { attractionsTotal += daySubtotalForDate(event, d, basePerDay); });
+                const externalRentalsTotal = (event.externalRentals || []).reduce((a, r) => a + (Number(r.cost) || 0), 0);
+                const deliveryFee = Number(event.deliveryFee) || 0;
+                const discountType = event.discountType || 'fixed';
+                const discountValue = Number(event.discountValue) || 0;
+                const discount = discountType === 'fixed' ? discountValue : (attractionsTotal * discountValue) / 100;
+                const finalPrice = Math.max((attractionsTotal - discount) + externalRentalsTotal + deliveryFee, 0);
+                return { attractionsTotal, finalPrice };
+            };
+
+            // true se o evento tem pelo menos um dia com itens customizados.
+            const hasDayItemOverrides = (event) => {
+                const ov = parseDateOverrides(event);
+                return Object.keys(ov).some(d => Array.isArray(ov[d].items));
+            };
+
             // Reuniões ocupam um único dia; eventos multi-dia ocupam o intervalo [date, endDate]
             // exceto dias listados em excludedDates.
             const eventOccursOnDate = (event, dateStr) => {
@@ -4404,8 +4452,10 @@
                         // === Card de EVENTO (lógica original) ===
                         let toysHtml = '<ul class="list-disc list-inside pl-1 text-blue-500">';
 
+                        // Itens deste dia específico (usa override do dia se houver; senão os itens base).
+                        const dayHasItemOverride = !!(parseDateOverrides(event)[dateStr] || {}).items;
                         // Aceita tanto o formato antigo (toys) quanto o novo (items) da API
-                        const lista = event.toys || event.items || [];
+                        const lista = dayHasItemOverride ? dayItemsForDate(event, dateStr) : (event.toys || event.items || []);
 
                         lista.forEach(item => {
                             let toyName = 'Brinquedo removido';
@@ -4460,6 +4510,18 @@
                             ? `<span class="ml-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide" title="Horário customizado apenas para este dia"><i class="fas fa-clock"></i> custom</span>`
                             : '';
                         const hasTime = dayHasTime;
+
+                        // Valor deste dia (quando multi-dia): mostra o valor do dia + total do evento.
+                        // Dia com itens customizados ganha selo "custom".
+                        let dayValueHtml = '';
+                        if (isMultiDay && !event.isTicketSale) {
+                            const basePerDay = subtotalOfItems(event.items || event.toys);
+                            const dayValue = daySubtotalForDate(event, dateStr, basePerDay);
+                            const itemsCustomBadge = dayHasItemOverride
+                                ? `<span class="ml-1 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-wide" title="Itens/valores customizados apenas para este dia"><i class="fas fa-star"></i> custom</span>`
+                                : '';
+                            dayValueHtml = `<p class="font-medium"><i class="fas fa-calendar-day fa-fw mr-1 text-gray-400"></i>Valor deste dia: <strong class="text-emerald-600">${formatCurrency(dayValue)}</strong>${itemsCustomBadge}</p>`;
+                        }
 
                         // INÍCIO DA MODIFICAÇÃO: Endereço Completo para Card
                         const eventAddressFull = [event.clientAddress, event.complemento, event.bairro, event.cidade]
@@ -4516,16 +4578,17 @@
                                 <!-- INÍCIO DA MODIFICAÇÃO: Monitor -->
                                 ${event.monitor ? `<p><i class="fas fa-user-shield fa-fw mr-1 text-gray-400"></i>Monitor: <strong>${event.monitor}</strong></p>` : ''}
                                 <!-- FIM DA MODIFICAÇÃO -->
+                                ${dayValueHtml}
                                 ${event.isTicketSale
                                     ? `<p class="font-medium"><i class="fas fa-ticket-alt fa-fw mr-1 text-amber-500"></i>Vendido por ingresso — Estimado: <strong class="text-amber-600">${formatCurrency(event.estimatedValue || 0)}</strong>${event.ticketNetTotal != null ? ` · Líquido: <strong class="text-emerald-600">${formatCurrency(event.ticketNetTotal)}</strong>` : ''}</p>`
-                                    : `<p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>Valor: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>`
+                                    : `<p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>${isMultiDay ? 'Total do evento' : 'Valor'}: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>`
                                 }
                                 ${event.paymentDetails ? `<p><i class="fas fa-credit-card fa-fw mr-1 text-gray-400"></i>Pagamento: <strong class="text-xs">${event.paymentDetails.replace(/\n/g, '<br>')}</strong></p>` : ''}
                                 ${birthdayInfoHtml} <!-- ADICIONADO AQUI -->
                             </div>
                         </div>
                         <div class="flex flex-col space-y-2 items-center">
-                             <button data-id="${event.id}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
+                             <button data-id="${event.id}" data-date="${dateStr}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
                             ${isMultiDay ? `
                                 <button data-id="${event.id}" data-date="${dateStr}" class="edit-day-time-btn text-indigo-500 hover:text-indigo-700 text-lg shrink-0" title="Editar horário apenas deste dia"><i class="fas fa-clock"></i></button>
                                 <button data-id="${event.id}" data-date="${dateStr}" class="delete-day-btn text-amber-600 hover:text-amber-800 text-lg shrink-0" title="Remover apenas este dia do evento"><i class="fas fa-calendar-minus"></i></button>
@@ -4538,7 +4601,7 @@
                             <button data-id="${event.id}" class="generate-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" title="✨ Criar Mensagem de Confirmação"><i class="fas fa-comment-dots"></i></button>
                             <!-- BOTÃO DE IMPRESSÃO INDIVIDUAL REMOVIDO -->
                             <!-- NOVO CHECKBOX DE SELEÇÃO -->
-                            <input type="checkbox" data-id="${event.id}" class="event-print-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500" title="Selecionar para Impressão">
+                            <input type="checkbox" data-id="${event.id}" data-date="${dateStr}" class="event-print-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500" title="Selecionar para Impressão">
                             <button data-id="${event.id}" class="generate-contract-btn text-purple-500 hover:text-purple-600 text-lg shrink-0" title="Gerar Contrato"><i class="fas fa-file-signature"></i></button>
                         </div>
                     </div>
@@ -4593,7 +4656,7 @@
                 linkCadastroBtn.onclick = () => openLinkCadastroModal(dateStr);
                 dayEventsList.appendChild(linkCadastroBtn);
 
-                document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id))));
+                document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date)));
                 document.querySelectorAll('.conclude-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleConcludeEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.cancel-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleCancelEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.reactivate-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleReactivateEvent(parseInt(e.currentTarget.dataset.id))));
@@ -5019,6 +5082,18 @@
                     const price = (toy.price !== undefined && toy.price !== null) ? toy.price : (toy.valor || 0);
                     return acc + (price * (toy.quantity || 1));
                 }, 0);
+
+                // Modo "somente este dia": o valor mostrado é apenas o subtotal dos itens do dia
+                // (frete/desconto/locações são do evento e não entram no preview do dia).
+                if (dayEditContext) {
+                    return {
+                        perDaySubtotal, activeDays: 1, attractionsTotal: perDaySubtotal,
+                        externalRentalsTotal: 0, deliveryFee: 0,
+                        discountType: 'fixed', discountValue: 0, discount: 0,
+                        finalPrice: perDaySubtotal
+                    };
+                }
+
                 const activeDays = getActiveDaysForPricing();
                 const attractionsTotal = perDaySubtotal * activeDays;
 
@@ -5613,9 +5688,56 @@
                 }
             };
 
-            const handleEditEvent = (eventId) => {
+            const handleEditEvent = (eventId, dateStr = null) => {
                 const event = events.find(e => e.id === eventId);
-                if (event) showEventModal(event.date, event);
+                if (!event) return;
+
+                const isMultiDay = !!(event.endDate && event.endDate > event.date) && event.eventType !== 'meeting';
+                // Evento de um único dia (ou reunião): edição direta, como antes.
+                if (!isMultiDay || !dateStr) {
+                    showEventModal(event.date, event);
+                    return;
+                }
+
+                // Multi-dia: pergunta se a edição é para todos os dias ou só para este dia.
+                const dayLabel = fmtDateBR(dateStr);
+                const bodyHtml = `
+                    <div class="conclude-section">
+                        <p style="font-size:0.9rem;color:#334155;margin:0 0 14px;">
+                            Este é um evento de <strong>vários dias</strong>. Como você quer editar?
+                        </p>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <button type="button" id="edit-all-days" style="text-align:left;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:12px 14px;border-radius:12px;cursor:pointer;">
+                                <div style="font-weight:700;font-size:0.92rem;"><i class="fas fa-calendar-week"></i> Todos os dias</div>
+                                <div style="font-size:0.78rem;color:#4f46e5;margin-top:2px;">Altera os itens/valores base aplicados a todos os dias (dias já personalizados são mantidos).</div>
+                            </button>
+                            <button type="button" id="edit-this-day" style="text-align:left;background:#faf5ff;border:1px solid #e9d5ff;color:#6b21a8;padding:12px 14px;border-radius:12px;cursor:pointer;">
+                                <div style="font-weight:700;font-size:0.92rem;"><i class="fas fa-calendar-day"></i> Somente o dia ${dayLabel}</div>
+                                <div style="font-size:0.78rem;color:#9333ea;margin-top:2px;">Altera itens/valores apenas deste dia, sem afetar os demais.</div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                const overlay = openConfirmOverlay({
+                    title: 'Editar evento multi-dia',
+                    subtitle: `${fmtDateBR(event.date)} → ${fmtDateBR(event.endDate)}`,
+                    bodyHtml,
+                    confirmLabel: 'Cancelar',
+                    confirmIcon: 'fa-times',
+                    onConfirm: async () => { /* botão confirmar serve como fechar */ }
+                });
+                // Remove o botão "confirmar" padrão (as escolhas são os dois botões acima).
+                const confirmBtn = overlay.querySelector('#overlay-confirm');
+                if (confirmBtn) confirmBtn.parentElement.style.display = 'none';
+
+                overlay.querySelector('#edit-all-days').addEventListener('click', () => {
+                    overlay.remove();
+                    showEventModal(event.date, event);
+                });
+                overlay.querySelector('#edit-this-day').addEventListener('click', () => {
+                    overlay.remove();
+                    showEventModal(event.date, event, dateStr);
+                });
             };
 
             // === Helpers para edição por dia em eventos multi-dia ===
@@ -6793,6 +6915,67 @@
                 }
             };
 
+            // Salva as alterações de itens/horário de UM único dia (modo "somente este dia").
+            // Não toca nos itens base do evento nem nos demais dias; recalcula o total somando os dias.
+            const handleSaveSingleDay = async () => {
+                const { eventId, dateStr } = dayEditContext;
+                const event = events.find(e => e.id === eventId);
+                if (!event) { showToast('Evento não encontrado.', true); return; }
+
+                const dayItems = toysForCurrentEvent.map(t => ({ id: t.id, quantity: t.quantity, price: t.price }));
+                if (dayItems.length === 0) {
+                    showToast('Adicione ao menos um item para este dia.', true);
+                    return;
+                }
+                const dayStart = document.getElementById('event-start-time').value;
+                const dayEnd = document.getElementById('event-end-time').value;
+                if (dayStart && dayEnd && dayEnd <= dayStart) {
+                    showToast('O horário de término deve ser após o início.', true);
+                    return;
+                }
+
+                const overrides = parseDateOverrides(event);
+                const existing = overrides[dateStr] || {};
+                overrides[dateStr] = {
+                    ...existing,
+                    startTime: dayStart || existing.startTime || '',
+                    endTime: dayEnd || existing.endTime || '',
+                    items: dayItems,
+                    subtotal: subtotalOfItems(dayItems)
+                };
+
+                // Recalcula os totais do evento considerando o novo override deste dia.
+                const totals = recomputeEventTotals({ ...event, dateOverrides: overrides });
+                const payload = buildEventPayload(event, {
+                    dateOverrides: JSON.stringify(overrides),
+                    subtotal: totals.attractionsTotal,
+                    price: totals.finalPrice
+                });
+
+                const saveBtn = document.getElementById('save-step-btn');
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Salvando...';
+                saveBtn.disabled = true;
+                try {
+                    const response = await api.salvarEvento(payload);
+                    if (!response || !response.success) throw new Error('Falha ao salvar');
+                    const saved = response.data;
+                    const idx = events.findIndex(ev => ev.id === saved.id);
+                    if (idx !== -1) events[idx] = saved; else events.push(saved);
+                    hideModal(eventModal);
+                    renderAll();
+                    if (selectedDate) renderDayEvents(selectedDate);
+                    showToast(`Dia ${fmtDateBR(dateStr)} atualizado (somente este dia).`, false);
+                } catch (err) {
+                    console.error('Erro ao salvar dia:', err);
+                    showToast('Erro ao salvar o dia. Verifique a conexão.', true);
+                } finally {
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                    dayEditContext = null;
+                }
+            };
+
             const handleFormSubmit = async (e) => {
                 e.preventDefault();
 
@@ -6801,6 +6984,11 @@
                 // --- BIFURCAÇÃO: REUNIÃO ---
                 if (agendamentoType === 'meeting') {
                     return handleMeetingSubmit();
+                }
+
+                // --- BIFURCAÇÃO: EDIÇÃO DE UM ÚNICO DIA (multi-dia) ---
+                if (dayEditContext) {
+                    return handleSaveSingleDay();
                 }
 
                 // Validação
@@ -6946,6 +7134,32 @@
                 // Preço final unificado (inclui locações externas e a multiplicação das atrações pelos dias)
                 eventData.price = pricing.finalPrice;
 
+                // === Modo "todos os dias": preserva personalizações por dia (não-destrutivo) ===
+                // Se o evento já tinha dias com itens customizados, mantém esses overrides e recalcula
+                // o total somando cada dia (dias sem override usam os novos itens base). Overrides de
+                // dias que deixaram de existir (removidos do intervalo) são descartados.
+                if (eventId && !eventData.isTicketSale) {
+                    const existingEv = events.find(ev => ev.id === eventId);
+                    const existingOverrides = existingEv ? parseDateOverrides(existingEv) : {};
+                    const hasItemOverrides = Object.keys(existingOverrides).some(d => Array.isArray(existingOverrides[d].items));
+                    if (Object.keys(existingOverrides).length) {
+                        const activeSet = new Set(getEventActiveDates({ date: finalDate, endDate: finalEndDate, excludedDates }));
+                        const kept = {};
+                        Object.keys(existingOverrides).forEach(d => { if (activeSet.has(d)) kept[d] = existingOverrides[d]; });
+                        eventData.dateOverrides = Object.keys(kept).length ? JSON.stringify(kept) : null;
+                        if (hasItemOverrides) {
+                            const totals = recomputeEventTotals({
+                                date: finalDate, endDate: finalEndDate, excludedDates,
+                                items: eventData.items, externalRentals: eventData.externalRentals,
+                                deliveryFee: eventData.deliveryFee, discountType: eventData.discountType,
+                                discountValue: eventData.discountValue, dateOverrides: kept
+                            });
+                            eventData.subtotal = totals.attractionsTotal;
+                            eventData.price = totals.finalPrice;
+                        }
+                    }
+                }
+
                 // Vendido por ingresso: não há valor de locação, só o estimado (que vai à parte).
                 if (eventData.isTicketSale) {
                     eventData.price = 0;
@@ -7006,11 +7220,18 @@
                 }
             };
 
-            const showEventModal = (dateStr, eventToEdit = null) => {
+            const showEventModal = (dateStr, eventToEdit = null, dayEditDate = null) => {
                 eventForm.reset();
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
                 externalRentalsForCurrentEvent = [];
+
+                // Modo "somente este dia": só quando editando um evento multi-dia existente com data.
+                dayEditContext = (eventToEdit && eventToEdit.id && dayEditDate)
+                    ? { eventId: eventToEdit.id, dateStr: dayEditDate }
+                    : null;
+                // Remove banner de dia anterior (se houver)
+                document.getElementById('day-edit-banner')?.remove();
 
                 // Reseta o selo "Conferido" do Instagram (form.reset não mexe nos <p> de status)
                 document.getElementById('client-social-status')?.classList.add('hidden');
@@ -7183,6 +7404,42 @@
                     renderMultiDaySelector([]);
                 }
 
+                // === Modo "somente este dia": carrega os itens/horário do dia e ajusta a UI ===
+                if (dayEditContext && eventToEdit) {
+                    const ov = parseDateOverrides(eventToEdit)[dayEditContext.dateStr] || {};
+                    let dayItems;
+                    if (Array.isArray(ov.items)) {
+                        dayItems = ov.items.map(i => {
+                            const toy = toys.find(t => t.id === (i.id || i.toyId));
+                            return {
+                                id: i.id || i.toyId,
+                                name: toy ? toy.name : (i.name || 'Brinquedo'),
+                                quantity: i.quantity || 1,
+                                price: Number(i.price) || 0
+                            };
+                        });
+                    } else {
+                        // Cópia dos itens base (não altera os itens base do evento)
+                        dayItems = JSON.parse(JSON.stringify(toysForCurrentEvent));
+                    }
+                    toysForCurrentEvent = dayItems;
+
+                    // Horário específico do dia (override ou padrão do evento)
+                    const t = getEventTimesForDate(eventToEdit, dayEditContext.dateStr);
+                    document.getElementById('event-start-time').value = t.startTime || '';
+                    document.getElementById('event-end-time').value = t.endTime || '';
+
+                    document.getElementById('modal-title').textContent = `Editar itens/valores — dia ${fmtDateBR(dayEditContext.dateStr)}`;
+                    // Seletor de dias não se aplica ao editar um único dia
+                    document.getElementById('multi-day-selector')?.classList.add('hidden');
+
+                    const banner = document.createElement('div');
+                    banner.id = 'day-edit-banner';
+                    banner.className = 'mb-3 px-4 py-3 rounded-lg bg-purple-50 border border-purple-300 text-purple-800 text-sm';
+                    banner.innerHTML = `<i class="fas fa-calendar-day mr-1"></i> Você está editando <strong>somente o dia ${fmtDateBR(dayEditContext.dateStr)}</strong>. Os demais dias não serão afetados.<span style="display:block;margin-top:4px;font-size:0.78rem;color:#7e22ce;">Frete, desconto e locações externas pertencem ao evento — edite em “Todos os dias”.</span>`;
+                    eventForm.prepend(banner);
+                }
+
                 toggleClientTypeFields();
                 toggleBirthdayFields(); // <!-- CHAMADA DA NOVA FUNÇÃO -->
                 renderSelectedToysInModal();
@@ -7274,20 +7531,28 @@
              * @param {boolean} hidePrices - Se deve ocultar os valores.
              * @returns {string} - O HTML da Ordem de Serviço.
              */
-            const generateEventHTML = (event, hidePrices = false) => {
+            const generateEventHTML = (event, hidePrices = false, dateStr = null) => {
                 if (!event) {
                     console.error('❌ generateEventHTML: event is null/undefined');
                     return '';
                 }
 
-                console.log('🔍 generateEventHTML chamado para evento:', event.id, event);
+                console.log('🔍 generateEventHTML chamado para evento:', event.id, 'dia:', dateStr, event);
 
                 const yourCompany = companies.find(c => c.id === event.yourCompanyId);
+
+                // Contexto multi-dia: quando a OS é de um dia específico, usa os itens/valores DESSE dia.
+                const isMultiDayOS = !!(event.endDate && event.endDate > event.date);
+                const osDate = dateStr || event.date;
+                const dayOverrideOS = (isMultiDayOS && dateStr) ? (parseDateOverrides(event)[dateStr] || null) : null;
 
                 // VALIDAÇÃO ROBUSTA: Safe access to toys or items
                 let eventToys = [];
 
-                if (event.toys && Array.isArray(event.toys)) {
+                if (dayOverrideOS && Array.isArray(dayOverrideOS.items)) {
+                    eventToys = dayOverrideOS.items;
+                    console.log('✅ Usando itens customizados do dia', dateStr, ':', eventToys.length, 'itens');
+                } else if (event.toys && Array.isArray(event.toys)) {
                     eventToys = event.toys;
                     console.log('✅ Usando event.toys:', eventToys.length, 'itens');
                 } else if (event.items && Array.isArray(event.items)) {
@@ -7362,7 +7627,28 @@
 
                 let financeSummaryHtml = '';
                 if (!hidePrices) { // <--- MODIFICAÇÃO
-                    financeSummaryHtml = `
+                    if (isMultiDayOS && dateStr) {
+                        // OS de um dia específico: mostra o valor DESTE dia + o total do evento (referência).
+                        const dayValueOS = subtotalOfItems(eventToys);
+                        financeSummaryHtml = `
+                <div class="section">
+                    <h2>Resumo Financeiro</h2>
+                    <table style="max-width: 350px; margin-left: auto;">
+                        <tbody>
+                            <tr>
+                                <td style="text-align: right; font-weight: bold; font-size: 1.2em;">VALOR DESTE DIA</td>
+                                <td style="text-align: right; font-weight: bold; font-size: 1.2em;">${formatCurrency(dayValueOS)}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; color:#555;">Total do evento (todos os dias)</td>
+                                <td style="text-align: right; color:#555;">${formatCurrency(event.price)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+                    } else {
+                        financeSummaryHtml = `
                 <div class="section">
                     <h2>Resumo Financeiro</h2>
                     <table style="max-width: 350px; margin-left: auto;">
@@ -7381,12 +7667,21 @@
                     </table>
                 </div>
             `;
+                    }
                 }
                 // <!-- FIM DA MODIFICAÇÃO -->
 
 
-                const dateObj = new Date(event.date + 'T00:00:00');
-                const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(dateObj);
+                const dateObj = new Date(osDate + 'T00:00:00');
+                let formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(dateObj);
+                // Horário específico do dia (usa override do dia quando houver)
+                const osTimes = getEventTimesForDate(event, osDate);
+                // Indicador de "dia X de Y" quando a OS é de um dia específico de evento multi-dia
+                if (isMultiDayOS && dateStr) {
+                    const actives = getEventActiveDates(event);
+                    const idx = actives.indexOf(dateStr) + 1;
+                    if (idx > 0) formattedDate += ` (dia ${idx}/${actives.length})`;
+                }
 
                 // INÍCIO DA MODIFICAÇÃO: Endereço completo para O.S.
                 const fullEventAddressOS = [event.clientAddress, event.complemento, event.bairro, event.cidade]
@@ -7449,7 +7744,7 @@
                 <div class="section">
                     <div class="details-grid">
                         <p><strong>Data:</strong> <b>${formattedDate}</b></p>
-                        <p><strong>Horário:</strong> <b>${event.startTime} às ${event.endTime}</b></p>
+                        <p><strong>Horário:</strong> <b>${osTimes.startTime || event.startTime || '—'} às ${osTimes.endTime || event.endTime || '—'}</b></p>
                         ${monitorHtml} <!-- ADICIONADO AQUI -->
                     </div>
                 </div>
@@ -7495,7 +7790,8 @@
                 selectedCheckboxes.forEach((checkbox, index) => {
                     try {
                         const eventId = parseInt(checkbox.dataset.id);
-                        console.log(`\n🔍 [${index + 1}/${selectedCheckboxes.length}] Processando evento ID:`, eventId);
+                        const printDate = checkbox.dataset.date || null; // dia específico (multi-dia)
+                        console.log(`\n🔍 [${index + 1}/${selectedCheckboxes.length}] Processando evento ID:`, eventId, 'dia:', printDate);
 
                         const event = events.find(e => e.id === eventId);
 
@@ -7509,7 +7805,7 @@
                         console.log('  - toys:', event.toys);
                         console.log('  - items:', event.items);
 
-                        const eventHTML = generateEventHTML(event, hidePrices);
+                        const eventHTML = generateEventHTML(event, hidePrices, printDate);
 
                         if (eventHTML) {
                             allEventsHTML += eventHTML;
