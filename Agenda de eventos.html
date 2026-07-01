@@ -1987,25 +1987,27 @@
                                         class="form-input w-full px-3 py-2 rounded-md">
                                 </div>
                             </div>
-                            <!-- INÍCIO: Redes Sociais com conferência (PF) -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                                <div class="md:col-span-2">
-                                    <label for="client-social"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Redes Sociais
-                                        (Opcional)</label>
+                            <!-- INÍCIO: Instagram do cliente com conferência ao abrir (PF) -->
+                            <div>
+                                <label for="client-social"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Instagram
+                                    (Opcional)</label>
+                                <div class="flex gap-2">
                                     <input type="text" id="client-social"
-                                        class="form-input w-full px-3 py-2 rounded-md"
-                                        placeholder="@instagram, Facebook, etc.">
+                                        class="form-input flex-1 px-3 py-2 rounded-md"
+                                        placeholder="@usuario">
+                                    <input type="hidden" id="client-social-checked" value="">
+                                    <button type="button" id="client-social-open"
+                                        class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-pink-50 text-pink-600 hover:bg-pink-100 text-sm font-medium"
+                                        title="Abrir perfil no Instagram (marca como conferido)">
+                                        <i class="fab fa-instagram"></i> Abrir
+                                    </button>
                                 </div>
-                                <div>
-                                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 py-2">
-                                        <input type="checkbox" id="client-social-checked"
-                                            class="form-checkbox h-4 w-4 text-indigo-600 rounded">
-                                        Conferido
-                                    </label>
-                                </div>
+                                <p id="client-social-status" class="text-xs text-emerald-600 mt-1 hidden">
+                                    <i class="fas fa-check"></i> Conferido
+                                </p>
                             </div>
-                            <!-- FIM: Redes Sociais com conferência (PF) -->
+                            <!-- FIM: Instagram do cliente com conferência ao abrir (PF) -->
                             <!-- INÍCIO DA MODIFICAÇÃO: Mover campo de Endereço de Contrato -->
                             <div class="mt-4"> <!-- Adicionado mt-4 para espaçamento -->
                                 <label for="contract-address"
@@ -2076,25 +2078,27 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- INÍCIO: Redes Sociais com conferência (PJ) -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                                <div class="md:col-span-2">
-                                    <label for="pj-social"
-                                        class="block text-sm font-medium text-gray-700 mb-1">Redes Sociais
-                                        (Opcional)</label>
+                            <!-- INÍCIO: Instagram do cliente com conferência ao abrir (PJ) -->
+                            <div>
+                                <label for="pj-social"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Instagram
+                                    (Opcional)</label>
+                                <div class="flex gap-2">
                                     <input type="text" id="pj-social"
-                                        class="form-input w-full px-3 py-2 rounded-md"
-                                        placeholder="@instagram, Facebook, etc.">
+                                        class="form-input flex-1 px-3 py-2 rounded-md"
+                                        placeholder="@usuario">
+                                    <input type="hidden" id="pj-social-checked" value="">
+                                    <button type="button" id="pj-social-open"
+                                        class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-pink-50 text-pink-600 hover:bg-pink-100 text-sm font-medium"
+                                        title="Abrir perfil no Instagram (marca como conferido)">
+                                        <i class="fab fa-instagram"></i> Abrir
+                                    </button>
                                 </div>
-                                <div>
-                                    <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 py-2">
-                                        <input type="checkbox" id="pj-social-checked"
-                                            class="form-checkbox h-4 w-4 text-indigo-600 rounded">
-                                        Conferido
-                                    </label>
-                                </div>
+                                <p id="pj-social-status" class="text-xs text-emerald-600 mt-1 hidden">
+                                    <i class="fas fa-check"></i> Conferido
+                                </p>
                             </div>
-                            <!-- FIM: Redes Sociais com conferência (PJ) -->
+                            <!-- FIM: Instagram do cliente com conferência ao abrir (PJ) -->
                         </div>
                         <!-- END: NEW CLIENT SECTION -->
                     </div>
@@ -3116,6 +3120,41 @@
             // --- FUNÇÕES AUXILIARES ---
             const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
             const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Monta a URL do perfil do Instagram a partir de um @ ou de uma URL colada.
+            const buildInstagramUrl = (raw) => {
+                if (!raw) return null;
+                const v = String(raw).trim();
+                if (!v) return null;
+                const m = v.match(/instagram\.com\/([A-Za-z0-9_.]+)/i);
+                if (m) return `https://www.instagram.com/${m[1]}`;
+                const handle = v.replace(/^@+/, '').replace(/\s+/g, '');
+                if (!handle) return null;
+                return `https://www.instagram.com/${handle}`;
+            };
+
+            // Liga o botão "Abrir": abre o perfil e marca como conferido automaticamente.
+            const wireSocialOpen = (btnId, inputId, hiddenId, statusId) => {
+                const btn = document.getElementById(btnId);
+                const input = document.getElementById(inputId);
+                const hidden = document.getElementById(hiddenId);
+                const status = document.getElementById(statusId);
+                if (!btn || !input) return;
+                btn.addEventListener('click', () => {
+                    const url = buildInstagramUrl(input.value);
+                    if (!url) { showToast('Informe o @ do Instagram primeiro.', true); return; }
+                    window.open(url, '_blank', 'noopener');
+                    if (hidden) hidden.value = 'true';
+                    if (status) status.classList.remove('hidden');
+                });
+                // Se editar o @, deixa de estar conferido (passou a ser outro perfil).
+                input.addEventListener('input', () => {
+                    if (hidden) hidden.value = '';
+                    if (status) status.classList.add('hidden');
+                });
+            };
+            wireSocialOpen('client-social-open', 'client-social', 'client-social-checked', 'client-social-status');
+            wireSocialOpen('pj-social-open', 'pj-social', 'pj-social-checked', 'pj-social-status');
 
             const showToast = (message, isError = false, duration = 3000) => {
                 toastMessage.textContent = message;
@@ -6891,7 +6930,7 @@
                     eventData.clientPhone = document.getElementById('client-phone').value;
                     eventData.clientPhoneBackup = document.getElementById('client-phone-backup').value;
                     eventData.clientSocial = document.getElementById('client-social').value.trim();
-                    eventData.clientSocialChecked = document.getElementById('client-social-checked').checked;
+                    eventData.clientSocialChecked = document.getElementById('client-social-checked').value === 'true';
                 } else {
                     eventData.clientName = document.getElementById('pj-company-name').value.trim();
                     eventData.cnpj = document.getElementById('pj-cnpj').value;
@@ -6901,7 +6940,7 @@
                     eventData.repPhone = document.getElementById('pj-rep-phone').value;
                     eventData.repPhoneBackup = document.getElementById('pj-rep-phone-backup').value;
                     eventData.clientSocial = document.getElementById('pj-social').value.trim();
-                    eventData.clientSocialChecked = document.getElementById('pj-social-checked').checked;
+                    eventData.clientSocialChecked = document.getElementById('pj-social-checked').value === 'true';
                 }
 
                 // Preço final unificado (inclui locações externas e a multiplicação das atrações pelos dias)
@@ -6972,6 +7011,10 @@
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
                 externalRentalsForCurrentEvent = [];
+
+                // Reseta o selo "Conferido" do Instagram (form.reset não mexe nos <p> de status)
+                document.getElementById('client-social-status')?.classList.add('hidden');
+                document.getElementById('pj-social-status')?.classList.add('hidden');
 
                 // --- BIFURCAÇÃO REUNIÃO: se o evento a editar for reunião, abre modo reunião ---
                 if (eventToEdit && eventToEdit.eventType === 'meeting') {
@@ -7108,7 +7151,8 @@
                         document.getElementById('pj-rep-phone').value = eventToEdit.repPhone || '';
                         document.getElementById('pj-rep-phone-backup').value = eventToEdit.repPhoneBackup || '';
                         document.getElementById('pj-social').value = eventToEdit.clientSocial || '';
-                        document.getElementById('pj-social-checked').checked = !!eventToEdit.clientSocialChecked;
+                        document.getElementById('pj-social-checked').value = eventToEdit.clientSocialChecked ? 'true' : '';
+                        document.getElementById('pj-social-status').classList.toggle('hidden', !eventToEdit.clientSocialChecked);
                     } else { // PF or old event without type
                         clientTypePfRadio.checked = true;
                         document.getElementById('client-name').value = eventToEdit.clientName || '';
@@ -7118,7 +7162,8 @@
                         document.getElementById('client-phone').value = eventToEdit.clientPhone || '';
                         document.getElementById('client-phone-backup').value = eventToEdit.clientPhoneBackup || '';
                         document.getElementById('client-social').value = eventToEdit.clientSocial || '';
-                        document.getElementById('client-social-checked').checked = !!eventToEdit.clientSocialChecked;
+                        document.getElementById('client-social-checked').value = eventToEdit.clientSocialChecked ? 'true' : '';
+                        document.getElementById('client-social-status').classList.toggle('hidden', !eventToEdit.clientSocialChecked);
                     }
 
                 } else {
@@ -7350,10 +7395,11 @@
                 const referenciaOS = event.referencia ? `<p><strong>Referência:</strong> ${event.referencia}</p>` : '';
                 // FIM DA MODIFICAÇÃO
 
-                // Redes sociais + selo de conferência para a O.S.
+                // Instagram (link clicável) + selo de conferência para a O.S.
                 const socialCheck = event.clientSocialChecked ? ' <span style="color:#059669;">✔ conferido</span>' : '';
+                const socialUrl = buildInstagramUrl(event.clientSocial);
                 const socialOS = event.clientSocial
-                    ? `<p><strong>Redes Sociais:</strong> ${event.clientSocial}${socialCheck}</p>`
+                    ? `<p><strong>Instagram:</strong> ${socialUrl ? `<a href="${socialUrl}" target="_blank" rel="noopener">${event.clientSocial}</a>` : event.clientSocial}${socialCheck}</p>`
                     : '';
 
                 let clientDetailsHtml = '';

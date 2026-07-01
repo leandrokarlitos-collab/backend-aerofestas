@@ -103,7 +103,9 @@
       "Bash(git -C \"C:\\\\Users\\\\Usuário\\\\OneDrive\\\\Desktop\\\\Sistema Operante - Aero Festas\" status --short)",
       "Bash(node --check .__agenda_check.mjs)",
       "Bash(gh api *)",
-      "Bash(node \"propostas/disponiveis-20-06-2026/generate-page.js\")"
+      "Bash(node \"propostas/disponiveis-20-06-2026/generate-page.js\")",
+      "PowerShell(git push origin main)",
+      "PowerShell(firebase deploy --only hosting)"
     ]
   }
 }
