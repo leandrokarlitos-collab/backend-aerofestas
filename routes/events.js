@@ -1,9 +1,16 @@
 const express = require('express');
+const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
 const EventService = require('../services/EventService');
 
 const adminRouter = express.Router();
 const publicRouter = express.Router();
+
+// Upload do contrato: mantém o arquivo em memória (vai direto pro Firebase Storage).
+const contractUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 } // 20 MB
+});
 
 // ---------------- ADMIN ----------------
 
@@ -25,6 +32,22 @@ adminRouter.delete('/events/:id', authenticate, async (req, res, next) => {
     try {
         await EventService.deleteEvent(req.params.id, req.user);
         res.json({ success: true, message: 'Evento excluído com sucesso!' });
+    } catch (err) { next(err); }
+});
+
+// Anexar / substituir o contrato do evento (arquivo: PDF, imagem ou Word).
+adminRouter.post('/events/:id/contract', authenticate, contractUpload.single('file'), async (req, res, next) => {
+    try {
+        const updated = await EventService.uploadContract(req.params.id, req.file, req.user);
+        res.json({ success: true, data: { id: updated.id, contractFileUrl: updated.contractFileUrl, contractFileName: updated.contractFileName } });
+    } catch (err) { next(err); }
+});
+
+// Remover o contrato anexado do evento.
+adminRouter.delete('/events/:id/contract', authenticate, async (req, res, next) => {
+    try {
+        const updated = await EventService.removeContract(req.params.id, req.user);
+        res.json({ success: true, data: { id: updated.id } });
     } catch (err) { next(err); }
 });
 

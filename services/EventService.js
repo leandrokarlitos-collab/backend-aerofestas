@@ -1,6 +1,17 @@
 const prisma = require('../prisma/client');
 const { logAudit, computeChanges } = require('./audit');
 const webpush = require('../config/webpush');
+const { getBucket } = require('./firebaseAdmin');
+const crypto = require('crypto');
+const path = require('path');
+
+// Tipos de arquivo aceitos como contrato anexado (PDF, imagens e Word).
+const CONTRACT_ALLOWED_MIME = [
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
 
 const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
@@ -485,6 +496,102 @@ async function notifyAdminsCadastroCompleto(clientName) {
     }
 }
 
+// Extensão do arquivo a partir do nome original ou do mime type.
+function contractExtension(file) {
+    if (file.originalname) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext) return ext;
+    }
+    const map = {
+        'application/pdf': '.pdf',
+        'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
+        'image/heic': '.heic', 'image/heif': '.heif',
+        'application/msword': '.doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx'
+    };
+    return map[file.mimetype] || '';
+}
+
+/**
+ * Anexa (ou substitui) o contrato de um evento: envia o arquivo ao Firebase Storage
+ * e grava contractFileUrl/contractFileName no evento. Retorna o evento atualizado.
+ */
+async function uploadContract(eventId, file, user) {
+    const id = parseFloat(eventId);
+    if (isNaN(id)) { const e = new Error('eventId inválido'); e.status = 400; throw e; }
+    if (!file) { const e = new Error('Nenhum arquivo enviado'); e.status = 400; throw e; }
+    if (!CONTRACT_ALLOWED_MIME.includes(file.mimetype)) {
+        const e = new Error(`Tipo de arquivo não suportado: ${file.mimetype}`); e.status = 400; throw e;
+    }
+
+    const event = await prisma.event.findUnique({ where: { id }, select: { id: true } });
+    if (!event) { const e = new Error('Evento não encontrado'); e.status = 404; throw e; }
+
+    const bucket = getBucket(); // 503 se Storage não configurado
+    const ext = contractExtension(file);
+    const random = crypto.randomBytes(6).toString('hex');
+    const storagePath = `contracts/event-${id}/${Date.now()}-${random}${ext}`;
+    const storageFile = bucket.file(storagePath);
+
+    await storageFile.save(file.buffer, {
+        metadata: {
+            contentType: file.mimetype,
+            cacheControl: 'private, max-age=0',
+            metadata: {
+                eventId: String(id),
+                uploadedBy: user?.email || user?.name || 'unknown'
+            }
+        },
+        resumable: false
+    });
+    await storageFile.makePublic();
+
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${encodeURI(storagePath)}`;
+    const originalName = (file.originalname || `contrato${ext}`).slice(0, 200);
+
+    const updated = await prisma.event.update({
+        where: { id },
+        data: { contractFileUrl: publicUrl, contractFileName: originalName }
+    });
+
+    safeAudit({
+        entityType: 'Event',
+        entityId: id,
+        action: 'UPDATE',
+        user,
+        snapshot: { contractFileUrl: publicUrl, contractFileName: originalName, source: 'contract-upload' }
+    });
+
+    return updated;
+}
+
+/**
+ * Remove o vínculo do contrato do evento (não apaga o arquivo físico do Storage,
+ * seguindo a mesma política das fotos). Retorna o evento atualizado.
+ */
+async function removeContract(eventId, user) {
+    const id = parseFloat(eventId);
+    if (isNaN(id)) { const e = new Error('eventId inválido'); e.status = 400; throw e; }
+
+    const event = await prisma.event.findUnique({ where: { id }, select: { id: true, contractFileUrl: true } });
+    if (!event) { const e = new Error('Evento não encontrado'); e.status = 404; throw e; }
+
+    const updated = await prisma.event.update({
+        where: { id },
+        data: { contractFileUrl: null, contractFileName: null }
+    });
+
+    safeAudit({
+        entityType: 'Event',
+        entityId: id,
+        action: 'UPDATE',
+        user,
+        snapshot: { contractFileUrl: null, previous: event.contractFileUrl, source: 'contract-remove' }
+    });
+
+    return updated;
+}
+
 module.exports = {
     upsertEvent,
     deleteEvent,
@@ -493,5 +600,7 @@ module.exports = {
     updatePublicEvent,
     saveDraftPublicEvent,
     listPublicToys,
-    checkAvailability
+    checkAvailability,
+    uploadContract,
+    removeContract
 };

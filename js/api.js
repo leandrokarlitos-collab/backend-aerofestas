@@ -298,6 +298,51 @@ export const api = {
         });
     },
 
+    /**
+     * Anexa/substitui o contrato de um evento (arquivo PDF/imagem/Word).
+     * Retorna { ok, status, data?, error? }.
+     */
+    uploadContrato: (eventId, file, onProgress) => {
+        return new Promise((resolve) => {
+            try {
+                const token = getToken();
+                const fd = new FormData();
+                fd.append('file', file, file.name || 'contrato');
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${BASE_URL}/admin/events/${eventId}/contract`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.upload.addEventListener('progress', (ev) => {
+                    if (typeof onProgress === 'function' && ev.lengthComputable) {
+                        onProgress(Math.round((ev.loaded / ev.total) * 100));
+                    }
+                });
+                xhr.addEventListener('load', () => {
+                    let json = {};
+                    try { json = JSON.parse(xhr.responseText || '{}'); } catch (_) { /* */ }
+                    resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, ...json });
+                });
+                xhr.addEventListener('error', () => resolve({ ok: false, status: 0, error: 'Erro de rede' }));
+                xhr.addEventListener('abort', () => resolve({ ok: false, status: 0, error: 'Upload cancelado' }));
+                xhr.send(fd);
+            } catch (error) {
+                console.error('Erro ao iniciar upload do contrato:', error);
+                resolve({ ok: false, error: 'Erro ao iniciar upload' });
+            }
+        });
+    },
+
+    // Remove o contrato anexado de um evento.
+    removerContrato: async (eventId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events/${eventId}/contract`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : { success: false };
+        } catch (error) { console.error('Erro ao remover contrato:', error); return { success: false }; }
+    },
+
     // Salvar Empresa
     salvarEmpresa: async (empresa) => {
         try {

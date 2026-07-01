@@ -2453,6 +2453,12 @@
                                 placeholder="Ex: Entrada de R$ XXX via PIX na assinatura, restante de R$ YYY em 2x no cartão na entrega. Inclua dados bancários/PIX aqui."></textarea>
                         </div>
 
+                        <!-- Contrato assinado (arquivo anexado ao evento) -->
+                        <div class="border border-teal-200 bg-teal-50/40 rounded-md p-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-2"><i class="fas fa-file-contract text-teal-600 mr-1"></i>Contrato assinado</label>
+                            <div id="contract-attachment-section"></div>
+                        </div>
+
                         <!-- INÍCIO DA MODIFICAÇÃO: Status de Pagamento -->
                         <div class="bg-gray-50 p-3 rounded-md space-y-3">
                             <h3 class="text-md font-semibold text-gray-800">Status Financeiro</h3>
@@ -4666,6 +4672,10 @@
                             <!-- NOVO CHECKBOX DE SELEÇÃO -->
                             <input type="checkbox" data-id="${event.id}" data-date="${dateStr}" class="event-print-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500" title="Selecionar para Impressão">
                             <button data-id="${event.id}" class="generate-contract-btn text-purple-500 hover:text-purple-600 text-lg shrink-0" title="Gerar Contrato"><i class="fas fa-file-signature"></i></button>
+                            ${event.contractFileUrl
+                                ? `<button data-id="${event.id}" class="view-contract-btn text-teal-600 hover:text-teal-800 text-lg shrink-0" title="Ver contrato anexado — ${escAttr(event.contractFileName || 'contrato')}"><i class="fas fa-file-contract"></i></button>`
+                                : `<button data-id="${event.id}" class="attach-contract-btn text-gray-400 hover:text-teal-600 text-lg shrink-0" title="Anexar contrato"><i class="fas fa-paperclip"></i></button>`
+                            }
                         </div>
                     </div>
                     ${isCancelled
@@ -4729,6 +4739,8 @@
                 document.querySelectorAll('.generate-message-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateMessage(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
                 // <!-- LISTENER DO BOTÃO INDIVIDUAL REMOVIDO -->
                 document.querySelectorAll('.generate-contract-btn').forEach(btn => btn.addEventListener('click', (e) => handleGenerateContract(parseInt(e.currentTarget.dataset.id), e.currentTarget)));
+                document.querySelectorAll('.attach-contract-btn').forEach(btn => btn.addEventListener('click', (e) => handleAttachContract(parseInt(e.currentTarget.dataset.id))));
+                document.querySelectorAll('.view-contract-btn').forEach(btn => btn.addEventListener('click', (e) => handleViewContract(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.review-event-btn').forEach(btn => btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handleEditEvent(parseInt(e.currentTarget.dataset.id));
@@ -7638,6 +7650,8 @@
                     document.getElementById('ticket-net-total').value = eventToEdit.ticketNetTotal ?? '';
                     // Itens lançados (não sobrescreve o Bruto salvo; mostra tag se divergir da soma)
                     ticketItemsMainCtrl.setItems(parseTicketItems(eventToEdit));
+                    // Seção do contrato anexado (evento existente → permite anexar/ver/remover)
+                    setupContractSection(eventToEdit);
 
                     if (eventToEdit.clientType === 'PJ') {
                         clientTypePjRadio.checked = true;
@@ -7678,6 +7692,8 @@
                     document.getElementById('ticket-school-percent').value = '';
                     document.getElementById('ticket-net-total').value = '';
                     ticketItemsMainCtrl.setItems([]);
+                    // Novo evento ainda não salvo → seção do contrato orienta a salvar primeiro
+                    setupContractSection(null);
                     // Novo evento: sem data de término ainda → seletor de dias começa oculto/limpo
                     renderMultiDaySelector([]);
                 }
@@ -8522,6 +8538,96 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 });
             }
             // ===== FIM LINK DE CADASTRO =====
+
+            // ====== CONTRATO ANEXADO (arquivo por evento) ======
+            const CONTRACT_ACCEPT = 'application/pdf,.pdf,.doc,.docx,image/*';
+
+            // Reflete o contrato anexado nos dados locais e re-renderiza a agenda + seção do editor.
+            const applyContractToState = (event, url, name) => {
+                event.contractFileUrl = url || null;
+                event.contractFileName = name || null;
+                if (selectedDate) renderDayEvents(selectedDate);
+                if (contractSectionEventId === event.id) setupContractSection(event);
+            };
+
+            const handleViewContract = (eventId) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event || !event.contractFileUrl) { showToast('Nenhum contrato anexado.', true); return; }
+                window.open(event.contractFileUrl, '_blank', 'noopener');
+            };
+
+            // Abre o seletor de arquivo e envia o contrato (PDF/imagem/Word) para o evento.
+            const uploadContractFile = (eventId) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return;
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = CONTRACT_ACCEPT;
+                input.style.display = 'none';
+                document.body.appendChild(input);
+                input.addEventListener('change', async () => {
+                    const file = input.files && input.files[0];
+                    input.remove();
+                    if (!file) return;
+                    if (file.size > 20 * 1024 * 1024) { showToast('Arquivo muito grande (máx. 20 MB).', true); return; }
+                    showToast('Enviando contrato…');
+                    const res = await api.uploadContrato(eventId, file);
+                    if (res && res.ok && res.data) {
+                        applyContractToState(event, res.data.contractFileUrl, res.data.contractFileName);
+                        showToast('Contrato anexado!');
+                    } else {
+                        showToast((res && res.error) || 'Falha ao anexar o contrato.', true);
+                    }
+                });
+                input.click();
+            };
+            const handleAttachContract = (eventId) => uploadContractFile(eventId);
+
+            const handleRemoveContract = async (eventId) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event || !event.contractFileUrl) return;
+                if (!confirm('Remover o contrato anexado deste evento?')) return;
+                const res = await api.removerContrato(eventId);
+                if (res && res.success) {
+                    applyContractToState(event, null, null);
+                    showToast('Contrato removido.');
+                } else {
+                    showToast('Falha ao remover o contrato.', true);
+                }
+            };
+
+            // Seção "Contrato assinado" do editor: reflete o estado atual e conecta os botões.
+            // event = null (novo evento ainda não salvo) → orienta a salvar antes de anexar.
+            let contractSectionEventId = null;
+            const setupContractSection = (event) => {
+                const box = document.getElementById('contract-attachment-section');
+                if (!box) return;
+                contractSectionEventId = event && event.id ? event.id : null;
+                if (!event || !event.id) {
+                    box.innerHTML = `<p class="text-xs text-gray-500"><i class="fas fa-circle-info mr-1"></i>Salve o evento para poder anexar o contrato assinado.</p>`;
+                    return;
+                }
+                if (event.contractFileUrl) {
+                    box.innerHTML = `
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <a href="${event.contractFileUrl}" target="_blank" rel="noopener" class="text-teal-700 hover:text-teal-900 text-sm font-medium break-all">
+                                <i class="fas fa-file-contract mr-1"></i>${escAttr(event.contractFileName || 'Ver contrato')}
+                            </a>
+                            <div class="flex gap-2 shrink-0">
+                                <button type="button" id="contract-replace-btn" class="text-xs px-2 py-1 rounded-md bg-teal-500 text-white hover:bg-teal-600 font-semibold"><i class="fas fa-arrows-rotate mr-1"></i>Trocar</button>
+                                <button type="button" id="contract-remove-btn" class="text-xs px-2 py-1 rounded-md bg-red-100 text-red-700 hover:bg-red-200 font-semibold"><i class="fas fa-trash mr-1"></i>Remover</button>
+                            </div>
+                        </div>`;
+                    box.querySelector('#contract-replace-btn').addEventListener('click', () => uploadContractFile(event.id));
+                    box.querySelector('#contract-remove-btn').addEventListener('click', () => handleRemoveContract(event.id));
+                } else {
+                    box.innerHTML = `
+                        <button type="button" id="contract-attach-btn" class="w-full text-sm px-3 py-2 rounded-md bg-teal-50 border border-teal-300 text-teal-700 hover:bg-teal-100 font-semibold">
+                            <i class="fas fa-paperclip mr-1"></i>Anexar contrato (PDF, imagem ou Word)
+                        </button>`;
+                    box.querySelector('#contract-attach-btn').addEventListener('click', () => uploadContractFile(event.id));
+                }
+            };
 
             const handleGenerateContract = async (eventId, buttonElement) => {
                 const event = events.find(e => e.id === eventId);

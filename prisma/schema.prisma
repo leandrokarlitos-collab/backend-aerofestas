@@ -178,6 +178,10 @@ model Event {
   ticketNetTotal      Float?  // líquido total que fica para a empresa
   ticketItems         String? // JSON: itens lançados da venda por ingresso [{description, unitPrice, quantity}]
 
+  // Contrato anexado (arquivo enviado — PDF/imagem/doc — armazenado no Firebase Storage)
+  contractFileUrl      String?
+  contractFileName     String?
+
   // Outros
   monitor              String?
   eventObservations    String?
