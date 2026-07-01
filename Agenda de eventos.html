@@ -4550,6 +4550,39 @@
                             dayValueHtml = `<p class="font-medium"><i class="fas fa-calendar-day fa-fw mr-1 text-gray-400"></i>Valor deste dia: <strong class="text-emerald-600">${formatCurrency(dayValue)}</strong>${itemsCustomBadge}</p>`;
                         }
 
+                        // Linha da venda por ingresso: mantém sempre o Estimado (projeção). Depois de
+                        // concluído e com o bruto real enviado, exibe também Bruto + Líquido e a
+                        // diferença Realizado × Estimado — para análise posterior (projeção vs realidade).
+                        let ticketSaleLineHtml = '';
+                        if (event.isTicketSale) {
+                            const est = Number(event.estimatedValue) || 0;
+                            const hasGross = event.ticketGrossSold != null;
+                            const hasNet = event.ticketNetTotal != null;
+                            const gross = hasGross ? (Number(event.ticketGrossSold) || 0) : null;
+                            const net = hasNet ? (Number(event.ticketNetTotal) || 0) : null;
+
+                            const parts = [`Estimado: <strong class="text-amber-600">${formatCurrency(est)}</strong>`];
+                            if (hasGross) parts.push(`Bruto: <strong class="text-sky-600">${formatCurrency(gross)}</strong>`);
+                            if (hasNet) parts.push(`Líquido: <strong class="text-emerald-600">${formatCurrency(net)}</strong>`);
+
+                            // Diferença Realizado × Estimado: usa o Bruto real como faturamento realizado
+                            // (cai para o Líquido só se o bruto não tiver sido informado).
+                            const realized = hasGross ? gross : (hasNet ? net : null);
+                            const realizedLabel = hasGross ? 'Bruto real' : 'Líquido';
+                            let diffHtml = '';
+                            if (realized != null && est > 0) {
+                                const diff = realized - est;
+                                const pct = (diff / est) * 100;
+                                const up = diff >= 0;
+                                const sign = up ? '+' : '-';
+                                const cls = up ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200';
+                                const arrow = up ? 'fa-arrow-up' : 'fa-arrow-down';
+                                diffHtml = `<span class="inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded border text-[11px] font-semibold ${cls}" title="${realizedLabel} vs. estimado"><i class="fas ${arrow}"></i>${sign}${formatCurrency(Math.abs(diff))} (${sign}${Math.abs(pct).toFixed(0)}%)</span>`;
+                            }
+
+                            ticketSaleLineHtml = `<p class="font-medium"><i class="fas fa-ticket-alt fa-fw mr-1 text-amber-500"></i>Vendido por ingresso — ${parts.join(' · ')}${diffHtml}</p>`;
+                        }
+
                         // INÍCIO DA MODIFICAÇÃO: Endereço Completo para Card
                         const eventAddressFull = [event.clientAddress, event.complemento, event.bairro, event.cidade]
                             .filter(Boolean) // Remove itens vazios
@@ -4607,7 +4640,7 @@
                                 <!-- FIM DA MODIFICAÇÃO -->
                                 ${dayValueHtml}
                                 ${event.isTicketSale
-                                    ? `<p class="font-medium"><i class="fas fa-ticket-alt fa-fw mr-1 text-amber-500"></i>Vendido por ingresso — Estimado: <strong class="text-amber-600">${formatCurrency(event.estimatedValue || 0)}</strong>${event.ticketNetTotal != null ? ` · Líquido: <strong class="text-emerald-600">${formatCurrency(event.ticketNetTotal)}</strong>` : ''}</p>`
+                                    ? ticketSaleLineHtml
                                     : `<p class="font-medium"><i class="fas fa-dollar-sign fa-fw mr-1 text-gray-400"></i>${isMultiDay ? 'Total do evento' : 'Valor'}: <strong class="text-emerald-600">${formatCurrency(event.price)}</strong></p>`
                                 }
                                 ${event.paymentDetails ? `<p><i class="fas fa-credit-card fa-fw mr-1 text-gray-400"></i>Pagamento: <strong class="text-xs">${event.paymentDetails.replace(/\n/g, '<br>')}</strong></p>` : ''}
