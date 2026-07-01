@@ -5384,12 +5384,13 @@
             const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
             // Deriva itens de "atração" a partir dos brinquedos do evento (event.items/toys):
-            // cada brinquedo vira uma linha (nome + qtd do agendamento) para a venda por ficha.
+            // cada brinquedo vira uma linha apenas com o NOME. Valor e quantidade ficam em branco —
+            // o operador lança por quanto e quantas fichas foram vendidas no fechamento.
             const deriveAtracaoItems = (rawItems) => (Array.isArray(rawItems) ? rawItems : []).map(item => {
                 const toyId = item.toyId || (item.toy && item.toy.id) || item.id;
                 const toy = (Array.isArray(toys) ? toys : []).find(t => t.id === toyId);
                 const name = (toy && toy.name) || (item.toy && item.toy.name) || item.name || 'Item';
-                return { category: 'atracao', description: name, unitPrice: Number(item.price) || 0, quantity: parseInt(item.quantity) || 1 };
+                return { category: 'atracao', description: name, unitPrice: 0, quantity: 0 };
             }).filter(i => i.description);
 
             // === Controlador do detalhamento da venda por ficha/ingresso ===
