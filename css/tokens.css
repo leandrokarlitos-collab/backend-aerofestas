@@ -1,0 +1,114 @@
+/* ============================================================
+   Aero Festas v3 — Design Tokens ("Soft Depth Premium")
+   Fonte única de cores, tipografia, forma, elevação e movimento.
+   Todas as páginas e componentes consomem SOMENTE estas variáveis.
+   Dark mode: classe .dark no <html> (gerida por js/theme.js).
+   ============================================================ */
+
+:root {
+    /* ---- Marca ---- */
+    --brand-50:  #EEF2FF;
+    --brand-100: #E0E7FF;
+    --brand-400: #818CF8;
+    --brand-500: #6366F1;
+    --brand-600: #4F46E5;
+    --brand-700: #4338CA;
+    --accent:    #F59E0B;   /* âmbar festivo — usar com parcimônia */
+    --grad-brand: linear-gradient(135deg, #4F46E5, #7C3AED);
+
+    /* ---- Superfícies (light) ---- */
+    --bg:            #F6F7F9;
+    --surface-1:     #FFFFFF;   /* cards */
+    --surface-2:     #F1F3F7;   /* inputs, wells, hover */
+    --surface-inset: #F8F9FB;   /* cards dentro de cards */
+    --border:        #E7E9EE;
+    --border-strong: #D8DCE4;
+
+    /* ---- Texto ---- */
+    --text:       #0F172A;
+    --text-muted: #64748B;
+    --text-faint: #94A3B8;
+    --text-on-brand: #FFFFFF;
+
+    /* ---- Semânticas ---- */
+    --success:      #10B981;
+    --success-soft: #D1FAE5;
+    --danger:       #F43F5E;
+    --danger-soft:  #FFE4E6;
+    --warning:      #F59E0B;
+    --warning-soft: #FEF3C7;
+    --info:         #38BDF8;
+    --info-soft:    #E0F2FE;
+
+    /* ---- Forma ---- */
+    --radius-sm: 10px;
+    --radius:    12px;   /* inputs, botões */
+    --radius-lg: 16px;   /* cards */
+    --radius-xl: 20px;   /* modais, sheets */
+
+    /* ---- Elevação ---- */
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
+    --shadow-2: 0 2px 4px rgba(15, 23, 42, .06), 0 16px 32px rgba(15, 23, 42, .10);
+    --shadow-modal: 0 8px 16px rgba(2, 6, 23, .12), 0 24px 64px rgba(2, 6, 23, .22);
+
+    /* ---- Glass (SOMENTE nav e backdrop de modal) ---- */
+    --glass-nav-bg: rgba(255, 255, 255, .72);
+    --glass-nav-border: rgba(15, 23, 42, .06);
+    --blur-nav: 14px;
+    --backdrop: rgba(2, 6, 23, .55);
+
+    /* ---- Foco ---- */
+    --ring: 0 0 0 3px rgba(79, 70, 229, .25);
+
+    /* ---- Tipografia ---- */
+    --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+
+    /* ---- Movimento ---- */
+    --ease: cubic-bezier(.2, .8, .3, 1);
+    --dur: 160ms;
+    --dur-slow: 240ms;
+
+    /* ---- Layout ---- */
+    --nav-sidebar-w: 240px;
+    --nav-sidebar-w-collapsed: 72px;
+    --nav-bottom-h: 64px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.dark {
+    /* ---- Superfícies (dark unificado) ---- */
+    --bg:            #0B1220;
+    --surface-1:     #131C2E;
+    --surface-2:     #1A2438;
+    --surface-inset: #0F1728;
+    --border:        rgba(148, 163, 184, .12);
+    --border-strong: rgba(148, 163, 184, .22);
+
+    /* ---- Texto ---- */
+    --text:       #F1F5F9;
+    --text-muted: #94A3B8;
+    --text-faint: #64748B;
+
+    /* ---- Marca (ajustes de contraste) ---- */
+    --brand-50:  rgba(99, 102, 241, .14);
+    --brand-100: rgba(99, 102, 241, .22);
+
+    /* ---- Semânticas soft (fundos escuros) ---- */
+    --success-soft: rgba(16, 185, 129, .16);
+    --danger-soft:  rgba(244, 63, 94, .16);
+    --warning-soft: rgba(245, 158, 11, .16);
+    --info-soft:    rgba(56, 189, 248, .16);
+
+    /* ---- Elevação: no dark, profundidade vem da cor, não da sombra ---- */
+    --shadow-1: 0 0 0 1px rgba(148, 163, 184, .06);
+    --shadow-2: 0 0 0 1px rgba(148, 163, 184, .10), 0 16px 32px rgba(0, 0, 0, .35);
+    --shadow-modal: 0 0 0 1px rgba(148, 163, 184, .10), 0 24px 64px rgba(0, 0, 0, .55);
+
+    /* ---- Glass ---- */
+    --glass-nav-bg: rgba(19, 28, 46, .78);
+    --glass-nav-border: rgba(148, 163, 184, .10);
+    --backdrop: rgba(2, 6, 23, .70);
+
+    --ring: 0 0 0 3px rgba(129, 140, 248, .35);
+}

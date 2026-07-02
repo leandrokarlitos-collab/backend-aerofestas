@@ -3668,9 +3668,14 @@
 
             init();
 
-            // --- BACKUP: Botão manual + Verificação automática ---
+            // --- BACKUP: Botão manual + Verificação automática (somente admin) ---
             const backupBtn = document.getElementById('backup-btn');
             const backupIcon = document.getElementById('backup-icon');
+            const userIsAdmin = (() => {
+                try { return JSON.parse(localStorage.getItem('userData') || '{}').isAdmin === true; }
+                catch { return false; }
+            })();
+            if (!userIsAdmin && backupBtn) backupBtn.style.display = 'none';
 
             async function downloadBackupJSON() {
                 if (!backupBtn) return;
@@ -3707,6 +3712,7 @@
 
             // Verificar status do último backup ao carregar
             (async () => {
+                if (!userIsAdmin) return;
                 try {
                     const status = await api.getBackupStatus();
                     if (status && status.success === false) {
@@ -3723,6 +3729,7 @@
 
             // Download local automático (1x por dia ao abrir Dashboard)
             (async () => {
+                if (!userIsAdmin) return;
                 try {
                     const today = new Date().toISOString().split('T')[0];
                     const lastLocal = localStorage.getItem('lastLocalBackup');

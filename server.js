@@ -26,6 +26,7 @@ const aiRouter = require('./routes/ai');
 const cron = require('node-cron');
 const webpush = require('./config/webpush');
 const { errorHandler, installProcessHandlers } = require('./middleware/errorHandler');
+const { authenticate, isAdmin } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,7 +46,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // --- ROTA DE ENVIO DE E-MAIL ---
-app.post('/api/send-email', async (req, res) => {
+app.post('/api/send-email', authenticate, async (req, res) => {
     const { to, subject, text, html } = req.body;
     if (!to || !subject) return res.status(400).json({ error: 'Faltam campos.' });
 
@@ -62,7 +63,7 @@ app.post('/api/send-email', async (req, res) => {
 });
 
 // --- ROTA DE MIGRAÇÃO (COM FINANCEIRO COMPLETO) ---
-app.post('/api/migrar-completo', async (req, res) => {
+app.post('/api/migrar-completo', isAdmin, async (req, res) => {
     req.setTimeout(900000); // 15 minutos
 
     const { financeDataV30, toys, events, clients, companies } = req.body;

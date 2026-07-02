@@ -1,7 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
-const { authenticate } = require('../middleware/auth');
+const { isAdmin } = require('../middleware/auth');
 const fs = require('fs');
 const path = require('path');
 
@@ -146,7 +146,7 @@ async function runBackup(source = 'manual') {
 // --- ROTAS ---
 
 // GET /api/backup/full — Download completo do backup em JSON
-router.get('/full', authenticate, async (req, res) => {
+router.get('/full', isAdmin, async (req, res) => {
     try {
         const data = await collectAllData();
         const dateStr = new Date().toISOString().split('T')[0];
@@ -161,7 +161,7 @@ router.get('/full', authenticate, async (req, res) => {
 });
 
 // POST /api/backup/run — Executa backup no servidor manualmente
-router.post('/run', authenticate, async (req, res) => {
+router.post('/run', isAdmin, async (req, res) => {
     try {
         const result = await runBackup('manual');
         res.json(result);
@@ -171,7 +171,7 @@ router.post('/run', authenticate, async (req, res) => {
 });
 
 // GET /api/backup/status — Retorna status do último backup
-router.get('/status', authenticate, async (req, res) => {
+router.get('/status', isAdmin, async (req, res) => {
     res.json(lastBackupStatus);
 });
 

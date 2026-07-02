@@ -105,7 +105,30 @@
       "Bash(gh api *)",
       "Bash(node \"propostas/disponiveis-20-06-2026/generate-page.js\")",
       "PowerShell(git push origin main)",
-      "PowerShell(firebase deploy --only hosting)"
+      "PowerShell(firebase deploy --only hosting)",
+      "PowerShell(git commit -m $msg)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(ls railway.json railway.toml nixpacks.toml Procfile firebase.json)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: permitir lançar item a item em eventos vendidos por ingresso \\(valor unitário × unidades = total\\) no editor e no \"Concluir evento\" — a soma preenche o Bruto automaticamente \\(editável, com tag ao divergir\\), persistência via nova coluna opcional ticketItems \\(JSON\\) e bump do cache PWA para v2.30.0 *)",
+      "Bash(git push *)",
+      "Bash(firebase deploy *)",
+      "Bash(firebase projects:list)",
+      "Bash(cat .firebaserc)",
+      "Bash(node -e \"const f=require\\('./firebase.json'\\); console.log\\(JSON.stringify\\(f.hosting?{public:f.hosting.public,ignore:f.hosting.ignore}:'no-hosting',null,2\\)\\)\")",
+      "Bash(git commit -m 'feat: no card da agenda, exibir Estimado + Bruto real + Líquido e a diferença Realizado × Estimado \\(+/- R$ e %\\) em eventos por ingresso concluídos, mantendo sempre o estimado para análise posterior; bump do cache PWA para v2.31.0 *)",
+      "Bash(git commit -m 'feat: no fechamento \\(e editor\\) da venda por ficha, detalhamento por linhas editáveis — itens pré-carregados com as atrações do evento \\(botão Puxar\\), + blocos '\\\\''Houve passaportes?'\\\\'' \\(quantos/valor\\) e '\\\\''Houve brinquedos juninos?'\\\\'' \\(quais/valor\\); tudo soma no Bruto ao vivo; categorias salvas em ticketItems; bump PWA v2.32.0 *)",
+      "Bash(git commit -m 'feat: líquido de eventos por ingresso entra no faturamento do mês e sai do estimado — na Agenda \\(card mensal\\) e no Financeiro \\(backend dashboard + client, tendências e tabelas\\); evento realizado \\(com líquido\\) deixa de contar como estimado; bump PWA v2.33.0 *)",
+      "Bash(node --check routes/finance.js)",
+      "Bash(git commit -m 'feat: anexar contrato \\(arquivo PDF/imagem/Word\\) em qualquer evento — upload no Firebase Storage, coluna opcional contractFileUrl/contractFileName no Event, endpoints POST/DELETE /events/:id/contract, botão no card \\(anexar/ver\\) e seção '\\\\''Contrato assinado'\\\\'' no editor \\(anexar/trocar/remover\\); bump PWA v2.34.0 *)",
+      "Bash(git commit -m 'fix: ao puxar atrações do evento na venda por ficha, pré-preencher apenas o nome — valor unitário e quantidade ficam em branco para lançamento manual; bump PWA v2.35.0 *)",
+      "Bash(sort -t: -k1,1n)",
+      "Bash(stat -c %s \"/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas/backups/backup-2026-04-21.json\" 2>/dev/null; grep -c \"^model \" \"/c/Users/Usuário/OneDrive/Desktop/Sistema Operante - Aero Festas/prisma/schema.prisma\")",
+      "PowerShell($raw = Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw; \"LEN=$\\($raw.Length\\)\"; $raw.Substring\\(0, 300\\))",
+      "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; \"backupDesign=$\\($j.backupDesign.Length\\) visualDesign=$\\($j.visualDesign.Length\\) backupVerif=$\\($j.backupVerification.Length\\) visualVerif=$\\($j.visualVerification.Length\\)\")",
+      "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; \"===== BACKUP VERIFICATION =====\"; $j.backupVerification; \"`n===== VISUAL VERIFICATION =====\"; $j.visualVerification)",
+      "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; $j.backupDesign)",
+      "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; $j.visualDesign)"
     ]
   }
 }

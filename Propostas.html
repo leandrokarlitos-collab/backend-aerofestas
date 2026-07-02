@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="./js/theme.js"></script>
 <title>Propostas geradas · Aero Festas</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#4f46e5">
@@ -10,21 +11,16 @@
 
 <script src="js/pwa-init.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
+</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/aero.css">
 
 <style>
-    body {
-        font-family: 'Inter', sans-serif;
-        background:
-            radial-gradient(1200px 600px at 10% -10%, rgba(168,85,247,0.18), transparent 60%),
-            radial-gradient(1000px 500px at 110% 110%, rgba(79,70,229,0.18), transparent 60%),
-            linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
-        min-height: 100vh;
-        padding-bottom: 140px;
-    }
-    h1, h2, h3 { font-family: 'Outfit', sans-serif; }
-
+    /* ---- Propostas: mínimos específicos da página (tokens do DS) ---- */
     .toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -32,126 +28,79 @@
         align-items: center;
         margin-bottom: 18px;
     }
-    .search-wrap {
-        position: relative;
-        flex: 1;
-        min-width: 200px;
-        max-width: 360px;
-    }
-    .search-wrap i {
+    .search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 360px; }
+    .search-wrap > i {
         position: absolute;
         left: 14px;
         top: 50%;
         transform: translateY(-50%);
-        color: #94a3b8;
+        color: var(--text-faint);
+        pointer-events: none;
     }
-    .search-wrap input {
-        width: 100%;
-        padding: 10px 12px 10px 38px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        font-size: 0.9rem;
-        color: #0f172a;
-    }
-    .search-wrap input:focus {
-        outline: none;
-        border-color: #4f46e5;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
-    }
-    .status-filter {
-        padding: 10px 14px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        font-size: 0.88rem;
-        color: #475569;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #4f46e5, #a855f7);
-        color: #fff;
-        padding: 10px 18px;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        border: none;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 10px 24px rgba(79, 70, 229, 0.3);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        text-decoration: none;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(79, 70, 229, 0.4); }
+    .search-wrap .input { padding-left: 38px; }
+    #prop-status-filter { width: auto; }
 
     .prop-card {
-        background: rgba(255, 255, 255, 0.72);
-        backdrop-filter: blur(16px) saturate(160%);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 20px;
         padding: 18px 20px;
-        box-shadow: 0 8px 28px rgba(31, 38, 135, 0.08);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
         display: grid;
         grid-template-columns: 1fr auto;
         gap: 16px;
         align-items: start;
     }
-    .prop-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 14px 36px rgba(31, 38, 135, 0.12);
-    }
     .prop-card .head {
-        font-family: 'Outfit', sans-serif;
+        font-family: var(--font-display);
         font-weight: 700;
         font-size: 1.1rem;
-        color: #0f172a;
+        color: var(--text);
         margin-bottom: 4px;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 8px;
     }
-    .prop-card .subhead {
-        color: #64748b;
-        font-size: 0.85rem;
-        margin-bottom: 8px;
-    }
+    .prop-card .subhead { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px; }
     .prop-card .meta-row {
         display: flex;
         flex-wrap: wrap;
         gap: 14px;
         font-size: 0.78rem;
-        color: #475569;
+        color: var(--text-muted);
         margin-top: 8px;
     }
-    .prop-card .meta-row span {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-    }
-    .prop-card .meta-row i { color: #94a3b8; }
+    .prop-card .meta-row span { display: inline-flex; align-items: center; gap: 5px; }
+    .prop-card .meta-row i { color: var(--text-faint); }
 
-    .status-pill {
-        display: inline-flex;
+    .url-row {
+        margin-top: 10px;
+        display: flex;
+        gap: 6px;
         align-items: center;
-        gap: 5px;
-        padding: 3px 11px;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        padding: 8px 12px;
+        background: var(--surface-inset);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        color: var(--text-muted);
     }
-    .status-pill.draft { background: rgba(148, 163, 184, 0.18); color: #64748b; }
-    .status-pill.sent { background: rgba(79, 70, 229, 0.15); color: #4338ca; }
-    .status-pill.viewed { background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; }
+    .url-row code {
+        flex: 1;
+        font-family: var(--font-body);
+        color: var(--brand-600);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+    .url-row button {
+        border: none;
+        background: transparent;
+        color: var(--brand-600);
+        cursor: pointer;
+        font-size: 0.78rem;
+        padding: 2px 6px;
+        font-weight: 600;
+    }
+    .dark .url-row code, .dark .url-row button { color: var(--brand-400); }
 
     .actions {
         display: flex;
@@ -161,160 +110,66 @@
         flex-wrap: wrap;
         justify-content: flex-end;
     }
-    .act-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        border: 1px solid rgba(15, 23, 42, 0.06);
-        background: rgba(255, 255, 255, 0.85);
-        color: #475569;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.15s ease;
-        text-decoration: none;
-        font-size: 0.85rem;
-    }
-    .act-btn:hover { color: #0f172a; background: #fff; transform: translateY(-1px); }
-    .act-btn.primary { color: #4f46e5; }
-    .act-btn.primary:hover { background: rgba(79, 70, 229, 0.08); }
-    .act-btn.danger { color: #ef4444; }
-    .act-btn.danger:hover { background: #fef2f2; }
-
-    .url-row {
-        margin-top: 10px;
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        padding: 8px 12px;
-        background: rgba(15, 23, 42, 0.03);
-        border-radius: 10px;
-        font-size: 0.78rem;
-        color: #64748b;
-    }
-    .url-row code {
-        flex: 1;
-        font-family: 'Inter', sans-serif;
-        color: #4338ca;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-weight: 500;
-    }
-    .url-row button {
-        border: none;
-        background: transparent;
-        color: #4f46e5;
-        cursor: pointer;
-        font-size: 0.78rem;
-        padding: 2px 6px;
-        font-weight: 600;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 70px 20px;
-        color: #94a3b8;
-    }
-    .empty-state i {
-        font-size: 3rem;
-        display: block;
-        margin-bottom: 14px;
-        opacity: 0.6;
-    }
-    .empty-state p { margin-bottom: 6px; }
-    .empty-state .cta { margin-top: 20px; }
+    .actions .act-open { color: var(--brand-600); }
+    .dark .actions .act-open { color: var(--brand-400); }
+    .actions .act-wa { color: var(--success); }
+    .actions .act-danger { color: var(--danger); }
+    .actions .act-danger:hover { background: var(--danger-soft); color: var(--danger); }
 
     @media (max-width: 640px) {
         .prop-card { grid-template-columns: 1fr; }
         .prop-card .actions { justify-content: flex-start; }
     }
-
-    /* Toast */
-    #toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #0f172a;
-        color: #fff;
-        padding: 12px 20px;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.88rem;
-        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
-        transform: translateX(120%);
-        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-        z-index: 10000;
-    }
-    #toast.show { transform: translateX(0); }
-    #toast.success { background: linear-gradient(135deg, #16a34a, #22c55e); }
-    #toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); }
 </style>
 </head>
 
 <body>
 
 <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-    <header class="mb-8">
-        <div class="flex items-center justify-between gap-4 mb-2">
-            <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 flex items-center gap-3">
-                <i class="fas fa-file-invoice text-indigo-500"></i> Propostas geradas
+    <header class="page-header">
+        <div>
+            <h1 class="flex items-center gap-3">
+                <i class="fas fa-file-invoice text-grad-brand"></i> Propostas geradas
             </h1>
-            <a href="./Dashboard.html"
-                class="hidden sm:inline-flex items-center gap-2 bg-white/60 hover:bg-white/80 text-slate-600 px-4 py-2 rounded-xl border border-white/40 shadow-sm transition-all">
-                <i class="fas fa-arrow-left"></i> Voltar
+            <p class="page-subtitle">
+                Todas as propostas geradas para seus clientes. Edite, duplique ou compartilhe novamente.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="./Configuracoes-Propostas.html" class="btn btn-secondary">
+                <i class="fas fa-sliders"></i> <span class="hidden sm:inline">Templates</span>
+            </a>
+            <a href="./Equipamentos.html" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nova proposta
             </a>
         </div>
-        <p class="text-slate-500 text-sm">
-            Todas as propostas geradas para seus clientes. Edite, duplique ou compartilhe novamente.
-        </p>
     </header>
 
     <div class="toolbar">
         <div class="search-wrap">
             <i class="fas fa-search"></i>
-            <input id="prop-search" type="text" placeholder="Buscar por cliente, evento ou slug…" autocomplete="off">
+            <input id="prop-search" type="text" class="input" placeholder="Buscar por cliente, evento ou slug…" autocomplete="off">
         </div>
-        <select id="prop-status-filter" class="status-filter">
+        <select id="prop-status-filter" class="select">
             <option value="">Todas</option>
             <option value="draft">Rascunho</option>
             <option value="sent">Enviada (não visualizada)</option>
             <option value="viewed">Visualizada pelo cliente</option>
         </select>
-
-        <div style="margin-left:auto;display:flex;gap:8px;">
-            <a href="./Configuracoes-Propostas.html" class="status-filter" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-                <i class="fas fa-sliders"></i> <span class="hidden sm:inline">Templates</span>
-            </a>
-            <a href="./Equipamentos.html" class="btn-primary">
-                <i class="fas fa-plus"></i> Nova proposta
-            </a>
-        </div>
     </div>
 
     <section id="prop-list" class="space-y-3">
-        <div style="text-align:center;color:#94a3b8;padding:60px 0;">
+        <div style="text-align:center;color:var(--text-faint);padding:60px 0;">
             <i class="fas fa-spinner fa-spin" style="font-size:1.6rem;margin-bottom:10px;"></i>
             <p>Carregando propostas…</p>
         </div>
     </section>
 </main>
 
-<div id="toast"></div>
-
 <script type="module">
 import { api, API_BASE_URL } from './js/api.js';
 
 let allProps = [];
-
-function showToast(msg, type = '') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = type;
-    requestAnimationFrame(() => t.classList.add('show'));
-    setTimeout(() => t.classList.remove('show'), 2800);
-}
 
 function esc(s) {
     return String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -334,9 +189,9 @@ function formatDate(iso) {
 }
 
 function statusLabel(s) {
-    if (s === 'viewed') return { label: 'Visualizada', cls: 'viewed', icon: 'eye' };
-    if (s === 'sent') return { label: 'Enviada', cls: 'sent', icon: 'paper-plane' };
-    return { label: 'Rascunho', cls: 'draft', icon: 'pen-to-square' };
+    if (s === 'viewed') return { label: 'Visualizada', cls: 'badge-success', icon: 'eye' };
+    if (s === 'sent') return { label: 'Enviada', cls: 'badge-info', icon: 'paper-plane' };
+    return { label: 'Rascunho', cls: '', icon: 'pen-to-square' };
 }
 
 function renderList() {
@@ -358,18 +213,21 @@ function renderList() {
         if (allProps.length === 0) {
             list.innerHTML = `
                 <div class="empty-state">
-                    <i class="fas fa-file-invoice"></i>
-                    <p style="font-weight:600;color:#475569;">Nenhuma proposta gerada ainda.</p>
-                    <p style="font-size:0.85rem;">Crie a primeira proposta acessando a aba Equipamentos.</p>
-                    <div class="cta">
-                        <a href="./Equipamentos.html" class="btn-primary">
-                            <i class="fas fa-plus"></i> Gerar primeira proposta
-                        </a>
-                    </div>
+                    <div class="empty-icon"><i class="fas fa-file-invoice"></i></div>
+                    <div class="empty-title">Nenhuma proposta gerada ainda.</div>
+                    <div class="empty-text">Crie a primeira proposta acessando a aba Equipamentos.</div>
+                    <a href="./Equipamentos.html" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Gerar primeira proposta
+                    </a>
                 </div>
             `;
         } else {
-            list.innerHTML = `<div class="empty-state"><i class="fas fa-magnifying-glass"></i><p>Nenhuma proposta encontrada com esses filtros.</p></div>`;
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-magnifying-glass"></i></div>
+                    <div class="empty-text">Nenhuma proposta encontrada com esses filtros.</div>
+                </div>
+            `;
         }
         return;
     }
@@ -380,20 +238,20 @@ function renderList() {
         const itemCount = (p.items || []).length;
         const totalLine = p.showPrices && p.total != null
             ? `<span><i class="fas fa-tag"></i> ${formatBRL(p.total)}</span>`
-            : `<span style="color:#94a3b8;font-style:italic;"><i class="fas fa-eye-slash"></i> Sem valores</span>`;
+            : `<span style="color:var(--text-faint);font-style:italic;"><i class="fas fa-eye-slash"></i> Sem valores</span>`;
 
         return `
-            <article class="prop-card" data-id="${p.id}">
+            <article class="prop-card surface surface-hover" data-id="${p.id}">
                 <div>
                     <h3 class="head">
                         ${esc(p.clientName || 'Cliente')}
-                        <span class="status-pill ${st.cls}"><i class="fas fa-${st.icon}"></i> ${st.label}</span>
+                        <span class="badge ${st.cls}"><i class="fas fa-${st.icon}"></i> ${st.label}</span>
                     </h3>
                     ${p.eventTitle ? `<div class="subhead">${esc(p.eventTitle)}${p.eventDate ? ' · ' + esc(p.eventDate.split('-').reverse().join('/')) : ''}</div>` : ''}
                     <div class="meta-row">
                         <span><i class="fas fa-cubes"></i> ${itemCount} brinquedo${itemCount === 1 ? '' : 's'}</span>
                         ${totalLine}
-                        ${p.viewCount > 0 ? `<span><i class="fas fa-eye"></i> ${p.viewCount} visualização${p.viewCount === 1 ? '' : 'ões'}</span>` : ''}
+                        ${p.viewCount > 0 ? `<span><i class="fas fa-eye"></i> ${p.viewCount} visualiza${p.viewCount === 1 ? 'ção' : 'ções'}</span>` : ''}
                         <span title="Criada em ${formatDate(p.createdAt)}"><i class="fas fa-clock"></i> ${formatDate(p.createdAt)}</span>
                     </div>
                     <div class="url-row">
@@ -402,19 +260,19 @@ function renderList() {
                     </div>
                 </div>
                 <div class="actions">
-                    <a href="${esc(url)}" target="_blank" rel="noopener" class="act-btn primary" title="Abrir prévia em nova aba">
+                    <a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-icon btn-sm act-open" title="Abrir prévia em nova aba">
                         <i class="fas fa-up-right-from-square"></i>
                     </a>
-                    <a href="https://wa.me/?text=${encodeURIComponent(`Olá! Segue a proposta da Aero Festas: ${url}`)}" target="_blank" rel="noopener" class="act-btn" title="Compartilhar via WhatsApp" style="color:#16a34a;">
+                    <a href="https://wa.me/?text=${encodeURIComponent(`Olá! Segue a proposta da Aero Festas: ${url}`)}" target="_blank" rel="noopener" class="btn btn-ghost btn-icon btn-sm act-wa" title="Compartilhar via WhatsApp">
                         <i class="fab fa-whatsapp"></i>
                     </a>
-                    <a href="./Equipamentos.html?edit-proposta=${p.id}" class="act-btn" title="Editar proposta">
+                    <a href="./Equipamentos.html?edit-proposta=${p.id}" class="btn btn-ghost btn-icon btn-sm" title="Editar proposta">
                         <i class="fas fa-pen"></i>
                     </a>
-                    <button class="act-btn" data-action="duplicate" title="Duplicar">
+                    <button class="btn btn-ghost btn-icon btn-sm" data-action="duplicate" title="Duplicar">
                         <i class="fas fa-clone"></i>
                     </button>
-                    <button class="act-btn danger" data-action="delete" title="Excluir">
+                    <button class="btn btn-ghost btn-icon btn-sm act-danger" data-action="delete" title="Excluir">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -437,19 +295,19 @@ document.getElementById('prop-list').addEventListener('click', async (e) => {
         const url = btn.dataset.url;
         try {
             await navigator.clipboard.writeText(url);
-            showToast('Link copiado!', 'success');
+            UI.toast('Link copiado!', 'success');
         } catch {
-            showToast('Não foi possível copiar', 'error');
+            UI.toast('Não foi possível copiar', 'error');
         }
     } else if (action === 'duplicate') {
         btn.disabled = true;
         const res = await api.duplicarProposta(id);
         btn.disabled = false;
         if (res?.success && res.data) {
-            showToast(`Proposta duplicada (${res.data.slug})`, 'success');
+            UI.toast(`Proposta duplicada (${res.data.slug})`, 'success');
             await loadProps();
         } else {
-            showToast('Erro ao duplicar proposta', 'error');
+            UI.toast('Erro ao duplicar proposta', 'error');
         }
     } else if (action === 'delete') {
         if (!confirm(`Excluir a proposta para "${proposta.clientName}"?\n\nIsso apaga a proposta permanentemente. O link ${window.location.origin}/p/${proposta.slug} deixará de funcionar.`)) return;
@@ -457,10 +315,10 @@ document.getElementById('prop-list').addEventListener('click', async (e) => {
         const ok = await api.deletarProposta(id);
         btn.disabled = false;
         if (ok) {
-            showToast('Proposta excluída', 'success');
+            UI.toast('Proposta excluída', 'success');
             await loadProps();
         } else {
-            showToast('Erro ao excluir proposta', 'error');
+            UI.toast('Erro ao excluir proposta', 'error');
         }
     }
 });
@@ -477,6 +335,8 @@ async function loadProps() {
 loadProps();
 </script>
 
+<script src="./js/ui.js"></script>
+<script src="./js/nav.js"></script>
 <script src="js/protect.js"></script>
 </body>
 </html>
