@@ -1,4 +1,7 @@
 require('dotenv').config();
+// Railway: a rota IPv6 até googleapis.com falha no TLS ("Premature close" no
+// token OAuth do firebase-admin). Node 17+ prefere IPv6 — forçamos IPv4.
+require('dns').setDefaultResultOrder('ipv4first');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
