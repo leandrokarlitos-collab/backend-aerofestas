@@ -8,3 +8,6 @@ dev.db-journal
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Backups locais (dados sensiveis - nunca commitar)
+backups/
