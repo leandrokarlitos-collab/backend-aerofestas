@@ -425,6 +425,15 @@ cron.schedule('0 3 * * *', async () => {
 // Executa backup 2 minutos após iniciar o servidor
 setTimeout(() => runBackup('startup'), 120000);
 
+// --- WATCHDOG DE BACKUP (12:00 UTC = 09:00 BRT) ---
+// Roda bem depois do cron das 03:00: se o último backup bem-sucedido tiver
+// mais de 26h (ou nunca tiver rodado), alerta os admins por e-mail e push.
+cron.schedule('0 12 * * *', async () => {
+    console.log('🕵️ Executando watchdog de backup...');
+    const { checkBackupWatchdog } = require('./services/AlertService');
+    await checkBackupWatchdog();
+});
+
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.redirect('/login.html'));
 

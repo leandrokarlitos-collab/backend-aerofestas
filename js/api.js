@@ -1239,6 +1239,36 @@ export const api = {
         }
     },
 
+    getBackupHistory: async (limit = 30) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/backup/history?limit=${limit}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    getBackupFiles: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/backup/files`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    getBackupDownloadUrl: async (path) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/backup/download?path=${encodeURIComponent(path)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
     // 📋 AUDITORIA
     getEntityHistory: async (entityType, entityId) => {
         try {

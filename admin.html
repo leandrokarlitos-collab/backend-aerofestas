@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Administrativo - Sistema Operante</title>
+    <script src="./js/theme.js"></script>
+    <title>Administração · Aero Festas</title>
 
     <!-- PWA Config -->
     <link rel="manifest" href="manifest.json">
@@ -13,462 +14,993 @@
     <script src="js/pwa-init.js"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/aero.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f0f2f5;
+        /* ---- Admin: mínimos específicos da página (tokens do DS) ---- */
+
+        /* Garante que o toggle .hidden do modal continue funcionando
+           mesmo com .modal-backdrop { display:flex } do aero.css */
+        .modal-backdrop.hidden { display: none; }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: -.01em;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title i { color: var(--brand-600); font-size: 17px; }
+        .dark .section-title i { color: var(--brand-400); }
+
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-head h3 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-head h3 i { color: var(--text-faint); font-size: 13px; }
+
+        .msg-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .msg-success { background: var(--success-soft); color: var(--success); }
+        .msg-error   { background: var(--danger-soft);  color: var(--danger); }
+
+        .act-danger { color: var(--danger); }
+        .act-danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+        /* Card de saúde do backup */
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+        }
+        .health-item .h-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .health-item .h-value {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        .health-foot {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 24px;
+            font-size: 13px;
+            color: var(--text-muted);
+            align-items: center;
+        }
+        .health-foot i { color: var(--text-faint); margin-right: 5px; }
+
+        /* Bloco "Como restaurar" */
+        details.restore-details summary {
+            cursor: pointer;
+            padding: 14px 18px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            list-style: none;
+            user-select: none;
+        }
+        details.restore-details summary::-webkit-details-marker { display: none; }
+        details.restore-details summary i.lead { color: var(--brand-600); }
+        .dark details.restore-details summary i.lead { color: var(--brand-400); }
+        details.restore-details summary .chev { margin-left: auto; color: var(--text-faint); transition: transform var(--dur) var(--ease); }
+        details.restore-details[open] summary .chev { transform: rotate(180deg); }
+        .restore-body { padding: 0 18px 18px; color: var(--text-muted); font-size: 14px; }
+        .restore-body p { margin-bottom: 8px; }
+        .restore-body pre {
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            font-size: 12.5px;
+            line-height: 1.7;
+            overflow-x: auto;
+            color: var(--text);
+            margin: 10px 0;
+        }
+        .restore-body code {
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-size: 12.5px;
+            color: var(--brand-600);
+        }
+        .dark .restore-body code { color: var(--brand-400); }
+
+        .cell-muted { color: var(--text-muted) !important; }
+        .cell-faint { color: var(--text-faint) !important; font-size: 12px; }
+        .truncate-msg {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
         }
     </style>
 </head>
 <body>
-    <div class="min-h-screen">
-        <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
-            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold"><i class="fas fa-user-shield mr-2"></i>Painel Administrativo</h1>
-                    <p class="text-sm text-white/80">Gerenciamento de Usuários</p>
-                </div>
-                <div class="flex gap-4">
-                    <a href="Dashboard.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-home mr-2"></i>Dashboard
-                    </a>
-                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-sign-out-alt mr-2"></i>Sair
-                    </button>
-                </div>
-            </div>
-        </header>
 
-        <div class="container mx-auto px-4 py-8">
-            <div class="mb-6 flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-800">Usuários Cadastrados</h2>
-                <button onclick="openAddUserModal()"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg shadow-lg transition-colors">
-                    <i class="fas fa-user-plus mr-2"></i>Adicionar Usuário
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <header class="page-header">
+        <div>
+            <h1 class="flex items-center gap-3">
+                <i class="fas fa-user-shield text-grad-brand"></i> Administração
+            </h1>
+            <p class="page-subtitle">Usuários, histórico de alterações e segurança de dados.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="Dashboard.html" class="btn btn-secondary">
+                <i class="fas fa-home"></i> <span class="hidden sm:inline">Dashboard</span>
+            </a>
+            <button onclick="logout()" class="btn btn-danger-soft">
+                <i class="fas fa-sign-out-alt"></i> <span class="hidden sm:inline">Sair</span>
+            </button>
+        </div>
+    </header>
+
+    <div id="messageContainer" class="mb-4"></div>
+
+    <!-- ================= Backups & Segurança ================= -->
+    <section class="mb-10">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <h2 class="section-title"><i class="fas fa-shield-halved"></i> Backups &amp; Segurança</h2>
+            <div class="flex flex-wrap gap-2">
+                <button id="runBackupBtn" class="btn btn-primary btn-sm">
+                    <i class="fas fa-play"></i> Executar backup agora
+                </button>
+                <button id="downloadBackupBtn" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-download"></i> Baixar backup atual
                 </button>
             </div>
+        </div>
 
-            <div id="messageContainer" class="mb-4"></div>
+        <div id="backupDurabilityBanner" class="hidden msg-banner msg-error mb-4">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span>Storage não configurado — backups não sobrevivem a deploy. Configure o Firebase Storage no backend.</span>
+        </div>
 
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                <div id="loadingUsers" class="text-center py-8">
-                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                    <p class="mt-2 text-gray-600">Carregando usuários...</p>
-                </div>
-                <table id="usersTable" class="hidden w-full">
-                    <thead class="bg-gray-50">
+        <!-- Card de saúde -->
+        <div id="backupHealthCard" class="surface p-5 mb-4"></div>
+
+        <!-- Histórico de execuções -->
+        <div class="surface overflow-hidden mb-4">
+            <div class="card-head">
+                <h3><i class="fas fa-clock-rotate-left"></i> Histórico de execuções</h3>
+                <button id="reloadBackupBtn" class="btn btn-ghost btn-sm" title="Atualizar">
+                    <i class="fas fa-rotate"></i>
+                </button>
+            </div>
+            <div id="backupHistoryBody"></div>
+        </div>
+
+        <!-- Arquivos no bucket -->
+        <div class="surface overflow-hidden mb-4">
+            <div class="card-head">
+                <h3><i class="fas fa-cloud"></i> Arquivos no armazenamento</h3>
+            </div>
+            <div id="backupFilesBody"></div>
+        </div>
+
+        <!-- Como restaurar -->
+        <details class="surface restore-details">
+            <summary>
+                <i class="fas fa-life-ring lead"></i> Como restaurar (guia rápido)
+                <i class="fas fa-chevron-down chev"></i>
+            </summary>
+            <div class="restore-body">
+                <p>A restauração é feita pelo script <code>scripts/restore.js</code> no backend (Railway ou local com <code>DATABASE_URL</code> de produção). Por padrão o script roda em <strong>dry-run</strong>: apenas simula e mostra o que seria restaurado, sem gravar nada.</p>
+                <pre># 1. Simulação (dry-run, padrão) a partir do último backup do bucket
+node scripts/restore.js --from-storage latest
+
+# 2. Simulação a partir de um arquivo local (v1 ou v2, .json/.gz/.enc)
+node scripts/restore.js --file backups/aero-backup-2026-07-02.json.gz
+
+# 3. Restaurar SOMENTE tabelas vazias (modo seguro recomendado)
+node scripts/restore.js --from-storage latest --mode empty-only
+
+# 4. Restaurar sobrescrevendo por id (upsert — usar com cautela)
+node scripts/restore.js --file backup.json --mode upsert</pre>
+                <p><i class="fas fa-circle-info"></i> O script nunca apaga dados: ele só cria (empty-only) ou cria/atualiza (upsert). O passo a passo completo, incluindo o drill trimestral de restauração, está em <code>docs/RESTORE-DRILL.md</code> no repositório.</p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ================= Usuários ================= -->
+    <section class="mb-10">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <h2 class="section-title"><i class="fas fa-users"></i> Usuários Cadastrados</h2>
+            <button onclick="openAddUserModal()" class="btn btn-primary btn-sm">
+                <i class="fas fa-user-plus"></i> Adicionar Usuário
+            </button>
+        </div>
+
+        <div class="surface overflow-hidden">
+            <div id="loadingUsers" class="p-5">
+                <div class="skeleton" style="height:14px;width:70%;margin-bottom:12px;"></div>
+                <div class="skeleton" style="height:14px;width:85%;margin-bottom:12px;"></div>
+                <div class="skeleton" style="height:14px;width:55%;"></div>
+            </div>
+            <div class="table-wrap">
+                <table id="usersTable" class="table hidden">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Tipo</th>
+                            <th>Data</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
-                    </tbody>
+                    <tbody id="usersTableBody"></tbody>
                 </table>
             </div>
+        </div>
+    </section>
 
-            <div class="mt-8">
-                <div class="mb-6 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold text-gray-800">Histórico de Alterações</h2>
-                    <button onclick="loadHistory()"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-sync-alt mr-2"></i>Atualizar
+    <!-- ================= Histórico de Alterações ================= -->
+    <section>
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <h2 class="section-title"><i class="fas fa-timeline"></i> Histórico de Alterações</h2>
+            <button onclick="loadHistory()" class="btn btn-secondary btn-sm">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+        </div>
+
+        <div class="surface p-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div>
+                    <label class="input-label">Tipo de Ação</label>
+                    <select id="filterAction" class="select">
+                        <option value="">Todas</option>
+                        <option value="create">Criar</option>
+                        <option value="update">Atualizar</option>
+                        <option value="delete">Remover</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="input-label">Entidade</label>
+                    <select id="filterEntityType" class="select">
+                        <option value="">Todas</option>
+                        <option value="User">Usuário</option>
+                        <option value="Event">Evento</option>
+                        <option value="Transaction">Transação</option>
+                        <option value="Account">Conta</option>
+                        <option value="FixedExpense">Despesa Fixa</option>
+                        <option value="Monitor">Monitor</option>
+                        <option value="MonitorPayment">Pgto Monitor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="input-label">Data Inicial</label>
+                    <input type="date" id="filterStartDate" class="input">
+                </div>
+                <div>
+                    <label class="input-label">Data Final</label>
+                    <input type="date" id="filterEndDate" class="input">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="applyHistoryFilters()" class="btn btn-primary btn-full">
+                        <i class="fas fa-filter"></i> Filtrar
                     </button>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Ação</label>
-                            <select id="filterAction" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Todas</option>
-                                <option value="create">Criar</option>
-                                <option value="update">Atualizar</option>
-                                <option value="delete">Remover</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Entidade</label>
-                            <select id="filterEntityType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Todas</option>
-                                <option value="User">Usuário</option>
-                                <option value="Event">Evento</option>
-                                <option value="Transaction">Transação</option>
-                                <option value="Account">Conta</option>
-                                <option value="FixedExpense">Despesa Fixa</option>
-                                <option value="Monitor">Monitor</option>
-                                <option value="MonitorPayment">Pgto Monitor</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Data Inicial</label>
-                            <input type="date" id="filterStartDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
-                            <input type="date" id="filterEndDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div class="flex items-end">
-                            <button onclick="applyHistoryFilters()"
-                                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors">
-                                <i class="fas fa-filter mr-2"></i>Filtrar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <div id="loadingHistory" class="text-center py-8 hidden">
-                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                        <p class="mt-2 text-gray-600">Carregando histórico...</p>
-                    </div>
-                    <div id="historyTableContainer" class="hidden">
-                        <table id="historyTable" class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entidade</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alterado Por</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alterações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="addUserModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800">Adicionar Usuário</h3>
-                <button onclick="closeAddUserModal()" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
+        <div class="surface overflow-hidden">
+            <div id="loadingHistory" class="p-5 hidden">
+                <div class="skeleton" style="height:14px;width:80%;margin-bottom:12px;"></div>
+                <div class="skeleton" style="height:14px;width:65%;margin-bottom:12px;"></div>
+                <div class="skeleton" style="height:14px;width:75%;"></div>
             </div>
-            <form id="addUserForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                    <input type="text" id="addUserName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div id="historyTableContainer" class="hidden">
+                <div class="table-wrap">
+                    <table id="historyTable" class="table">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Tipo</th>
+                                <th>Ação</th>
+                                <th>Entidade</th>
+                                <th>Alterado Por</th>
+                                <th>Alterações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="addUserEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Senha (deixe em branco para gerar automaticamente)</label>
-                    <input type="password" id="addUserPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div class="flex items-center gap-4">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="addUserIsAdmin" class="mr-2">
-                        <span class="text-sm text-gray-700">Administrador</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" id="addUserSkipEmail" class="mr-2">
-                        <span class="text-sm text-gray-700">Pular confirmação de email</span>
-                    </label>
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition-colors">
-                        Adicionar
-                    </button>
-                    <button type="button" onclick="closeAddUserModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 rounded-lg transition-colors">
-                        Cancelar
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
+    </section>
+</main>
+
+<!-- Modal: Adicionar Usuário -->
+<div id="addUserModal" class="hidden modal-backdrop sheet-on-mobile">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">Adicionar Usuário</div>
+            <button type="button" onclick="closeAddUserModal()" class="btn btn-ghost btn-icon" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addUserForm">
+            <div class="modal-body space-y-4">
+                <div>
+                    <label class="input-label">Nome</label>
+                    <input type="text" id="addUserName" required class="input">
+                </div>
+                <div>
+                    <label class="input-label">Email</label>
+                    <input type="email" id="addUserEmail" required class="input">
+                </div>
+                <div>
+                    <label class="input-label">Senha (deixe em branco para gerar automaticamente)</label>
+                    <input type="password" id="addUserPassword" class="input">
+                </div>
+                <div class="flex items-center gap-4 flex-wrap">
+                    <label class="flex items-center gap-2 text-sm" style="color:var(--text-muted)">
+                        <input type="checkbox" id="addUserIsAdmin">
+                        Administrador
+                    </label>
+                    <label class="flex items-center gap-2 text-sm" style="color:var(--text-muted)">
+                        <input type="checkbox" id="addUserSkipEmail">
+                        Pular confirmação de email
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeAddUserModal()" class="btn btn-ghost">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Adicionar</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <script src="js/protect.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/nav.js"></script>
+<script src="js/protect.js"></script>
 
-    <script type="module">
-        import {
-            getUserData,
-            listUsers,
-            addUser,
-            removeUser,
-            logout,
-            getHistory
-        } from './js/auth.js';
+<script type="module">
+    import {
+        getUserData,
+        listUsers,
+        addUser,
+        removeUser,
+        logout,
+        getHistory
+    } from './js/auth.js';
+    import { api } from './js/api.js';
 
-        // --- TORNA FUNÇÕES GLOBAIS (Para funcionar com onclick no HTML) ---
-        window.logout = logout;
+    // --- TORNA FUNÇÕES GLOBAIS (Para funcionar com onclick no HTML) ---
+    window.logout = logout;
 
-        window.openAddUserModal = function () {
-            document.getElementById('addUserModal').classList.remove('hidden');
-        };
+    window.openAddUserModal = function () {
+        document.getElementById('addUserModal').classList.remove('hidden');
+    };
 
-        window.closeAddUserModal = function () {
-            document.getElementById('addUserModal').classList.add('hidden');
-            document.getElementById('addUserForm').reset();
-        };
+    window.closeAddUserModal = function () {
+        document.getElementById('addUserModal').classList.add('hidden');
+        document.getElementById('addUserForm').reset();
+    };
 
-        window.removeUserById = async function (userId) {
-            if (!confirm('Tem certeza que deseja remover este usuário?')) return;
-            try {
-                await removeUser(userId);
-                showMessage('Usuário removido com sucesso!', 'success');
-                await loadUsers();
-            } catch (error) {
-                showMessage('Erro ao remover usuário: ' + error.message, 'error');
-            }
-        };
-
-        // --- FUNÇÕES INTERNAS DO MÓDULO ---
-
-        let currentUser = null;
-
-        // Inicialização
-        (async function () {
-            try {
-                // Pequeno delay para garantir que o js/protect.js rodou
-                await new Promise(r => setTimeout(r, 100));
-
-                currentUser = getUserData();
-                if (!currentUser || !currentUser.isAdmin) {
-                    console.warn("Acesso negado: Usuário não é admin ou não está logado.");
-                    window.location.href = '/Dashboard.html';
-                    return;
-                }
-                await loadUsers();
-            } catch (error) {
-                console.error('Erro na inicialização:', error);
-                window.location.href = '/login.html';
-            }
-        })();
-
-        // Carrega lista de usuários
-        async function loadUsers() {
-            try {
-                const users = await listUsers();
-                displayUsers(users);
-                // Carrega histórico inicial
-                loadHistory();
-            } catch (error) {
-                showMessage('Erro ao carregar usuários: ' + error.message, 'error');
-            }
+    window.removeUserById = async function (userId) {
+        const ok = await UI.confirm({
+            title: 'Remover usuário',
+            message: 'Tem certeza que deseja remover este usuário?',
+            confirmText: 'Remover',
+            danger: true
+        });
+        if (!ok) return;
+        try {
+            await removeUser(userId);
+            showMessage('Usuário removido com sucesso!', 'success');
+            await loadUsers();
+        } catch (error) {
+            showMessage('Erro ao remover usuário: ' + error.message, 'error');
         }
+    };
 
-        // Exibe usuários na tabela
-        function displayUsers(users) {
-            const loading = document.getElementById('loadingUsers');
-            const table = document.getElementById('usersTable');
-            const tbody = document.getElementById('usersTableBody');
+    // --- FUNÇÕES INTERNAS DO MÓDULO ---
 
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-            tbody.innerHTML = '';
+    let currentUser = null;
 
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum usuário cadastrado</td></tr>';
+    // Inicialização
+    (async function () {
+        try {
+            // Pequeno delay para garantir que o js/protect.js rodou
+            await new Promise(r => setTimeout(r, 100));
+
+            currentUser = getUserData();
+            if (!currentUser || !currentUser.isAdmin) {
+                console.warn("Acesso negado: Usuário não é admin ou não está logado.");
+                window.location.href = '/Dashboard.html';
                 return;
             }
+            loadBackupSection();
+            await loadUsers();
+        } catch (error) {
+            console.error('Erro na inicialização:', error);
+            window.location.href = '/login.html';
+        }
+    })();
 
-            users.forEach(user => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
+    // Carrega lista de usuários
+    async function loadUsers() {
+        try {
+            const users = await listUsers();
+            displayUsers(users);
+            // Carrega histórico inicial
+            loadHistory();
+        } catch (error) {
+            showMessage('Erro ao carregar usuários: ' + error.message, 'error');
+        }
+    }
 
-                // Tenta achar o nome de quem criou/atualizou
-                const createdByText = user.createdBy && users.find(u => u.id === user.createdBy)?.name || (user.createdBy === 'system' ? 'Sistema' : 'Desconhecido');
-                const updatedByText = user.updatedBy && users.find(u => u.id === user.updatedBy)?.name || (user.updatedBy === 'system' ? 'Sistema' : '-');
+    // Exibe usuários na tabela
+    function displayUsers(users) {
+        const loading = document.getElementById('loadingUsers');
+        const table = document.getElementById('usersTable');
+        const tbody = document.getElementById('usersTableBody');
 
-                row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(user.name)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(user.email)}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${user.emailConfirmed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                                ${user.emailConfirmed ? 'Confirmado' : 'Pendente'}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${user.isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}">
-                                ${user.isAdmin ? 'Admin' : 'Usuário'}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div>${new Date(user.createdAt).toLocaleDateString('pt-BR')}</div>
-                            <div class="text-xs text-gray-400">Por: ${escapeHtml(createdByText)}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <button onclick="removeUserById('${user.id}')" class="text-red-600 hover:text-red-800" title="Remover Usuário">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    `;
-                tbody.appendChild(row);
-            });
+        loading.classList.add('hidden');
+        table.classList.remove('hidden');
+        tbody.innerHTML = '';
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="cell-muted" style="text-align:center;padding:24px;">Nenhum usuário cadastrado</td></tr>';
+            return;
         }
 
-        // --- FUNÇÃO DE HISTÓRICO (Implementada) ---
-        // --- FUNÇÃO DE HISTÓRICO (CORRIGIDA) ---
-        window.loadHistory = async function () {
-            const loading = document.getElementById('loadingHistory');
-            const container = document.getElementById('historyTableContainer');
-            const tbody = document.getElementById('historyTableBody');
+        users.forEach(user => {
+            const row = document.createElement('tr');
 
-            loading.classList.remove('hidden');
-            container.classList.add('hidden');
+            // Tenta achar o nome de quem criou/atualizou
+            const createdByText = user.createdBy && users.find(u => u.id === user.createdBy)?.name || (user.createdBy === 'system' ? 'Sistema' : 'Desconhecido');
+            const updatedByText = user.updatedBy && users.find(u => u.id === user.updatedBy)?.name || (user.updatedBy === 'system' ? 'Sistema' : '-');
 
-            try {
-                // Pega filtros
-                const filters = {
-                    action: document.getElementById('filterAction').value,
-                    entityType: document.getElementById('filterEntityType').value,
-                    startDate: document.getElementById('filterStartDate').value,
-                    endDate: document.getElementById('filterEndDate').value
+            row.innerHTML = `
+                    <td class="font-medium whitespace-nowrap">${escapeHtml(user.name)}</td>
+                    <td class="cell-muted whitespace-nowrap">${escapeHtml(user.email)}</td>
+                    <td class="whitespace-nowrap">
+                        <span class="badge ${user.emailConfirmed ? 'badge-success' : 'badge-warning'}">
+                            ${user.emailConfirmed ? 'Confirmado' : 'Pendente'}
+                        </span>
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <span class="badge ${user.isAdmin ? 'badge-brand' : ''}">
+                            ${user.isAdmin ? 'Admin' : 'Usuário'}
+                        </span>
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <div class="cell-muted">${new Date(user.createdAt).toLocaleDateString('pt-BR')}</div>
+                        <div class="cell-faint">Por: ${escapeHtml(createdByText)}</div>
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <button onclick="removeUserById('${user.id}')" class="btn btn-ghost btn-icon act-danger" title="Remover Usuário">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // --- FUNÇÃO DE HISTÓRICO ---
+    window.loadHistory = async function () {
+        const loading = document.getElementById('loadingHistory');
+        const container = document.getElementById('historyTableContainer');
+        const tbody = document.getElementById('historyTableBody');
+
+        loading.classList.remove('hidden');
+        container.classList.add('hidden');
+
+        try {
+            // Pega filtros
+            const filters = {
+                action: document.getElementById('filterAction').value,
+                entityType: document.getElementById('filterEntityType').value,
+                startDate: document.getElementById('filterStartDate').value,
+                endDate: document.getElementById('filterEndDate').value
+            };
+
+            // getHistory retorna um objeto { history: [], stats: {} }
+            const response = await getHistory(filters);
+            const historyList = response.history || []; // Extraímos apenas a lista (Array)
+
+            tbody.innerHTML = '';
+            if (historyList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="cell-muted" style="text-align:center;padding:24px;">Nenhum registro encontrado.</td></tr>';
+            } else {
+                const entityTypeLabels = {
+                    'User': 'Usuário',
+                    'Event': 'Evento',
+                    'Transaction': 'Transação',
+                    'Account': 'Conta',
+                    'FixedExpense': 'Despesa Fixa',
+                    'Category': 'Categoria',
+                    'Monitor': 'Monitor',
+                    'MonitorPayment': 'Pgto Monitor'
                 };
 
-                // O erro estava aqui: getHistory retorna um objeto { history: [], stats: {} }
-                const response = await getHistory(filters);
-                const historyList = response.history || []; // Extraímos apenas a lista (Array)
+                const entityTypeBadges = {
+                    'User': 'badge-brand',
+                    'Event': 'badge-info',
+                    'Transaction': 'badge-success',
+                    'Account': 'badge-warning',
+                    'FixedExpense': 'badge-warning',
+                    'Category': '',
+                    'Monitor': 'badge-info',
+                    'MonitorPayment': 'badge-info'
+                };
 
-                tbody.innerHTML = '';
-                if (historyList.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum registro encontrado.</td></tr>';
-                } else {
-                    const entityTypeLabels = {
-                        'User': 'Usuário',
-                        'Event': 'Evento',
-                        'Transaction': 'Transação',
-                        'Account': 'Conta',
-                        'FixedExpense': 'Despesa Fixa',
-                        'Category': 'Categoria',
-                        'Monitor': 'Monitor',
-                        'MonitorPayment': 'Pgto Monitor'
-                    };
+                const actionLabels = { 'CREATE': 'Criação', 'UPDATE': 'Edição', 'DELETE': 'Remoção' };
+                const actionBadges = { 'CREATE': 'badge-success', 'UPDATE': 'badge-warning', 'DELETE': 'badge-danger' };
 
-                    const entityTypeColors = {
-                        'User': 'bg-purple-100 text-purple-800',
-                        'Event': 'bg-blue-100 text-blue-800',
-                        'Transaction': 'bg-green-100 text-green-800',
-                        'Account': 'bg-yellow-100 text-yellow-800',
-                        'FixedExpense': 'bg-orange-100 text-orange-800',
-                        'Category': 'bg-gray-100 text-gray-800',
-                        'Monitor': 'bg-teal-100 text-teal-800',
-                        'MonitorPayment': 'bg-cyan-100 text-cyan-800'
-                    };
+                historyList.forEach(h => {
+                    const row = document.createElement('tr');
 
-                    const actionLabels = { 'CREATE': 'Criação', 'UPDATE': 'Edição', 'DELETE': 'Remoção' };
-                    const actionColors = { 'CREATE': 'bg-green-100 text-green-800', 'UPDATE': 'bg-amber-100 text-amber-800', 'DELETE': 'bg-red-100 text-red-800' };
-
-                    historyList.forEach(h => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-gray-50';
-
-                        // Formata mudanças para texto legível
-                        let changesText = '-';
-                        if (h.details) {
-                            try {
-                                const details = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
-                                const parts = [];
-                                for (const [key, val] of Object.entries(details)) {
-                                    if (val && typeof val === 'object' && 'old' in val && 'new' in val) {
-                                        parts.push(`${key}: ${val.old || '—'} → ${val.new || '—'}`);
-                                    }
+                    // Formata mudanças para texto legível
+                    let changesText = '-';
+                    if (h.details) {
+                        try {
+                            const details = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
+                            const parts = [];
+                            for (const [key, val] of Object.entries(details)) {
+                                if (val && typeof val === 'object' && 'old' in val && 'new' in val) {
+                                    parts.push(`${key}: ${val.old || '—'} → ${val.new || '—'}`);
                                 }
-                                changesText = parts.length > 0 ? parts.join('; ') : JSON.stringify(details).substring(0, 80);
-                                if (changesText.length > 80) changesText = changesText.substring(0, 77) + '...';
-                            } catch (e) { changesText = String(h.details).substring(0, 80); }
-                        }
+                            }
+                            changesText = parts.length > 0 ? parts.join('; ') : JSON.stringify(details).substring(0, 80);
+                            if (changesText.length > 80) changesText = changesText.substring(0, 77) + '...';
+                        } catch (e) { changesText = String(h.details).substring(0, 80); }
+                    }
 
-                        const entityName = h.targetUserInfo ? (h.targetUserInfo.name || h.targetUserInfo.email || h.entityId) : h.entityId;
-                        const changerName = h.changedByInfo ? (h.changedByInfo.name || 'Sistema') : (h.adminEmail || 'Sistema');
-                        const actionUpper = h.action ? h.action.toUpperCase() : 'N/A';
-                        const entityType = h.entityType || 'N/A';
+                    const entityName = h.targetUserInfo ? (h.targetUserInfo.name || h.targetUserInfo.email || h.entityId) : h.entityId;
+                    const changerName = h.changedByInfo ? (h.changedByInfo.name || 'Sistema') : (h.adminEmail || 'Sistema');
+                    const actionUpper = h.action ? h.action.toUpperCase() : 'N/A';
+                    const entityType = h.entityType || 'N/A';
 
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(h.timestamp).toLocaleString('pt-BR')}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${entityTypeColors[entityType] || 'bg-gray-100 text-gray-800'}">${entityTypeLabels[entityType] || entityType}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${actionColors[actionUpper] || 'bg-gray-100 text-gray-800'}">${actionLabels[actionUpper] || actionUpper}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(entityName)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(changerName)}</td>
-                            <td class="px-6 py-4 text-sm text-gray-400 text-xs max-w-xs truncate" title="${escapeHtml(changesText)}">${escapeHtml(changesText)}</td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                }
-                container.classList.remove('hidden');
-
-                // (Opcional) Se quiser preencher os cards de estatística no futuro, use response.stats aqui
-
-            } catch (error) {
-                console.error("Erro ao carregar histórico:", error);
-                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-red-500">Erro ao carregar dados.</td></tr>';
-                container.classList.remove('hidden');
-            } finally {
-                loading.classList.add('hidden');
-            }
-        };
-
-        window.applyHistoryFilters = function () {
-            loadHistory();
-        };
-
-        // Adiciona usuário (Listener)
-        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const name = document.getElementById('addUserName').value.trim();
-            const email = document.getElementById('addUserEmail').value.trim();
-            const password = document.getElementById('addUserPassword').value;
-            const isAdmin = document.getElementById('addUserIsAdmin').checked;
-            const skipEmail = document.getElementById('addUserSkipEmail').checked;
-
-            try {
-                const result = await addUser({
-                    name,
-                    email,
-                    password: password || undefined,
-                    isAdmin,
-                    skipEmailConfirmation: skipEmail
+                    row.innerHTML = `
+                        <td class="cell-muted whitespace-nowrap">${new Date(h.timestamp).toLocaleString('pt-BR')}</td>
+                        <td class="whitespace-nowrap">
+                            <span class="badge ${entityTypeBadges[entityType] || ''}">${entityTypeLabels[entityType] || entityType}</span>
+                        </td>
+                        <td class="whitespace-nowrap">
+                            <span class="badge ${actionBadges[actionUpper] || ''}">${actionLabels[actionUpper] || actionUpper}</span>
+                        </td>
+                        <td class="cell-muted whitespace-nowrap">${escapeHtml(entityName)}</td>
+                        <td class="cell-muted whitespace-nowrap">${escapeHtml(changerName)}</td>
+                        <td><span class="truncate-msg cell-faint" title="${escapeHtml(changesText)}">${escapeHtml(changesText)}</span></td>
+                    `;
+                    tbody.appendChild(row);
                 });
-
-                showMessage('Usuário adicionado com sucesso!' + (result.generatedPassword ? ` Senha: ${result.generatedPassword}` : ''), 'success');
-                closeAddUserModal();
-                await loadUsers();
-            } catch (error) {
-                showMessage('Erro ao adicionar usuário: ' + error.message, 'error');
             }
-        });
+            container.classList.remove('hidden');
 
-        // Mensagens e Utilitários
-        function showMessage(text, type) {
-            const container = document.getElementById('messageContainer');
-            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-            container.innerHTML = `
-                    <div class="${bgColor} text-white px-4 py-3 rounded-lg shadow-lg">
-                        ${escapeHtml(text)}
-                    </div>
-                `;
-            setTimeout(() => { container.innerHTML = ''; }, 5000);
+        } catch (error) {
+            console.error("Erro ao carregar histórico:", error);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--danger);">Erro ao carregar dados.</td></tr>';
+            container.classList.remove('hidden');
+        } finally {
+            loading.classList.add('hidden');
+        }
+    };
+
+    window.applyHistoryFilters = function () {
+        loadHistory();
+    };
+
+    // Adiciona usuário (Listener)
+    document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('addUserName').value.trim();
+        const email = document.getElementById('addUserEmail').value.trim();
+        const password = document.getElementById('addUserPassword').value;
+        const isAdmin = document.getElementById('addUserIsAdmin').checked;
+        const skipEmail = document.getElementById('addUserSkipEmail').checked;
+
+        try {
+            const result = await addUser({
+                name,
+                email,
+                password: password || undefined,
+                isAdmin,
+                skipEmailConfirmation: skipEmail
+            });
+
+            showMessage('Usuário adicionado com sucesso!' + (result.generatedPassword ? ` Senha: ${result.generatedPassword}` : ''), 'success');
+            closeAddUserModal();
+            await loadUsers();
+        } catch (error) {
+            showMessage('Erro ao adicionar usuário: ' + error.message, 'error');
+        }
+    });
+
+    // ========================================================
+    // BACKUPS & SEGURANÇA
+    // ========================================================
+
+    const fmtBytes = (b) => {
+        if (b == null || isNaN(b)) return '—';
+        if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+        return (b / (1024 * 1024)).toFixed(2) + ' MB';
+    };
+    const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString('pt-BR') : '—';
+
+    function skeletonRows(el, n) {
+        let html = '<div class="p-4">';
+        for (let i = 0; i < n; i++) {
+            html += '<div style="display:flex;gap:12px;padding:8px 0;"><div class="skeleton" style="flex:2;height:14px;"></div><div class="skeleton" style="flex:1;height:14px;"></div><div class="skeleton" style="flex:1;height:14px;"></div></div>';
+        }
+        el.innerHTML = html + '</div>';
+    }
+
+    async function loadBackupSection() {
+        const health = document.getElementById('backupHealthCard');
+        const histBody = document.getElementById('backupHistoryBody');
+        const filesBody = document.getElementById('backupFilesBody');
+
+        UI.skeleton(health, 'lines', 3);
+        skeletonRows(histBody, 4);
+        skeletonRows(filesBody, 3);
+
+        const [status, history, files] = await Promise.all([
+            api.getBackupStatus(),
+            api.getBackupHistory(30),
+            api.getBackupFiles()
+        ]);
+
+        renderBackupHealth(status, history);
+        renderBackupHistory(history);
+        renderBackupFiles(files);
+    }
+
+    function backupHealthBadge(status) {
+        if (status.success === false) {
+            return '<span class="badge badge-danger"><i class="fas fa-xmark"></i> Falha</span>';
+        }
+        if (status.durable === false) {
+            return '<span class="badge badge-warning"><i class="fas fa-triangle-exclamation"></i> Não durável</span>';
+        }
+        const ageH = (Date.now() - new Date(status.timestamp).getTime()) / 36e5;
+        if (ageH > 24) {
+            return '<span class="badge badge-warning"><i class="fas fa-clock"></i> Desatualizado (&gt;24h)</span>';
+        }
+        if (status.verified) {
+            return '<span class="badge badge-success"><i class="fas fa-check"></i> Verificado</span>';
+        }
+        return '<span class="badge badge-success"><i class="fas fa-check"></i> OK</span>';
+    }
+
+    function renderBackupHealth(status, history) {
+        const card = document.getElementById('backupHealthCard');
+
+        if (!status || !status.timestamp) {
+            card.innerHTML = `
+                <div class="empty-state" style="padding:24px 16px;">
+                    <div class="empty-icon"><i class="fas fa-database"></i></div>
+                    <div class="empty-title">Nenhum backup registrado ainda</div>
+                    <div class="empty-text">Execute o primeiro backup pelo botão acima. O backup automático roda diariamente.</div>
+                </div>`;
+            return;
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        // Último restore drill no histórico
+        const lastDrill = (history || []).find(h => h.type === 'drill');
+        let drillHtml;
+        if (!lastDrill) {
+            drillHtml = '<span class="badge badge-warning"><i class="fas fa-triangle-exclamation"></i> Nunca executado</span>';
+        } else {
+            const days = Math.floor((Date.now() - new Date(lastDrill.timestamp).getTime()) / 864e5);
+            drillHtml = days > 120
+                ? `${fmtDateTime(lastDrill.timestamp)} <span class="badge badge-warning">${days} dias atrás — agendar novo drill</span>`
+                : `${fmtDateTime(lastDrill.timestamp)} <span class="badge badge-success">${days} dia(s) atrás</span>`;
         }
-    </script>
+
+        card.innerHTML = `
+            <div class="health-grid">
+                <div class="health-item">
+                    <div class="h-label">Último backup</div>
+                    <div class="h-value">${fmtDateTime(status.timestamp)}</div>
+                    <div style="margin-top:6px;">${backupHealthBadge(status)}</div>
+                </div>
+                <div class="health-item">
+                    <div class="h-label">Registros</div>
+                    <div class="h-value">${(status.recordCount || 0).toLocaleString('pt-BR')}</div>
+                </div>
+                <div class="health-item">
+                    <div class="h-label">Tamanho</div>
+                    <div class="h-value">${fmtBytes(status.sizeBytes)}</div>
+                </div>
+                <div class="health-item">
+                    <div class="h-label">Origem</div>
+                    <div class="h-value">${escapeHtml(status.source || '—')}</div>
+                </div>
+            </div>
+            <div class="health-foot">
+                <span><i class="fas fa-layer-group"></i> Retenção: 30 diários · 24 mensais · anuais</span>
+                <span><i class="fas fa-vial-circle-check"></i> Último restore drill: ${drillHtml}</span>
+            </div>`;
+    }
+
+    function renderBackupHistory(history) {
+        const body = document.getElementById('backupHistoryBody');
+        if (!history || history.length === 0) {
+            UI.empty(body, {
+                icon: 'fa-clock-rotate-left',
+                title: 'Sem execuções registradas',
+                text: 'As execuções de backup (automáticas e manuais) aparecerão aqui.'
+            });
+            return;
+        }
+
+        const typeBadges = { backup: 'badge-brand', restore: 'badge-warning', drill: 'badge-info' };
+        const typeLabels = { backup: 'Backup', restore: 'Restore', drill: 'Drill' };
+
+        const rows = history.map(h => {
+            const msg = h.message || '—';
+            const msgShort = msg.length > 60 ? msg.substring(0, 57) + '...' : msg;
+            const tipoBadge = h.success === false
+                ? `<span class="badge badge-danger">${typeLabels[h.type] || h.type || '—'} · falha</span>`
+                : `<span class="badge ${typeBadges[h.type] || ''}">${typeLabels[h.type] || h.type || '—'}</span>`;
+            return `
+                <tr>
+                    <td class="cell-muted whitespace-nowrap">${fmtDateTime(h.timestamp)}</td>
+                    <td class="cell-muted whitespace-nowrap">${escapeHtml(h.source || '—')}</td>
+                    <td class="whitespace-nowrap">${tipoBadge}</td>
+                    <td class="whitespace-nowrap">${(h.recordCount || 0).toLocaleString('pt-BR')}</td>
+                    <td class="whitespace-nowrap">${fmtBytes(h.sizeBytes)}</td>
+                    <td class="whitespace-nowrap">${h.durable ? '<span class="badge badge-success">Sim</span>' : '<span class="badge badge-warning">Não</span>'}</td>
+                    <td class="whitespace-nowrap">${h.verified ? '<span style="color:var(--success);font-weight:700;">✓</span>' : '<span class="cell-faint">—</span>'}</td>
+                    <td><span class="truncate-msg cell-faint" title="${escapeHtml(msg)}">${escapeHtml(msgShort)}</span></td>
+                </tr>`;
+        }).join('');
+
+        body.innerHTML = `
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data/hora</th>
+                            <th>Origem</th>
+                            <th>Tipo</th>
+                            <th>Registros</th>
+                            <th>Tamanho</th>
+                            <th>Durável</th>
+                            <th>Verificado</th>
+                            <th>Mensagem</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderBackupFiles(files) {
+        const body = document.getElementById('backupFilesBody');
+        const banner = document.getElementById('backupDurabilityBanner');
+
+        if (!files) {
+            UI.empty(body, {
+                icon: 'fa-cloud',
+                title: 'Não foi possível listar os arquivos',
+                text: 'Erro ao consultar o armazenamento. Tente atualizar.'
+            });
+            return;
+        }
+
+        if (files.durable === false) {
+            banner.classList.remove('hidden');
+            UI.empty(body, {
+                icon: 'fa-triangle-exclamation',
+                title: 'Storage não configurado',
+                text: 'Os backups não estão sendo enviados ao bucket e não sobrevivem a deploy.'
+            });
+            return;
+        }
+
+        banner.classList.add('hidden');
+
+        const list = files.files || [];
+        if (list.length === 0) {
+            UI.empty(body, {
+                icon: 'fa-folder-open',
+                title: 'Nenhum arquivo no bucket',
+                text: 'Execute um backup para gerar o primeiro arquivo durável.'
+            });
+            return;
+        }
+
+        const tierBadges = { daily: 'badge-brand', monthly: 'badge-info', yearly: 'badge-warning' };
+        const tierLabels = { daily: 'Diário', monthly: 'Mensal', yearly: 'Anual' };
+
+        const rows = list.map(f => {
+            const name = (f.path || '').split('/').pop();
+            return `
+                <tr>
+                    <td class="whitespace-nowrap">
+                        <span class="font-medium">${escapeHtml(name)}</span>
+                        ${f.encrypted ? ' <i class="fas fa-lock cell-faint" title="Criptografado (AES-256-GCM)"></i>' : ''}
+                    </td>
+                    <td class="whitespace-nowrap"><span class="badge ${tierBadges[f.tier] || ''}">${tierLabels[f.tier] || escapeHtml(f.tier || '—')}</span></td>
+                    <td class="whitespace-nowrap">${fmtBytes(f.sizeBytes)}</td>
+                    <td class="cell-muted whitespace-nowrap">${fmtDateTime(f.updated)}</td>
+                    <td class="whitespace-nowrap">
+                        <button class="btn btn-secondary btn-sm" data-path="${escapeHtml(f.path)}">
+                            <i class="fas fa-download"></i> Baixar
+                        </button>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        body.innerHTML = `
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Arquivo</th>
+                            <th>Tier</th>
+                            <th>Tamanho</th>
+                            <th>Atualizado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    // Baixar arquivo do bucket (delegação)
+    document.getElementById('backupFilesBody').addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-path]');
+        if (!btn) return;
+        btn.disabled = true;
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = 'fas fa-spinner fa-spin';
+        try {
+            const res = await api.getBackupDownloadUrl(btn.dataset.path);
+            if (res && res.url) {
+                // <a>.click() em vez de window.open: pós-await, popup blockers
+                // (especialmente Safari) bloqueariam a nova janela silenciosamente
+                const a = document.createElement('a');
+                a.href = res.url;
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } else {
+                UI.toast('Erro ao gerar link de download', 'error');
+            }
+        } finally {
+            btn.disabled = false;
+            if (icon) icon.className = 'fas fa-download';
+        }
+    });
+
+    // Executar backup agora
+    document.getElementById('runBackupBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBackupBtn');
+        const icon = btn.querySelector('i');
+        btn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin';
+        try {
+            const res = await api.runBackup();
+            if (res && res.success) {
+                UI.toast(`Backup concluído: ${(res.recordCount || 0).toLocaleString('pt-BR')} registros (${fmtBytes(res.sizeBytes)})`, 'success');
+            } else {
+                UI.toast('Falha no backup: ' + ((res && res.message) || 'erro desconhecido'), 'error');
+            }
+        } catch (err) {
+            UI.toast('Erro ao executar backup', 'error');
+        } finally {
+            btn.disabled = false;
+            icon.className = 'fas fa-play';
+            loadBackupSection();
+        }
+    });
+
+    // Baixar backup atual (JSON completo — mesmo padrão do Dashboard)
+    document.getElementById('downloadBackupBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('downloadBackupBtn');
+        const icon = btn.querySelector('i');
+        btn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin';
+        try {
+            const data = await api.getBackupFull();
+            if (!data) throw new Error('Resposta vazia');
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const dateStr = new Date().toISOString().split('T')[0];
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-aero-festas-${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            UI.toast('Backup baixado com sucesso!', 'success');
+        } catch (err) {
+            console.error('Erro backup:', err);
+            UI.toast('Erro ao baixar backup. Tente novamente.', 'error');
+        } finally {
+            btn.disabled = false;
+            icon.className = 'fas fa-download';
+        }
+    });
+
+    // Atualizar seção de backups
+    document.getElementById('reloadBackupBtn').addEventListener('click', () => loadBackupSection());
+
+    // Mensagens e Utilitários
+    function showMessage(text, type) {
+        const container = document.getElementById('messageContainer');
+        const cls = type === 'success' ? 'msg-banner msg-success' : 'msg-banner msg-error';
+        const icon = type === 'success' ? 'fa-check' : 'fa-triangle-exclamation';
+        container.innerHTML = `
+                <div class="${cls}">
+                    <i class="fas ${icon}"></i>
+                    <span>${escapeHtml(text)}</span>
+                </div>
+            `;
+        setTimeout(() => { container.innerHTML = ''; }, 5000);
+    }
+
+    function escapeHtml(text) {
+        // Escapa também aspas — o resultado é interpolado dentro de atributos
+        // HTML (title="...", data-path="...") em template strings.
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+</script>
 </body>
 </html>

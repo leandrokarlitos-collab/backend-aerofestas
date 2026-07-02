@@ -1,178 +1,116 @@
-﻿const express = require('express');
+/**
+ * Rotas de backup — camada HTTP FINA sobre services/BackupService.js
+ * (Sistema de Segurança de Dados v3 — Aero Festas)
+ *
+ * Toda a lógica (coleta, gzip, criptografia, upload, verificação, retenção,
+ * status persistido) vive no BackupService. Aqui só: auth admin, parse de
+ * query e tradução de erros para HTTP.
+ */
+
+const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const { isAdmin } = require('../middleware/auth');
-const fs = require('fs');
-const path = require('path');
+const BackupService = require('../services/BackupService');
 
-// Status do último backup (mantido em memória)
-let lastBackupStatus = {
-    success: null,
-    timestamp: null,
-    message: null,
-    recordCount: 0
-};
-
-// Diretório de backups no servidor
-const BACKUP_DIR = path.join(__dirname, '..', 'backups');
-const MAX_BACKUPS = 7;
-
-// Garante que o diretório de backups existe
-if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
-
-/**
- * Coleta todos os dados do banco para backup
- */
-async function collectAllData() {
-    const [
-        eventos,
-        clientes,
-        empresas,
-        brinquedos,
-        monitores,
-        transacoes,
-        contasBancarias,
-        contasFixas,
-        funcionarios,
-        faixasComissao,
-        tarefas,
-        planosDiarios,
-        categoriasGastos,
-        categoriasFixas
-    ] = await Promise.all([
-        prisma.event.findMany({ include: { items: { include: { toy: true } }, company: true }, orderBy: { date: 'desc' } }),
-        prisma.client.findMany({ orderBy: { name: 'asc' } }),
-        prisma.company.findMany({ orderBy: { name: 'asc' } }),
-        prisma.toy.findMany({ orderBy: { name: 'asc' } }),
-        prisma.monitor.findMany({ include: { desempenho: true, pagamentos: true } }),
-        prisma.transaction.findMany({ orderBy: { date: 'desc' } }),
-        prisma.bankAccount.findMany({ orderBy: { name: 'asc' } }),
-        prisma.fixedExpense.findMany({ orderBy: { dueDay: 'asc' } }),
-        prisma.funcionario.findMany(),
-        prisma.faixaComissao.findMany(),
-        prisma.task.findMany(),
-        prisma.dailyPlan.findMany({ orderBy: { date: 'desc' } }),
-        prisma.expenseCategory.findMany({ orderBy: { name: 'asc' } }),
-        prisma.fixedExpenseCategory.findMany({ orderBy: { name: 'asc' } })
-    ]);
-
-    const totalRecords = eventos.length + clientes.length + empresas.length +
-        brinquedos.length + monitores.length + transacoes.length +
-        contasBancarias.length + contasFixas.length + funcionarios.length +
-        faixasComissao.length + tarefas.length + planosDiarios.length +
-        categoriasGastos.length + categoriasFixas.length;
-
-    return {
-        metadata: {
-            version: '1.0',
-            timestamp: new Date().toISOString(),
-            source: 'backup-sistema-operante',
-            totalRecords
-        },
-        eventos,
-        clientes,
-        empresas,
-        brinquedos,
-        monitores,
-        transacoes,
-        contasBancarias,
-        contasFixas,
-        funcionarios,
-        faixasComissao,
-        tarefas,
-        planosDiarios,
-        categoriasGastos,
-        categoriasFixas
-    };
-}
-
-/**
- * Salva backup no filesystem do servidor e limpa backups antigos
- */
-async function saveBackupToServer(data) {
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `backup-${dateStr}.json`;
-    const filepath = path.join(BACKUP_DIR, filename);
-
-    fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf-8');
-
-    // Limpar backups antigos (manter apenas MAX_BACKUPS)
-    const files = fs.readdirSync(BACKUP_DIR)
-        .filter(f => f.startsWith('backup-') && f.endsWith('.json'))
-        .sort()
-        .reverse();
-
-    if (files.length > MAX_BACKUPS) {
-        for (const old of files.slice(MAX_BACKUPS)) {
-            fs.unlinkSync(path.join(BACKUP_DIR, old));
-        }
-    }
-
-    return { filename, filepath, size: fs.statSync(filepath).size };
-}
-
-/**
- * Executa o backup completo (usado pelo cron e pela rota manual)
- */
-async function runBackup(source = 'manual') {
-    try {
-        console.log(`📦 Iniciando backup (${source})...`);
-        const data = await collectAllData();
-        const result = await saveBackupToServer(data);
-
-        lastBackupStatus = {
-            success: true,
-            timestamp: new Date().toISOString(),
-            message: `Backup salvo: ${result.filename} (${(result.size / 1024).toFixed(1)} KB)`,
-            recordCount: data.metadata.totalRecords
-        };
-
-        console.log(`✅ Backup concluído: ${result.filename} — ${data.metadata.totalRecords} registros`);
-        return lastBackupStatus;
-    } catch (error) {
-        lastBackupStatus = {
-            success: false,
-            timestamp: new Date().toISOString(),
-            message: `Erro no backup: ${error.message}`,
-            recordCount: 0
-        };
-        console.error('❌ Erro no backup:', error);
-        return lastBackupStatus;
-    }
-}
-
-// --- ROTAS ---
-
-// GET /api/backup/full — Download completo do backup em JSON
+// GET /api/backup/full — backup completo em JSON PURO via res.json.
+// O Dashboard re-serializa a resposta para gerar o download local no browser —
+// por isso NÃO servir gzip nem Content-Disposition de anexo aqui.
 router.get('/full', isAdmin, async (req, res) => {
     try {
-        const data = await collectAllData();
-        const dateStr = new Date().toISOString().split('T')[0];
-
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="backup-aero-festas-${dateStr}.json"`);
-        res.json(data);
-    } catch (error) {
-        console.error('Erro ao gerar backup:', error);
-        res.status(500).json({ error: 'Erro ao gerar backup', details: error.message });
+        res.json(await BackupService.collectAllData({ source: 'download' }));
+    } catch (err) {
+        console.error('[backup] Erro em GET /full:', err);
+        res.status(err.status || 500).json({ error: err.message });
     }
 });
 
-// POST /api/backup/run — Executa backup no servidor manualmente
+// POST /api/backup/run — executa backup manual no servidor
 router.post('/run', isAdmin, async (req, res) => {
     try {
-        const result = await runBackup('manual');
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao executar backup', details: error.message });
+        res.json(await BackupService.runBackup('manual'));
+    } catch (err) {
+        res.status(err.status || 500).json({ error: err.message });
     }
 });
 
-// GET /api/backup/status — Retorna status do último backup
+// GET /api/backup/status — status do último backup (persistido em BackupRun)
 router.get('/status', isAdmin, async (req, res) => {
-    res.json(lastBackupStatus);
+    try {
+        res.json(await BackupService.getStatus());
+    } catch (err) {
+        res.status(err.status || 500).json({ error: err.message });
+    }
 });
 
-module.exports = { router, runBackup };
+// GET /api/backup/history?limit=30 — histórico de execuções (backup/restore/drill)
+router.get('/history', isAdmin, async (req, res) => {
+    try {
+        res.json(await BackupService.getHistory(req.query.limit || 30));
+    } catch (err) {
+        res.status(err.status || 500).json({ error: err.message });
+    }
+});
+
+// GET /api/backup/files — lista os arquivos de backup no bucket (daily/monthly/yearly)
+router.get('/files', isAdmin, async (req, res) => {
+    try {
+        res.json(await BackupService.listBackups());
+    } catch (err) {
+        res.status(err.status || 500).json({ error: err.message });
+    }
+});
+
+// GET /api/backup/download?path=... — signed URL de 15 minutos para o arquivo
+router.get('/download', isAdmin, async (req, res) => {
+    try {
+        res.json({ url: await BackupService.getDownloadUrl(req.query.path) });
+    } catch (err) {
+        res.status(err.status || 500).json({ error: err.message });
+    }
+});
+
+// GET /api/backup/restore-report?path=... — relatório READ-ONLY que compara
+// as contagens do arquivo de backup com o banco atual, tabela a tabela.
+// NÃO escreve NADA no banco. Aceita path=latest para o daily mais recente.
+router.get('/restore-report', isAdmin, async (req, res) => {
+    try {
+        let storagePath = req.query.path;
+        if (!storagePath) {
+            const e = new Error('Parâmetro path é obrigatório (ou use path=latest)');
+            e.status = 400;
+            throw e;
+        }
+        if (storagePath === 'latest') {
+            storagePath = await BackupService.resolveLatestPath();
+        }
+
+        const backup = await BackupService.downloadBackup(storagePath);
+        const counts = (backup.metadata && backup.metadata.counts) || {};
+
+        const rows = [];
+        for (const { model, delegate } of BackupService.TABLES) {
+            // arquivo: contagem do metadata (v2); fallback para o array da tabela;
+            // null se o arquivo não tem essa tabela (ex.: backup legado v1)
+            let arquivo = null;
+            if (counts[model] !== undefined) {
+                arquivo = counts[model];
+            } else if (backup.tables && Array.isArray(backup.tables[model])) {
+                arquivo = backup.tables[model].length;
+            }
+            rows.push({
+                tabela: model,
+                arquivo,
+                banco: await prisma[delegate].count()
+            });
+        }
+
+        res.json({ path: storagePath, generatedAt: new Date().toISOString(), rows });
+    } catch (err) {
+        console.error('[backup] Erro em GET /restore-report:', err);
+        res.status(err.status || 500).json({ error: err.message });
+    }
+});
+
+// server.js (linha 18) importa { router, runBackup } daqui — reexporta o do service
+module.exports = { router, runBackup: BackupService.runBackup };

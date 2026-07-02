@@ -551,6 +551,28 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// --- BACKUP & DISASTER RECOVERY ---
+
+model BackupRun {
+  id           String   @id @default(uuid())
+  type         String   @default("backup") // "backup" | "restore" | "drill"
+  source       String   // "cron-diario" | "startup" | "manual" | "cli"
+  success      Boolean
+  message      String?
+  totalRecords Int      @default(0)
+  counts       String?  // JSON: registros por tabela
+  sizeBytes    Int      @default(0)
+  checksum     String?  // sha256 do JSON canônico de tables
+  storagePath  String?  // caminho no bucket (null = só local/degradado)
+  durable      Boolean  @default(false) // true = persistido no Firebase Storage
+  verified     Boolean  @default(false) // integridade pós-upload confirmada
+  durationMs   Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+}
+
 // --- WHATSAPP INTEGRATION ---
 
 model WhatsAppInstance {
