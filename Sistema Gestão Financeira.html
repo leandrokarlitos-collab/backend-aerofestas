@@ -4448,7 +4448,8 @@
                 const input = getById('gasto-declarante');
                 if (!sel || !wrap || !input) return;
                 const nomeConta = sel.options[sel.selectedIndex]?.textContent || '';
-                const naoDeclarada = normalizarTexto(nomeConta).includes('nao declarada');
+                // 'declarada' sozinho: tolerante a variações/acentos no nome da conta
+                const naoDeclarada = normalizarTexto(nomeConta).includes('declarada');
                 wrap.classList.toggle('hidden', !naoDeclarada);
                 input.required = naoDeclarada;
                 if (!naoDeclarada) input.value = '';
