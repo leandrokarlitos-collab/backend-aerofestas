@@ -234,7 +234,9 @@ async function runBackup(source = 'manual') {
             const bucket = firebaseAdmin.getBucket();
             const file = bucket.file(storagePath);
 
-            await file.save(payload, {
+            // Upload com retry: o token OAuth/upload pode falhar transitoriamente
+            // (rede do Railway) — 3 tentativas com 8s de espaço
+            await comRetry(() => file.save(payload, {
                 resumable: false,
                 contentType: 'application/gzip',
                 metadata: {
@@ -246,7 +248,7 @@ async function runBackup(source = 'manual') {
                         encrypted: key ? 'true' : 'false',
                     },
                 },
-            });
+            }), 3, 8000);
             run.storagePath = storagePath;
             run.durable = true;
 
@@ -316,6 +318,23 @@ async function runBackup(source = 'manual') {
     }
 
     return toStatusShape(saved || { ...run, createdAt: new Date() });
+}
+
+/** Executa fn com até N tentativas, esperando esperaMs entre elas. */
+async function comRetry(fn, tentativas, esperaMs) {
+    let ultimoErro;
+    for (let t = 1; t <= tentativas; t++) {
+        try {
+            return await fn();
+        } catch (err) {
+            ultimoErro = err;
+            if (t < tentativas) {
+                console.warn(`[backup] Tentativa ${t}/${tentativas} falhou (${err.message}) — nova tentativa em ${esperaMs / 1000}s`);
+                await new Promise(r => setTimeout(r, esperaMs));
+            }
+        }
+    }
+    throw ultimoErro;
 }
 
 /** Formata BackupRun no shape legado esperado pelo frontend (Dashboard). */

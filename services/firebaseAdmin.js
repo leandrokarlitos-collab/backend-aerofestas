@@ -11,6 +11,15 @@
  */
 
 const admin = require('firebase-admin');
+const https = require('https');
+
+// Railway + Node 20: o token OAuth do Google (googleapis.com/oauth2/v4/token)
+// falha com "Premature close" — combinação de happy-eyeballs (autoSelectFamily)
+// com keep-alive do node-fetch/gaxios. Fixar family:4 no agente desativa o
+// auto-select e força IPv4 no nível do socket, para TODAS as chamadas https
+// (token OAuth, upload ao Storage, web-push).
+const ipv4Agent = new https.Agent({ keepAlive: true, family: 4 });
+https.globalAgent = ipv4Agent;
 
 let bucket = null;
 let initError = null;
@@ -50,8 +59,9 @@ function init() {
 
     try {
         admin.initializeApp({
-            credential: admin.credential.cert(credentials),
-            storageBucket: bucketName
+            credential: admin.credential.cert(credentials, ipv4Agent),
+            storageBucket: bucketName,
+            httpAgent: ipv4Agent
         });
         bucket = admin.storage().bucket();
         console.log('[firebaseAdmin] inicializado, bucket:', bucketName);
