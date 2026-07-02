@@ -13,6 +13,9 @@
         "release:minor": "npm version minor && git push origin main --tags",
         "release:major": "npm version major && git push origin main --tags"
     },
+    "engines": {
+        "node": "20.x"
+    },
     "keywords": [
         "auth",
         "login",

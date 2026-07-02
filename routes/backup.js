@@ -112,5 +112,50 @@ router.get('/restore-report', isAdmin, async (req, res) => {
     }
 });
 
+// GET /api/backup/diag — diagnóstico TEMPORÁRIO da conectividade com o Google
+// (investigação do "Premature close" no token OAuth). Remover quando resolvido.
+router.get('/diag', isAdmin, async (req, res) => {
+    const https = require('https');
+    const diag = {
+        nodeVersion: process.version,
+        proxyEnv: {
+            HTTP_PROXY: process.env.HTTP_PROXY || null,
+            HTTPS_PROXY: process.env.HTTPS_PROXY || null,
+            http_proxy: process.env.http_proxy || null,
+            https_proxy: process.env.https_proxy || null,
+            NO_PROXY: process.env.NO_PROXY || null,
+        },
+        rawHttps: null,
+        bucketExists: null,
+    };
+
+    // Teste 1: https cru (módulo nativo) até o host do token OAuth
+    diag.rawHttps = await new Promise((resolve) => {
+        const req2 = https.request(
+            { host: 'www.googleapis.com', path: '/discovery/v1/apis', method: 'GET', timeout: 10000, family: 4 },
+            (r) => {
+                let bytes = 0;
+                r.on('data', (c) => { bytes += c.length; });
+                r.on('end', () => resolve({ ok: true, status: r.statusCode, bodyBytes: bytes }));
+                r.on('error', (e) => resolve({ ok: false, fase: 'body', erro: e.message }));
+            }
+        );
+        req2.on('timeout', () => { req2.destroy(); resolve({ ok: false, fase: 'timeout' }); });
+        req2.on('error', (e) => resolve({ ok: false, fase: 'request', erro: e.message }));
+        req2.end();
+    });
+
+    // Teste 2: SDK (token OAuth + metadata do bucket)
+    try {
+        const firebaseAdmin = require('../services/firebaseAdmin');
+        const [exists] = await firebaseAdmin.getBucket().exists();
+        diag.bucketExists = { ok: true, exists };
+    } catch (err) {
+        diag.bucketExists = { ok: false, erro: err.message };
+    }
+
+    res.json(diag);
+});
+
 // server.js (linha 18) importa { router, runBackup } daqui — reexporta o do service
 module.exports = { router, runBackup: BackupService.runBackup };
