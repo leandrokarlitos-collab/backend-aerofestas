@@ -348,6 +348,8 @@
                                 conta: contaRef ? contaRef.name : "Caixa",
                                 pagamento: t.paymentMethod || "Outro",
                                 valor: t.amount,
+                                declaredBy: t.declaredBy || '',
+                                detalhe: t.expenseDetail || '',
                                 comprovantes: []
                             };
                         });
@@ -3866,7 +3868,18 @@
                 getById('gasto-valor').value = gasto.valor;
                 getById('gasto-categoria').value = gasto.categoria;
                 getById('gasto-pagamento').value = gasto.pagamento;
+                // Compat: formas antigas que saíram da lista (ex.: "Cartão de Crédito")
+                if (getById('gasto-pagamento').value !== gasto.pagamento) {
+                    getById('gasto-pagamento').value =
+                        gasto.pagamento === 'Cartão de Crédito' ? 'Crédito' : 'Não declarado';
+                }
                 getById('gasto-conta').value = gasto.contaId || '';
+
+                // Campos condicionais com os valores salvos
+                window.atualizarDeclaranteGasto();
+                const inputDeclarante = getById('gasto-declarante');
+                if (inputDeclarante) inputDeclarante.value = gasto.declaredBy || '';
+                window.atualizarDetalheGasto(gasto.detalhe);
 
                 const btnSubmit = form.querySelector('button[type="submit"]');
                 if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar Gasto';
@@ -4420,6 +4433,47 @@
             });
 
             // ========== HANDLER PARA NOVO GASTO (MODAL) ==========
+            // ---- Campos condicionais do gasto ----
+            // Conta "Não Declarada" → pede quem declarou; categorias de
+            // combustível/alimentação → checkboxes de detalhe.
+            const DETALHES_POR_CATEGORIA = [
+                { match: 'combust', label: 'Tipo de combustível', opcoes: ['Diesel', 'Gasolina', 'Etanol'] },
+                { match: 'aliment', label: 'Tipo de alimentação', opcoes: ['Marmitex', 'Lanche', 'Outros'] }
+            ];
+            const normalizarTexto = (s) => (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+            window.atualizarDeclaranteGasto = () => {
+                const sel = getById('gasto-conta');
+                const wrap = getById('gasto-declarante-wrap');
+                const input = getById('gasto-declarante');
+                if (!sel || !wrap || !input) return;
+                const nomeConta = sel.options[sel.selectedIndex]?.textContent || '';
+                const naoDeclarada = normalizarTexto(nomeConta).includes('nao declarada');
+                wrap.classList.toggle('hidden', !naoDeclarada);
+                input.required = naoDeclarada;
+                if (!naoDeclarada) input.value = '';
+            };
+
+            window.atualizarDetalheGasto = (marcados) => {
+                const wrap = getById('gasto-detalhe-wrap');
+                const label = getById('gasto-detalhe-label');
+                const box = getById('gasto-detalhe-opcoes');
+                if (!wrap || !box) return;
+                const cat = normalizarTexto(getById('gasto-categoria')?.value);
+                const regra = DETALHES_POR_CATEGORIA.find(r => cat.includes(r.match));
+                if (!regra) { wrap.classList.add('hidden'); box.innerHTML = ''; return; }
+                if (label) label.textContent = regra.label;
+                const jaMarcados = new Set((marcados || '').split('/').map(s => s.trim()).filter(Boolean));
+                box.innerHTML = regra.opcoes.map(op =>
+                    `<label class="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" class="gasto-detalhe-check" value="${op}" ${jaMarcados.has(op) ? 'checked' : ''}> ${op}
+                    </label>`).join('');
+                wrap.classList.remove('hidden');
+            };
+
+            getById('gasto-conta')?.addEventListener('change', window.atualizarDeclaranteGasto);
+            getById('gasto-categoria')?.addEventListener('change', () => window.atualizarDetalheGasto());
+
             const formGasto = getById('form-gasto');
             if (formGasto) {
                 formGasto.addEventListener('submit', async (e) => {
@@ -4440,6 +4494,11 @@
                         return;
                     }
 
+                    const declaranteVisivel = !getById('gasto-declarante-wrap')?.classList.contains('hidden');
+                    const declarante = getById('gasto-declarante')?.value.trim() || '';
+                    const detalhes = Array.from(document.querySelectorAll('.gasto-detalhe-check:checked'))
+                        .map(c => c.value).join(' / ');
+
                     const dadosGasto = {
                         date: data,
                         description: descricao,
@@ -4447,7 +4506,9 @@
                         type: 'EXPENSE',
                         category: categoria,
                         paymentMethod: metodo,
-                        accountId: contaId
+                        accountId: contaId,
+                        declaredBy: declaranteVisivel ? declarante : null,
+                        expenseDetail: detalhes || null
                     };
 
                     let sucesso;
@@ -4490,6 +4551,10 @@
                 // Define data padrão como hoje
                 const dataInput = getById('gasto-data');
                 if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+
+                // Reseta os campos condicionais (declarante/detalhe)
+                window.atualizarDeclaranteGasto();
+                window.atualizarDetalheGasto();
 
                 showModal('add-gasto-modal');
             });
@@ -6729,13 +6794,23 @@
                 <div><label for="gasto-conta" class="block text-sm font-medium text-gray-700">Conta de
                         Saída</label><select id="gasto-conta" required class="form-input w-full mt-1"></select>
                 </div>
+                <div id="gasto-declarante-wrap" class="hidden"><label for="gasto-declarante"
+                        class="block text-sm font-medium text-gray-700">Quem declarou o gasto?</label><input
+                        type="text" id="gasto-declarante" placeholder="Nome de quem declarou"
+                        class="form-input w-full mt-1"></div>
                 <div><label for="gasto-pagamento" class="block text-sm font-medium text-gray-700">Forma de
                         Pagamento</label><select id="gasto-pagamento" required class="form-input w-full mt-1">
                         <option>PIX</option>
-                        <option>Cartão de Crédito</option>
+                        <option>Crédito</option>
+                        <option>Débito</option>
                         <option>Dinheiro</option>
                         <option>Boleto</option>
+                        <option>Não declarado</option>
                     </select></div>
+                <div id="gasto-detalhe-wrap" class="hidden lg:col-span-3">
+                    <span id="gasto-detalhe-label" class="block text-sm font-medium text-gray-700 mb-1">Detalhe</span>
+                    <div id="gasto-detalhe-opcoes" class="flex flex-wrap gap-4"></div>
+                </div>
                 <div><label for="gasto-valor" class="block text-sm font-medium text-gray-700">Valor
                         (R$)</label><input type="number" id="gasto-valor" step="0.01" required
                         class="form-input w-full mt-1"></div>

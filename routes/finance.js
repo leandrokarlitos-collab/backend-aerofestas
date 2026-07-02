@@ -199,7 +199,9 @@ router.post('/transactions', async (req, res) => {
                 date: t.date,
                 category: t.category,
                 paymentMethod: t.paymentMethod,
-                accountId: t.accountId
+                accountId: t.accountId,
+                declaredBy: t.declaredBy || null,
+                expenseDetail: t.expenseDetail || null
             }
         });
         res.json(newTransaction);
@@ -223,7 +225,9 @@ router.put('/transactions/:id', async (req, res) => {
                 date: t.date,
                 category: t.category,
                 paymentMethod: t.paymentMethod,
-                accountId: t.accountId
+                accountId: t.accountId,
+                declaredBy: t.declaredBy || null,
+                expenseDetail: t.expenseDetail || null
             }
         });
         res.json(updated);

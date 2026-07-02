@@ -477,6 +477,8 @@ model Transaction {
   paymentMethod String?  // PIX, Boleto, etc.
   eventId       Float?   // Vincula receita a evento (NULL para entradas avulsas)
   accountId     String?  // Vincula a transação a uma conta bancária
+  declaredBy    String?  // Quem declarou o gasto (quando a conta é "Não Declarada")
+  expenseDetail String?  // Detalhe do gasto: combustível (Diesel/Gasolina/Etanol), alimentação (Marmitex/Lanche/Outros)
 
   // Auditoria
   createdBy     String?
