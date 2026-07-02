@@ -422,9 +422,10 @@ import { api, API_BASE_URL } from './js/api.js';
 
 let templatesCache = [];
 let editingId = null;
-let whyArr = [];
-let howArr = [];
-let faqArr = [];
+// const: os listeners de wireRepeater capturam estas referências — nunca reatribuir (ver refillArr no openModal)
+const whyArr = [];
+const howArr = [];
+const faqArr = [];
 
 function showToast(msg, type = '') {
     const t = document.getElementById('toast');
@@ -668,12 +669,17 @@ function openModal(id = null) {
     if (t?.ogImageUrl) { ogPreview.src = t.ogImageUrl; ogPreview.style.display = 'block'; }
     else { ogPreview.style.display = 'none'; }
 
-    try { whyArr = JSON.parse(t?.whyCards || '[]'); } catch { whyArr = []; }
-    try { howArr = JSON.parse(t?.howItWorks || '[]'); } catch { howArr = []; }
-    try { faqArr = JSON.parse(t?.faq || '[]'); } catch { faqArr = []; }
-    if (!Array.isArray(whyArr)) whyArr = [];
-    if (!Array.isArray(howArr)) howArr = [];
-    if (!Array.isArray(faqArr)) faqArr = [];
+    // Repopula os mesmos arrays sem reatribuir — wireRepeater guarda a referência original
+    const refillArr = (arr, json) => {
+        arr.length = 0;
+        try {
+            const parsed = JSON.parse(json || '[]');
+            if (Array.isArray(parsed)) arr.push(...parsed);
+        } catch { /* mantém vazio */ }
+    };
+    refillArr(whyArr, t?.whyCards);
+    refillArr(howArr, t?.howItWorks);
+    refillArr(faqArr, t?.faq);
     rerenderWhy(); rerenderHow(); rerenderFaq();
 
     updateWaPreview();
