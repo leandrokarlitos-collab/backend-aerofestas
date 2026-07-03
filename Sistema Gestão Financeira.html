@@ -6506,41 +6506,19 @@
 
                 <div id="page-monitores" class="page">
                     <div class="space-y-6">
-                        <!-- Cabeçalho Simplificado -->
-                        <div class="glassmorphism p-6 rounded-lg text-center">
-                            <h2 class="text-3xl font-bold text-gray-800 mb-2">Gestão de Monitores</h2>
-                            <p class="text-gray-500 mb-6 font-medium">Gerencie sua equipe e realize pagamentos de forma
-                                rápida.</p>
-
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-5xl mx-auto">
-                                <!-- Botão 1: Ver Monitores -->
-                                <button id="open-monitores-modal-btn"
-                                    class="shiny-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
-                                    <i class="fa-solid fa-users-viewfinder text-3xl"></i>
-                                    <span class="text-sm font-bold">Monitores Cadastrados</span>
-                                </button>
-
-                                <!-- Botão 2: Monitores Reserva -->
-                                <button id="open-reserva-modal-btn"
-                                    class="bg-amber-500 text-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-amber-200">
-                                    <i class="fa-solid fa-clock-rotate-left text-3xl"></i>
-                                    <span class="text-sm font-bold">Monitores Reserva</span>
-                                </button>
-
-                                <!-- Botão 3: Lançar Pagamento -->
-                                <button id="open-pagamento-modal-btn"
-                                    class="gemini-btn p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95">
-                                    <i class="fa-solid fa-hand-holding-dollar text-3xl"></i>
-                                    <span class="text-sm font-bold">Lançar Pagamento & Avaliação</span>
-                                </button>
-
-                                <!-- Botão 4: Link de Cadastro -->
-                                <button onclick="window.copiarLinkCadastro()"
-                                    class="bg-indigo-600 text-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-200">
-                                    <i class="fa-solid fa-link text-3xl"></i>
-                                    <span class="text-sm font-bold">Copiar Link de Cadastro</span>
-                                </button>
+                        <!-- F2: a gestão de equipe mudou para equipe.html (código legado removido na F4) -->
+                        <div class="glassmorphism p-8 rounded-lg text-center">
+                            <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center text-white text-2xl"
+                                style="background:linear-gradient(135deg,#4F46E5,#7C3AED);box-shadow:0 6px 18px rgba(79,70,229,.35);">
+                                <i class="fa-solid fa-people-group"></i>
                             </div>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">A gestão de equipe mudou de endereço</h2>
+                            <p class="text-gray-500 mb-6 font-medium">Monitores, pagamentos, desempenho, funcionários e
+                                comissões agora vivem na página <strong>Equipe</strong> — mais completa e rápida.</p>
+                            <a href="./equipe.html"
+                                class="shiny-btn inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold">
+                                <i class="fa-solid fa-arrow-right"></i> Abrir a página Equipe
+                            </a>
                         </div>
 
                         <!-- Seção de Histórico (Visível por padrão, mas compacta para mobile) -->

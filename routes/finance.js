@@ -3,6 +3,28 @@ const router = express.Router();
 const prisma = require('../prisma/client');
 const { authenticate } = require('../middleware/auth');
 
+// --- AUTENTICAÇÃO ---
+// Todas as rotas de /api/finance exigem token, EXCETO as usadas pelo
+// formulário PÚBLICO de cadastro/atualização de monitores
+// (cadastro-monitor.html, enviado a candidatos sem login):
+//   POST /monitores            (cadastro)
+//   POST /monitores/verificar  (checagem de CPF/e-mail duplicado)
+//   GET  /monitores/:id        (link de atualização ?id=)
+//   PUT  /monitores/:id        (salvar atualização via link)
+// Obs.: endurecer o par GET/PUT público com token assinado no link é melhoria
+// futura — hoje preserva o fluxo existente do formulário público.
+const FINANCE_ROTAS_PUBLICAS = [
+    { method: 'POST', re: /^\/monitores\/?$/ },
+    { method: 'POST', re: /^\/monitores\/verificar\/?$/ },
+    { method: 'GET',  re: /^\/monitores\/[^/]+\/?$/ },
+    { method: 'PUT',  re: /^\/monitores\/[^/]+\/?$/ },
+];
+router.use((req, res, next) => {
+    const publica = FINANCE_ROTAS_PUBLICAS.some(r => r.method === req.method && r.re.test(req.path));
+    if (publica) return next();
+    return authenticate(req, res, next);
+});
+
 // --- DASHBOARD E LEITURA ---
 
 // GET /api/finance/dashboard

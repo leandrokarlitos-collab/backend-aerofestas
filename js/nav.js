@@ -14,8 +14,8 @@
         { key: 'financas',  label: 'Financeiro',   icon: 'fa-chart-pie',      href: './Sistema Gestão Financeira.html' },
         { key: 'clientes',  label: 'Clientes',     icon: 'fa-users',          href: './Sistema de CRM.html' },
         { key: 'equip',     label: 'Equipamentos', icon: 'fa-cubes',          href: './Equipamentos.html' },
-        { key: 'propostas', label: 'Propostas',    icon: 'fa-file-signature', href: './Propostas.html' }
-        // { key: 'equipe', label: 'Equipe', icon: 'fa-people-group', href: './equipe.html' } — ativado na fase Equipe (F2)
+        { key: 'propostas', label: 'Propostas',    icon: 'fa-file-signature', href: './Propostas.html' },
+        { key: 'equipe',    label: 'Equipe',       icon: 'fa-people-group',   href: './equipe.html' }
     ];
     // Itens do bottom nav mobile (4 principais + Mais)
     var BOTTOM_KEYS = ['home', 'agenda', 'financas', 'clientes'];

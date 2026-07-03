@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.1.2';
+const CACHE_NAME = 'aero-festas-v3.2.0';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -10,6 +10,7 @@ const ASSETS_TO_CACHE = [
     '/Equipamentos.html',
     '/Propostas.html',
     '/Configuracoes-Propostas.html',
+    '/equipe.html',
     '/admin.html',
     '/profile.html',
     '/register.html',

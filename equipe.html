@@ -1,0 +1,1827 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="./js/theme.js"></script>
+<title>Equipe · Aero Festas</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="icon" href="./icons/Logo_Aero_Festas.png" type="image/png">
+
+<script src="js/pwa-init.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/aero.css">
+
+<style>
+    /* ---- Equipe: mínimos específicos da página (somente tokens do DS) ---- */
+    .is-closed { display: none !important; }
+
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+    .toolbar .select { width: auto; }
+    .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 340px; }
+    .search-wrap > i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-faint);
+        pointer-events: none;
+    }
+    .search-wrap .input { padding-left: 38px; }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    /* ---- Cards de monitor ---- */
+    .m-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 14px;
+    }
+    .m-card {
+        padding: 16px;
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        cursor: pointer;
+    }
+    .m-avatar {
+        width: 52px;
+        height: 52px;
+        flex: none;
+        border-radius: 999px;
+        background: var(--grad-brand);
+        color: var(--text-on-brand);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 16px;
+        overflow: hidden;
+    }
+    .m-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .m-avatar.lg { width: 84px; height: 84px; font-size: 26px; }
+    .m-card .m-nome {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .m-card .m-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+    .m-card .m-tel { font-size: 12.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .m-card .m-tel i { color: var(--text-faint); font-size: 11px; }
+    .chip-sm { padding: 2px 9px; font-size: 11px; }
+
+    .count-text { font-size: 12.5px; color: var(--text-faint); margin: 10px 2px 0; }
+
+    /* ---- Modal largo + detalhe ---- */
+    .modal-box.modal-wide { max-width: 720px; }
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 10px 16px;
+        margin-top: 14px;
+    }
+    .detail-item .dt {
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--text-faint);
+        margin-bottom: 2px;
+    }
+    .detail-item .dd { font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+
+    details.sec {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-inset);
+        margin-top: 10px;
+    }
+    details.sec summary {
+        cursor: pointer;
+        padding: 11px 14px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        list-style: none;
+        user-select: none;
+    }
+    details.sec summary::-webkit-details-marker { display: none; }
+    details.sec summary > .caret { color: var(--text-faint); font-size: 11px; transition: transform var(--dur) var(--ease); }
+    details.sec[open] summary > .caret { transform: rotate(90deg); }
+    details.sec summary > .sec-icon { color: var(--brand-600); width: 16px; text-align: center; }
+    .dark details.sec summary > .sec-icon { color: var(--brand-400); }
+    details.sec .sec-body { padding: 2px 14px 14px; }
+
+    .skill-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 8px; }
+    .skill-row .skill-name { width: 118px; flex: none; color: var(--text-muted); }
+    .skill-row .skill-val { width: 34px; flex: none; text-align: right; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+    .skill-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+    .skill-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--grad-brand); }
+
+    .doc-thumbs { display: flex; flex-wrap: wrap; gap: 12px; }
+    .doc-thumb { text-align: center; cursor: pointer; }
+    .doc-thumb img {
+        width: 120px;
+        height: 84px;
+        object-fit: cover;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+    }
+    .doc-thumb span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .des-item {
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+        margin-bottom: 10px;
+    }
+    .des-item .des-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .des-item .des-data { font-weight: 600; font-size: 13.5px; color: var(--text); }
+    .des-item .des-texto { font-size: 13.5px; color: var(--text-muted); margin-top: 6px; }
+    .des-item .des-obs { font-size: 12.5px; color: var(--text-faint); margin-top: 4px; font-style: italic; }
+
+    /* ---- Formulários ---- */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fg-full { grid-column: 1 / -1; }
+    @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } }
+    input[type="checkbox"] { accent-color: var(--brand-600); width: 17px; height: 17px; }
+    .check-row { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--text); font-weight: 500; cursor: pointer; }
+
+    .photo-drop {
+        width: 88px;
+        height: 88px;
+        margin: 0 auto;
+        border-radius: 999px;
+        border: 2px dashed var(--border-strong);
+        background: var(--surface-2);
+        color: var(--text-faint);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        cursor: pointer;
+        overflow: hidden;
+        transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .photo-drop:hover { border-color: var(--brand-500); color: var(--brand-600); }
+    .photo-drop img { width: 100%; height: 100%; object-fit: cover; }
+
+    .total-live {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 16px;
+        background: var(--surface-inset);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .total-live .tl-label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    .total-live .tl-value {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 20px;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+    }
+    .hint-text { font-size: 12px; color: var(--text-faint); margin-top: 4px; }
+    .hint-text.is-on { color: var(--warning); font-weight: 600; }
+
+    .motorista-box {
+        background: var(--surface-inset);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+    }
+
+    /* ---- Navegação de mês ---- */
+    .month-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 4px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .month-nav button {
+        width: 32px;
+        height: 30px;
+        border: none;
+        border-radius: calc(var(--radius) - 4px);
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .month-nav button:hover { background: var(--surface-1); color: var(--text); }
+    .month-nav .month-label {
+        min-width: 148px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        text-transform: capitalize;
+    }
+
+    /* ---- Funcionários & comissões ---- */
+    .fixa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 860px) { .fixa-grid { grid-template-columns: 1fr; } }
+    .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+    }
+    .panel-head h2 { font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .panel-head h2 i { color: var(--brand-600); }
+    .dark .panel-head h2 i { color: var(--brand-400); }
+    .panel-body { padding: 12px 16px 16px; }
+    .inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 12px; }
+    .inline-form > div { flex: 1; min-width: 120px; }
+
+    .table tfoot td {
+        font-weight: 700;
+        color: var(--text);
+        border-top: 1px solid var(--border-strong);
+        border-bottom: none;
+    }
+    .row-actions { display: flex; gap: 4px; }
+    .row-actions button {
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-faint);
+        transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .row-actions button:hover { background: var(--surface-2); color: var(--text); }
+    .row-actions button.act-danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+    .tab-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+</style>
+</head>
+
+<body data-page="equipe">
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <header class="page-header">
+        <div>
+            <h1 class="flex items-center gap-3">
+                <i class="fas fa-people-group text-grad-brand"></i> Equipe
+            </h1>
+            <p class="page-subtitle">Monitores, pagamentos, desempenho, folha e comissões</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-link-cadastro" class="btn btn-secondary" type="button">
+                <i class="fas fa-link"></i> <span class="hidden sm:inline">Link de cadastro público</span><span class="sm:hidden">Link</span>
+            </button>
+            <button id="btn-novo-monitor" class="btn btn-primary" type="button">
+                <i class="fas fa-plus"></i> Novo monitor
+            </button>
+        </div>
+    </header>
+
+    <div class="segmented mb-5" id="equipe-tabs" role="tablist">
+        <button type="button" data-tab="monitores"><i class="fas fa-users mr-1"></i> Monitores</button>
+        <button type="button" data-tab="pagamentos"><i class="fas fa-hand-holding-dollar mr-1"></i> Pagamentos</button>
+        <button type="button" data-tab="desempenho"><i class="fas fa-star mr-1"></i> Desempenho</button>
+        <button type="button" data-tab="fixa"><i class="fas fa-briefcase mr-1"></i> Funcionários &amp; Comissões</button>
+    </div>
+
+    <!-- ================= ABA 1: MONITORES ================= -->
+    <section id="tab-monitores" class="hidden">
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-user-check"></i> Ativos</span>
+                <span class="kpi-value" id="kpi-ativos">—</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-clock-rotate-left"></i> Em reserva</span>
+                <span class="kpi-value" id="kpi-reserva">—</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-users"></i> Total</span>
+                <span class="kpi-value" id="kpi-total">—</span>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input id="mon-busca" type="text" class="input" placeholder="Buscar por nome, telefone ou email…" autocomplete="off">
+            </div>
+            <select id="mon-filtro-status" class="select" title="Status">
+                <option value="">Status: todos</option>
+                <option value="ativo">Ativos</option>
+                <option value="reserva">Reserva</option>
+            </select>
+            <select id="mon-filtro-cnh" class="select" title="CNH">
+                <option value="">CNH: todos</option>
+                <option value="sim">Com CNH</option>
+                <option value="nao">Sem CNH</option>
+            </select>
+            <select id="mon-filtro-ps" class="select" title="Curso de Primeiros Socorros">
+                <option value="">Curso PS: todos</option>
+                <option value="sim">Com curso PS</option>
+                <option value="nao">Sem curso PS</option>
+            </select>
+            <select id="mon-ordenar" class="select" title="Ordenação">
+                <option value="nome">Nome A-Z</option>
+                <option value="status">Status</option>
+            </select>
+        </div>
+
+        <div id="monitores-grid" class="m-grid"></div>
+        <p id="mon-count" class="count-text"></p>
+    </section>
+
+    <!-- ================= ABA 2: PAGAMENTOS ================= -->
+    <section id="tab-pagamentos" class="hidden">
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-circle-check"></i> Total pago no mês</span>
+                <span class="kpi-value is-success tabular-nums" id="kpi-pago">—</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-hourglass-half"></i> Pendentes</span>
+                <span class="kpi-value tabular-nums" id="kpi-pendente">—</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-calendar-day"></i> Diárias no mês</span>
+                <span class="kpi-value" id="kpi-diarias">—</span>
+            </div>
+        </div>
+
+        <div class="tab-head">
+            <div class="month-nav">
+                <button type="button" id="btn-mes-prev" aria-label="Mês anterior"><i class="fas fa-chevron-left"></i></button>
+                <span class="month-label" id="label-mes">—</span>
+                <button type="button" id="btn-mes-next" aria-label="Próximo mês"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <button type="button" id="btn-lancar-pagamento" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Lançar pagamento
+            </button>
+        </div>
+
+        <div id="pag-lista" class="surface" style="overflow:hidden;"></div>
+    </section>
+
+    <!-- ================= ABA 3: DESEMPENHO ================= -->
+    <section id="tab-desempenho" class="hidden">
+        <div class="tab-head">
+            <div class="search-wrap" style="max-width:360px;">
+                <i class="fas fa-user"></i>
+                <select id="des-monitor" class="select" style="padding-left:38px;">
+                    <option value="">Selecione um monitor…</option>
+                </select>
+            </div>
+            <button type="button" id="btn-nova-avaliacao" class="btn btn-primary" disabled>
+                <i class="fas fa-star"></i> Registrar avaliação
+            </button>
+        </div>
+        <div id="des-lista"></div>
+    </section>
+
+    <!-- ================= ABA 4: FUNCIONÁRIOS & COMISSÕES ================= -->
+    <section id="tab-fixa" class="hidden">
+        <div class="fixa-grid">
+            <div class="surface" style="overflow:hidden;">
+                <div class="panel-head">
+                    <h2><i class="fas fa-id-badge"></i> Funcionários (folha fixa)</h2>
+                    <button type="button" id="btn-novo-funcionario" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+                <div class="panel-body" id="func-lista"></div>
+            </div>
+
+            <div class="surface" style="overflow:hidden;">
+                <div class="panel-head">
+                    <h2><i class="fas fa-percent"></i> Faixas de comissão</h2>
+                </div>
+                <div class="panel-body">
+                    <div id="faixas-lista"></div>
+                    <div class="inline-form">
+                        <div>
+                            <label class="input-label" for="fx-ate">Faturamento até (R$)</label>
+                            <input type="number" id="fx-ate" class="input" step="0.01" min="0" placeholder="45000">
+                        </div>
+                        <div>
+                            <label class="input-label" for="fx-pct">Comissão (%)</label>
+                            <input type="number" id="fx-pct" class="input" step="0.1" min="0" max="100" placeholder="2,0">
+                        </div>
+                        <button type="button" id="btn-add-faixa" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- ================= MODAL: DETALHE DO MONITOR ================= -->
+<div id="modal-detalhe" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box modal-wide" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title">Detalhes do monitor</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-detalhe" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="detalhe-body"></div>
+        <div class="modal-footer hidden" id="detalhe-footer" style="flex-wrap:wrap;">
+            <button type="button" id="btn-det-status" class="btn btn-ghost"></button>
+            <button type="button" id="btn-det-excluir" class="btn btn-danger-soft"><i class="fas fa-trash-can"></i> Excluir</button>
+            <button type="button" id="btn-det-editar" class="btn btn-secondary"><i class="fas fa-pen-to-square"></i> Editar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: CADASTRO/EDIÇÃO DE MONITOR ================= -->
+<div id="modal-monitor" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box" style="max-width:560px;" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title" id="modal-monitor-title">Novo monitor</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-monitor" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="form-monitor">
+            <div class="modal-body">
+                <input type="hidden" id="fm-id">
+
+                <div style="text-align:center;margin-bottom:14px;">
+                    <div class="photo-drop" id="fm-foto-drop" title="Clique para escolher a foto">
+                        <i class="fas fa-camera" id="fm-foto-icone"></i>
+                        <img id="fm-foto-img" class="hidden" alt="">
+                    </div>
+                    <input type="file" id="fm-foto-input" accept="image/*" class="hidden">
+                    <p class="hint-text" style="margin-top:6px;">Foto do monitor (opcional)</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="fg-full">
+                        <label class="input-label" for="fm-nome">Nome completo *</label>
+                        <input type="text" id="fm-nome" class="input" required>
+                    </div>
+                    <div>
+                        <label class="input-label" for="fm-nascimento">Data de nascimento</label>
+                        <input type="date" id="fm-nascimento" class="input">
+                    </div>
+                    <div>
+                        <label class="input-label" for="fm-cpf">CPF</label>
+                        <input type="text" id="fm-cpf" class="input" placeholder="000.000.000-00">
+                    </div>
+                    <div>
+                        <label class="input-label" for="fm-telefone">Telefone / WhatsApp</label>
+                        <input type="text" id="fm-telefone" class="input" placeholder="(00) 00000-0000">
+                    </div>
+                    <div>
+                        <label class="input-label" for="fm-email">Email</label>
+                        <input type="email" id="fm-email" class="input" placeholder="email@exemplo.com">
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label" for="fm-endereco">Endereço residencial</label>
+                        <input type="text" id="fm-endereco" class="input" placeholder="Rua, número, bairro, cidade">
+                    </div>
+                    <div>
+                        <label class="check-row" for="fm-cnh" style="margin-top:26px;">
+                            <input type="checkbox" id="fm-cnh"> Possui CNH
+                        </label>
+                    </div>
+                    <div id="fm-cnh-cat-wrap" class="hidden">
+                        <label class="input-label" for="fm-cnh-categoria">Categoria da CNH</label>
+                        <input type="text" id="fm-cnh-categoria" class="input" placeholder="Ex: AB">
+                    </div>
+                    <div>
+                        <label class="input-label" for="fm-status">Status</label>
+                        <select id="fm-status" class="select">
+                            <option value="ativo">Ativo</option>
+                            <option value="reserva">Reserva</option>
+                        </select>
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label" for="fm-observacoes">Observações internas</label>
+                        <textarea id="fm-observacoes" class="textarea" rows="2" placeholder="Informações relevantes sobre o monitor…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close="modal-monitor">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="fm-submit"><i class="fas fa-check"></i> Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL: LANÇAR/EDITAR PAGAMENTO ================= -->
+<div id="modal-pagamento" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box" style="max-width:560px;" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title" id="modal-pagamento-title">Lançar pagamento</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-pagamento" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="form-pagamento">
+            <div class="modal-body">
+                <input type="hidden" id="fp-id">
+                <div class="form-grid">
+                    <div>
+                        <label class="input-label" for="fp-data">Data do evento *</label>
+                        <input type="date" id="fp-data" class="input" required>
+                    </div>
+                    <div>
+                        <label class="input-label" for="fp-data-pagamento">Data do pagamento</label>
+                        <input type="date" id="fp-data-pagamento" class="input">
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label" for="fp-monitor">Monitor *</label>
+                        <select id="fp-monitor" class="select" required>
+                            <option value="">Selecione um monitor…</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="input-label" for="fp-valor-base">Valor da diária (R$) *</label>
+                        <input type="number" id="fp-valor-base" class="input" step="0.01" min="0" value="100.00" required>
+                    </div>
+                    <div>
+                        <label class="input-label" for="fp-status">Status</label>
+                        <select id="fp-status" class="select">
+                            <option value="Executado">Pago / Executado</option>
+                            <option value="Pendente" selected>Pendente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="input-label" for="fp-entrada">Hora de entrada</label>
+                        <input type="time" id="fp-entrada" class="input">
+                    </div>
+                    <div>
+                        <label class="input-label" for="fp-saida">Hora de saída</label>
+                        <input type="time" id="fp-saida" class="input">
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label" for="fp-he">Horas extras (R$)</label>
+                        <input type="number" id="fp-he" class="input" step="0.01" min="0" value="0.00">
+                        <p class="hint-text" id="fp-he-hint">Calculado automaticamente pelas horas (diária cobre 11h) — pode ajustar manualmente.</p>
+                    </div>
+                    <div class="fg-full motorista-box">
+                        <label class="check-row" for="fp-motorista">
+                            <input type="checkbox" id="fp-motorista">
+                            <span><i class="fas fa-truck-fast" style="color:var(--brand-600);"></i> Foi motorista neste dia?</span>
+                        </label>
+                        <div id="fp-eventos-wrap" class="hidden" style="margin-top:10px;">
+                            <label class="input-label" for="fp-eventos">Eventos entregues (R$ 20,00 por evento)</label>
+                            <input type="number" id="fp-eventos" class="input" step="0.5" min="0" value="0">
+                            <p class="hint-text" id="fp-adicional-label"></p>
+                        </div>
+                    </div>
+                    <div class="fg-full total-live">
+                        <span class="tl-label">Total do lançamento</span>
+                        <span class="tl-value tabular-nums" id="fp-total">R$ 0,00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close="modal-pagamento">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="fp-submit"><i class="fas fa-check"></i> Confirmar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL: REGISTRAR AVALIAÇÃO ================= -->
+<div id="modal-avaliacao" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title">Registrar avaliação</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-avaliacao" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="form-avaliacao">
+            <div class="modal-body">
+                <p id="fa-monitor-nome" style="font-weight:600;color:var(--text);margin-bottom:12px;"></p>
+                <div class="form-grid">
+                    <div>
+                        <label class="input-label" for="fa-data">Data *</label>
+                        <input type="date" id="fa-data" class="input" required>
+                    </div>
+                    <div>
+                        <label class="input-label" for="fa-nota">Nota (0 a 10)</label>
+                        <input type="number" id="fa-nota" class="input" min="0" max="10" step="0.1" value="10">
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label" for="fa-descricao">Descrição</label>
+                        <input type="text" id="fa-descricao" class="input" placeholder="Ex: Festa infantil — condomínio X">
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label" for="fa-obs">Observações</label>
+                        <textarea id="fa-obs" class="textarea" rows="3" placeholder="Ex: Chegou cedo e foi muito atencioso com as crianças."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close="modal-avaliacao">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="fa-submit"><i class="fas fa-check"></i> Salvar avaliação</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL: FUNCIONÁRIO ================= -->
+<div id="modal-funcionario" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title" id="modal-funcionario-title">Novo funcionário</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-funcionario" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="form-funcionario">
+            <div class="modal-body">
+                <input type="hidden" id="ff-id">
+                <div class="form-grid">
+                    <div class="fg-full">
+                        <label class="input-label" for="ff-nome">Nome *</label>
+                        <input type="text" id="ff-nome" class="input" required>
+                    </div>
+                    <div>
+                        <label class="input-label" for="ff-salario">Salário fixo (R$) *</label>
+                        <input type="number" id="ff-salario" class="input" step="0.01" min="0" required>
+                    </div>
+                    <div>
+                        <label class="input-label" for="ff-va">Vale alimentação (R$)</label>
+                        <input type="number" id="ff-va" class="input" step="0.01" min="0" value="0">
+                    </div>
+                    <div>
+                        <label class="input-label" for="ff-vt">Vale transporte (R$)</label>
+                        <input type="number" id="ff-vt" class="input" step="0.01" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close="modal-funcionario">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="ff-submit"><i class="fas fa-check"></i> Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="module">
+import { api } from './js/api.js';
+
+/* ================= Helpers ================= */
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+const fmtBRL = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+function fmtData(iso) {
+    // Sempre escapado: 'data'/'nascimento' são Strings livres no banco e os
+    // POSTs de monitor/desempenho são públicos — sem escape seria XSS armazenado
+    if (!iso) return '—';
+    const s = String(iso).split('T')[0];
+    const [y, m, d] = s.split('-');
+    if (!d) return escapeHtml(iso);
+    return escapeHtml(`${d}/${m}/${y}`);
+}
+function hojeISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function iniciais(nome) {
+    return String(nome || '?').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+}
+async function copiarTexto(txt) {
+    try { await navigator.clipboard.writeText(txt); return true; }
+    catch {
+        const ta = document.createElement('textarea');
+        ta.value = txt;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch { /* noop */ }
+        ta.remove();
+        return ok;
+    }
+}
+function emptyFull(container, opts) {
+    UI.empty(container, opts);
+    const node = container.firstElementChild;
+    if (node) node.style.gridColumn = '1 / -1';
+}
+
+/* ================= Estado ================= */
+const state = {
+    monitores: [],
+    monitoresOk: false,
+    monitoresCarregando: null, // Promise em andamento
+    pagamentos: [],
+    pagamentosOk: false,
+    funcionarios: [],
+    faixas: [],
+    fixaOk: false,
+    mes: (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; })(),
+    detalhe: null,         // monitor aberto no modal de detalhe
+    pagEditando: null,     // pagamento em edição
+    fotoBase64: ''         // nova foto escolhida no form de monitor
+};
+
+/* ================= Modais estáticos ================= */
+function abrirModal(id) { $(id).classList.remove('is-closed'); }
+function fecharModal(id) { $(id).classList.add('is-closed'); }
+document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => fecharModal(btn.getAttribute('data-close')));
+});
+document.querySelectorAll('.modal-backdrop[id]').forEach(bd => {
+    bd.addEventListener('mousedown', (e) => { if (e.target === bd) bd.classList.add('is-closed'); });
+});
+
+/* ================= Abas ================= */
+const TABS = ['monitores', 'pagamentos', 'desempenho', 'fixa'];
+function setTab(tab) {
+    if (!TABS.includes(tab)) tab = 'monitores';
+    localStorage.setItem('equipe_tab', tab);
+    document.querySelectorAll('#equipe-tabs > button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    TABS.forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
+    if (tab === 'monitores' || tab === 'desempenho') ensureMonitores();
+    if (tab === 'pagamentos') { ensureMonitores(); ensurePagamentos(); }
+    if (tab === 'fixa') ensureFixa();
+}
+document.querySelectorAll('#equipe-tabs > button').forEach(b => {
+    b.addEventListener('click', () => setTab(b.dataset.tab));
+});
+
+/* ============================================================
+   ABA 1 — MONITORES
+   ============================================================ */
+const LIMITE_PAGINA = 50;
+
+async function ensureMonitores(force = false) {
+    if (state.monitoresOk && !force) { renderKpisMonitores(); renderMonitores(); popularSelectsMonitores(); return; }
+    if (state.monitoresCarregando) return state.monitoresCarregando;
+
+    state.monitoresCarregando = (async () => {
+        const grid = $('monitores-grid');
+        if (!state.monitoresOk) UI.skeleton(grid, 'cards', 3);
+        // getMonitores devolve array simples (sem total). Busca páginas em
+        // sequência até vir página incompleta (teto de 20 páginas = 1000).
+        const todos = [];
+        for (let page = 1; page <= 20; page++) {
+            const lote = await api.getMonitores(page, LIMITE_PAGINA);
+            if (!Array.isArray(lote) || lote.length === 0) break;
+            todos.push(...lote);
+            if (lote.length < LIMITE_PAGINA) break;
+        }
+        state.monitores = todos;
+        state.monitoresOk = true;
+        renderKpisMonitores();
+        renderMonitores();
+        popularSelectsMonitores();
+    })();
+    try { await state.monitoresCarregando; }
+    finally { state.monitoresCarregando = null; }
+}
+
+function renderKpisMonitores() {
+    const ativos = state.monitores.filter(m => (m.status || 'ativo') === 'ativo').length;
+    const reserva = state.monitores.filter(m => m.status === 'reserva').length;
+    UI.countUp($('kpi-ativos'), ativos);
+    UI.countUp($('kpi-reserva'), reserva);
+    UI.countUp($('kpi-total'), state.monitores.length);
+}
+
+function temPS(m) { return m.possuiCursoPS === true || m.possuiCursoPS === 'true' || m.possuiCursoPS === 'Sim'; }
+function temCNH(m) { return m.cnh === true || m.cnh === 'Sim'; }
+
+function renderMonitores() {
+    const grid = $('monitores-grid');
+    const busca = ($('mon-busca').value || '').toLowerCase().trim();
+    const fStatus = $('mon-filtro-status').value;
+    const fCnh = $('mon-filtro-cnh').value;
+    const fPs = $('mon-filtro-ps').value;
+    const ordem = $('mon-ordenar').value;
+
+    let lista = [...state.monitores];
+    if (fStatus) lista = lista.filter(m => (m.status || 'ativo') === fStatus);
+    if (fCnh) lista = lista.filter(m => temCNH(m) === (fCnh === 'sim'));
+    if (fPs) lista = lista.filter(m => temPS(m) === (fPs === 'sim'));
+    if (busca) {
+        lista = lista.filter(m =>
+            (m.nome || '').toLowerCase().includes(busca) ||
+            (m.telefone || '').toLowerCase().includes(busca) ||
+            (m.email || '').toLowerCase().includes(busca));
+    }
+    if (ordem === 'status') {
+        lista.sort((a, b) => {
+            const sa = (a.status || 'ativo') === 'ativo' ? 0 : 1;
+            const sb = (b.status || 'ativo') === 'ativo' ? 0 : 1;
+            return sa - sb || (a.nome || '').localeCompare(b.nome || '');
+        });
+    } else {
+        lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    }
+
+    $('mon-count').textContent = lista.length
+        ? `${lista.length} ${lista.length === 1 ? 'monitor exibido' : 'monitores exibidos'}`
+        : '';
+
+    if (lista.length === 0) {
+        emptyFull(grid, {
+            icon: 'fa-people-group',
+            title: state.monitores.length === 0 ? 'Nenhum monitor cadastrado' : 'Nenhum monitor encontrado',
+            text: state.monitores.length === 0
+                ? 'Cadastre o primeiro monitor da equipe ou compartilhe o link de cadastro público.'
+                : 'Ajuste a busca ou os filtros para encontrar quem procura.',
+            cta: state.monitores.length === 0 ? { label: 'Novo monitor', onClick: () => abrirFormMonitor(null) } : null
+        });
+        return;
+    }
+
+    grid.innerHTML = lista.map(m => {
+        const ativo = (m.status || 'ativo') === 'ativo';
+        const statusBadge = ativo
+            ? '<span class="badge badge-success">Ativo</span>'
+            : '<span class="badge badge-warning">Reserva</span>';
+        const cnhChip = temCNH(m)
+            ? `<span class="chip chip-sm"><i class="fas fa-id-card"></i> CNH ${escapeHtml(m.cnhCategoria || '')}</span>` : '';
+        const psChip = temPS(m)
+            ? '<span class="chip chip-sm" title="Possui curso de primeiros socorros"><i class="fas fa-heart-pulse"></i> PS</span>' : '';
+        const avatar = m.fotoPerfil
+            ? `<div class="m-avatar"><img src="${escapeHtml(m.fotoPerfil)}" loading="lazy" alt=""></div>`
+            : `<div class="m-avatar">${escapeHtml(iniciais(m.nome))}</div>`;
+        return `
+        <article class="surface surface-hover m-card" data-id="${escapeHtml(m.id)}" title="Ver detalhes">
+            ${avatar}
+            <div class="min-w-0" style="flex:1;">
+                <h3 class="m-nome">${escapeHtml(m.nome)}</h3>
+                <div class="m-badges">${statusBadge}${cnhChip}${psChip}</div>
+                <p class="m-tel"><i class="fas fa-phone"></i> ${escapeHtml(m.telefone || 'Sem telefone')}</p>
+            </div>
+        </article>`;
+    }).join('');
+}
+
+$('monitores-grid').addEventListener('click', (e) => {
+    const card = e.target.closest('.m-card[data-id]');
+    if (card) abrirDetalheMonitor(card.dataset.id);
+});
+['mon-filtro-status', 'mon-filtro-cnh', 'mon-filtro-ps', 'mon-ordenar'].forEach(id => {
+    $(id).addEventListener('change', renderMonitores);
+});
+$('mon-busca').addEventListener('input', renderMonitores);
+
+/* ---------- Detalhe do monitor ---------- */
+async function abrirDetalheMonitor(id) {
+    abrirModal('modal-detalhe');
+    const body = $('detalhe-body');
+    $('detalhe-footer').classList.add('hidden');
+    UI.skeleton(body, 'lines', 6);
+
+    state.detalheIdPendente = id; // guarda contra resposta obsoleta (abrir A, fechar, abrir B)
+    const m = await api.getMonitorById(id);
+    if (state.detalheIdPendente !== id) return; // outro monitor foi aberto no meio tempo
+    if (!m) {
+        fecharModal('modal-detalhe');
+        UI.toast('Erro ao carregar detalhes do monitor', 'error');
+        return;
+    }
+    state.detalhe = m;
+    renderDetalheMonitor(m);
+}
+
+const SKILL_LABELS = {
+    forca: 'Força', agilidade: 'Agilidade', proatividade: 'Proatividade',
+    comunicacao: 'Comunicação', disponibilidade: 'Disponibilidade', respeito: 'Respeito'
+};
+
+function ddItem(label, valor) {
+    return `<div class="detail-item"><div class="dt">${escapeHtml(label)}</div><div class="dd">${valor || '—'}</div></div>`;
+}
+function secao(icone, titulo, corpoHtml, aberta = false) {
+    return `
+    <details class="sec"${aberta ? ' open' : ''}>
+        <summary><i class="fas fa-chevron-right caret"></i><i class="fas ${icone} sec-icon"></i> ${escapeHtml(titulo)}</summary>
+        <div class="sec-body">${corpoHtml}</div>
+    </details>`;
+}
+function linkRede(tipo, valor) {
+    if (!valor) return '';
+    const v = String(valor).trim();
+    let href = '';
+    if (/^https?:\/\//i.test(v)) href = v;
+    else if (tipo === 'instagram') href = 'https://instagram.com/' + v.replace(/^@/, '');
+    else if (tipo === 'tiktok') href = 'https://www.tiktok.com/@' + v.replace(/^@/, '');
+    const icone = { instagram: 'fa-brands fa-instagram', facebook: 'fa-brands fa-facebook', linkedin: 'fa-brands fa-linkedin', tiktok: 'fa-brands fa-tiktok' }[tipo];
+    const inner = `<i class="${icone}"></i> ${escapeHtml(v)}`;
+    return href
+        ? `<a class="chip chip-interactive" href="${escapeHtml(href)}" target="_blank" rel="noopener">${inner}</a>`
+        : `<span class="chip">${inner}</span>`;
+}
+function notaBadge(nota) {
+    const n = parseFloat(nota);
+    if (isNaN(n)) return '<span class="badge">Sem nota</span>';
+    const cls = n >= 7 ? 'badge-success' : (n >= 5 ? 'badge-warning' : 'badge-danger');
+    return `<span class="badge ${cls}"><i class="fas fa-star"></i> ${escapeHtml(String(nota))}</span>`;
+}
+function listaDesempenhoHtml(avaliacoes) {
+    const lista = [...(avaliacoes || [])].sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')));
+    if (lista.length === 0) return '<p class="hint-text">Nenhuma avaliação registrada ainda.</p>';
+    return lista.map(d => `
+        <div class="des-item">
+            <div class="des-head">
+                <span class="des-data"><i class="fas fa-calendar" style="color:var(--text-faint);"></i> ${fmtData(d.data)}</span>
+                ${notaBadge(d.nota)}
+            </div>
+            ${d.descricao ? `<p class="des-texto">${escapeHtml(d.descricao)}</p>` : ''}
+            ${d.obs ? `<p class="des-obs">${escapeHtml(d.obs)}</p>` : ''}
+        </div>`).join('');
+}
+
+function renderDetalheMonitor(m) {
+    const body = $('detalhe-body');
+    const ativo = (m.status || 'ativo') === 'ativo';
+
+    let hab = null;
+    try { hab = m.habilidades ? JSON.parse(m.habilidades) : null; } catch { hab = null; }
+
+    const avatar = m.fotoPerfil
+        ? `<div class="m-avatar lg"><img src="${escapeHtml(m.fotoPerfil)}" alt=""></div>`
+        : `<div class="m-avatar lg">${escapeHtml(iniciais(m.nome))}</div>`;
+
+    const badges = [
+        ativo ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-warning">Reserva</span>',
+        temCNH(m) ? `<span class="chip chip-sm"><i class="fas fa-id-card"></i> CNH ${escapeHtml(m.cnhCategoria || '')}</span>` : '',
+        temPS(m) ? '<span class="chip chip-sm"><i class="fas fa-heart-pulse"></i> Curso PS</span>' : ''
+    ].join('');
+
+    /* Saúde */
+    const saudeHtml = `<div class="detail-grid" style="margin-top:4px;">
+        ${ddItem('Tipo sanguíneo', escapeHtml(m.tipoSanguineo || ''))}
+        ${ddItem('Plano de saúde', escapeHtml(m.planoSaude || ''))}
+        ${ddItem('Medicamentos contínuos', escapeHtml(m.medicamentos || ''))}
+        ${ddItem('Alergias', escapeHtml(m.alergias || ''))}
+        ${ddItem('Restrições alimentares', escapeHtml(m.restricoesAlimentares || ''))}
+        ${ddItem('Condições médicas', escapeHtml(m.condicaoMedica || ''))}
+        ${ddItem('Fobias / medos', escapeHtml(m.fobias || ''))}
+    </div>`;
+
+    /* Habilidades */
+    let skillsHtml = '';
+    if (hab && typeof hab === 'object') {
+        skillsHtml = Object.entries(hab).map(([k, v]) => {
+            const nota = Math.max(0, Math.min(10, Number(v) || 0));
+            return `<div class="skill-row">
+                <span class="skill-name">${escapeHtml(SKILL_LABELS[k] || k)}</span>
+                <span class="skill-bar"><span style="width:${nota * 10}%;"></span></span>
+                <span class="skill-val">${nota}</span>
+            </div>`;
+        }).join('');
+    } else {
+        skillsHtml = '<p class="hint-text">Sem autoavaliação de habilidades.</p>';
+    }
+    const habilidadesHtml = skillsHtml + `<div class="detail-grid">
+        ${ddItem('Habilidades específicas', escapeHtml(m.habilidadesEspecificas || ''))}
+        ${ddItem('Idiomas', escapeHtml(m.idiomas || ''))}
+        ${ddItem('Escolaridade / curso', escapeHtml(m.escolaridade || ''))}
+        ${ddItem('Tamanho camiseta', escapeHtml(m.tamanhoCamiseta || ''))}
+        ${ddItem('Experiências anteriores', escapeHtml(m.experiencias || ''))}
+    </div>`;
+
+    /* Documentos */
+    const docs = [];
+    if (m.fotoDocumento) docs.push({ src: m.fotoDocumento, label: 'Documento (RG/CNH)' });
+    if (m.fotoCertificadoPS) docs.push({ src: m.fotoCertificadoPS, label: 'Certificado PS' });
+    const docsHtml = docs.length
+        ? `<div class="doc-thumbs">${docs.map((d, i) => `
+            <div class="doc-thumb" data-doc="${i}" title="Ampliar">
+                <img src="${escapeHtml(d.src)}" loading="lazy" alt="${escapeHtml(d.label)}">
+                <span>${escapeHtml(d.label)}</span>
+            </div>`).join('')}</div>`
+        : '<p class="hint-text">Nenhum documento anexado.</p>';
+
+    /* Redes sociais */
+    const redes = [linkRede('instagram', m.instagram), linkRede('facebook', m.facebook),
+        linkRede('linkedin', m.linkedin), linkRede('tiktok', m.tiktok)].filter(Boolean);
+    const redesHtml = redes.length
+        ? `<div style="display:flex;flex-wrap:wrap;gap:8px;">${redes.join('')}</div>`
+        : '<p class="hint-text">Nenhuma rede social informada.</p>';
+
+    /* Contato de emergência */
+    const emergHtml = `<div class="detail-grid" style="margin-top:4px;">
+        ${ddItem('Nome', escapeHtml(m.contatoEmergenciaNome || ''))}
+        ${ddItem('Parentesco', escapeHtml(m.contatoEmergenciaParentesco || ''))}
+        ${ddItem('Telefone', escapeHtml(m.contatoEmergenciaTelefone || ''))}
+    </div>`;
+
+    const obsHtml = m.observacoes
+        ? `<p style="font-size:14px;color:var(--text);white-space:pre-wrap;">${escapeHtml(m.observacoes)}</p>`
+        : '<p class="hint-text">Sem observações.</p>';
+
+    body.innerHTML = `
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+            ${avatar}
+            <div style="flex:1;min-width:200px;">
+                <h3 style="font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--text);">${escapeHtml(m.nome)}</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">${badges}</div>
+            </div>
+        </div>
+        <div class="detail-grid">
+            ${ddItem('Nascimento', fmtData(m.nascimento))}
+            ${ddItem('CPF', escapeHtml(m.cpf || ''))}
+            ${ddItem('Telefone', escapeHtml(m.telefone || ''))}
+            ${ddItem('Email', escapeHtml(m.email || ''))}
+            ${ddItem('Endereço', escapeHtml(m.endereco || ''))}
+        </div>
+        ${secao('fa-heart-pulse', 'Saúde', saudeHtml)}
+        ${secao('fa-bolt', 'Habilidades', habilidadesHtml)}
+        ${secao('fa-file-image', 'Documentos', docsHtml)}
+        ${secao('fa-hashtag', 'Redes sociais', redesHtml)}
+        ${secao('fa-phone-volume', 'Contato de emergência', emergHtml)}
+        ${secao('fa-comment-dots', 'Observações', obsHtml)}
+        ${secao('fa-star', `Desempenho (${(m.desempenho || []).length})`, listaDesempenhoHtml(m.desempenho))}
+    `;
+
+    /* Lightbox dos documentos */
+    body.querySelectorAll('.doc-thumb').forEach(el => {
+        el.addEventListener('click', () => {
+            const d = docs[Number(el.dataset.doc)];
+            if (!d) return;
+            UI.modal({
+                title: d.label,
+                html: `<img src="${escapeHtml(d.src)}" alt="${escapeHtml(d.label)}" style="width:100%;border-radius:var(--radius);">`
+            });
+        });
+    });
+
+    /* Footer */
+    const footer = $('detalhe-footer');
+    footer.classList.remove('hidden');
+    const btnStatus = $('btn-det-status');
+    btnStatus.innerHTML = ativo
+        ? '<i class="fas fa-arrow-down"></i> Mover para reserva'
+        : '<i class="fas fa-arrow-up"></i> Ativar';
+}
+
+$('btn-det-editar').addEventListener('click', () => {
+    if (!state.detalhe) return;
+    fecharModal('modal-detalhe');
+    abrirFormMonitor(state.detalhe);
+});
+
+$('btn-det-status').addEventListener('click', async () => {
+    const m = state.detalhe;
+    if (!m) return;
+    const novo = (m.status || 'ativo') === 'ativo' ? 'reserva' : 'ativo';
+    const btn = $('btn-det-status');
+    btn.disabled = true;
+    const ok = await api.alternarStatusMonitor(m.id, novo);
+    btn.disabled = false;
+    if (!ok) { UI.toast('Erro ao alterar status do monitor', 'error'); return; }
+    m.status = novo;
+    const naLista = state.monitores.find(x => x.id === m.id);
+    if (naLista) naLista.status = novo;
+    renderKpisMonitores();
+    renderMonitores();
+    renderDetalheMonitor(m);
+    UI.toast(novo === 'ativo' ? `${m.nome} ativado` : `${m.nome} movido para a reserva`);
+});
+
+$('btn-det-excluir').addEventListener('click', async () => {
+    const m = state.detalhe;
+    if (!m) return;
+    const confirmado = await UI.confirm({
+        title: 'Excluir monitor',
+        message: `Excluir "${m.nome}"? Os pagamentos e avaliações vinculados também serão removidos. Esta ação não pode ser desfeita.`,
+        confirmText: 'Excluir',
+        danger: true
+    });
+    if (!confirmado) return;
+    const ok = await api.deletarMonitor(m.id);
+    if (!ok) { UI.toast('Erro ao excluir monitor', 'error'); return; }
+    fecharModal('modal-detalhe');
+    state.monitores = state.monitores.filter(x => x.id !== m.id);
+    renderKpisMonitores();
+    renderMonitores();
+    popularSelectsMonitores();
+    UI.toast('Monitor excluído');
+});
+
+/* ---------- Cadastro / edição de monitor ---------- */
+function lerImagemRedimensionada(file, maxLado = 640) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+        reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+                const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, Math.round(img.width * escala));
+                c.height = Math.max(1, Math.round(img.height * escala));
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                resolve(c.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => resolve(reader.result); // fallback: base64 original
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function setFotoPreview(src) {
+    const img = $('fm-foto-img');
+    const icone = $('fm-foto-icone');
+    if (src) {
+        img.src = src;
+        img.classList.remove('hidden');
+        icone.classList.add('hidden');
+    } else {
+        img.removeAttribute('src');
+        img.classList.add('hidden');
+        icone.classList.remove('hidden');
+    }
+}
+
+function abrirFormMonitor(m) {
+    $('form-monitor').reset();
+    state.fotoBase64 = '';
+    $('fm-id').value = m ? m.id : '';
+    $('modal-monitor-title').textContent = m ? 'Editar monitor' : 'Novo monitor';
+    if (m) {
+        $('fm-nome').value = m.nome || '';
+        $('fm-nascimento').value = (m.nascimento || '').split('T')[0];
+        $('fm-cpf').value = m.cpf || '';
+        $('fm-telefone').value = m.telefone || '';
+        $('fm-email').value = m.email || '';
+        $('fm-endereco').value = m.endereco || '';
+        $('fm-cnh').checked = temCNH(m);
+        $('fm-cnh-categoria').value = m.cnhCategoria || '';
+        $('fm-status').value = (m.status || 'ativo') === 'reserva' ? 'reserva' : 'ativo';
+        $('fm-observacoes').value = m.observacoes || '';
+        setFotoPreview(m.fotoPerfil || '');
+    } else {
+        $('fm-status').value = 'ativo';
+        setFotoPreview('');
+    }
+    $('fm-cnh-cat-wrap').classList.toggle('hidden', !$('fm-cnh').checked);
+    abrirModal('modal-monitor');
+}
+
+$('btn-novo-monitor').addEventListener('click', () => abrirFormMonitor(null));
+$('fm-cnh').addEventListener('change', () => {
+    $('fm-cnh-cat-wrap').classList.toggle('hidden', !$('fm-cnh').checked);
+});
+$('fm-foto-drop').addEventListener('click', () => $('fm-foto-input').click());
+$('fm-foto-input').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+        state.fotoBase64 = await lerImagemRedimensionada(file);
+        setFotoPreview(state.fotoBase64);
+    } catch {
+        UI.toast('Não foi possível ler a imagem', 'error');
+    }
+});
+
+$('form-monitor').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = $('fm-id').value;
+    const cnhMarcado = $('fm-cnh').checked;
+    const dados = {
+        nome: $('fm-nome').value.trim(),
+        nascimento: $('fm-nascimento').value,
+        cpf: $('fm-cpf').value.trim(),
+        telefone: $('fm-telefone').value.trim(),
+        email: $('fm-email').value.trim(),
+        endereco: $('fm-endereco').value.trim(),
+        cnh: cnhMarcado,
+        cnhCategoria: cnhMarcado ? $('fm-cnh-categoria').value.trim() : '',
+        status: $('fm-status').value,
+        observacoes: $('fm-observacoes').value.trim()
+    };
+    if (!dados.nome) { UI.toast('Informe o nome do monitor', 'error'); return; }
+    if (state.fotoBase64) dados.fotoPerfil = state.fotoBase64;
+    if (!id) {
+        // Objeto puro: o backend faz JSON.stringify — enviar string dupla-stringifica
+        dados.habilidades = { forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 };
+    }
+
+    const btn = $('fm-submit');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+    const ok = id ? await api.atualizarMonitor(id, dados) : await api.salvarMonitor(dados);
+    btn.disabled = false;
+    btn.innerHTML = original;
+
+    if (!ok) { UI.toast('Erro ao salvar monitor', 'error'); return; }
+    fecharModal('modal-monitor');
+    UI.toast(id ? 'Monitor atualizado' : 'Monitor cadastrado');
+    await ensureMonitores(true);
+});
+
+/* ---------- Link de cadastro público ---------- */
+$('btn-link-cadastro').addEventListener('click', async () => {
+    const url = new URL('cadastro-monitor.html', window.location.href).href;
+    const ok = await copiarTexto(url);
+    if (ok) UI.toast('Link de cadastro copiado!');
+    else UI.toast('Não foi possível copiar o link', 'error');
+});
+
+/* ---------- Selects de monitor (pagamentos e desempenho) ---------- */
+function popularSelectsMonitores() {
+    const opcoes = [...state.monitores]
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+        .map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nome)}</option>`)
+        .join('');
+    [['fp-monitor', 'Selecione um monitor…'], ['des-monitor', 'Selecione um monitor…']].forEach(([id, placeholder]) => {
+        const sel = $(id);
+        const atual = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>` + opcoes;
+        if (atual && sel.querySelector(`option[value="${CSS.escape(atual)}"]`)) sel.value = atual;
+    });
+}
+
+/* ============================================================
+   ABA 2 — PAGAMENTOS
+   ============================================================ */
+async function ensurePagamentos(force = false) {
+    if (state.pagamentosOk && !force) { renderPagamentos(); return; }
+    const wrap = $('pag-lista');
+    wrap.innerHTML = '<div style="padding:16px;"></div>';
+    UI.skeleton(wrap.firstElementChild, 'table', 5);
+    const lista = await api.getPagamentosMonitores();
+    state.pagamentos = Array.isArray(lista) ? lista : [];
+    state.pagamentosOk = true;
+    // O backend retorna no máximo 500 pagamentos (mais recentes). Meses
+    // anteriores ao mais antigo recebido podem estar incompletos — avisamos.
+    state.pagDataMaisAntiga = state.pagamentos.length >= 500
+        ? state.pagamentos.reduce((min, p) => (String(p.data) < min ? String(p.data) : min), '9999')
+        : null;
+    renderPagamentos();
+}
+
+function chaveMes() {
+    return `${state.mes.y}-${String(state.mes.m).padStart(2, '0')}`;
+}
+function totalPagamento(p) {
+    return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+}
+
+function renderPagamentos() {
+    $('label-mes').textContent = new Date(state.mes.y, state.mes.m - 1, 1)
+        .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    const doMes = state.pagamentos
+        .filter(p => String(p.data || '').startsWith(chaveMes()))
+        .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+
+    const pago = doMes.filter(p => p.statusPagamento === 'Executado').reduce((s, p) => s + totalPagamento(p), 0);
+    const pendente = doMes.filter(p => p.statusPagamento !== 'Executado').reduce((s, p) => s + totalPagamento(p), 0);
+    UI.countUp($('kpi-pago'), pago, { prefix: 'R$ ', decimals: 2 });
+    UI.countUp($('kpi-pendente'), pendente, { prefix: 'R$ ', decimals: 2 });
+    UI.countUp($('kpi-diarias'), doMes.length);
+
+    const wrap = $('pag-lista');
+    // Aviso quando o mês navegado é anterior ao alcance dos 500 registros carregados
+    const mesIncompleto = state.pagDataMaisAntiga && chaveMes() <= state.pagDataMaisAntiga.slice(0, 7);
+    const avisoTeto = mesIncompleto
+        ? '<div class="badge badge-warning" style="display:flex;padding:10px 14px;margin-bottom:10px;"><i class="fas fa-triangle-exclamation"></i>&nbsp; Este mês pode estar incompleto: o servidor retorna apenas os 500 lançamentos mais recentes.</div>'
+        : '';
+    if (doMes.length === 0) {
+        if (mesIncompleto) {
+            wrap.innerHTML = avisoTeto;
+            return;
+        }
+        UI.empty(wrap, {
+            icon: 'fa-hand-holding-dollar',
+            title: 'Nenhum pagamento neste mês',
+            text: 'Lance a primeira diária do mês para acompanhar os valores da equipe.',
+            cta: { label: 'Lançar pagamento', onClick: abrirFormPagamentoNovo }
+        });
+        return;
+    }
+
+    const linhas = doMes.map(p => {
+        const isPago = p.statusPagamento === 'Executado';
+        const statusBadge = isPago
+            ? '<span class="badge badge-success">Pago</span>'
+            : '<span class="badge badge-warning">Pendente</span>';
+        const motorista = p.foiMotorista
+            ? ` <span class="chip chip-sm" title="Foi motorista (${escapeHtml(String(p.numEventos || 0))} eventos)"><i class="fas fa-truck-fast"></i></span>` : '';
+        return `
+        <tr>
+            <td style="white-space:nowrap;">${fmtData(p.data)}</td>
+            <td style="font-weight:600;">${escapeHtml(p.nome || '—')}${motorista}</td>
+            <td class="tabular-nums">${fmtBRL(p.valorBase)}</td>
+            <td class="tabular-nums">${fmtBRL(p.adicional)}</td>
+            <td class="tabular-nums">${fmtBRL(p.horasExtras)}</td>
+            <td class="tabular-nums" style="font-weight:700;">${fmtBRL(totalPagamento(p))}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <div class="row-actions">
+                    <button type="button" data-action="editar" data-id="${escapeHtml(p.id)}" title="Editar"><i class="fas fa-pen-to-square"></i></button>
+                    <button type="button" class="act-danger" data-action="excluir" data-id="${escapeHtml(p.id)}" title="Excluir"><i class="fas fa-trash-can"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    const subtotal = doMes.reduce((s, p) => s + totalPagamento(p), 0);
+    wrap.innerHTML = `
+        ${avisoTeto}
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Data</th><th>Monitor</th><th>Base</th><th>Adicional</th>
+                        <th>H. Extras</th><th>Total</th><th>Status</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5" style="text-align:right;">Subtotal do mês</td>
+                        <td class="tabular-nums">${fmtBRL(subtotal)}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+}
+
+$('btn-mes-prev').addEventListener('click', () => {
+    state.mes.m--; if (state.mes.m < 1) { state.mes.m = 12; state.mes.y--; }
+    renderPagamentos();
+});
+$('btn-mes-next').addEventListener('click', () => {
+    state.mes.m++; if (state.mes.m > 12) { state.mes.m = 1; state.mes.y++; }
+    renderPagamentos();
+});
+
+$('pag-lista').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const p = state.pagamentos.find(x => x.id === btn.dataset.id);
+    if (!p) return;
+    if (btn.dataset.action === 'editar') {
+        await ensureMonitores(); // o select de monitores precisa existir antes de setar o valor
+        abrirFormPagamento(p);
+    } else if (btn.dataset.action === 'excluir') {
+        const confirmado = await UI.confirm({
+            title: 'Excluir pagamento',
+            message: `Excluir o pagamento de ${p.nome || 'monitor'} em ${fmtData(p.data)} (${fmtBRL(totalPagamento(p))})?`,
+            confirmText: 'Excluir',
+            danger: true
+        });
+        if (!confirmado) return;
+        const ok = await api.deletarPagamentoMonitor(p.id);
+        if (!ok) { UI.toast('Erro ao excluir pagamento', 'error'); return; }
+        state.pagamentos = state.pagamentos.filter(x => x.id !== p.id);
+        renderPagamentos();
+        UI.toast('Pagamento excluído');
+    }
+});
+
+/* ---------- Formulário de pagamento ---------- */
+function atualizarCalculosPagamento() {
+    const base = parseFloat($('fp-valor-base').value) || 0;
+    const he = parseFloat($('fp-he').value) || 0;
+    const motorista = $('fp-motorista').checked;
+    const eventos = motorista ? (parseFloat($('fp-eventos').value) || 0) : 0;
+    const adicional = eventos * 20;
+
+    $('fp-eventos-wrap').classList.toggle('hidden', !motorista);
+    $('fp-adicional-label').textContent = motorista
+        ? `Adicional de motorista: ${fmtBRL(adicional)} (${eventos} × R$ 20,00)` : '';
+    $('fp-total').textContent = fmtBRL(base + adicional + he);
+}
+
+function calcularHEAutomatico() {
+    const entrada = $('fp-entrada').value;
+    const saida = $('fp-saida').value;
+    const base = parseFloat($('fp-valor-base').value) || 0;
+    const hint = $('fp-he-hint');
+    if (!entrada || !saida) {
+        hint.textContent = 'Calculado automaticamente pelas horas (diária cobre 11h) — pode ajustar manualmente.';
+        hint.classList.remove('is-on');
+        return;
+    }
+    const [hE, mE] = entrada.split(':').map(Number);
+    const [hS, mS] = saida.split(':').map(Number);
+    let minSaida = hS * 60 + mS;
+    const minEntrada = hE * 60 + mE;
+    if (minSaida < minEntrada) minSaida += 24 * 60; // virou o dia
+    const totalHoras = (minSaida - minEntrada) / 60;
+    const horasExtras = Math.max(0, totalHoras - 11);
+    const valorHE = horasExtras * (base / 11);
+    $('fp-he').value = valorHE.toFixed(2);
+    hint.textContent = horasExtras > 0
+        ? `+${horasExtras.toFixed(2)}h extra (${fmtBRL(valorHE)})`
+        : 'Sem horas extras (jornada até 11h).';
+    hint.classList.toggle('is-on', horasExtras > 0);
+    atualizarCalculosPagamento();
+}
+
+['fp-entrada', 'fp-saida'].forEach(id => $(id).addEventListener('change', calcularHEAutomatico));
+$('fp-valor-base').addEventListener('input', () => { calcularHEAutomatico(); atualizarCalculosPagamento(); });
+$('fp-he').addEventListener('input', atualizarCalculosPagamento);
+$('fp-motorista').addEventListener('change', atualizarCalculosPagamento);
+$('fp-eventos').addEventListener('input', atualizarCalculosPagamento);
+
+async function abrirFormPagamentoNovo() {
+    await ensureMonitores();
+    abrirFormPagamento(null);
+}
+
+function abrirFormPagamento(p) {
+    $('form-pagamento').reset();
+    state.pagEditando = p || null;
+    $('fp-id').value = p ? p.id : '';
+    $('modal-pagamento-title').textContent = p ? 'Editar pagamento' : 'Lançar pagamento';
+    if (p) {
+        $('fp-data').value = (p.data || '').split('T')[0];
+        $('fp-data-pagamento').value = (p.dataPagamento || '').split('T')[0];
+        $('fp-monitor').value = p.monitorId || '';
+        $('fp-valor-base').value = (parseFloat(p.valorBase) || 0).toFixed(2);
+        $('fp-he').value = (parseFloat(p.horasExtras) || 0).toFixed(2);
+        $('fp-entrada').value = p.horaEntrada || '';
+        $('fp-saida').value = p.horaSaida || '';
+        $('fp-status').value = p.statusPagamento === 'Executado' ? 'Executado' : 'Pendente';
+        $('fp-motorista').checked = !!p.foiMotorista;
+        $('fp-eventos').value = p.numEventos != null ? p.numEventos : 0;
+    } else {
+        $('fp-data').value = hojeISO();
+        $('fp-valor-base').value = '100.00';
+        $('fp-he').value = '0.00';
+        $('fp-status').value = 'Pendente';
+        $('fp-eventos').value = '0';
+    }
+    $('fp-he-hint').textContent = 'Calculado automaticamente pelas horas (diária cobre 11h) — pode ajustar manualmente.';
+    $('fp-he-hint').classList.remove('is-on');
+    atualizarCalculosPagamento();
+    abrirModal('modal-pagamento');
+}
+
+$('btn-lancar-pagamento').addEventListener('click', abrirFormPagamentoNovo);
+
+$('form-pagamento').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const editId = $('fp-id').value;
+    const monitorId = $('fp-monitor').value;
+    if (!monitorId) { UI.toast('Selecione o monitor', 'error'); return; }
+    const monitor = state.monitores.find(m => m.id === monitorId);
+
+    const base = parseFloat($('fp-valor-base').value) || 0;
+    const he = parseFloat($('fp-he').value) || 0;
+    const motorista = $('fp-motorista').checked;
+    const eventos = motorista ? (parseFloat($('fp-eventos').value) || 0) : 0;
+    const adicional = eventos * 20;
+
+    const dados = {
+        data: $('fp-data').value,
+        dataPagamento: $('fp-data-pagamento').value || null,
+        eventoId: state.pagEditando ? (state.pagEditando.eventoId || null) : null,
+        monitorId,
+        nome: monitor ? monitor.nome : (state.pagEditando ? state.pagEditando.nome : ''),
+        valorBase: base,
+        adicional,
+        horasExtras: he,
+        pagamento: base + adicional + he,
+        statusPagamento: $('fp-status').value,
+        horaEntrada: $('fp-entrada').value || null,
+        horaSaida: $('fp-saida').value || null,
+        foiMotorista: motorista,
+        numEventos: eventos
+    };
+
+    const btn = $('fp-submit');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+    const ok = editId
+        ? await api.atualizarPagamentoMonitor(editId, dados)
+        : await api.salvarPagamentoMonitor(dados);
+    btn.disabled = false;
+    btn.innerHTML = original;
+
+    if (!ok) { UI.toast('Erro ao salvar pagamento', 'error'); return; }
+    fecharModal('modal-pagamento');
+    UI.toast(editId ? 'Pagamento atualizado' : 'Pagamento registrado');
+    await ensurePagamentos(true);
+});
+
+/* ============================================================
+   ABA 3 — DESEMPENHO
+   ============================================================ */
+async function carregarDesempenho() {
+    const monitorId = $('des-monitor').value;
+    const lista = $('des-lista');
+    $('btn-nova-avaliacao').disabled = !monitorId;
+    if (!monitorId) {
+        UI.empty(lista, {
+            icon: 'fa-star',
+            title: 'Escolha um monitor',
+            text: 'Selecione um monitor acima para ver o histórico de avaliações e registrar novas.'
+        });
+        return;
+    }
+    UI.skeleton(lista, 'cards', 3);
+    const m = await api.getMonitorById(monitorId);
+    if (!m) {
+        UI.toast('Erro ao carregar avaliações', 'error');
+        lista.innerHTML = '';
+        return;
+    }
+    if (m.id !== $('des-monitor').value) return; // usuário trocou de monitor no meio
+    const avaliacoes = m.desempenho || [];
+    if (avaliacoes.length === 0) {
+        UI.empty(lista, {
+            icon: 'fa-star',
+            title: 'Nenhuma avaliação ainda',
+            text: `Registre a primeira avaliação de ${m.nome}.`,
+            cta: { label: 'Registrar avaliação', onClick: abrirFormAvaliacao }
+        });
+        return;
+    }
+    lista.innerHTML = `<div style="max-width:680px;">${listaDesempenhoHtml(avaliacoes)}</div>`;
+}
+
+$('des-monitor').addEventListener('change', carregarDesempenho);
+
+function abrirFormAvaliacao() {
+    const monitorId = $('des-monitor').value;
+    if (!monitorId) { UI.toast('Selecione um monitor primeiro', 'warning'); return; }
+    const monitor = state.monitores.find(m => m.id === monitorId);
+    $('form-avaliacao').reset();
+    $('fa-data').value = hojeISO();
+    $('fa-nota').value = '10';
+    $('fa-monitor-nome').textContent = monitor ? `Monitor: ${monitor.nome}` : '';
+    abrirModal('modal-avaliacao');
+}
+$('btn-nova-avaliacao').addEventListener('click', abrirFormAvaliacao);
+
+$('form-avaliacao').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const monitorId = $('des-monitor').value;
+    if (!monitorId) { UI.toast('Selecione um monitor', 'error'); return; }
+    const dados = {
+        monitorId,
+        data: $('fa-data').value,
+        nota: String($('fa-nota').value || ''),
+        descricao: $('fa-descricao').value.trim(),
+        obs: $('fa-obs').value.trim()
+    };
+    const btn = $('fa-submit');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+    const ok = await api.salvarDesempenho(dados);
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (!ok) { UI.toast('Erro ao salvar avaliação', 'error'); return; }
+    fecharModal('modal-avaliacao');
+    UI.toast('Avaliação registrada');
+    carregarDesempenho();
+});
+
+/* ============================================================
+   ABA 4 — FUNCIONÁRIOS & COMISSÕES
+   ============================================================ */
+async function ensureFixa(force = false) {
+    if (state.fixaOk && !force) { renderFuncionarios(); renderFaixas(); return; }
+    UI.skeleton($('func-lista'), 'table', 3);
+    UI.skeleton($('faixas-lista'), 'table', 3);
+    const [funcionarios, faixas] = await Promise.all([api.getFuncionarios(), api.getFaixasComissao()]);
+    state.funcionarios = Array.isArray(funcionarios) ? funcionarios : [];
+    state.faixas = Array.isArray(faixas) ? faixas : [];
+    state.fixaOk = true;
+    renderFuncionarios();
+    renderFaixas();
+}
+
+function renderFuncionarios() {
+    const wrap = $('func-lista');
+    if (state.funcionarios.length === 0) {
+        UI.empty(wrap, {
+            icon: 'fa-id-badge',
+            title: 'Nenhum funcionário fixo',
+            text: 'Cadastre os funcionários de folha fixa (salário + VA + VT).',
+            cta: { label: 'Adicionar funcionário', onClick: () => abrirFormFuncionario(null) }
+        });
+        return;
+    }
+    let totalFolha = 0;
+    const linhas = [...state.funcionarios]
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+        .map(f => {
+            const total = (parseFloat(f.salarioFixo) || 0) + (parseFloat(f.va) || 0) + (parseFloat(f.vt) || 0);
+            totalFolha += total;
+            return `
+            <tr>
+                <td style="font-weight:600;">${escapeHtml(f.nome)}</td>
+                <td class="tabular-nums">${fmtBRL(f.salarioFixo)}</td>
+                <td class="tabular-nums">${fmtBRL(f.va)}</td>
+                <td class="tabular-nums">${fmtBRL(f.vt)}</td>
+                <td class="tabular-nums" style="font-weight:700;">${fmtBRL(total)}</td>
+                <td>
+                    <div class="row-actions">
+                        <button type="button" data-action="editar" data-id="${escapeHtml(f.id)}" title="Editar"><i class="fas fa-pen-to-square"></i></button>
+                        <button type="button" class="act-danger" data-action="excluir" data-id="${escapeHtml(f.id)}" title="Excluir"><i class="fas fa-trash-can"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    wrap.innerHTML = `
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>Nome</th><th>Salário</th><th>VA</th><th>VT</th><th>Total</th><th></th></tr></thead>
+                <tbody>${linhas}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" style="text-align:right;">Total mensal da folha</td>
+                        <td class="tabular-nums">${fmtBRL(totalFolha)}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+}
+
+$('func-lista').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const f = state.funcionarios.find(x => x.id === btn.dataset.id);
+    if (!f) return;
+    if (btn.dataset.action === 'editar') {
+        abrirFormFuncionario(f);
+    } else {
+        const confirmado = await UI.confirm({
+            title: 'Excluir funcionário',
+            message: `Excluir "${f.nome}" da folha fixa?`,
+            confirmText: 'Excluir',
+            danger: true
+        });
+        if (!confirmado) return;
+        const ok = await api.deletarFuncionario(f.id);
+        if (!ok) { UI.toast('Erro ao excluir funcionário', 'error'); return; }
+        state.funcionarios = state.funcionarios.filter(x => x.id !== f.id);
+        renderFuncionarios();
+        UI.toast('Funcionário excluído');
+    }
+});
+
+function abrirFormFuncionario(f) {
+    $('form-funcionario').reset();
+    $('ff-id').value = f ? f.id : '';
+    $('modal-funcionario-title').textContent = f ? 'Editar funcionário' : 'Novo funcionário';
+    if (f) {
+        $('ff-nome').value = f.nome || '';
+        $('ff-salario').value = f.salarioFixo != null ? f.salarioFixo : '';
+        $('ff-va').value = f.va != null ? f.va : 0;
+        $('ff-vt').value = f.vt != null ? f.vt : 0;
+    } else {
+        $('ff-va').value = '0';
+        $('ff-vt').value = '0';
+    }
+    abrirModal('modal-funcionario');
+}
+$('btn-novo-funcionario').addEventListener('click', () => abrirFormFuncionario(null));
+
+$('form-funcionario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = $('ff-id').value;
+    const dados = {
+        nome: $('ff-nome').value.trim(),
+        salarioFixo: parseFloat($('ff-salario').value) || 0,
+        va: parseFloat($('ff-va').value) || 0,
+        vt: parseFloat($('ff-vt').value) || 0
+    };
+    if (!dados.nome) { UI.toast('Informe o nome do funcionário', 'error'); return; }
+    const btn = $('ff-submit');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+    const ok = id ? await api.atualizarFuncionario(id, dados) : await api.salvarFuncionario(dados);
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (!ok) { UI.toast('Erro ao salvar funcionário', 'error'); return; }
+    fecharModal('modal-funcionario');
+    UI.toast(id ? 'Funcionário atualizado' : 'Funcionário cadastrado');
+    await ensureFixa(true);
+});
+
+/* ---------- Faixas de comissão ---------- */
+function renderFaixas() {
+    const wrap = $('faixas-lista');
+    if (state.faixas.length === 0) {
+        UI.empty(wrap, {
+            icon: 'fa-percent',
+            title: 'Nenhuma faixa cadastrada',
+            text: 'Adicione as faixas de comissão por faturamento no formulário abaixo.'
+        });
+        return;
+    }
+    const linhas = [...state.faixas]
+        .sort((a, b) => (a.ateValor || 0) - (b.ateValor || 0))
+        .map(fx => `
+            <tr>
+                <td>Até <span class="tabular-nums" style="font-weight:600;">${fmtBRL(fx.ateValor)}</span></td>
+                <td class="tabular-nums" style="font-weight:700;">${((parseFloat(fx.percentual) || 0) * 100).toFixed(1).replace('.', ',')}%</td>
+                <td>
+                    <div class="row-actions" style="justify-content:flex-end;">
+                        <button type="button" class="act-danger" data-action="excluir" data-id="${escapeHtml(fx.id)}" title="Excluir"><i class="fas fa-trash-can"></i></button>
+                    </div>
+                </td>
+            </tr>`).join('');
+    wrap.innerHTML = `
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>Faturamento</th><th>Comissão</th><th></th></tr></thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>`;
+}
+
+$('faixas-lista').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action="excluir"]');
+    if (!btn) return;
+    const fx = state.faixas.find(x => x.id === btn.dataset.id);
+    if (!fx) return;
+    const confirmado = await UI.confirm({
+        title: 'Excluir faixa',
+        message: `Excluir a faixa "até ${fmtBRL(fx.ateValor)} → ${((parseFloat(fx.percentual) || 0) * 100).toFixed(1)}%"?`,
+        confirmText: 'Excluir',
+        danger: true
+    });
+    if (!confirmado) return;
+    const ok = await api.deletarFaixaComissao(fx.id);
+    if (!ok) { UI.toast('Erro ao excluir faixa', 'error'); return; }
+    state.faixas = state.faixas.filter(x => x.id !== fx.id);
+    renderFaixas();
+    UI.toast('Faixa excluída');
+});
+
+$('btn-add-faixa').addEventListener('click', async () => {
+    const ate = parseFloat($('fx-ate').value);
+    const pct = parseFloat($('fx-pct').value);
+    if (isNaN(ate) || ate <= 0) { UI.toast('Informe o valor de faturamento da faixa', 'error'); return; }
+    if (isNaN(pct) || pct <= 0) { UI.toast('Informe o percentual de comissão', 'error'); return; }
+    const btn = $('btn-add-faixa');
+    btn.disabled = true;
+    // Backend guarda decimal (ex.: 0.02 = 2%) — a UI coleta em %.
+    const ok = await api.salvarFaixaComissao({ ateValor: ate, percentual: pct / 100 });
+    btn.disabled = false;
+    if (!ok) { UI.toast('Erro ao salvar faixa', 'error'); return; }
+    $('fx-ate').value = '';
+    $('fx-pct').value = '';
+    UI.toast('Faixa adicionada');
+    await ensureFixa(true);
+});
+
+/* ================= Init ================= */
+setTab(localStorage.getItem('equipe_tab') || 'monitores');
+</script>
+
+<script src="./js/ui.js"></script>
+<script src="./js/nav.js"></script>
+<script src="js/protect.js"></script>
+</body>
+</html>

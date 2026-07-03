@@ -245,7 +245,8 @@
         }
 
         var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (reduced || !isFinite(value)) {
+        // Aba oculta: rAF não dispara — aplica o valor direto (sem animação)
+        if (reduced || document.hidden || !isFinite(value)) {
             target.textContent = fmt(value || 0);
             return;
         }
