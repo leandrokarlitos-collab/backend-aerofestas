@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./js/theme.js"></script>
     <title>Dashboard - Integrado</title>
 
     <!-- PWA Config -->
@@ -17,26 +18,7 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        dark: {
-                            bg: '#0f172a',
-                            card: 'rgba(30, 41, 59, 0.7)',
-                            border: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    backdropBlur: {
-                        xs: '2px',
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
     </script>
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
@@ -45,483 +27,61 @@
     <!-- [MODIFICADO] Adicionado Chart.js para os novos gráficos financeiros -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/aero.css">
+
     <style>
-        :root {
-            --primary: #4f46e5;
-            --secondary: #a855f7;
-            --success: #10b981;
-            --danger: #ef4444;
-            --info: #3b82f6;
+        /* ===== Dashboard: mínimos específicos da página (tokens do DS) ===== */
 
-            --bg-color: #f3f4f6;
-            --text-color: #1f2937;
-            --text-muted: #6b7280;
-
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-
-            --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
-            --particle-color-rgb: 100, 116, 139;
-
-            /* [NOVO] Variáveis para Inputs e Formulários */
-            --input-bg: #ffffff;
-            --input-border: #e2e8f0;
-            --input-focus: #4f46e5;
-            --input-text: #1e293b;
-            --input-placeholder: #94a3b8;
-        }
-
-        .dark {
-            --bg-color: #020617;
-            --text-color: #f8fafc;
-            --text-muted: #94a3b8;
-            --glass-bg: rgba(15, 23, 42, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --input-bg: #1e293b;
-            --input-border: rgba(255, 255, 255, 0.1);
-            --input-text: #f1f5f9;
-            --input-placeholder: #64748b;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
-            transition: background-color 0.4s ease, color 0.4s ease;
-        }
-
-        body.dark {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
-
-        /* Ajustes Glassmorphism para Dark Mode */
-        .dark .glassmorphism {
-            background: var(--glass-bg);
-            border-color: var(--glass-border);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.02);
-        }
-
-        .dark .dashboard-card h2, .dark .dashboard-card h3, .dark .dashboard-card h4 {
-            color: #f1f5f9;
-        }
-
-        .dark .text-slate-500, .dark .text-slate-600, .dark .text-slate-700 {
-            color: #94a3b8;
-        }
-
-        .dark .bg-white\/50, .dark .bg-white\/60 {
-            background-color: rgba(30, 41, 59, 0.5);
-        }
-
-        .dark .border-gray-200\/50, .dark .border-slate-100, .dark .border-slate-200 {
-            border-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .dark .sidebar-title {
-            color: #f1f5f9;
-        }
-
-        .dark #task-sidebar {
-            background: rgba(15, 23, 42, 0.8);
-            border-left-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .dark .bg-slate-50, .dark .bg-slate-100\/80 {
-            background-color: rgba(30, 41, 59, 0.8);
-        }
-
-        .dark .tab-btn.bg-white {
-            background-color: #334155;
-            color: #818cf8;
-        }
-
-        .dark .sidebar-icon {
-            background: linear-gradient(135deg, #1e293b, #334155);
-            color: #818cf8;
-        }
-
-        #particles-js {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-
-        .header-title {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-            text-shadow: 0 0 15px rgba(139, 92, 246, 0.1);
-        }
-
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 
-                0 8px 32px 0 rgba(31, 38, 135, 0.07),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .dark .glassmorphism {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-            inset: 0 0 0 1px rgba(255, 255, 255, 0.02);
-        }
-
-        .glassmorphism:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-        }
-
-        .form-input {
-            background-color: var(--input-bg);
-            border: 1.5px solid var(--input-border);
-            color: var(--input-text);
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 100%;
-            font-size: 0.875rem;
-        }
-
-        .form-input::placeholder {
-            color: var(--input-placeholder);
-            opacity: 1;
-        }
-
-        .form-input:focus {
-            outline: none;
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-            border-color: var(--input-focus);
-            background-color: #ffffff;
-        }
-
-        .task-item label:has(input:checked) {
-            text-decoration: line-through;
-            color: var(--text-muted-color);
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #a8a8a8;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        .verse-container {
-            font-style: italic;
-            border-left: 3px solid var(--header-grad-from);
-            transition: border-color 0.5s ease;
-        }
-
-        .scrollable-widget {
-            max-height: 60vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding-right: 8px;
-            scrollbar-width: thin;
-            scrollbar-color: #6366f1 transparent;
-        }
-
-        .scrollable-widget::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .scrollable-widget::-webkit-scrollbar-thumb {
-            background-color: #6366f1;
-            border-radius: 20px;
-        }
-
-        .gemini-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .gemini-btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
-            filter: brightness(1.1);
-        }
-
-        .modal-box.glassmorphism {
-            background: var(--glass-bg);
-        }
-
-        .shiny-btn {
-            position: relative;
-            border: 2px solid transparent;
-            background-image: linear-gradient(to right, #4f46e5 0%, #3b82f6 51%, #4f46e5 100%);
-            background-size: 200% auto;
-            color: white;
-            box-shadow: 0 4px 15px 0 rgba(60, 78, 224, 0.4);
-            transition: all 0.4s ease;
-        }
-
-        .shiny-btn:hover {
-            background-position: right center;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px 0 rgba(60, 78, 224, 0.6);
-        }
-
-        .form-input::placeholder {
-            color: #d1d5db !important;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        .form-input:focus::placeholder {
-            opacity: 0;
-        }
-
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 4px solid #4f46e5;
-            width: 40px;
-            height: 40px;
-            animation: spin 2s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes toast-in {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .toast-enter {
-            animation: toast-in 0.5s ease-out forwards;
-        }
-
-        /* Dashboard Stat Cards Improvements */
-        .dashboard-card {
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            transform: rotate(45deg);
-            pointer-events: none;
-            transition: all 0.6s ease;
-        }
-
-        .dashboard-card:hover::before {
-            left: -30%;
-            top: -30%;
-        }
-
-        .dashboard-card.receita { border-bottom: 4px solid #10b981; }
-        .dashboard-card.despesa { border-bottom: 4px solid #ef4444; }
-        .dashboard-card.saldo { border-bottom: 4px solid #3b82f6; }
-        .dashboard-card.ia { border-bottom: 4px solid #8b5cf6; }
-
-        .stat-icon-bg {
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            font-size: 5rem;
-            opacity: 0.05;
-            transform: rotate(-15deg);
-            transition: all 0.4s ease;
-            pointer-events: none;
-        }
-
-        .dashboard-card:hover .stat-icon-bg {
-            opacity: 0.1;
-            transform: scale(1.1) rotate(0deg);
-        }
-
-        /* [AAA] Super-Premium Futuristic Loader */
+        /* ---- Page loader (id/mecanismo preservados, visual simplificado) ---- */
         #page-loader {
             position: fixed;
             inset: 0;
-            background: #f8fafc;
+            background: var(--bg);
             z-index: 99999;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s, backdrop-filter 0.8s;
-        }
-
-        .dark #page-loader { background: #020617; }
-
-        /* Mesh Gradient Background para o Loader */
-        #page-loader::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: 
-                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
-            filter: blur(100px);
-            animation: mesh-move 15s ease infinite alternate;
-            z-index: -1;
-        }
-
-        @keyframes mesh-move {
-            0% { transform: scale(1) translate(0, 0); }
-            100% { transform: scale(1.2) translate(5%, 5%); }
+            transition: opacity var(--dur-slow) var(--ease), visibility var(--dur-slow);
         }
 
         .loader-content {
-            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2rem;
+            gap: 16px;
         }
 
-        .loader-logo-wrapper {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loader-logo-glow {
-            position: absolute;
-            inset: -10px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-            filter: blur(20px);
-            opacity: 0.3;
-            animation: morph 8s ease-in-out infinite alternate;
-        }
-
-        .loader-ring {
-            position: absolute;
-            inset: 0;
-            border: 3px solid transparent;
-            border-top-color: var(--primary);
-            border-bottom-color: var(--secondary);
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--brand-600);
             border-radius: 50%;
-            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
-            z-index: 2;
+            animation: spin .8s linear infinite;
         }
 
-        .loader-ring::after {
-            content: '';
-            position: absolute;
-            inset: 8px;
-            border: 3px solid transparent;
-            border-left-color: #f093fb;
-            border-right-color: #4f46e5;
-            border-radius: 50%;
-            animation: loader-spin 2s linear infinite reverse;
-        }
-
-        @keyframes loader-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes morph {
-            0% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; transform: rotate(0deg); }
-            100% { border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%; transform: rotate(180deg); }
-        }
-
-        .loader-logo-main {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            color: var(--primary);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-            z-index: 3;
-            animation: loader-pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes loader-pulse {
-            0%, 100% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.05); filter: brightness(1.1); }
-        }
-
-        .loader-text-aaa {
-            font-size: 0.85rem;
+        .loader-text {
+            font-size: 12px;
             font-weight: 600;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
+            letter-spacing: .08em;
             text-transform: uppercase;
             text-align: center;
+            color: var(--text-muted);
             min-height: 1.5em;
-            transition: opacity 0.5s ease;
+            transition: opacity .5s ease;
         }
 
         .loader-hidden {
             opacity: 0 !important;
             visibility: hidden !important;
-            transform: scale(1.1);
         }
 
         #main-container {
             opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(12px);
+            transition: opacity .5s ease-out, transform .5s var(--ease);
         }
 
         #main-container.content-ready {
@@ -529,40 +89,72 @@
             transform: translateY(0);
         }
 
-        .ai-badge {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            padding: 2px 8px;
-            border-radius: 99px;
+        /* ---- Loader pequeno (usado em template strings do JS) ---- */
+        .loader {
+            border: 4px solid var(--surface-2);
+            border-radius: 50%;
+            border-top: 4px solid var(--brand-600);
+            width: 40px;
+            height: 40px;
+            animation: spin 1.2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ---- Verso do dia (linha discreta sob o header) ---- */
+        .verse-line {
+            border-left: 3px solid var(--brand-400);
+            padding: 2px 0 2px 14px;
+            margin-top: 14px;
+            max-width: 640px;
+        }
+
+        .verse-line #verse-text {
+            font-style: italic;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .verse-line #verse-ref {
             font-size: 10px;
-            font-weight: 800;
+            font-weight: 700;
+            letter-spacing: .1em;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+            color: var(--text-faint);
+            margin-top: 4px;
         }
 
-        .stat-icon-bg {
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            font-size: 5rem;
-            opacity: 0.05;
-            transform: rotate(-15deg);
-            transition: all 0.3s ease;
-            pointer-events: none;
+        /* ---- Linha de KPIs ---- */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
         }
 
-        .glassmorphism:hover .stat-icon-bg {
-            opacity: 0.1;
-            transform: scale(1.1) rotate(0deg);
+        @media (min-width: 1024px) {
+            .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
 
-        /* ESTILOS PARA RECOLHÍVEIS E DESCANSO DE TELA */
+        .kpi-card .kpi-sub {
+            font-size: 12px;
+            color: var(--text-faint);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ---- Widgets recolhíveis ---- */
+        .collapsible-header { border-bottom: 1px solid var(--border); }
+
         .collapsible-content {
             overflow: hidden;
             transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
             max-height: 1000px;
-            /* Altura máxima grande o suficiente */
         }
 
         .collapsible-content.collapsed {
@@ -570,25 +162,146 @@
             padding-top: 0;
             padding-bottom: 0;
             margin-top: -1px;
-            /* Evita borda dupla */
         }
 
-        .collapsible-header i.fa-chevron-down {
-            transition: transform 0.3s ease;
+        .collapsible-header i.fa-chevron-down { transition: transform 0.3s ease; }
+        .collapsible-header i.fa-chevron-down.rotated { transform: rotate(180deg); }
+
+        #screensaver { transition: opacity 0.5s ease-in-out; }
+
+        .task-item label:has(input:checked) {
+            text-decoration: line-through;
+            color: var(--text-muted);
         }
 
-        .collapsible-header i.fa-chevron-down.rotated {
-            transform: rotate(180deg);
+        .is-today { background-color: var(--warning-soft) !important; }
+
+        .scrollable-widget {
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--brand-500) transparent;
         }
 
-        #screensaver {
-            transition: opacity 0.5s ease-in-out;
+        .scrollable-widget::-webkit-scrollbar { width: 5px; }
+        .scrollable-widget::-webkit-scrollbar-thumb { background-color: var(--brand-500); border-radius: 20px; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--brand-100); border-radius: 10px; }
+
+        /* ---- Botões/etiquetas legados referenciados em template strings do JS ---- */
+        .shiny-btn {
+            background: var(--grad-brand);
+            color: var(--text-on-brand);
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            transition: filter var(--dur) var(--ease), transform var(--dur) var(--ease);
         }
 
-        /* [NOVO] ESTILOS PARA ABAS DO MODAL FINANCEIRO */
-        .finance-modal-content {
-            display: none;
+        .shiny-btn:hover { filter: brightness(1.08); }
+        .shiny-btn:active { transform: scale(.98); }
+
+        .form-input {
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            padding: 8px 12px;
+            outline: none;
         }
+
+        /* Aliases de vars legadas ainda consumidas por CSS/JS antigos da página */
+        :root {
+            --card-bg: var(--surface-2);
+            --text-color: var(--text);
+            --text-muted-color: var(--text-muted);
+            --input-bg: var(--surface-inset);
+        }
+
+        /* Compensações dark para utilitárias Tailwind remanescentes no markup
+           (saem gradualmente conforme os blocos forem tokenizados) */
+        .dark .bg-white\/50 { background-color: rgba(19, 28, 46, .55); }
+        .dark .bg-slate-50, .dark .bg-slate-100\/80 { background-color: var(--surface-inset); }
+        .dark .text-gray-800, .dark .text-slate-800, .dark .text-slate-700 { color: var(--text); }
+        .dark .text-slate-600, .dark .text-slate-500, .dark .text-gray-500 { color: var(--text-muted); }
+        .dark .border-gray-200\/50, .dark .border-slate-200 { border-color: var(--border); }
+
+        .form-input:focus {
+            border-color: var(--brand-400);
+            box-shadow: var(--ring);
+        }
+
+        /* Cards 'glassmorphism' gerados pelo fluxo Gemini (template strings) */
+        #plan-display-area .glassmorphism {
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+        }
+
+        .gemini-btn {
+            background: var(--grad-brand);
+            color: var(--text-on-brand);
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: filter var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+
+        .gemini-btn:hover {
+            filter: brightness(1.08);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, .4);
+        }
+
+        .gemini-btn:active { transform: scale(.98); }
+
+        .ai-badge {
+            background: var(--grad-brand);
+            color: var(--text-on-brand);
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Aviso de gastos pendentes (template string do JS) */
+        .pending-note {
+            background: var(--warning-soft);
+            border: 1px solid var(--border);
+            color: #B45309;
+        }
+
+        .dark .pending-note { color: var(--warning); }
+
+        /* ---- Área do plano diário: repintura token-based do conteúdo gerado ---- */
+        #plan-display-area .text-slate-800,
+        #plan-display-area .text-slate-700 { color: var(--text); }
+
+        #plan-display-area .text-slate-600,
+        #plan-display-area .text-slate-500,
+        #plan-display-area .text-slate-400 { color: var(--text-muted); }
+
+        #plan-display-area .bg-white,
+        #plan-display-area .bg-white\/40 { background-color: var(--surface-1); }
+
+        #plan-display-area .bg-slate-100 { background-color: var(--surface-2); }
+        #plan-display-area .bg-amber-50 { background-color: var(--warning-soft); }
+        #plan-display-area .bg-indigo-50,
+        #plan-display-area .bg-indigo-50\/50 { background-color: var(--brand-50); }
+
+        #plan-display-area .border-slate-200,
+        #plan-display-area .border-slate-100,
+        #plan-display-area .border-amber-100,
+        #plan-display-area .border-indigo-100 { border-color: var(--border); }
+
+        #plan-display-area .divide-slate-100 > * + * { border-color: var(--border); }
+
+        /* ---- Modal financeiro: abas (classes preservadas p/ o JS) ---- */
+        .finance-modal-content { display: none; }
 
         .finance-modal-content.active {
             display: block;
@@ -596,225 +309,56 @@
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .finance-tab-btn {
-            background-color: #e5e7eb;
-            /* bg-gray-200 */
-            color: #4b5563;
-            /* text-gray-600 */
+            background-color: transparent;
+            color: var(--text-muted);
             transition: all 0.2s ease-in-out;
             border-bottom: 3px solid transparent;
         }
 
         .finance-tab-btn:hover {
-            background-color: #f3f4f6;
-            /* bg-gray-100 */
+            background-color: var(--surface-2);
+            color: var(--text);
         }
 
         .finance-tab-btn.active {
-            background-color: transparent;
-            color: var(--primary);
+            color: var(--brand-600);
             font-weight: 600;
-            border-bottom-color: var(--primary);
+            border-bottom-color: var(--brand-600);
         }
 
-        /* [SUPER-PREMIUM] Unified Fluid Capsule Bottom Nav */
-        .bottom-nav {
-            position: fixed;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 40px);
-            max-width: 420px;
-            height: 75px;
-            background: rgba(255, 255, 255, 0.6);
-            /* Translucidez premium */
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 12px 15px 0 15px;
-            z-index: 10000;
-            border-radius: 40px;
-            box-shadow:
-                0 20px 40px -10px rgba(0, 0, 0, 0.12),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.8);
-            transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
-            user-select: none;
-            overflow: hidden;
-        }
+        .dark .finance-tab-btn.active { color: var(--brand-400); }
 
-        /* O Handle Tátil Integrado */
-        .bottom-nav-handle {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
+        /* ---- Larguras/estrutura dos modais legados (aditivo ao .modal-box do DS) ---- */
+        #gemini-modal-box { max-width: 42rem; display: flex; flex-direction: column; overflow: hidden; }
+        #finance-modal-box { max-width: 56rem; display: flex; flex-direction: column; overflow: hidden; }
+        #gemini-chat-modal .modal-box { max-width: 32rem; display: flex; flex-direction: column; overflow: hidden; }
+        #api-key-modal .modal-box { max-width: 28rem; }
 
-        .bottom-nav-handle::after {
-            content: '';
-            width: 40px;
-            height: 4px;
-            background: rgba(79, 70, 229, 0.2);
-            border-radius: 10px;
-            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Ícone interno (escondido por padrão) */
-        .bottom-nav-handle i {
-            position: absolute;
-            font-size: 1.2rem;
-            color: #4f46e5;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Morphing: Barra Inteira -> Pílula Compacta */
-        .bottom-nav.collapsed {
-            transform: translateX(-50%) translateY(15px);
-            width: 80px;
-            height: 48px;
-            padding: 0;
-            border-radius: 100px;
-            background: rgba(255, 255, 255, 0.5);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .bottom-nav.collapsed .nav-item {
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-        }
-
-        .bottom-nav.collapsed .bottom-nav-handle::after {
-            opacity: 0;
-            transform: scaleX(0);
-        }
-
-        .bottom-nav.collapsed .bottom-nav-handle i {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        @media (min-width: 1024px) {
-            .bottom-nav {
-                display: none;
-            }
-        }
-
-        .nav-item {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            width: 65px;
-            height: 100%;
-            text-decoration: none;
-            z-index: 1;
-            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* The Pill - Fundo do Item Ativo */
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 16px;
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0;
-            z-index: -1;
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
-        }
-
-        .nav-item.active {
-            color: white;
-            transform: translateY(-8px);
-        }
-
-        .nav-item.active::before {
-            transform: translate(-50%, -60%) scale(1);
-            opacity: 1;
-        }
-
-        .nav-item i {
-            font-size: 1.5rem;
-            margin-bottom: 2px;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .nav-item span {
-            font-size: 0.6rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.8;
-            transition: all 0.3s ease;
-        }
-
-        .nav-item.active span {
-            opacity: 1;
-            transform: translateY(2px);
-            color: #4f46e5;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-size: 0.55rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .nav-item:active {
-            transform: scale(0.9) translateY(0);
-        }
-
-        /* [SUPER-PREMIUM] Right Task Sidebar */
+        /* ---- Sidebar de tarefas (sólida — mecânica preservada) ---- */
         #task-sidebar {
             position: fixed;
             top: 0;
             right: 0;
             width: 400px;
             height: 100vh;
+            border-radius: 0;
             z-index: 1000;
             transform: translateX(100%);
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(50px) saturate(200%);
-            -webkit-backdrop-filter: blur(50px) saturate(200%);
-            border-left: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.08);
+            background: var(--surface-1);
+            border-left: 1px solid var(--border);
+            box-shadow: var(--shadow-2);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        #task-sidebar.open {
-            transform: translateX(0);
-        }
+        #task-sidebar.open { transform: translateX(0); }
 
         @media (max-width: 640px) {
             #task-sidebar {
@@ -823,38 +367,34 @@
             }
         }
 
-        /* Sidebar Toggle Button (Floating) */
         #sidebar-toggle {
             position: fixed;
             right: 20px;
             bottom: 115px;
-            width: 64px;
-            height: 64px;
-            border-radius: 24px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-lg);
+            background: var(--grad-brand);
+            color: var(--text-on-brand);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 12px 35px rgba(79, 70, 229, 0.45);
+            box-shadow: 0 12px 30px rgba(79, 70, 229, .35);
             cursor: pointer;
             z-index: 900;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.4s var(--ease);
         }
 
-        #sidebar-toggle:hover {
-            transform: translateY(-5px) scale(1.08);
-            box-shadow: 0 18px 45px rgba(79, 70, 229, 0.6);
-        }
+        #sidebar-toggle:hover { transform: translateY(-4px); }
 
         #sidebar-toggle i {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             margin-bottom: 2px;
         }
 
         #sidebar-toggle span {
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -862,14 +402,13 @@
 
         #sidebar-toggle.active {
             transform: rotate(180deg) scale(0.9);
-            background: white;
-            color: var(--primary);
-            border: 1px solid rgba(79, 70, 229, 0.2);
+            background: var(--surface-1);
+            color: var(--brand-600);
+            border: 1px solid var(--border-strong);
         }
 
-        /* Sidebar Header */
         .sidebar-header {
-            padding: 45px 35px 25px 35px;
+            padding: 40px 32px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -878,39 +417,39 @@
         .sidebar-title-group {
             display: flex;
             align-items: center;
-            gap: 18px;
+            gap: 16px;
         }
 
         .sidebar-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 18px;
-            background: linear-gradient(135deg, #eff6ff, #dbeafe);
-            color: #3b82f6;
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            background: var(--brand-50);
+            color: var(--brand-600);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.12);
+            font-size: 1.3rem;
         }
+
+        .dark .sidebar-icon { color: var(--brand-400); }
 
         .sidebar-title {
-            font-size: 1.75rem;
+            font-family: var(--font-display);
+            font-size: 1.5rem;
             font-weight: 800;
-            color: #0f172a;
-            letter-spacing: -0.03em;
+            color: var(--text);
+            letter-spacing: -0.02em;
         }
 
-        /* Overlay */
         #sidebar-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(10px);
+            background: var(--backdrop);
             z-index: 950;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 0.4s var(--ease);
         }
 
         #sidebar-overlay.visible {
@@ -918,36 +457,20 @@
             pointer-events: auto;
         }
 
-        /* Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(79, 70, 229, 0.1);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(79, 70, 229, 0.3);
-        }
+        #task-sidebar .tab-btn { color: var(--text-muted); }
+        #task-sidebar .tab-btn.bg-white { background-color: var(--surface-1); }
+        .dark #task-sidebar .tab-btn.text-indigo-600 { color: var(--brand-400); }
+        #new-task-input { padding-right: 48px; }
+        #new-task-date { padding-left: 38px; }
     </style>
 </head>
 
-<body class="min-h-screen">
-    <!-- [AAA] Super-Premium Page Loader -->
+<body class="min-h-screen" data-page="home">
+    <!-- Page Loader (id/mecanismo preservados, visual DS v3) -->
     <div id="page-loader">
         <div class="loader-content">
-            <div class="loader-logo-wrapper">
-                <div class="loader-logo-glow"></div>
-                <div class="loader-ring"></div>
-                <div class="loader-logo-main">
-                    <i class="fa-solid fa-rocket"></i>
-                </div>
-            </div>
-            <div class="flex flex-col items-center gap-3">
-                <div id="loader-message" class="loader-text-aaa">Sincronizando Aero Festas</div>
-            </div>
+            <div class="loader-spinner"></div>
+            <div id="loader-message" class="loader-text">Sincronizando Aero Festas</div>
         </div>
     </div>
 
@@ -975,8 +498,6 @@
         }
     </script>
 
-    <canvas id="particles-js"></canvas>
-
     <div id="screensaver"
         class="fixed inset-0 z-20 flex items-center justify-center text-white bg-black/30 hidden opacity-0">
         <div id="screensaver-clock" class="text-8xl font-bold text-center"
@@ -984,70 +505,52 @@
         </div>
     </div>
 
-    <div id="main-container" class="container mx-auto p-4 md:p-8 relative z-10 transition-opacity duration-500">
-        <header class="flex flex-col items-center gap-6 mb-10">
-            <div class="w-full flex justify-between items-center">
-                <div>
-                    <h1 id="greeting" class="text-3xl md:text-5xl header-title"></h1>
-                    <p class="text-slate-500 text-sm font-medium mt-1">Resumo do dia • <span
-                            id="current-date-header"></span></p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="theme-toggle"
-                        class="bg-white/60 dark:bg-slate-800/60 text-slate-400 dark:text-slate-300 w-12 h-12 rounded-2xl hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm"
-                        title="Alternar Tema">
-                        <i class="fas fa-moon dark:hidden"></i>
-                        <i class="fas fa-sun hidden dark:block"></i>
-                    </button>
-                    <button id="backup-btn"
-                        class="bg-white/60 dark:bg-slate-800/60 text-slate-400 dark:text-slate-300 w-12 h-12 rounded-2xl hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm"
-                        title="Baixar Backup">
-                        <i class="fas fa-download text-xl" id="backup-icon"></i>
-                    </button>
-                    <button id="settings-btn"
-                        class="bg-white/60 dark:bg-slate-800/60 text-slate-400 dark:text-slate-300 w-12 h-12 rounded-2xl hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm"
-                        title="Configurações">
-                        <i class="fas fa-cog text-xl"></i>
-                    </button>
+    <div id="main-container" class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 relative z-10">
+        <header class="page-header">
+            <div class="min-w-0">
+                <h1 id="greeting"></h1>
+                <p class="page-subtitle">Resumo do dia • <span id="current-date-header"></span></p>
+                <div id="daily-verse" class="verse-line">
+                    <p id="verse-text"></p>
+                    <p id="verse-ref"></p>
                 </div>
             </div>
-
-            <div id="daily-verse"
-                class="w-full max-w-3xl p-6 glassmorphism rounded-2xl border-l-4 border-indigo-500 self-start transition-all">
-                <p id="verse-text" class="text-sm md:text-base text-slate-700 italic leading-relaxed"></p>
-                <p id="verse-ref"
-                    class="font-bold text-[10px] text-slate-400 mt-3 uppercase tracking-widest text-right"></p>
-            </div>
-
-            <!-- Navegação Desktop -->
-            <div class="hidden lg:flex absolute top-0 right-16 space-x-3">
-                <button onclick="window.location.href='./Agenda de eventos.html'"
-                    class="bg-white/60 text-slate-600 px-5 py-2.5 rounded-xl hover:bg-white/80 transition-all border border-white/40 shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-calendar-days text-indigo-500"></i> <span
-                        class="text-sm font-bold">Agenda</span>
+            <div class="flex items-center gap-2">
+                <button id="backup-btn" class="btn btn-ghost btn-icon" title="Baixar Backup">
+                    <i class="fas fa-download text-xl" id="backup-icon"></i>
                 </button>
-                <button onclick="window.location.href='./Sistema Gestão Financeira.html'"
-                    class="bg-white/60 text-slate-600 px-5 py-2.5 rounded-xl hover:bg-white/80 transition-all border border-white/40 shadow-sm flex items-center gap-2">
-                    <i class="fas fa-chart-line text-emerald-500"></i> <span class="text-sm font-bold">Financeiro</span>
-                </button>
-                <button onclick="window.location.href='./Sistema de CRM.html'"
-                    class="bg-white/60 text-slate-600 px-5 py-2.5 rounded-xl hover:bg-white/80 transition-all border border-white/40 shadow-sm flex items-center gap-2">
-                    <i class="fas fa-users text-blue-500"></i> <span class="text-sm font-bold">Clientes</span>
-                </button>
-                <button onclick="window.location.href='./Equipamentos.html'"
-                    class="bg-white/60 text-slate-600 px-5 py-2.5 rounded-xl hover:bg-white/80 transition-all border border-white/40 shadow-sm flex items-center gap-2">
-                    <i class="fas fa-cubes text-indigo-500"></i> <span class="text-sm font-bold">Equipamentos</span>
+                <button id="settings-btn" class="btn btn-ghost btn-icon" title="Configurações">
+                    <i class="fas fa-cog text-xl"></i>
                 </button>
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- [v3] Linha de KPIs (aditiva — os valores vêm do widget financeiro e da agenda) -->
+        <section class="kpi-grid" aria-label="Indicadores do mês">
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-arrow-trend-up" style="color: var(--success)"></i> Receitas do mês</span>
+                <span class="kpi-value" id="kpi-receitas"><span class="skeleton" style="display:inline-block;width:110px;height:22px"></span></span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-arrow-trend-down" style="color: var(--danger)"></i> Despesas do mês</span>
+                <span class="kpi-value" id="kpi-despesas"><span class="skeleton" style="display:inline-block;width:110px;height:22px"></span></span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-scale-balanced" style="color: var(--brand-500)"></i> Saldo</span>
+                <span class="kpi-value" id="kpi-saldo"><span class="skeleton" style="display:inline-block;width:110px;height:22px"></span></span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-calendar-day" style="color: var(--accent)"></i> Próximo evento</span>
+                <span class="kpi-value" id="kpi-evento"><span class="skeleton" style="display:inline-block;width:90px;height:22px"></span></span>
+                <span class="kpi-sub" id="kpi-evento-sub"></span>
+            </div>
+        </section>
 
-            <div class="lg:col-span-2 flex flex-col gap-8">
-                <section id="widget-assistant"
-                    class="glassmorphism rounded-2xl overflow-hidden dashboard-card ia">
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+
+                <section id="widget-assistant" class="surface overflow-hidden lg:col-span-2">
                     <div
-                        class="p-6 border-b border-white/20 flex justify-between items-center cursor-pointer collapsible-header">
+                        class="p-6 flex justify-between items-center cursor-pointer collapsible-header">
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg">
@@ -1067,7 +570,7 @@
 
                     <div class="collapsible-content px-6 pb-8 pt-6">
                         <div id="assistant-initial-state" class="text-center py-4">
-                            <p id="assistant-prompt-text" class="text-slate-600 mb-6 text-sm max-w-sm mx-auto">
+                            <p id="assistant-prompt-text" class="mb-6 text-sm max-w-sm mx-auto" style="color: var(--text-muted)">
                                 Transforme seus eventos e tarefas em um plano de ação estratégico.
                             </p>
                             <div id="assistant-actions" class="flex flex-col sm:flex-row gap-3 justify-center">
@@ -1076,20 +579,18 @@
                                     <i class="fas fa-bolt mr-2"></i> Gerar Plano Diário
                                 </button>
                                 <button id="view-plan-history-btn"
-                                    class="bg-white text-slate-700 border border-slate-200 font-bold py-3.5 px-8 rounded-xl w-full sm:w-auto text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+                                    class="btn btn-secondary w-full sm:w-auto">
                                     <i class="fas fa-history"></i> Histórico
                                 </button>
                             </div>
                         </div>
                         <div id="plan-display-area"></div>
-                        <i class="fas fa-robot stat-icon-bg"></i>
                     </div>
                 </section>
 
-                <section id="widget-finance-summary"
-                    class="glassmorphism rounded-2xl overflow-hidden dashboard-card receita">
+                <section id="widget-finance-summary" class="surface overflow-hidden lg:col-span-2">
                     <div
-                        class="p-6 border-b border-white/20 flex justify-between items-center cursor-pointer collapsible-header">
+                        class="p-6 flex justify-between items-center cursor-pointer collapsible-header">
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
@@ -1163,13 +664,12 @@
                                 </button>
                             </div>
                         </div>
-                        <i class="fas fa-chart-line stat-icon-bg"></i>
                     </div>
                 </section>
 
-                <section id="widget-events" class="glassmorphism rounded-2xl overflow-hidden dashboard-card saldo">
+                <section id="widget-events" class="surface overflow-hidden">
                     <div
-                        class="p-6 border-b border-white/20 flex justify-between items-center cursor-pointer collapsible-header">
+                        class="p-6 flex justify-between items-center cursor-pointer collapsible-header">
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
@@ -1184,12 +684,11 @@
                             <!-- Eventos serão carregados aqui -->
                         </div>
                     </div>
-                    <i class="fas fa-calendar-alt stat-icon-bg"></i>
                 </section>
 
-                <section id="widget-dates" class="glassmorphism rounded-2xl overflow-hidden dashboard-card despesa">
+                <section id="widget-dates" class="surface overflow-hidden">
                     <div
-                        class="p-6 border-b border-white/20 flex justify-between items-center cursor-pointer collapsible-header">
+                        class="p-6 flex justify-between items-center cursor-pointer collapsible-header">
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
@@ -1205,15 +704,13 @@
                             <!-- Datas relevantes serão carregadas aqui -->
                         </div>
                     </div>
-                    <i class="fas fa-birthday-cake stat-icon-bg"></i>
                 </section>
-            </div>
         </main>
     </div>
 
     <!-- [NOVO] Sidebar de Tarefas - Lateral Direita (Design Ultra-Premium) -->
     <div id="sidebar-overlay"></div>
-    <div id="task-sidebar">
+    <div id="task-sidebar" class="surface-raised">
         <div class="sidebar-header">
             <div class="sidebar-title-group">
                 <div class="sidebar-icon">
@@ -1270,7 +767,6 @@
                 </form>
             </div>
         </div>
-        <i class="fas fa-tasks stat-icon-bg opacity-[0.03]"></i>
     </div>
 
     <!-- [NOVO] Botão Flutuante para Abrir Sidebar (Mobile First) -->
@@ -1279,55 +775,10 @@
         <span>Tarefas</span>
     </div>
 
-    <!-- Bottom Navigation Bar (Mobile Only) -->
-    <nav class="bottom-nav active" id="main-bottom-nav">
-        <!-- Handle Tátil (Puxador Integrado) -->
-        <div class="bottom-nav-handle" id="bottom-nav-handle">
-            <i class="fas fa-chevron-up"></i>
-        </div>
-
-        <a href="#" class="nav-item active">
-            <i class="fas fa-home"></i>
-            <span>Início</span>
-        </a>
-        <a href="./Agenda de eventos.html" class="nav-item">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Agenda</span>
-        </a>
-        <a href="./Sistema Gestão Financeira.html" class="nav-item">
-            <i class="fas fa-wallet"></i>
-            <span>Financeiro</span>
-        </a>
-        <a href="./Sistema de CRM.html" class="nav-item">
-            <i class="fas fa-users"></i>
-            <span>Clientes</span>
-        </a>
-        <a href="./Equipamentos.html" class="nav-item">
-            <i class="fas fa-cubes"></i>
-            <span>Equipamentos</span>
-        </a>
-    </nav>
+    <!-- Nav (sidebar desktop + bottom nav mobile) é injetada por js/nav.js -->
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const bottomNav = document.getElementById('main-bottom-nav');
-            const handle = document.getElementById('bottom-nav-handle');
-
-            if (bottomNav) {
-                const toggleNav = (e) => {
-                    e.stopPropagation();
-                    bottomNav.classList.toggle('collapsed');
-                };
-
-                handle?.addEventListener('click', toggleNav);
-
-                bottomNav.addEventListener('click', (e) => {
-                    if (bottomNav.classList.contains('collapsed')) {
-                        toggleNav(e);
-                    }
-                });
-            }
-
             // --- LÓGICA DA SIDEBAR DE TAREFAS ---
             const taskSidebar = document.getElementById('task-sidebar');
             const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -1433,13 +884,7 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <!-- [MODIFICADO] z-index de z-50 para z-60 (para ficar acima de tudo) -->
-    <div id="toast"
-        class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-60">
-        <i id="toast-icon" class="text-lg"></i>
-        <p id="toast-message" class="ml-3"></p>
-    </div>
+    <!-- Toast: renderizado por js/ui.js (window.showToast shim) -->
 
     <!-- [NOVO] Modal de Detalhes Financeiros -->
     <div id="finance-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 hidden z-40">
@@ -1542,25 +987,13 @@
         import { api } from './js/api.js';
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- LOGICA DE TEMA (DARK MODE) ---
-            const themeToggle = document.getElementById('theme-toggle');
-            const htmlElement = document.documentElement;
-            const bodyElement = document.body;
-
-            // Carrega preferência salva
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            if (savedTheme === 'dark') {
-                htmlElement.classList.add('dark');
-                bodyElement.classList.add('dark');
-            }
-
-            themeToggle?.addEventListener('click', () => {
-                const isDark = htmlElement.classList.toggle('dark');
-                bodyElement.classList.toggle('dark');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                
-                // Atualiza cores dos gráficos se existirem
-                if (window.Chart) {
+            // --- TEMA (DARK MODE): aplicado por js/theme.js; toggle vem do nav (js/nav.js) ---
+            // Repinta os gráficos Chart.js quando o tema muda (evento 'themechange' do theme.js)
+            window.addEventListener('themechange', (ev) => {
+                const isDark = ev && ev.detail ? !!ev.detail.dark : document.documentElement.classList.contains('dark');
+                // Chart.helpers/Chart.instances são API do Chart.js v2 — guarda
+                // evita TypeError caso o CDN sirva v3+/v4
+                if (window.Chart && Chart.helpers && Chart.helpers.each && Chart.instances) {
                     Chart.helpers.each(Chart.instances, (instance) => {
                         const options = instance.options;
                         if (isDark) {
@@ -1583,9 +1016,6 @@
                         instance.update();
                     });
                 }
-
-                // Feedback visual
-                if (window.showToast) showToast(isDark ? "Modo Escuro ativado" : "Modo Claro ativado", false);
             });
 
             // --- CONFIGURAÇÕES GLOBAIS E INICIALIZAÇÃO ---
@@ -1665,32 +1095,9 @@
                 document.getElementById('verse-ref').textContent = verse.ref;
             }
 
-            function applyTheme() {
-                const hour = new Date().getHours();
-                const root = document.documentElement;
-
-                if (hour >= 5 && hour < 12) { // Manhã
-                    root.style.setProperty('--bg-color', '#e0f2fe');
-                    root.style.setProperty('--text-color', '#0c4a6e');
-                    root.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.7)');
-                    root.style.setProperty('--header-grad-from', '#38bdf8');
-                    root.style.setProperty('--header-grad-to', '#fb923c');
-                } else if (hour >= 12 && hour < 18) { // Tarde
-                    // Tema padrão (já definido no :root)
-                } else { // Noite
-                    root.style.setProperty('--bg-color', '#1e293b');
-                    root.style.setProperty('--text-color', '#e2e8f0');
-                    root.style.setProperty('--glass-bg', 'rgba(30, 41, 59, 0.7)');
-                    root.style.setProperty('--header-grad-from', '#818cf8');
-                    root.style.setProperty('--header-grad-to', '#c084fc');
-                    root.style.setProperty('--card-bg', 'rgba(51, 65, 85, 0.6)');
-                    root.style.setProperty('--border-color', 'rgba(71, 85, 105, 0.3)');
-                    root.style.setProperty('--input-bg', '#334155');
-                    root.style.setProperty('--input-border', 'rgba(255, 255, 255, 0.1)');
-                    root.style.setProperty('--input-text', '#f1f5f9');
-                    root.style.setProperty('--input-placeholder', '#64748b');
-                }
-            }
+            // applyTheme() legado (tema por hora do dia) removido: sobrescrevia
+            // vars no :root e "vazava" modo noturno dentro do tema claro.
+            // O tema agora é 100% js/theme.js + tokens.css.
 
             function setGreeting() {
                 const greetingEl = document.getElementById('greeting');
@@ -1729,11 +1136,33 @@
 
             // --- CARREGAMENTO DE DADOS (Eventos, Datas, Tarefas) ---
 
+            // [v3] Preenche o 4º KPI (Próximo evento)
+            function setEventKpi(nextEvent) {
+                const kpiEvento = document.getElementById('kpi-evento');
+                const kpiEventoSub = document.getElementById('kpi-evento-sub');
+                if (!kpiEvento) return;
+                if (!nextEvent) {
+                    kpiEvento.textContent = '—';
+                    if (kpiEventoSub) kpiEventoSub.textContent = 'Sem eventos futuros';
+                    return;
+                }
+                const d = new Date(nextEvent.date + 'T00:00:00');
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const diffDays = Math.round((d - today) / 86400000);
+                if (diffDays === 0) kpiEvento.textContent = 'Hoje';
+                else if (diffDays === 1) kpiEvento.textContent = 'Amanhã';
+                else kpiEvento.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+                if (kpiEventoSub) {
+                    kpiEventoSub.textContent = [nextEvent.clientName, nextEvent.startTime].filter(Boolean).join(' • ');
+                }
+            }
+
             async function loadUpcomingEvents() {
                 const eventsListEl = document.getElementById('upcoming-events-list');
                 const events = await api.getEventos();
                 if (!events || events.length === 0) {
-                    eventsListEl.innerHTML = '<p class="text-gray-500">Nenhum evento encontrado na agenda.</p>';
+                    UI.empty(eventsListEl, { icon: 'fa-calendar-xmark', title: 'Agenda vazia', text: 'Nenhum evento encontrado na agenda.' });
+                    setEventKpi(null);
                     return;
                 }
                 const today = new Date();
@@ -1744,8 +1173,10 @@
                     .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .slice(0, 5);
 
+                setEventKpi(upcomingEvents[0] || null);
+
                 if (upcomingEvents.length === 0) {
-                    eventsListEl.innerHTML = '<p class="text-gray-500">Nenhum evento futuro agendado.</p>';
+                    UI.empty(eventsListEl, { icon: 'fa-calendar-xmark', title: 'Sem eventos futuros', text: 'Nenhum evento futuro agendado.' });
                     return;
                 }
 
@@ -1869,7 +1300,7 @@
 
                 // 4. Renderiza a lista
                 if (upcomingDates.length === 0) {
-                    datesListEl.innerHTML = '<p class="text-gray-500">Nenhuma data relevante nos próximos 30 dias.</p>';
+                    UI.empty(datesListEl, { icon: 'fa-gift', title: 'Nada por perto', text: 'Nenhuma data relevante nos próximos 30 dias.' });
                     return;
                 }
 
@@ -1961,7 +1392,7 @@
                     });
 
                     if (tasks.length === 0) {
-                        listEl.innerHTML = '<p class="text-center text-gray-500 pt-4">Nenhuma tarefa por aqui.</p>';
+                        UI.empty(listEl, { icon: 'fa-clipboard-check', title: 'Tudo em dia', text: 'Nenhuma tarefa por aqui.' });
                     } else {
                         listEl.innerHTML = tasks.map(task => {
                             const isPastDue = task.dueDate && task.dueDate < today;
@@ -2258,6 +1689,11 @@
                     financeWidgetLoading.innerHTML = `<p class="text-gray-500">${data.error}</p>`;
                     financeWidgetLoading.classList.remove('hidden');
                     financeWidgetContent.classList.add('hidden');
+                    // [v3] Zera os skeletons dos KPIs em caso de erro
+                    ['kpi-receitas', 'kpi-despesas', 'kpi-saldo'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = '—';
+                    });
                     return;
                 }
 
@@ -2275,6 +1711,18 @@
                 saldoEl.className = `text-3xl font-extrabold ${data.saldo >= 0 ? 'text-blue-600' : 'text-red-600'} tracking-tight`;
 
                 financeWidgetMonth.textContent = data.formattedMonth;
+
+                // [v3] Linha de KPIs no topo (UI.countUp do js/ui.js)
+                if (window.UI) {
+                    UI.countUp(document.getElementById('kpi-receitas'), data.totalReceitas, { prefix: 'R$ ', decimals: 2 });
+                    UI.countUp(document.getElementById('kpi-despesas'), data.totalDespesas, { prefix: 'R$ ', decimals: 2 });
+                    const kpiSaldo = document.getElementById('kpi-saldo');
+                    if (kpiSaldo) {
+                        kpiSaldo.classList.remove('is-success', 'is-danger');
+                        kpiSaldo.classList.add(data.saldo >= 0 ? 'is-success' : 'is-danger');
+                        UI.countUp(kpiSaldo, data.saldo, { prefix: 'R$ ', decimals: 2 });
+                    }
+                }
 
                 // Pendentes (replicando estilo do Sistema Financeiro)
                 if (despComp && data.totalPendentes > 0) {
@@ -2459,22 +1907,8 @@
             const showModal = (modalEl) => modalEl.classList.remove('hidden');
             const hideModal = (modalEl) => modalEl.classList.add('hidden');
 
-            const showToast = (message, isError = true) => {
-                const toast = document.getElementById('toast');
-                const toastMessage = document.getElementById('toast-message');
-                const toastIcon = document.getElementById('toast-icon');
-                if (!toast || !toastMessage) return;
-                toastMessage.textContent = message;
-                toast.classList.toggle('bg-red-600', isError);
-                toast.classList.toggle('bg-green-600', !isError);
-                if (toastIcon) toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
-                toast.classList.remove('hidden');
-                toast.classList.add('toast-enter');
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                    toast.classList.remove('toast-enter');
-                }, 5000);
-            };
+            // Toast: usa o shim global window.showToast(message, isError) instalado por js/ui.js
+            const showToast = (message, isError = true) => window.showToast(message, isError);
 
             // Placeholder Animation for API Key
             const animatePlaceholder = () => {
@@ -3635,7 +3069,6 @@
 
             // --- Função de Inicialização Principal ---
             async function init() {
-                applyTheme();
                 setGreeting();
                 displayRandomVerse();
                 await loadUpcomingEvents();
@@ -3741,22 +3174,7 @@
                 } catch (e) { /* silencioso */ }
             })();
 
-            // --- Lógica das Partículas (Plano de Fundo) ---
-            const canvas = document.getElementById('particles-js'); const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            let particlesArray; let mouse = { x: null, y: null, radius: (canvas.height / 80) * (canvas.width / 80) };
-            window.addEventListener('mousemove', (event) => { mouse.x = event.x; mouse.y = event.y; });
-            class Particle { constructor(x, y, directionX, directionY, size) { this.x = x; this.y = y; this.directionX = directionX; this.directionY = directionY; this.size = size; } draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false); const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color-rgb').trim(); ctx.fillStyle = `rgba(${particleColor}, 0.4)`; ctx.fill(); } update() { if (this.x > canvas.width || this.x < 0) this.directionX = -this.directionX; if (this.y > canvas.height || this.y < 0) this.directionY = -this.directionY; let dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx * dx + dy * dy); if (distance < mouse.radius + this.size) { if (mouse.x < this.x && this.x < canvas.width - this.size * 10) this.x += 1; if (mouse.x > this.x && this.x > this.size * 10) this.x -= 1; if (mouse.y < this.y && this.y < canvas.height - this.size * 10) this.y += 1; if (mouse.y > this.y && this.y > this.size * 10) this.y -= 1; } this.x += this.directionX; this.y += this.directionY; this.draw(); } }
-            function initParticles() { particlesArray = []; let numberOfParticles = (canvas.height * canvas.width) / 9000; for (let i = 0; i < numberOfParticles; i++) { let size = (Math.random() * 2) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2); let directionX = (Math.random() * .4) - .2; let directionY = (Math.random() * .4) - .2; particlesArray.push(new Particle(x, y, directionX, directionY, size)); } }
-            function connectParticles() { let opacityValue = 1; for (let a = 0; a < particlesArray.length; a++) { for (let b = a; b < particlesArray.length; b++) { let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y)); if (distance < (canvas.width / 7) * (canvas.height / 7)) { opacityValue = 1 - (distance / 20000); const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color-rgb').trim(); ctx.strokeStyle = `rgba(${particleColor}, ${opacityValue * 0.5})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(particlesArray[a].x, particlesArray[a].y); ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke(); } } } }
-            function animateParticles() { requestAnimationFrame(animateParticles); ctx.clearRect(0, 0, innerWidth, innerHeight); for (let i = 0; i < particlesArray.length; i++) particlesArray[i].update(); connectParticles(); }
-            window.addEventListener('resize', () => { canvas.width = innerWidth; canvas.height = innerHeight; mouse.radius = ((canvas.height / 80) * (canvas.width / 80)); initParticles(); });
-            window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
-
-            setTimeout(() => {
-                initParticles();
-                animateParticles();
-            }, 100);
+            // Partículas de fundo removidas no DS v3 (fundo sólido via tokens)
         });
     </script>
 
@@ -3800,7 +3218,9 @@
         </div>
     </div>
 
-    <!-- Sistema de Autenticação -->
+    <!-- Toolkit de UI + Navegação unificada + Autenticação -->
+    <script src="./js/ui.js"></script>
+    <script src="./js/nav.js"></script>
     <script src="js/protect.js"></script>
 
 </body>
