@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./js/theme.js"></script>
     <title>Sistema de Gestão Financeira v30 - Categorias Dinâmicas</title>
 
     <!-- PWA Config -->
@@ -17,34 +18,18 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        dark: {
-                            bg: '#0f172a',
-                            card: 'rgba(30, 41, 59, 0.7)',
-                            border: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    backdropBlur: {
-                        xs: '2px',
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/aero.css">
     <script type="module">
         import { api, API_BASE_URL } from './js/api.js?v=1.1';
         import { getToken } from './js/auth.js?v=1.1';
@@ -95,24 +80,15 @@
         };
         window.hideModal = hideModal;
 
-        const showToastModal = (message, isError = false) => {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            const toastIcon = document.getElementById('toast-icon');
-
-            if (toast && toastMessage && toastIcon) {
-                toastMessage.textContent = message;
-                toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
-                toast.className = isError
-                    ? 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3'
-                    : 'fixed top-5 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-3';
-
-                setTimeout(() => {
-                    toast.className = toast.className.replace('top-5', '-top-20');
-                }, 3000);
-            }
-        };
+        // Delegado ao design system (js/ui.js) — mantém a assinatura legada (msg, isError)
+        const showToastModal = (message, isError = false) => window.UI.toast(message, !!isError);
         window.showToastModal = showToastModal;
+
+        // Escape p/ dados de usuário interpolados em template strings (XSS)
+        const escapeHtml = (v) => String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        window.escapeHtml = escapeHtml;
 
         const validateForm = (form) => {
             let isValid = true;
@@ -130,42 +106,35 @@
         window.validateForm = validateForm;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- LOGICA DE TEMA (DARK MODE) ---
-            const themeToggle = document.getElementById('theme-toggle');
-            const htmlElement = document.documentElement;
-            const bodyElement = document.body;
-
-            // Carrega preferência salva
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            if (savedTheme === 'dark') {
-                htmlElement.classList.add('dark');
-                bodyElement.classList.add('dark');
-            }
-
-            themeToggle?.addEventListener('click', () => {
-                const isDark = htmlElement.classList.toggle('dark');
-                bodyElement.classList.toggle('dark');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
-                // Atualiza cores dos gráficos se existirem
-                if (window.Chart) {
+            // --- TEMA (DARK MODE): aplicado por js/theme.js; toggle vem do nav (js/nav.js) ---
+            // Repinta os gráficos Chart.js quando o tema muda (evento 'themechange' do theme.js)
+            window.addEventListener('themechange', (ev) => {
+                const isDark = ev && ev.detail ? !!ev.detail.dark : document.documentElement.classList.contains('dark');
+                // Chart.helpers/Chart.instances são API do Chart.js v2 — guarda
+                // evita TypeError caso o CDN sirva v3+/v4
+                if (window.Chart && Chart.helpers && Chart.helpers.each && Chart.instances) {
                     Chart.helpers.each(Chart.instances, (instance) => {
                         const options = instance.options;
                         if (isDark) {
-                            options.scales.x.grid.color = 'rgba(255, 255, 255, 0.1)';
-                            options.scales.y.grid.color = 'rgba(255, 255, 255, 0.1)';
-                            options.plugins.legend.labels.color = '#94a3b8';
+                            if (options.scales && options.scales.x) {
+                                options.scales.x.grid.color = 'rgba(255, 255, 255, 0.1)';
+                                options.scales.y.grid.color = 'rgba(255, 255, 255, 0.1)';
+                            }
+                            if (options.plugins && options.plugins.legend) {
+                                options.plugins.legend.labels.color = '#94a3b8';
+                            }
                         } else {
-                            options.scales.x.grid.color = 'rgba(0, 0, 0, 0.05)';
-                            options.scales.y.grid.color = 'rgba(0, 0, 0, 0.05)';
-                            options.plugins.legend.labels.color = '#64748b';
+                            if (options.scales && options.scales.x) {
+                                options.scales.x.grid.color = 'rgba(0, 0, 0, 0.05)';
+                                options.scales.y.grid.color = 'rgba(0, 0, 0, 0.05)';
+                            }
+                            if (options.plugins && options.plugins.legend) {
+                                options.plugins.legend.labels.color = '#64748b';
+                            }
                         }
                         instance.update();
                     });
                 }
-
-                // Feedback visual
-                showToast(isDark ? "Modo Escuro ativado" : "Modo Claro ativado");
             });
 
             // Alias global para showToast para evitar ReferenceError
@@ -636,10 +605,18 @@
 
                 // Atualiza Cards do Dashboard (Apenas se estiver no Dashboard)
                 if (tab === 'dashboard') {
-                    getById('total-receitas').textContent = formatarMoeda(recAtual);
+                    if (window.UI && window.UI.countUp) {
+                        UI.countUp(getById('total-receitas'), recAtual, { prefix: 'R$ ', decimals: 2 });
+                    } else {
+                        getById('total-receitas').textContent = formatarMoeda(recAtual);
+                    }
                     getById('receitas-comparison').innerHTML = getChangeHTML(recAtual, recAnterior);
 
-                    getById('total-despesas').textContent = formatarMoeda(despAtual);
+                    if (window.UI && window.UI.countUp) {
+                        UI.countUp(getById('total-despesas'), despAtual, { prefix: 'R$ ', decimals: 2 });
+                    } else {
+                        getById('total-despesas').textContent = formatarMoeda(despAtual);
+                    }
                     const despesasComparison = getById('despesas-comparison');
                     despesasComparison.innerHTML = getChangeHTML(despAtual, despAnterior, true);
 
@@ -658,8 +635,12 @@
                     }
 
                     const elSaldo = getById('saldo-total');
-                    elSaldo.textContent = formatarMoeda(saldoAtual);
-                    elSaldo.className = `text-4xl font-bold ${saldoAtual >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+                    if (window.UI && window.UI.countUp) {
+                        UI.countUp(elSaldo, saldoAtual, { prefix: 'R$ ', decimals: 2 });
+                    } else {
+                        elSaldo.textContent = formatarMoeda(saldoAtual);
+                    }
+                    elSaldo.className = `kpi-value tabular-nums ${saldoAtual >= 0 ? 'is-success' : 'is-danger'}`;
                     getById('saldo-comparison').innerHTML = getChangeHTML(saldoAtual, saldoAnterior);
 
                     // --- [AAA] Geração de Insights Inteligentes ---
@@ -852,12 +833,19 @@
                                 const catBadge = isFromEvent
                                     ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"><i class="fa-solid fa-truck-arrow-right"></i> ${g.categoria}</span>`
                                     : g.categoria;
+                                // Campos novos v3.1.1: detalhe da categoria (chip) e quem declarou (ícone)
+                                const detalheChip = g.detalhe
+                                    ? ` <span class="chip chip-sm" title="Detalhe: ${escapeHtml(g.detalhe)}">${escapeHtml(g.detalhe)}</span>`
+                                    : '';
+                                const declaranteIcon = g.declaredBy
+                                    ? ` <span class="declared-by" title="Declarado por ${escapeHtml(g.declaredBy)}"><i class="fa-solid fa-user-pen"></i></span>`
+                                    : '';
                                 return `
                                     <tr ${rowClass}>
                                         <td>${formatarData(g.data)}</td>
                                         <td>${g.descricao}</td>
-                                        <td>${catBadge}</td>
-                                        <td>${g.conta}</td>
+                                        <td>${catBadge}${detalheChip}</td>
+                                        <td>${g.conta}${declaranteIcon}</td>
                                         <td>${g.pagamento}</td>
                                         <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
                                         <td>
@@ -4190,15 +4178,8 @@
             });
 
             // Funções Auxiliares já definidas no topo do script
-            const showToast = (msg, isError) => {
-                const toast = getById('toast');
-                if (toast) {
-                    getById('toast-message').textContent = msg;
-                    toast.className = `fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl z-50 ${isError ? 'bg-red-600' : 'bg-green-600'}`;
-                    toast.classList.remove('hidden');
-                    setTimeout(() => toast.classList.add('hidden'), 3000);
-                }
-            };
+            // Delegado ao design system (js/ui.js)
+            const showToast = (msg, isError) => window.UI.toast(msg, !!isError);
 
             // ========== LOCAL LOADING SYSTEM ==========
             const showLocalLoader = (element, message = 'Carregando...') => {
@@ -4783,1214 +4764,59 @@
 
 
     <style>
-        :root {
-            --glow-color: hsl(224, 88%, 66%);
-            --primary: #4f46e5;
-            --secondary: #a855f7;
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --text-muted: #6b7280;
-            --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
-        }
+        /* ===== Financeiro: mínimos específicos da página (tokens do DS) ===== */
 
-        .dark {
-            --glass-bg: rgba(15, 23, 42, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-muted: #94a3b8;
-        }
+        body { overflow-x: hidden; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #fdfdfd;
-            color: #1f2937;
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-            transition: background-color 0.4s ease, color 0.4s ease;
-        }
-
-        body.dark {
-            background: #020617;
-            color: #f8fafc;
-        }
-
-        /* Ajustes Glassmorphism para Dark Mode */
-        .dark .glassmorphism {
-            background: var(--glass-bg);
-            border-color: var(--glass-border);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.02);
-        }
-
-        .dark .dashboard-card h3 {
-            color: #e2e8f0;
-        }
-
-        .dark .nav-glass {
-            background: rgba(30, 41, 59, 0.4);
-            border-color: rgba(255, 255, 255, 0.05);
-            color: #cbd5e1 !important;
-        }
-
-        .dark .nav-glass:hover {
-            background: rgba(30, 41, 59, 0.6);
-        }
-
-        .dark .form-input {
-            background-color: rgba(30, 41, 59, 0.5);
-            border-color: rgba(255, 255, 255, 0.1);
-            color: #f1f5f9;
-        }
-
-        .dark .table-container {
-            background: rgba(15, 23, 42, 0.6);
-        }
-
-        .dark th {
-            background-color: rgba(30, 41, 59, 0.8) !important;
-            color: #94a3b8 !important;
-        }
-
-        .dark td {
-            border-color: rgba(255, 255, 255, 0.05);
-            color: #e2e8f0;
-        }
-
-        .dark tr:hover td {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-
-        .theme-toggle-btn {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .theme-toggle-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 15px var(--glow-color);
-        }
-
-        /* Efeito Liquid Glass - Sutil e Sofisticado */
-        .liquid-blob {
-            position: fixed;
-            width: 800px;
-            height: 800px;
-            border-radius: 50%;
-            filter: blur(120px);
-            z-index: -1;
-            opacity: 0.25;
-            animation: move 40s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
-        }
-
-        .blob-1 {
-            background: linear-gradient(135deg, #c7d2fe 0%, #818cf8 100%);
-            top: -20%;
-            left: -10%;
-            animation-duration: 50s;
-        }
-
-        .blob-2 {
-            background: linear-gradient(135deg, #f5d0fe 0%, #d8b4fe 100%);
-            bottom: -20%;
-            right: -10%;
-            animation-delay: -10s;
-            animation-duration: 60s;
-        }
-
-        .blob-3 {
-            background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
-            top: 30%;
-            left: 30%;
-            width: 600px;
-            height: 600px;
-            animation-delay: -20s;
-            animation-duration: 45s;
-        }
-
-        @keyframes move {
-            0% {
-                transform: translate(0, 0) rotate(0deg) scale(1);
-            }
-
-            33% {
-                transform: translate(150px, 100px) rotate(30deg) scale(1.1);
-            }
-
-            66% {
-                transform: translate(-100px, 200px) rotate(-20deg) scale(0.9);
-            }
-
-            100% {
-                transform: translate(50px, -50px) rotate(10deg) scale(1);
-            }
-        }
-
-        #particles-js {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.3;
-        }
-
-        .header-title {
-            background: linear-gradient(to right, #4f46e5, #8b5cf6);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-            text-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
-        }
-
-        /* Evolução para Spatial Glass AAA */
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow:
-                0 8px 32px 0 rgba(31, 38, 135, 0.07),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .dark .glassmorphism {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-            inset: 0 0 0 1px rgba(255, 255, 255, 0.02);
-        }
-
-        .dashboard-card {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            transform: rotate(45deg);
-            pointer-events: none;
-            transition: all 0.6s ease;
-        }
-
-        .dashboard-card:hover::before {
-            left: -30%;
-            top: -30%;
-        }
-
-        .dashboard-card.receita {
-            border-bottom: 4px solid #10b981;
-        }
-
-        .dashboard-card.despesa {
-            border-bottom: 4px solid #ef4444;
-        }
-
-        .dashboard-card.saldo {
-            border-bottom: 4px solid #3b82f6;
-        }
-
-        .dashboard-card.pendente {
-            border-bottom: 4px solid #f59e0b;
-        }
-
-        .stat-icon-bg {
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            font-size: 5rem;
-            opacity: 0.05;
-            transform: rotate(-15deg);
-            transition: all 0.4s ease;
-        }
-
-        .dashboard-card:hover .stat-icon-bg {
-            transform: rotate(0deg) scale(1.2);
-            opacity: 0.08;
-        }
-
-        /* Insights Pills */
-        .insight-pill {
-            background: rgba(79, 70, 229, 0.1);
-            color: #4f46e5;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            border: 1px solid rgba(79, 70, 229, 0.2);
-        }
-
-        .dark .insight-pill {
-            background: rgba(129, 140, 248, 0.1);
-            color: #a5b4fc;
-            border-color: rgba(129, 140, 248, 0.2);
-        }
-
-        /* [AAA] Skeleton Loading */
-        .skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite;
-            border-radius: 8px;
-        }
-
-        .dark .skeleton {
-            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-            background-size: 200% 100%;
-        }
-
-        @keyframes skeleton-loading {
-            0% {
-                background-position: 200% 0;
-            }
-
-            100% {
-                background-position: -200% 0;
-            }
-        }
-
-        .skeleton-text {
-            height: 1rem;
-            margin-bottom: 0.5rem;
-            width: 100%;
-        }
-
-        .skeleton-title {
-            height: 1.5rem;
-            margin-bottom: 1rem;
-            width: 60%;
-        }
-
-        .skeleton-circle {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-        }
-
-        .modal-box.glassmorphism {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(30px) saturate(190%);
-            -webkit-backdrop-filter: blur(30px) saturate(190%);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
-        .nav-glass {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .nav-glass:hover {
-            background: rgba(255, 255, 255, 0.6);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .nav-glass.active {
-            background: white !important;
-            color: #4f46e5 !important;
-            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2) !important;
-        }
-
-        .shiny-btn {
-            position: relative;
-            border: 2px solid transparent;
-            background-image: linear-gradient(to right, #4f46e5 0%, #3b82f6 51%, #4f46e5 100%);
-            background-size: 200% auto;
-            color: white;
-            box-shadow: 0 4px 15px 0 rgba(60, 78, 224, 0.4);
-            transition: all 0.4s ease;
-        }
-
-        .shiny-btn:hover {
-            background-position: right center;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px 0 rgba(60, 78, 224, 0.6);
-        }
-
-        .shiny-btn-red {
-            position: relative;
-            border: 2px solid transparent;
-            background-image: linear-gradient(to right, #dc2626 0%, #ef4444 51%, #dc2626 100%);
-            background-size: 200% auto;
-            color: white;
-            box-shadow: 0 4px 15px 0 rgba(239, 68, 68, 0.4);
-            transition: all 0.4s ease;
-        }
-
-        .shiny-btn-red:hover {
-            background-position: right center;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px 0 rgba(239, 68, 68, 0.6);
-        }
-
-        /* Estilos para controle de páginas/abas */
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        .shiny-btn-red:disabled {
-            background-image: none;
-            background-color: #9ca3af;
-            box-shadow: none;
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .shiny-btn:disabled {
-            background-image: none;
-            background-color: #9ca3af;
-            box-shadow: none;
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .form-input {
-            background-color: #f9fafb;
-            border: 1px solid #d1d5db;
-            color: #1f2937;
-            border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            transition: all 0.2s ease-in-out;
-        }
-
-        .form-input::placeholder {
-            color: #6b7280;
-        }
-
-        .form-input:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px #4f46e5;
-            border-color: #4f46e5;
-        }
-
-        /* Page transitions */
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Custom styles for tables */
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(200, 200, 200, 0.5);
-        }
-
-        thead th {
-            background-color: rgba(236, 240, 241, 0.5);
-            font-weight: 600;
-            color: #374151;
-        }
-
-        tbody tr:hover {
-            background-color: rgba(243, 244, 246, 0.4);
-        }
-
-        .action-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1em;
-            transition: color 0.2s;
-            padding: 0;
-        }
-
-        .delete-btn {
-            color: #ef4444;
-        }
-
-        .delete-btn:hover {
-            color: #b91c1c;
-        }
-
-        .edit-btn {
-            color: #f59e0b;
-        }
-
-        .edit-btn:hover {
-            color: #b45309;
-        }
-
-        .action-btn:disabled {
-            color: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        /* Gemini Button Style Modernized */
-        .gemini-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 0.75rem;
-            cursor: pointer;
-            font-size: 0.95em;
-            font-weight: 700;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .gemini-btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
-            filter: brightness(1.1);
-        }
-
-        .gemini-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(45deg);
-            transition: 0.5s;
-            pointer-events: none;
-        }
-
-        .gemini-btn:hover::after {
-            left: 120%;
-        }
-
-        /* Dashboard Stat Cards Improvements */
-        .dashboard-card {
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            border-left: 4px solid transparent;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-        }
-
-        .dashboard-card.receita {
-            border-left-color: #10b981;
-        }
-
-        .dashboard-card.despesa {
-            border-left-color: #ef4444;
-        }
-
-        .dashboard-card.saldo {
-            border-left-color: #3b82f6;
-        }
-
-        .dashboard-card.ia {
-            border-left-color: #8b5cf6;
-        }
-
-        .stat-icon-bg {
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            font-size: 5rem;
-            opacity: 0.05;
-            transform: rotate(-15deg);
-            transition: all 0.3s ease;
-        }
-
-        .dashboard-card:hover .stat-icon-bg {
-            opacity: 0.1;
-            transform: scale(1.1) rotate(0deg);
-        }
-
-        /* Animação de Digitação para Placeholder */
-        @keyframes typing-placeholder {
-
-            0%,
-            100% {
-                placeholder: "Cole sua chave aqui";
-            }
-
-            20% {
-                placeholder: "C";
-            }
-
-            25% {
-                placeholder: "Co";
-            }
-
-            30% {
-                placeholder: "Col";
-            }
-
-            35% {
-                placeholder: "Cole";
-            }
-
-            40% {
-                placeholder: "Cole ";
-            }
-
-            45% {
-                placeholder: "Cole s";
-            }
-
-            50% {
-                placeholder: "Cole su";
-            }
-
-            55% {
-                placeholder: "Cole sua";
-            }
-
-            60% {
-                placeholder: "Cole sua ";
-            }
-
-            70% {
-                placeholder: "Cole sua ch";
-            }
-
-            80% {
-                placeholder: "Cole sua cha";
-            }
-
-            90% {
-                placeholder: "Cole sua chav";
-            }
-
-            95% {
-                placeholder: "Cole sua chave";
-            }
-        }
-
-        .form-input::placeholder {
-            color: #d1d5db !important;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        .form-input:focus::placeholder {
-            opacity: 0;
-        }
-
-        .modal-backdrop {
-            animation: fadeIn 0.2s ease-out;
-        }
-
-        .modal-content {
-            animation: slideUp 0.3s ease-out;
-        }
-
-        /* Validação de Formulário */
-        .form-input.error {
-            border-color: #ef4444;
-            background-color: #fef2f2;
-        }
-
-        .form-input.error:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-        }
-
-        .error-message {
-            color: #ef4444;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-
-        .loader {
-            width: 48px;
-            height: 48px;
-            border: 5px solid #FFF;
-            border-bottom-color: #4f46e5;
-            border-radius: 50%;
-            display: block;
-            box-sizing: border-box;
-            animation: rotation 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes rotation {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Animations */
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Full Page Loader (Premium) */
-        #page-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease-out, visibility 0.5s;
-        }
-
-        .loader-content {
-            text-align: center;
-            position: relative;
-        }
-
-        /* Local Granular Loader */
-        .local-loader-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(4px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 50;
-            border-radius: inherit;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .local-loader-overlay.visible {
-            opacity: 1;
-        }
-
-        .local-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(79, 70, 229, 0.2);
-            border-top: 3px solid #4f46e5;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 10px;
-        }
-
-        .local-loading-text {
-            font-size: 0.875rem;
-            color: #4f46e5;
-            font-weight: 600;
-            letter-spacing: 0.025em;
-        }
-
-        /* Toast Animation */
-        @keyframes toast-in {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .toast-enter {
-            animation: toast-in 0.5s ease-out forwards;
-        }
-
-        .rotate-180 {
-            transform: rotate(180deg);
-        }
-
-        details>summary {
-            list-style: none;
-        }
-
-        details>summary::-webkit-details-marker {
-            display: none;
-        }
-
-        /* Estilos do Menu de Monitores */
-        #monitors-sidebar.collapsed {
-            width: 0px;
-            padding: 0;
-            overflow: hidden;
-            margin-left: -1.5rem;
-            /* Compensa o gap */
-        }
-
-        #monitors-sidebar.collapsed .sidebar-content {
-            opacity: 0;
-        }
-
-        #sidebar-toggle-btn.collapsed .fa-chevron-left {
-            transform: rotate(180deg);
-        }
-
-        #monitors-sidebar-list a {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.375rem;
-            transition: background-color 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            color: #374151;
-        }
-
-        #monitors-sidebar-list a:hover {
-            background-color: rgba(230, 230, 245, 0.7);
-        }
-
-        /* Abas de Configuração de Salário */
-        .config-tab-btn {
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            border-radius: 0.375rem;
-            transition: all 0.3s;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-
-        .config-tab-btn.active {
-            background-color: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
-        }
-
-        .config-tab-btn:not(.active) {
-            background-color: transparent;
-            color: #4b5563;
-        }
-
-        .config-tab-content {
-            display: none;
-        }
-
-        .config-tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        /* [ULTRA-PREMIUM] Estilos para Bottom Navigation Mobile */
-        /* [SUPER-PREMIUM] Unified Fluid Capsule Bottom Nav */
-        .bottom-nav {
-            position: fixed;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 40px);
-            max-width: 420px;
-            height: 75px;
-            background: rgba(255, 255, 255, 0.6);
-            /* Mais translúcido */
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 12px 15px 0 15px;
-            z-index: 10000;
-            border-radius: 40px;
-            box-shadow:
-                0 20px 40px -10px rgba(0, 0, 0, 0.12),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.8);
-            transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
-            user-select: none;
-            overflow: hidden;
-        }
-
-        /* O Handle Tátil Integrado */
-        .bottom-nav-handle {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .bottom-nav-handle::after {
-            content: '';
-            width: 40px;
-            height: 4px;
-            background: rgba(79, 70, 229, 0.2);
-            border-radius: 10px;
-            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Ícone interno (escondido por padrão) */
-        .bottom-nav-handle i {
-            position: absolute;
-            font-size: 1.2rem;
-            color: #4f46e5;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Morphing: Barra Inteira -> Pílula Compacta e Visível */
-        .bottom-nav.collapsed {
-            transform: translateX(-50%) translateY(15px);
-            /* Desce apenas opo suficiente para um visual 'docked' mas visível */
-            width: 80px;
-            /* Mais compacta */
-            height: 48px;
-            padding: 0;
-            border-radius: 100px;
-            background: rgba(255, 255, 255, 0.5);
-            /* Translúcida */
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .bottom-nav:not(.collapsed).hover-active {
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
-        }
-
-        .bottom-nav.collapsed .nav-item {
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-        }
-
-        .bottom-nav.collapsed .bottom-nav-handle::after {
-            opacity: 0;
-            transform: scaleX(0);
-        }
-
-        .bottom-nav.collapsed .bottom-nav-handle i {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        @media (min-width: 1024px) {
-            .bottom-nav {
-                display: none;
-            }
-        }
-
-        .nav-item {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            width: 65px;
-            height: 100%;
-            text-decoration: none;
-            z-index: 1;
-            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* The Pill - Fundo do Item Ativo */
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 16px;
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0;
-            z-index: -1;
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
-        }
-
-        .nav-item.active {
-            color: white;
-            transform: translateY(-8px);
-        }
-
-        .nav-item.active::before {
-            transform: translate(-50%, -60%) scale(1);
-            opacity: 1;
-        }
-
-        .nav-item i {
-            font-size: 1.5rem;
-            margin-bottom: 2px;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .nav-item span {
-            font-size: 0.6rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.8;
-            transition: all 0.3s ease;
-        }
-
-        .nav-item.active span {
-            opacity: 1;
-            transform: translateY(2px);
-            color: #4f46e5;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-size: 0.55rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .nav-item:active {
-            transform: scale(0.9) translateY(0);
-        }
-
-        /* [NEW] Ajuste para Toast no Mobile não sobrepor a Nav */
-        @media (max-width: 1023px) {
-            #toast {
-                bottom: 100px !important;
-            }
-        }
-
-        /* [AAA] Super-Premium Futuristic Loader */
+        /* ---- Page loader (id/mecanismo preservados, visual simplificado) ---- */
         #page-loader {
             position: fixed;
             inset: 0;
-            background: #f8fafc;
+            background: var(--bg);
             z-index: 99999;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s, backdrop-filter 0.8s;
-        }
-
-        .dark #page-loader {
-            background: #020617;
-        }
-
-        /* Mesh Gradient Background para o Loader */
-        #page-loader::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
-            filter: blur(100px);
-            animation: mesh-move 15s ease infinite alternate;
-            z-index: -1;
-        }
-
-        @keyframes mesh-move {
-            0% {
-                transform: scale(1) translate(0, 0);
-            }
-
-            100% {
-                transform: scale(1.2) translate(5%, 5%);
-            }
+            transition: opacity var(--dur-slow) var(--ease), visibility var(--dur-slow);
         }
 
         .loader-content {
-            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2rem;
+            gap: 16px;
         }
 
-        .loader-logo-wrapper {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loader-logo-glow {
-            position: absolute;
-            inset: -10px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-            filter: blur(20px);
-            opacity: 0.3;
-            animation: morph 8s ease-in-out infinite alternate;
-        }
-
-        .loader-ring {
-            position: absolute;
-            inset: 0;
-            border: 3px solid transparent;
-            border-top-color: var(--primary);
-            border-bottom-color: var(--secondary);
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--brand-600);
             border-radius: 50%;
-            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
-            z-index: 2;
+            animation: spin .8s linear infinite;
         }
 
-        .loader-ring::after {
-            content: '';
-            position: absolute;
-            inset: 8px;
-            border: 3px solid transparent;
-            border-left-color: #f093fb;
-            border-right-color: #4f46e5;
-            border-radius: 50%;
-            animation: loader-spin 2s linear infinite reverse;
-        }
-
-        @keyframes loader-spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes morph {
-            0% {
-                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-                transform: rotate(0deg);
-            }
-
-            100% {
-                border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
-                transform: rotate(180deg);
-            }
-        }
-
-        .loader-logo-main {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            color: var(--primary);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-            z-index: 3;
-            animation: loader-pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes loader-pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                filter: brightness(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-                filter: brightness(1.1);
-            }
-        }
-
-        .loader-text-aaa {
-            font-size: 0.85rem;
+        .loader-text {
+            font-size: 12px;
             font-weight: 600;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
+            letter-spacing: .08em;
             text-transform: uppercase;
             text-align: center;
+            color: var(--text-muted);
             min-height: 1.5em;
-            transition: opacity 0.5s ease;
+            transition: opacity .5s ease;
         }
 
-        /* Classe de transição de saída */
         .loader-hidden {
             opacity: 0 !important;
             visibility: hidden !important;
-            backdrop-filter: blur(0px) !important;
-            transform: scale(1.1);
         }
 
         #page-content-wrapper {
             opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(12px);
+            transition: opacity .5s ease-out, transform .5s var(--ease);
         }
 
         #page-content-wrapper.content-ready {
@@ -5998,131 +4824,485 @@
             transform: translateY(0);
         }
 
-        /* Monitor Cards Style */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Loader pequeno usado em template strings do JS (chat IA) */
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--surface-2);
+            border-top: 4px solid var(--brand-600);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 12px auto;
+        }
+
+        /* Loader local por seção (showLocalLoader/hideLocalLoader) */
+        .local-loader-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, .72);
+            backdrop-filter: blur(3px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity .3s ease;
+        }
+
+        .dark .local-loader-overlay { background: rgba(2, 6, 23, .72); }
+        .local-loader-overlay.visible { opacity: 1; }
+
+        .local-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--brand-600);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        .local-loading-text {
+            font-size: .85rem;
+            color: var(--brand-600);
+            font-weight: 600;
+            letter-spacing: .025em;
+        }
+
+        .dark .local-loading-text { color: var(--brand-400); }
+
+        /* ---- Controle de páginas/abas (mecânica .page.active preservada) ---- */
+        .page { display: none; }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+
+        @keyframes bounceSubtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .animate-bounce-subtle { animation: bounceSubtle 2s infinite ease-in-out; }
+
+        /* ---- Abas internas (.nav-link) dentro do .segmented ---- */
+        /* O handler JS ainda alterna utilities legadas (shiny-btn, bg-white/50...);
+           estas regras (especificidade maior) garantem o visual do segmented. */
+        .segmented.finance-tabs { display: flex; margin-bottom: 24px; }
+        .segmented > .nav-link {
+            background: transparent;
+            background-image: none;
+            color: var(--text-muted);
+            border: none;
+            box-shadow: none;
+            transform: none;
+        }
+        .segmented > .nav-link:hover {
+            background: var(--surface-1);
+            color: var(--text);
+            transform: none;
+            box-shadow: none;
+        }
+        .segmented > .nav-link.active {
+            background: var(--surface-1);
+            background-image: none;
+            color: var(--brand-600);
+            box-shadow: var(--shadow-1);
+        }
+        .dark .segmented > .nav-link.active { color: var(--brand-400); }
+
+        /* ---- Filtro de mês (sticky, ids/handlers preservados) ---- */
+        .month-filter-container {
+            position: sticky;
+            top: 10px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            width: fit-content;
+            margin: 0 auto 24px;
+            padding: 4px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-1);
+        }
+
+        .month-nav-btn {
+            width: 34px;
+            height: 32px;
+            border: none;
+            border-radius: calc(var(--radius) - 4px);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 700;
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+        }
+
+        .month-nav-btn:hover { background: var(--surface-1); color: var(--text); }
+
+        .month-filter-container .month-filter {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            text-align: center;
+            font-weight: 600;
+            color: var(--brand-600);
+            padding: 5px 8px;
+            width: auto;
+        }
+
+        .month-filter-container .month-filter:focus { box-shadow: none; border: none; background: var(--surface-1); border-radius: calc(var(--radius) - 4px); }
+        .dark .month-filter-container .month-filter { color: var(--brand-400); }
+
+        /* ---- Linha de KPIs ---- */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 1024px) {
+            .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+
+        .kpi-card .kpi-delta { font-size: 12px; color: var(--text-faint); }
+
+        /* ---- Quick insights (pills discretas) ---- */
+        .insight-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--brand-50);
+            color: var(--brand-600);
+            border: 1px solid var(--border);
+        }
+
+        .dark .insight-pill { background: var(--surface-2); color: var(--brand-400); }
+
+        /* ---- Meta do mês (barra fina, ids meta-* preservados) ---- */
+        #meta-section .meta-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #meta-section .meta-title i { color: var(--brand-600); }
+        .dark #meta-section .meta-title i { color: var(--brand-400); }
+
+        #meta-section .meta-goal {
+            font-weight: 700;
+            color: var(--brand-600);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .dark #meta-section .meta-goal { color: var(--brand-400); }
+
+        .meta-track {
+            position: relative;
+            width: 100%;
+            height: 14px;
+            border-radius: 999px;
+            background: var(--surface-2);
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .meta-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 640px) {
+            .meta-stats { grid-template-columns: 1fr; }
+        }
+
+        /* ---- Skeleton (tamanhos usados em template strings do JS) ---- */
+        .skeleton-text { height: 1rem; margin-bottom: 0.5rem; width: 100%; }
+        .skeleton-title { height: 1.5rem; margin-bottom: 1rem; width: 60%; }
+        .skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+
+        /* ---- Botões legados (classes referenciadas por JS/markup) ---- */
+        .shiny-btn {
+            border: none;
+            background: var(--grad-brand);
+            color: var(--text-on-brand);
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, .30);
+            transition: filter var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+
+        .shiny-btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79, 70, 229, .38); }
+        .shiny-btn:active { transform: scale(.98); }
+
+        .shiny-btn-red {
+            border: none;
+            background: var(--danger);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            transition: filter var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+
+        .shiny-btn-red:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+        .shiny-btn:disabled,
+        .shiny-btn-red:disabled {
+            background: var(--surface-2);
+            color: var(--text-faint);
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: .7;
+            transform: none;
+        }
+
+        .shiny-btn-outline {
+            border: 1px solid var(--border-strong);
+            background: var(--surface-1);
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color var(--dur) var(--ease);
+        }
+
+        .shiny-btn-outline:hover { background: var(--surface-2); }
+
+        .gemini-btn {
+            background: var(--grad-brand);
+            color: var(--text-on-brand);
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: filter var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+
+        .gemini-btn:hover {
+            filter: brightness(1.08);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, .4);
+        }
+
+        .gemini-btn:active { transform: scale(.98); }
+
+        /* ---- Inputs legados (.form-input em dezenas de campos — NÃO renomear) ---- */
+        .form-input {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: var(--radius);
+            padding: 0.5rem 0.75rem;
+            font-size: 14px;
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur) var(--ease);
+        }
+
+        .form-input::placeholder { color: var(--text-faint); opacity: 1; }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--brand-400);
+            box-shadow: var(--ring);
+            background: var(--surface-1);
+        }
+
+        .form-input.error,
+        .form-input.border-red-500 { border-color: var(--danger); }
+
+        .form-input.error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .error-message.show { display: block; }
+
+        /* ---- Tabelas (wrapper legado; as tables usam .table do DS) ---- */
+        .table-wrapper { overflow-x: auto; border-radius: var(--radius); }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.05em;
+            padding: 0;
+            transition: filter var(--dur) var(--ease);
+        }
+
+        .delete-btn { color: var(--danger); }
+        .delete-btn:hover { filter: brightness(.8); }
+        .edit-btn { color: var(--warning); }
+        .edit-btn:hover { filter: brightness(.8); }
+        .action-btn:disabled { color: var(--text-faint); cursor: not-allowed; }
+
+        /* ---- Chips de detalhe do gasto (campos novos v3.1.1) ---- */
+        .chip-sm { padding: 2px 8px; font-size: 11px; }
+        .declared-by { color: var(--text-faint); margin-left: 6px; font-size: 12px; }
+
+        /* ---- Glassmorphism legado → superfície sólida (modais + template strings) ---- */
+        .glassmorphism {
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-2);
+        }
+
+        /* aero.css dá display:flex ao .modal-backdrop — a classe .hidden precisa vencer */
+        .modal-backdrop.hidden { display: none !important; }
+
+        /* Restaura larguras dos modais legados (aero .modal-box trava em 480px) */
+        .modal-box.max-w-md { max-width: 28rem; }
+        .modal-box.max-w-lg { max-width: 32rem; }
+        .modal-box.max-w-xl { max-width: 36rem; }
+        .modal-box.max-w-2xl { max-width: 42rem; }
+        .modal-box.max-w-3xl { max-width: 48rem; }
+        .modal-box.max-w-4xl { max-width: 56rem; }
+
+        @media (max-width: 640px) {
+            .modal-content { padding: 1.5rem; margin: 1rem; }
+        }
+
+        /* ---- Abas de configuração de salários (classes preservadas p/ o JS) ---- */
+        .config-tab-btn {
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            border: 2px solid transparent;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+        }
+
+        .config-tab-btn.active {
+            background: var(--surface-1);
+            color: var(--brand-600);
+            border-color: var(--brand-600);
+        }
+
+        .dark .config-tab-btn.active { color: var(--brand-400); border-color: var(--brand-400); }
+
+        .config-tab-content { display: none; }
+
+        .config-tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* ---- Cards de monitor (template strings do JS) ---- */
         .monitor-card {
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(10px);
+            background: var(--surface-1);
+            border: 1px solid var(--border) !important;
+            transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
         }
 
         .monitor-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-            background: rgba(255, 255, 255, 0.7);
-            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-2);
+            border-color: var(--brand-400) !important;
         }
 
         .monitor-avatar {
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+            background: var(--brand-50);
+            color: var(--brand-600);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            color: var(--primary);
             font-size: 1.25rem;
-            border: 2px solid white;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border: 2px solid var(--surface-1);
+            box-shadow: var(--shadow-1);
         }
+
+        .dark .monitor-avatar { color: var(--brand-400); }
 
         .btn-action-small {
             width: 32px;
             height: 32px;
+            border: none;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            cursor: pointer;
+            transition: transform var(--dur) var(--ease);
         }
 
-        .btn-action-small:hover {
-            transform: scale(1.1);
-        }
+        .btn-action-small:hover { transform: scale(1.1); }
 
-        @media (max-width: 640px) {
-            .modal-content {
-                padding: 1.5rem;
-                margin: 1rem;
-            }
+        /* ---- Miscelânea preservada ---- */
+        .rotate-180 { transform: rotate(180deg); }
 
-            .grid-cols-1 {
-                gap: 1rem;
-            }
-        }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
 
-        /* [AAA] Custom Animations */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-
-        @keyframes bounceSubtle {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-4px);
-            }
-        }
-
-        .animate-bounce-subtle {
-            animation: bounceSubtle 2s infinite ease-in-out;
-        }
-
-        /* [AAA] Liquid Blobs Dark Mode Adjustment */
-        .dark .blob-1 {
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-            opacity: 0.4;
-        }
-
-        .dark .blob-2 {
-            background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
-            opacity: 0.4;
-        }
-
-        .dark .blob-3 {
-            background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%);
-            opacity: 0.4;
-        }
+        /* ---- Compensações dark p/ utilitárias Tailwind remanescentes no markup
+               e em template strings do JS (saem conforme forem tokenizadas) ---- */
+        .dark .bg-white { background-color: var(--surface-1); }
+        .dark .bg-white\/40, .dark .bg-white\/50, .dark .bg-white\/60 { background-color: rgba(19, 28, 46, .55); }
+        .dark .bg-gray-50, .dark .bg-gray-50\/50, .dark .bg-gray-100, .dark .bg-gray-200,
+        .dark .bg-slate-50, .dark .bg-indigo-50, .dark .bg-indigo-50\/50,
+        .dark .bg-blue-50, .dark .bg-blue-50\/50 { background-color: var(--surface-inset); }
+        .dark #meta-section .bg-emerald-50, .dark #meta-section .bg-amber-50,
+        .dark #meta-section .bg-red-50 { background-color: var(--surface-inset); }
+        .dark .text-gray-900, .dark .text-gray-800, .dark .text-gray-700,
+        .dark .text-slate-800, .dark .text-slate-700 { color: var(--text); }
+        .dark .text-gray-600, .dark .text-gray-500, .dark .text-slate-600, .dark .text-slate-500 { color: var(--text-muted); }
+        .dark .border-gray-100, .dark .border-gray-200, .dark .border-gray-200\/50,
+        .dark .border-gray-300\/50, .dark .border-indigo-100, .dark .border-indigo-200,
+        .dark .border-blue-200, .dark .border-emerald-100, .dark .border-amber-100,
+        .dark .border-slate-200 { border-color: var(--border); }
+        .dark .divide-gray-200\/50 > * + * { border-color: var(--border); }
     </style>
 </head>
 
-<body class="min-h-screen">
-    <!-- Efeitos de Fundo Liquid Glass -->
-    <div class="liquid-blob blob-1"></div>
-    <div class="liquid-blob blob-2"></div>
-    <div class="liquid-blob blob-3"></div>
+<body class="min-h-screen" data-page="financas">
 
-    <!-- [AAA] Super-Premium Page Loader -->
+    <!-- Page Loader (id/mecanismo preservados, visual do DS) -->
     <div id="page-loader">
         <div class="loader-content">
-            <div class="loader-logo-wrapper">
-                <div class="loader-logo-glow"></div>
-                <div class="loader-ring"></div>
-                <div class="loader-logo-main">
-                    <i class="fa-solid fa-chart-line"></i>
-                </div>
-            </div>
-            <div class="flex flex-col items-center gap-3">
-                <div id="loader-message" class="loader-text-aaa">Sincronizando Aero Festas</div>
-            </div>
+            <div class="loader-spinner"></div>
+            <div id="loader-message" class="loader-text">Sincronizando Aero Festas</div>
         </div>
     </div>
 
@@ -6150,90 +5330,45 @@
         }
     </script>
 
-    <canvas id="particles-js"></canvas>
-
     <div id="page-content-wrapper">
 
-        <div class="container mx-auto p-4 md:p-8 relative z-10">
-            <header class="text-center mb-8 relative">
-                <h1 class="text-4xl md:text-5xl header-title">Gestão Financeira</h1>
-                <p class="text-gray-500 mt-2">Aero & ABC Festas</p>
-                <div class="absolute top-0 left-0 flex space-x-2 p-2">
-                    <button onclick="window.location.href='./Dashboard.html'"
-                        class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors"
-                        title="Acessar Dashboard">
-                        <i class="fa-solid fa-house"></i>
-                    </button>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
+            <header class="page-header">
+                <div>
+                    <h1 class="flex items-center gap-3">
+                        <i class="fa-solid fa-chart-pie text-grad-brand"></i> Financeiro
+                    </h1>
+                    <p class="page-subtitle">Gestão financeira · Aero &amp; ABC Festas</p>
                 </div>
-                <div class="absolute top-0 right-0 flex space-x-2 p-2">
-                    <!-- Ícones de Navegação (Escondidos no Mobile) -->
-                    <div class="hidden lg:flex space-x-2">
-                        <button onclick="window.location.href='./Agenda de eventos.html'"
-                            class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors"
-                            title="Acessar Agenda de Eventos">
-                            <i class="fa-solid fa-calendar-days"></i>
-                        </button>
-                        <button class="bg-indigo-200/80 text-indigo-700 w-10 h-10 rounded-full cursor-default"
-                            title="Você está no Financeiro">
-                            <i class="fas fa-chart-line"></i>
-                        </button>
-                        <button onclick="window.location.href='./Sistema de CRM.html'"
-                            class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors"
-                            title="Acessar CRM">
-                            <i class="fas fa-users"></i>
-                        </button>
-                        <button onclick="window.location.href='./Equipamentos.html'"
-                            class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors"
-                            title="Acessar Equipamentos">
-                            <i class="fas fa-cubes text-indigo-500"></i>
-                        </button>
-                    </div>
-                    <!-- Botão Dark Mode -->
-                    <button id="theme-toggle"
-                        class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all duration-300 shadow-sm"
-                        title="Alternar Tema">
-                        <i class="fas fa-moon dark:hidden"></i>
-                        <i class="fas fa-sun hidden dark:block"></i>
-                    </button>
-                    <!-- Botão de Configurações (Sempre visível) -->
-                    <button id="settings-btn"
-                        class="bg-white/50 text-gray-600 w-10 h-10 rounded-full hover:bg-white/80 transition-colors"
-                        title="Configurações">
+                <div class="flex items-center gap-2">
+                    <!-- Botão de Configurações (chave da API Gemini) -->
+                    <button id="settings-btn" class="btn btn-ghost btn-icon" title="Configurações">
                         <i class="fas fa-cog"></i>
                     </button>
                 </div>
             </header>
 
-            <nav class="flex justify-center mb-8 space-x-1 md:space-x-2 flex-wrap">
-                <button data-target="dashboard"
-                    class="nav-link active shiny-btn px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
-                        class="fa-solid fa-chart-pie mr-2"></i> Dashboard</button>
-                <button data-target="entradas"
-                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
-                        class="fa-solid fa-calendar-check mr-2"></i> Entradas</button>
-                <button data-target="gastos"
-                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
-                        class="fa-solid fa-cart-shopping mr-2"></i> Gastos</button>
-                <button data-target="contas-fixas"
-                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
-                        class="fa-solid fa-file-invoice-dollar mr-2"></i> Contas Fixas</button>
-                <button data-target="monitores"
-                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
-                        class="fa-solid fa-users mr-2"></i> Monitores</button>
-                <button data-target="salarios"
-                    class="nav-link nav-glass text-gray-700 font-semibold px-4 py-2 rounded-md text-sm md:text-base mb-2"><i
-                        class="fa-solid fa-money-bill-wave mr-2"></i> Salários</button>
+            <nav class="segmented finance-tabs" role="tablist" aria-label="Seções do financeiro">
+                <button data-target="dashboard" class="nav-link active"><i
+                        class="fa-solid fa-chart-pie mr-1"></i> Dashboard</button>
+                <button data-target="entradas" class="nav-link"><i
+                        class="fa-solid fa-calendar-check mr-1"></i> Entradas</button>
+                <button data-target="gastos" class="nav-link"><i
+                        class="fa-solid fa-cart-shopping mr-1"></i> Gastos</button>
+                <button data-target="contas-fixas" class="nav-link"><i
+                        class="fa-solid fa-file-invoice-dollar mr-1"></i> Contas Fixas</button>
+                <button data-target="monitores" class="nav-link"><i
+                        class="fa-solid fa-users mr-1"></i> Monitores</button>
+                <button data-target="salarios" class="nav-link"><i
+                        class="fa-solid fa-money-bill-wave mr-1"></i> Salários</button>
             </nav>
 
-            <div
-                class="month-filter-container glassmorphism p-4 rounded-lg mb-8 flex justify-center items-center gap-4">
-                <button class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
-                    data-direction="-1">&lt;</button>
-                <input type="month"
-                    class="month-filter form-input text-center font-semibold text-indigo-600 border-none shadow-inner bg-white/50 backdrop-blur-sm"
-                    id="month-filter-global">
-                <button class="month-nav-btn nav-glass text-gray-600 w-10 h-10 rounded-full font-bold text-lg"
-                    data-direction="1">&gt;</button>
+            <div class="month-filter-container">
+                <button class="month-nav-btn" data-direction="-1" title="Mês anterior"
+                    aria-label="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                <input type="month" class="month-filter" id="month-filter-global">
+                <button class="month-nav-btn" data-direction="1" title="Próximo mês"
+                    aria-label="Próximo mês"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
 
             <main>
@@ -6246,42 +5381,30 @@
                         </div>
                     </div>
 
-                    <section id="dashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="glassmorphism p-6 rounded-lg text-center dashboard-card receita">
-                            <i class="fa-solid fa-arrow-up stat-icon-bg"></i>
-                            <h3 class="font-semibold text-gray-600 mb-2 flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-circle-arrow-up text-emerald-500"></i> Receitas do Mês
-                            </h3>
-                            <p id="total-receitas" class="text-4xl font-bold text-emerald-600">R$ 0,00</p>
-                            <div id="receitas-comparison" class="text-xs mt-2 font-medium"></div>
+                    <section id="dashboard" class="kpi-grid">
+                        <div class="kpi-card">
+                            <span class="kpi-label"><i class="fa-solid fa-circle-arrow-up"
+                                    style="color:var(--success)"></i> Receitas do Mês</span>
+                            <p id="total-receitas" class="kpi-value tabular-nums">R$ 0,00</p>
+                            <div id="receitas-comparison" class="kpi-delta"></div>
                         </div>
-                        <div class="glassmorphism p-6 rounded-lg text-center dashboard-card despesa">
-                            <i class="fa-solid fa-arrow-down stat-icon-bg"></i>
-                            <h3 class="font-semibold text-gray-600 mb-2 flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-circle-arrow-down text-red-500"></i> Despesas do Mês
-                            </h3>
-                            <p id="total-despesas" class="text-4xl font-bold text-red-500">R$ 0,00</p>
-                            <div id="despesas-comparison" class="text-xs mt-2 font-medium"></div>
+                        <div class="kpi-card">
+                            <span class="kpi-label"><i class="fa-solid fa-circle-arrow-down"
+                                    style="color:var(--danger)"></i> Despesas do Mês</span>
+                            <p id="total-despesas" class="kpi-value tabular-nums">R$ 0,00</p>
+                            <div id="despesas-comparison" class="kpi-delta"></div>
                         </div>
-                        <div class="glassmorphism p-6 rounded-lg text-center dashboard-card saldo">
-                            <i class="fa-solid fa-scale-balanced stat-icon-bg"></i>
-                            <h3 class="font-semibold text-gray-600 mb-2 flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-building-columns text-blue-500"></i> Saldo do Mês
-                            </h3>
-                            <p id="saldo-total" class="text-4xl font-bold text-blue-600">R$ 0,00</p>
-                            <div id="saldo-comparison" class="text-xs mt-2 font-medium"></div>
+                        <div class="kpi-card">
+                            <span class="kpi-label"><i class="fa-solid fa-scale-balanced"></i> Saldo do Mês</span>
+                            <p id="saldo-total" class="kpi-value tabular-nums">R$ 0,00</p>
+                            <div id="saldo-comparison" class="kpi-delta"></div>
                         </div>
-                        <div
-                            class="glassmorphism p-6 rounded-lg text-center flex flex-col justify-center items-center dashboard-card ia">
-                            <i class="fa-solid fa-wand-magic-sparkles stat-icon-bg"></i>
-                            <h3 class="font-bold text-indigo-700 mb-3 flex items-center gap-2">
-                                <i class="fa-solid fa-robot"></i> Inteligência Aero
-                            </h3>
-                            <button onclick="openChat('dashboard')" class="gemini-btn w-full mb-2">
+                        <div class="kpi-card">
+                            <span class="kpi-label"><i class="fa-solid fa-robot"></i> Inteligência Aero</span>
+                            <button onclick="openChat('dashboard')" class="gemini-btn w-full mb-2 mt-1 py-2 text-sm">
                                 <i class="fa-solid fa-sparkles"></i> Gerar Insights
                             </button>
-                            <button id="export-executive-pdf"
-                                class="w-full py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-lg">
+                            <button id="export-executive-pdf" class="btn btn-secondary btn-sm w-full">
                                 <i class="fa-solid fa-file-pdf"></i> Relatório Executivo
                             </button>
                         </div>
@@ -6292,9 +5415,8 @@
                         @keyframes meta-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
                         @keyframes meta-count-pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
                         @keyframes meta-trophy { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.3) rotate(5deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
-                        #meta-section { animation: meta-slide-up 0.6s ease-out both; transition: box-shadow 0.3s ease, transform 0.3s ease; }
-                        #meta-section:hover { box-shadow: 0 0 24px 4px rgba(99, 102, 241, 0.15); transform: translateY(-2px); }
-                        #meta-progress-bar { position: relative; overflow: hidden; }
+                        #meta-section { animation: meta-slide-up 0.6s ease-out both; }
+                        #meta-progress-bar { position: relative; overflow: hidden; height: 100%; border-radius: 999px; }
                         #meta-progress-bar::after {
                             content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
                             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
@@ -6309,60 +5431,60 @@
                         .meta-value-pop { animation: meta-count-pop 0.4s ease-out; }
                         .meta-trophy { animation: meta-trophy 0.6s ease-out 0.5s backwards; display: inline-block; }
                     </style>
-                    <section id="meta-section" class="glassmorphism p-6 rounded-lg mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-bold text-gray-700 flex items-center gap-2">
-                                <i class="fa-solid fa-bullseye text-indigo-600 animate-pulse"></i> Meta do Mês
+                    <section id="meta-section" class="surface px-5 py-4 mb-8">
+                        <div class="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                            <h3 class="meta-title">
+                                <i class="fa-solid fa-bullseye"></i> Meta do Mês
                             </h3>
-                            <span id="meta-valor" class="text-lg font-bold text-indigo-600 transition-all duration-300">R$ 0,00</span>
+                            <span id="meta-valor" class="meta-goal transition-all duration-300">R$ 0,00</span>
                         </div>
-                        <div class="relative w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-4 shadow-inner">
-                            <div id="meta-progress-bar" class="h-full rounded-full" style="width: 0%; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-                            <span id="meta-progress-text" class="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white drop-shadow-md">0%</span>
+                        <div class="meta-track">
+                            <div id="meta-progress-bar" style="width: 0%; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                            <span id="meta-progress-text" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow-md">0%</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                            <div class="meta-card-anim p-4 rounded-xl bg-emerald-50 border border-emerald-100 cursor-default">
+                        <div class="meta-stats">
+                            <div class="meta-card-anim p-3 rounded-xl bg-emerald-50 border border-emerald-100 cursor-default">
                                 <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1"><i class="fa-solid fa-coins mr-1"></i>Receita Atual</p>
-                                <p id="meta-receita-atual" class="text-xl font-bold text-emerald-700">R$ 0,00</p>
+                                <p id="meta-receita-atual" class="text-lg font-bold text-emerald-700 tabular-nums">R$ 0,00</p>
                             </div>
-                            <div class="meta-card-anim p-4 rounded-xl bg-amber-50 border border-amber-100 cursor-default">
+                            <div class="meta-card-anim p-3 rounded-xl bg-amber-50 border border-amber-100 cursor-default">
                                 <p class="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1"><i class="fa-solid fa-flag-checkered mr-1"></i>Falta para a Meta</p>
-                                <p id="meta-falta" class="text-xl font-bold text-amber-700">R$ 0,00</p>
+                                <p id="meta-falta" class="text-lg font-bold text-amber-700 tabular-nums">R$ 0,00</p>
                             </div>
-                            <div class="meta-card-anim p-4 rounded-xl border cursor-default" id="meta-acumulado-card">
+                            <div class="meta-card-anim p-3 rounded-xl border cursor-default" id="meta-acumulado-card">
                                 <p class="text-[10px] font-bold uppercase tracking-wider mb-1" id="meta-acumulado-label"><i class="fa-solid fa-layer-group mr-1"></i>Acumulado</p>
-                                <p id="meta-acumulado" class="text-xl font-bold">R$ 0,00</p>
+                                <p id="meta-acumulado" class="text-lg font-bold tabular-nums">R$ 0,00</p>
                             </div>
                         </div>
                     </section>
 
                     <section id="charts-section" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="glassmorphism p-6 rounded-lg">
+                        <div class="surface p-6">
                             <h3 class="text-center font-bold text-gray-700 mb-4">Receita por Empresa (Mês)</h3>
                             <div style="position: relative; height: 300px;">
                                 <canvas id="empresas-chart"></canvas>
                             </div>
                         </div>
-                        <div class="glassmorphism p-6 rounded-lg">
+                        <div class="surface p-6">
                             <h3 class="text-center font-bold text-gray-700 mb-4">Distribuição de Despesas (Mês)</h3>
                             <div style="position: relative; height: 300px;">
                                 <canvas id="despesas-gerais-chart"></canvas>
                             </div>
                         </div>
                         <!-- Gráfico de Gastos & Compras removido por ser desnecessário -->
-                        <div class="glassmorphism p-6 rounded-lg">
+                        <div class="surface p-6">
                             <h3 class="text-center font-bold text-gray-700 mb-4">Contas Fixas (Mês)</h3>
                             <div style="position: relative; height: 300px;">
                                 <canvas id="contas-fixas-chart"></canvas>
                             </div>
                         </div>
-                        <div class="glassmorphism p-6 rounded-lg">
+                        <div class="surface p-6">
                             <h3 class="text-center font-bold text-gray-700 mb-4">Pagamentos Monitores (Mês)</h3>
                             <div style="position: relative; height: 300px;">
                                 <canvas id="pagamentos-monitores-chart"></canvas>
                             </div>
                         </div>
-                        <div class="glassmorphism p-6 rounded-lg lg:col-span-2">
+                        <div class="surface p-6 lg:col-span-2">
                             <h3 class="text-center font-bold text-gray-700 mb-4">Fluxo de Caixa Diário (Mês)</h3>
                             <div style="position: relative; height: 400px;">
                                 <canvas id="daily-chart"></canvas>
@@ -6372,7 +5494,7 @@
                 </div>
 
                 <div id="page-entradas" class="page">
-                    <section class="glassmorphism p-6 rounded-lg">
+                    <section class="surface p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-bold text-gray-800">Entradas Registradas no Mês</h2>
                             <button id="open-entrada-modal-btn" class="shiny-btn px-4 py-2 rounded-md"><i
@@ -6386,7 +5508,7 @@
                             da
                             Agenda de Eventos.</p>
                         <div class="table-wrapper">
-                            <table id="tabela-eventos">
+                            <table id="tabela-eventos" class="table">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
@@ -6405,7 +5527,7 @@
                 </div>
 
                 <div id="page-gastos" class="page space-y-8">
-                    <section class="glassmorphism p-6 rounded-lg">
+                    <section class="surface p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-bold text-gray-800">Gastos Registrados no Mês</h2>
                             <div class="flex items-center gap-2">
@@ -6443,7 +5565,7 @@
                             </div>
                         </div>
                         <div class="table-wrapper">
-                            <table id="tabela-gastos">
+                            <table id="tabela-gastos" class="table">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
@@ -6464,7 +5586,7 @@
                 </div>
 
                 <div id="page-contas-fixas" class="page space-y-8">
-                    <section class="glassmorphism p-6 rounded-lg">
+                    <section class="surface p-6">
                         <div class="flex justify-between items-center">
                             <h2 class="text-2xl font-bold text-gray-800">Contas Fixas</h2>
                             <div class="flex gap-2">
@@ -6478,14 +5600,14 @@
                             </div>
                         </div>
                     </section>
-                    <section class="glassmorphism p-6 rounded-lg">
+                    <section class="surface p-6">
                         <h2 class="text-2xl font-bold text-gray-800 mb-4">Lançamento de Contas Fixas do Mês</h2>
                         <p class="text-sm text-gray-500 mb-4">Aqui são listadas as contas (permanentes ou parcelas)
                             ativas
                             para o mês selecionado.</p>
                         <div class="table-wrapper" id="contas-fixas-cards-container">
                             <!-- Os cards serão gerados dinamicamente aqui -->
-                            <table id="tabela-contas-fixas-mes" class="hidden">
+                            <table id="tabela-contas-fixas-mes" class="table hidden">
                                 <thead>
                                     <tr>
                                         <th>Descrição</th>
@@ -6507,7 +5629,7 @@
                 <div id="page-monitores" class="page">
                     <div class="space-y-6">
                         <!-- F2: a gestão de equipe mudou para equipe.html (código legado removido na F4) -->
-                        <div class="glassmorphism p-8 rounded-lg text-center">
+                        <div class="surface p-8 text-center">
                             <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center text-white text-2xl"
                                 style="background:linear-gradient(135deg,#4F46E5,#7C3AED);box-shadow:0 6px 18px rgba(79,70,229,.35);">
                                 <i class="fa-solid fa-people-group"></i>
@@ -6522,7 +5644,7 @@
                         </div>
 
                         <!-- Seção de Histórico (Visível por padrão, mas compacta para mobile) -->
-                        <section class="glassmorphism p-6 rounded-lg">
+                        <section class="surface p-6">
                             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                                 <h3 class="text-xl font-bold text-gray-800">
                                     <i class="fa-solid fa-history mr-2 text-indigo-500"></i>Histórico de Pagamentos
@@ -6534,7 +5656,7 @@
                             </div>
 
                             <div class="table-wrapper">
-                                <table id="tabela-pagamentos-monitores" class="w-full">
+                                <table id="tabela-pagamentos-monitores" class="table w-full">
                                     <thead>
                                         <tr>
                                             <th class="w-10">
@@ -6562,7 +5684,7 @@
                     </div>
                 </div>
                 <div id="page-salarios" class="page space-y-8">
-                    <section class="glassmorphism p-6 rounded-lg">
+                    <section class="surface p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-bold text-gray-800">Cálculo de Salário</h2>
                             <button id="open-salarios-config-modal-btn" class="gemini-btn px-4 py-2 rounded-md">
@@ -6583,7 +5705,7 @@
                         <div id="salario-calculo-container" class="hidden">
                             <h3 id="salario-nome-funcionario" class="text-xl font-bold text-gray-800 mb-6"></h3>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <div class="glassmorphism p-5 rounded-lg border border-indigo-100">
+                                <div class="surface p-5">
                                     <h3 class="font-semibold text-gray-600 mb-2"><i
                                             class="fa-solid fa-arrow-up mr-2 text-emerald-500"></i>Entradas Totais (Mês)
                                     </h3>
@@ -6591,7 +5713,7 @@
                                     </p>
                                 </div>
 
-                                <div class="glassmorphism p-5 rounded-lg border border-indigo-100">
+                                <div class="surface p-5">
                                     <h3 class="font-semibold text-gray-600 mb-2"><i
                                             class="fa-solid fa-percentage mr-2 text-indigo-500"></i>Comissão Calculada
                                     </h3>
@@ -6600,7 +5722,7 @@
                                     </p>
                                 </div>
 
-                                <div class="glassmorphism p-5 rounded-lg border-2 border-green-300 bg-green-50/30">
+                                <div class="surface p-5" style="border-color: var(--success);">
                                     <h3 class="font-semibold text-gray-700 mb-2"><i
                                             class="fa-solid fa-sack-dollar mr-2 text-green-600"></i>Salário Total a
                                         Pagar
@@ -6998,7 +6120,7 @@
                 <section>
                     <h3 class="text-xl font-bold text-gray-800 mb-4">Funcionários Cadastrados</h3>
                     <div class="table-wrapper">
-                        <table id="tabela-funcionarios-config">
+                        <table id="tabela-funcionarios-config" class="table">
                             <thead>
                                 <tr>
                                     <th>Nome</th>
@@ -7034,7 +6156,7 @@
                 <section>
                     <h3 class="text-xl font-bold text-gray-800 mb-4">Faixas de Comissão Atuais</h3>
                     <div class="table-wrapper">
-                        <table id="tabela-comissao-config">
+                        <table id="tabela-comissao-config" class="table">
                             <thead>
                                 <tr>
                                     <th>Faturamento Até (R$)</th>
@@ -7234,7 +6356,7 @@
 
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
             <div class="table-wrapper">
-                <table id="tabela-cf-categorias-db">
+                <table id="tabela-cf-categorias-db" class="table">
                     <thead>
                         <tr>
                             <th>Nome</th>
@@ -7299,7 +6421,7 @@
 
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Contas Cadastradas</h3>
             <div class="table-wrapper">
-                <table id="tabela-contas-db">
+                <table id="tabela-contas-db" class="table">
                     <thead>
                         <tr>
                             <th>Nome</th>
@@ -7344,7 +6466,7 @@
 
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Categorias Cadastradas</h3>
             <div class="table-wrapper">
-                <table id="tabela-gasto-categorias-db">
+                <table id="tabela-gasto-categorias-db" class="table">
                     <thead>
                         <tr>
                             <th>Nome</th>
@@ -7435,13 +6557,6 @@
                 </form>
             </div>
         </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="gemini-toast"
-        class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-[200]">
-        <i id="gemini-toast-icon" class="text-lg"></i>
-        <p id="gemini-toast-message" class="ml-3 font-medium"></p>
     </div>
 
     <!-- Modal: Lista de Monitores (Mobile-First Cards) -->
@@ -7983,7 +7098,9 @@
         </div>
     </div>
 
-    <!-- Sistema de Autenticação -->
+    <!-- Design system (toasts/modais), navegação unificada e autenticação -->
+    <script src="js/ui.js"></script>
+    <script src="js/nav.js"></script>
     <script src="js/protect.js"></script>
 
 
@@ -8006,18 +7123,8 @@
         const openIAModal = (modalEl) => modalEl.classList.remove('hidden');
         const hideIAModal = (modalEl) => modalEl.classList.add('hidden');
 
-        const showIAToast = (message, isError = true) => {
-            const toast = document.getElementById('gemini-toast');
-            const toastMessage = document.getElementById('gemini-toast-message');
-            const toastIcon = document.getElementById('gemini-toast-icon');
-            if (!toast || !toastMessage) return;
-            toastMessage.textContent = message;
-            toast.classList.toggle('bg-red-600', isError);
-            toast.classList.toggle('bg-green-600', !isError);
-            if (toastIcon) toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 5000);
-        };
+        // Delegado ao design system (js/ui.js) — assinatura legada preservada
+        const showIAToast = (message, isError = true) => window.UI.toast(message, !!isError);
 
         // Placeholder Animation for API Key
         const animatePlaceholder = () => {
@@ -8403,59 +7510,6 @@
     </div>
 
     <script src="js/charts-init.js"></script>
-
-    <!-- Bottom Navigation Bar (Mobile Only) -->
-    <nav class="bottom-nav active" id="main-bottom-nav">
-        <!-- Handle Tátil (Puxador Integrado) -->
-        <div class="bottom-nav-handle" id="bottom-nav-handle">
-            <i class="fas fa-chevron-up"></i>
-        </div>
-
-        <a href="./Dashboard.html" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Início</span>
-        </a>
-        <a href="./Agenda de eventos.html" class="nav-item">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Agenda</span>
-        </a>
-        <a href="#" class="nav-item active">
-            <i class="fas fa-wallet"></i>
-            <span>Financeiro</span>
-        </a>
-        <a href="./Sistema de CRM.html" class="nav-item">
-            <i class="fas fa-users"></i>
-            <span>Clientes</span>
-        </a>
-        <a href="./Equipamentos.html" class="nav-item">
-            <i class="fas fa-cubes"></i>
-            <span>Equipamentos</span>
-        </a>
-    </nav>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const bottomNav = document.getElementById('main-bottom-nav');
-            const handle = document.getElementById('bottom-nav-handle');
-
-            if (bottomNav) {
-                // Clique no handle ou na própria barra (quando recolhida) alterna o estado
-                const toggleNav = (e) => {
-                    e.stopPropagation();
-                    bottomNav.classList.toggle('collapsed');
-                };
-
-                handle?.addEventListener('click', toggleNav);
-
-                // Se estiver recolhida, clicar em qualquer lugar da pílula pequena a expande
-                bottomNav.addEventListener('click', (e) => {
-                    if (bottomNav.classList.contains('collapsed')) {
-                        toggleNav(e);
-                    }
-                });
-            }
-        });
-    </script>
 
     <!-- Modal Visualizador de Foto -->
     <div id="modal-visualizador-foto"
