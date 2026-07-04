@@ -4,7 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#4f46e5">
-    <title>Cadastro de Evento - Aero Festas</title>
+    <title>Confirme seu evento · Aero Festas</title>
+    <meta name="description" content="Faltam só alguns detalhes para deixarmos tudo pronto para a sua festa com a Aero Festas. É rápido e seguro. 💛">
+
+    <!-- Prévia do link (WhatsApp/redes) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Aero Festas">
+    <meta property="og:title" content="Confirme seu evento ✨">
+    <meta property="og:description" content="Faltam só alguns detalhes para deixarmos tudo pronto para a sua festa. É rápido, seguro e leva pouquinho tempo. 💛">
+    <meta property="og:image" content="https://agenda-aero-festas.web.app/icons/icon-512.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Confirme seu evento ✨ · Aero Festas">
+    <meta name="twitter:description" content="Faltam só alguns detalhes para deixarmos tudo pronto para a sua festa. 💛">
+    <meta name="twitter:image" content="https://agenda-aero-festas.web.app/icons/icon-512.png">
+    <link rel="icon" href="/icons/icon-192.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -549,7 +564,8 @@
     <script>
         const API_BASE = "https://backend-aerofestas-production.up.railway.app/api";
         const params = new URLSearchParams(window.location.search);
-        const eventId = params.get('id');
+        // Aceita o link curto /e/<id> (rewrite do Firebase) OU o legado ?id=<id>
+        const eventId = params.get('id') || (window.location.pathname.match(/\/e\/(\d+)/) || [])[1] || null;
 
         const $ = id => document.getElementById(id);
         const onlyDigits = v => (v || '').replace(/\D/g, '');

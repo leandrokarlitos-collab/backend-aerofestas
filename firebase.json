@@ -29,6 +29,10 @@
         ],
         "rewrites": [
             {
+                "source": "/e/**",
+                "destination": "/cadastro-evento.html"
+            },
+            {
                 "source": "/p/maple-bear",
                 "destination": "/propostas/maple-bear/index.html"
             },

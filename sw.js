@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.7.1';
+const CACHE_NAME = 'aero-festas-v3.7.2';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -83,8 +83,8 @@ self.addEventListener('fetch', (event) => {
 
     // Propostas dinâmicas (/p/* e /propostas/view.html) — SEMPRE rede,
     // nunca cacheia: o conteúdo depende da API e pode ser editado a qualquer momento.
-    if (url.pathname === '/propostas/view.html' || url.pathname.startsWith('/p/')) {
-        return; // bypass total do SW
+    if (url.pathname === '/propostas/view.html' || url.pathname.startsWith('/p/') || url.pathname.startsWith('/e/')) {
+        return; // bypass total do SW (propostas e link curto de cadastro /e/<id>)
     }
 
     // Apenas para recursos LOCAIS da aplicação

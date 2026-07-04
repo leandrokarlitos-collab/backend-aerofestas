@@ -8188,7 +8188,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     if (pixKey) localStorage.setItem('aero_last_pix', pixKey);
 
                     // Mostra seção de compartilhamento
-                    const url = `${window.location.origin}/cadastro-evento.html?id=${savedEvent.id}`;
+                    const url = `${window.location.origin}/e/${savedEvent.id}`;
                     document.getElementById('link-cadastro-url').value = url;
 
                     // Contexto para a mensagem premium
@@ -8237,7 +8237,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             // JÁ criado — permite reenviar o link sem gerar outro.
             const reopenShareForEvent = (event) => {
                 if (!event) return;
-                const url = `${window.location.origin}/cadastro-evento.html?id=${event.id}`;
+                const url = `${window.location.origin}/e/${event.id}`;
                 const company = (companies || []).find(c => c.id === event.yourCompanyId);
                 const companyName = company?.name || '';
                 const [yy, mm, dd] = String(event.date || '').split('-');
