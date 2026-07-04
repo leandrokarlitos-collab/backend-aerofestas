@@ -203,8 +203,9 @@ model Event {
   discountValue    Float?
   deliveryFee      Float?
   paymentStatus    String?
-  signalAmount     Float?
+  signalAmount     Float?     // Entrada (R$) para confirmar a reserva — mostrada ao cliente no link
   signalReceived   Boolean?
+  pixKey           String?    // Chave PIX exibida ao cliente na etapa de pagamento do link
   paymentDetails   String?
 
   // Evento vendido por ingresso (sem locação fixa) — apenas projeção

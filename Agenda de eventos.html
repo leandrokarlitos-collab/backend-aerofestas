@@ -2376,6 +2376,30 @@
                     </div>
                 </div>
 
+                <!-- Entrada / Sinal (opcional) -->
+                <div class="mb-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fas fa-hand-holding-usd mr-1 text-amber-500"></i>Entrada para reserva <span class="text-xs font-normal text-gray-400">(opcional)</span></label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex">
+                                <input type="number" id="link-entrada-percent" min="0" max="100" step="1" placeholder="% do total" class="form-input flex-1 w-full px-2 py-2 rounded-l-md text-sm border-r-0">
+                                <span class="form-input inline-flex items-center px-2 rounded-r-md text-sm text-gray-500 bg-gray-100">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <input type="number" id="link-entrada-value" min="0" step="0.01" placeholder="Valor R$" class="form-input w-full px-2 py-2 rounded-md text-sm">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Deixe vazio se este evento não exige entrada. O valor tem prioridade sobre a %.</p>
+                </div>
+
+                <!-- Chave PIX (opcional) -->
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fas fa-qrcode mr-1 text-emerald-500"></i>Chave PIX <span class="text-xs font-normal text-gray-400">(opcional)</span></label>
+                    <input type="text" id="link-pix-key" class="form-input w-full px-3 py-2 rounded-md text-sm" placeholder="CPF, telefone, e-mail ou aleatória">
+                    <p class="text-xs text-gray-400 mt-1">Usada para o cliente fazer a entrada ao final do cadastro.</p>
+                </div>
+
                 <!-- Totais -->
                 <div class="mb-4 p-3 bg-gray-50 rounded-md space-y-1 text-sm">
                     <div class="flex justify-between text-gray-600"><span>Subtotal:</span><span id="link-subtotal" class="font-medium tabular-nums">R$ 0,00</span></div>
@@ -2393,18 +2417,46 @@
             </div>
             <!-- Etapa 2: Compartilhamento -->
             <div id="link-cadastro-share" class="hidden">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-check-circle mr-2 text-green-500"></i>Link Gerado!</h2>
-                    <button id="close-link-share-btn" class="text-gray-500 hover:text-gray-700 text-xl"><i class="fas fa-times"></i></button>
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-md shrink-0">
+                            <i class="fas fa-check text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900 leading-tight">Convite pronto!</h2>
+                            <p class="text-sm text-gray-500">Envie ao cliente com um toque.</p>
+                        </div>
+                    </div>
+                    <button id="close-link-share-btn" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
                 </div>
-                <p class="text-sm text-gray-500 mb-4">Envie este link para o cliente preencher os dados.</p>
+
+                <!-- Resumo discreto -->
+                <div class="mb-4 p-4 rounded-xl bg-gradient-to-br from-amber-50 to-white border border-amber-100">
+                    <div class="flex items-center justify-between text-sm mb-1.5">
+                        <span class="text-gray-500"><i class="fas fa-user mr-1.5 text-amber-400"></i>Cliente</span>
+                        <span id="link-share-client" class="font-semibold text-gray-800">—</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm mb-1.5">
+                        <span class="text-gray-500"><i class="fas fa-calendar-day mr-1.5 text-amber-400"></i>Data</span>
+                        <span id="link-share-date" class="font-semibold text-gray-800">—</span>
+                    </div>
+                    <div id="link-share-entrada-row" class="flex items-center justify-between text-sm pt-2 mt-2 border-t border-amber-100 hidden">
+                        <span class="text-gray-500"><i class="fas fa-hand-holding-usd mr-1.5 text-emerald-500"></i>Entrada</span>
+                        <span id="link-share-entrada" class="font-bold text-emerald-600 tabular-nums">—</span>
+                    </div>
+                </div>
+
+                <label class="block text-xs font-medium text-gray-500 mb-1">Link do cadastro</label>
                 <div class="mb-4">
-                    <input type="text" id="link-cadastro-url" class="form-input w-full px-3 py-2 rounded-md bg-gray-100 text-sm" readonly>
+                    <input type="text" id="link-cadastro-url" class="form-input w-full px-3 py-2 rounded-md bg-gray-50 text-sm text-gray-600" readonly>
                 </div>
-                <div class="flex gap-3">
-                    <button id="link-copy-btn" class="flex-1 px-4 py-2 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"><i class="fas fa-copy mr-1"></i>Copiar Link</button>
-                    <button id="link-share-btn" class="flex-1 px-4 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"><i class="fab fa-whatsapp mr-1"></i>Compartilhar</button>
-                </div>
+
+                <button id="link-share-btn" class="w-full px-4 py-3 mb-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold text-base shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
+                    <i class="fab fa-whatsapp text-xl"></i> Enviar convite pelo WhatsApp
+                </button>
+                <button id="link-copy-btn" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-copy"></i> Copiar link
+                </button>
             </div>
         </div>
     </div>
@@ -7930,6 +7982,8 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             // ===== LINK DE CADASTRO: Modal + Lógica =====
             let linkCadastroToys = [];
             let linkCadastroDateStr = '';
+            // Contexto do último link gerado (para montar a mensagem premium de compartilhamento)
+            let linkShareContext = { clientName: '', companyName: '', dateBR: '', signalAmount: 0, url: '' };
 
             const openLinkCadastroModal = (dateStr) => {
                 linkCadastroDateStr = dateStr;
@@ -7942,6 +7996,10 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 document.getElementById('link-discount-type').value = 'fixed';
                 document.getElementById('link-discount-value').value = 0;
                 document.getElementById('link-delivery-fee').value = 0;
+                document.getElementById('link-entrada-percent').value = '';
+                document.getElementById('link-entrada-value').value = '';
+                // Chave PIX: lembra a última usada
+                document.getElementById('link-pix-key').value = localStorage.getItem('aero_last_pix') || '';
                 document.getElementById('link-cadastro-config').classList.remove('hidden');
                 document.getElementById('link-cadastro-share').classList.add('hidden');
 
@@ -8079,6 +8137,19 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     : discountValue;
                 const totalPrice = Math.max(0, subtotal - discountAmount) + deliveryFee;
 
+                // Entrada (sinal): valor tem prioridade sobre a %; vazio => sem etapa de pagamento
+                const entradaValueRaw = document.getElementById('link-entrada-value').value.trim();
+                const entradaPercentRaw = document.getElementById('link-entrada-percent').value.trim();
+                let signalAmount = 0;
+                if (entradaValueRaw !== '') {
+                    signalAmount = Math.round((parseFloat(entradaValueRaw) || 0) * 100) / 100;
+                } else if (entradaPercentRaw !== '') {
+                    const pct = parseFloat(entradaPercentRaw) || 0;
+                    signalAmount = Math.round(totalPrice * pct / 100 * 100) / 100;
+                }
+                if (signalAmount < 0) signalAmount = 0;
+                const pixKey = document.getElementById('link-pix-key').value.trim();
+
                 const eventId = Date.now();
                 const clientNameInput = document.getElementById('link-cadastro-client-name').value.trim();
                 const startTimeInput = document.getElementById('link-cadastro-start-time').value;
@@ -8096,6 +8167,8 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     discountType,
                     discountValue,
                     deliveryFee,
+                    signalAmount: signalAmount || null,
+                    pixKey: pixKey || null,
                     status: 'pendente_cadastro'
                 };
                 try {
@@ -8105,9 +8178,31 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     events.push({ ...savedEvent, toys: savedEvent.items || linkCadastroToys, items: savedEvent.items || linkCadastroToys });
                     renderAll();
 
+                    // Lembra a última chave PIX usada
+                    if (pixKey) localStorage.setItem('aero_last_pix', pixKey);
+
                     // Mostra seção de compartilhamento
                     const url = `${window.location.origin}/cadastro-evento.html?id=${savedEvent.id}`;
                     document.getElementById('link-cadastro-url').value = url;
+
+                    // Contexto para a mensagem premium
+                    const companySel = document.getElementById('link-cadastro-company');
+                    const companyName = companySel.options[companySel.selectedIndex]?.textContent?.trim() || '';
+                    const [yy, mm, dd] = linkCadastroDateStr.split('-');
+                    const dateBR = `${dd}/${mm}/${yy}`;
+                    linkShareContext = { clientName: clientNameInput, companyName, dateBR, signalAmount, url };
+
+                    // Preenche o resumo discreto
+                    document.getElementById('link-share-client').textContent = clientNameInput || 'A definir';
+                    document.getElementById('link-share-date').textContent = dateBR;
+                    const entradaRow = document.getElementById('link-share-entrada-row');
+                    if (signalAmount > 0) {
+                        document.getElementById('link-share-entrada').textContent = `${formatCurrency(signalAmount)} para confirmar`;
+                        entradaRow.classList.remove('hidden');
+                    } else {
+                        entradaRow.classList.add('hidden');
+                    }
+
                     document.getElementById('link-cadastro-config').classList.add('hidden');
                     document.getElementById('link-cadastro-share').classList.remove('hidden');
                     showToast('Evento criado! Compartilhe o link com o cliente.', false);
@@ -8132,12 +8227,34 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 });
             });
 
+            // Monta a mensagem premium, calorosa e personalizada para o cliente
+            const buildLinkShareMessage = () => {
+                const { clientName, companyName, dateBR, signalAmount, url } = linkShareContext;
+                const saudacao = clientName ? `Olá, ${clientName}! ✨` : 'Olá! ✨';
+                const empresa = companyName ? ` na ${companyName}` : '';
+                const dataTrecho = dateBR ? ` no dia ${dateBR}` : '';
+                const linhas = [
+                    `${saudacao} Que alegria receber você${empresa}.`,
+                    '',
+                    `Para deixarmos tudo pronto para o seu evento${dataTrecho}, é só preencher seus dados neste link rápido e seguro:`,
+                    url,
+                ];
+                if (signalAmount > 0) {
+                    linhas.push('');
+                    linhas.push(`Ao final, você poderá garantir a sua reserva com a entrada de ${formatCurrency(signalAmount)} via PIX. 💳`);
+                }
+                linhas.push('');
+                linhas.push('Qualquer dúvida, estou por aqui para ajudar! 💛');
+                return linhas.join('\n');
+            };
+
             document.getElementById('link-share-btn').addEventListener('click', () => {
                 const url = document.getElementById('link-cadastro-url').value;
+                const message = buildLinkShareMessage();
                 if (navigator.share) {
-                    navigator.share({ title: 'Cadastro de Evento - Aero Festas', text: 'Preencha seus dados para confirmar o evento:', url });
+                    navigator.share({ title: 'Convite de Evento - Aero Festas', text: message }).catch(() => {});
                 } else {
-                    window.open(`https://wa.me/?text=${encodeURIComponent('Preencha seus dados para confirmar o evento: ' + url)}`, '_blank');
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                 }
             });
 

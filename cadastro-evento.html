@@ -102,18 +102,94 @@
         </div>
 
         <!-- Success -->
-        <div id="success-state" class="glass-card rounded-2xl p-8 md:p-10 text-center hidden">
-            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-circle-check text-5xl text-emerald-500"></i>
+        <div id="success-state" class="glass-card rounded-3xl p-8 md:p-12 hidden animate-[slideUp_0.5s_ease-out]"
+            style="box-shadow: var(--shadow-2); border-color: var(--brand-100)">
+            <!-- Cabeçalho do sucesso -->
+            <div class="text-center">
+                <div class="relative w-24 h-24 mx-auto mb-5">
+                    <div class="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50"></div>
+                    <div class="absolute inset-2 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-check text-white text-4xl"></i>
+                    </div>
+                </div>
+                <h2 id="success-title" class="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2 tracking-tight">Recebemos seus dados!</h2>
+                <p id="success-message" class="text-gray-500 text-base leading-relaxed max-w-md mx-auto">A equipe Aero Festas entrará em contato em breve para confirmar.</p>
             </div>
-            <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-2">Recebemos seus dados!</h2>
-            <p id="success-message" class="text-gray-500 mb-5">A equipe Aero Festas entrará em contato em breve para confirmar.</p>
-            <button type="button" id="success-download-btn"
-                class="w-full max-w-xs mx-auto py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2"
-                style="min-height: 48px">
-                <i class="fa-solid fa-file-arrow-down"></i> Baixar minha cópia do contrato
-            </button>
-            <p class="text-xs text-gray-400 mt-3">Você pode salvar este PDF como comprovante.</p>
+
+            <!-- ETAPA DE PAGAMENTO (aparece só quando há entrada) -->
+            <div id="payment-block" class="hidden mt-8">
+                <div class="rounded-2xl p-6 md:p-7 text-center"
+                    style="background: linear-gradient(160deg, var(--brand-50) 0%, var(--surface-1) 60%); border: 1px solid var(--brand-100)">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide text-indigo-600 bg-white/70 border border-indigo-100">
+                        <i class="fa-solid fa-shield-heart"></i> Falta só um passo
+                    </span>
+                    <h3 class="text-xl md:text-2xl font-extrabold text-gray-800 mt-3">Sua reserva está quase garantida!</h3>
+                    <p class="text-sm text-gray-500 mt-1.5 max-w-sm mx-auto">Para confirmar a data, realize o PIX da entrada abaixo.</p>
+
+                    <!-- Valor da entrada em destaque -->
+                    <div class="mt-5 mb-1">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Entrada</p>
+                        <p id="signal-amount" class="text-4xl md:text-5xl font-extrabold text-indigo-700 tabular-nums leading-none mt-1">R$ 0,00</p>
+                    </div>
+                </div>
+
+                <!-- Caixa da chave PIX -->
+                <div id="pix-box" class="mt-4 hidden">
+                    <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">
+                        <i class="fa-solid fa-qrcode text-indigo-500 mr-1"></i> Chave PIX
+                    </label>
+                    <div class="flex items-stretch gap-2">
+                        <div class="flex-1 min-w-0 flex items-center bg-white border-2 border-dashed border-indigo-300 rounded-xl px-3 py-2.5">
+                            <span id="pix-key-value" class="font-mono font-semibold text-gray-800 text-sm md:text-base truncate select-all"></span>
+                        </div>
+                        <button type="button" id="copy-pix-btn"
+                            class="shrink-0 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2 transition-all active:scale-95"
+                            style="min-height: 48px">
+                            <i id="copy-pix-icon" class="fa-solid fa-copy"></i>
+                            <span id="copy-pix-label" class="hidden sm:inline">Copiar</span>
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> Toque em copiar e cole no seu app do banco.
+                    </p>
+                </div>
+
+                <!-- Fallback: dados bancários (aparece se não houver chave PIX) -->
+                <div id="bank-info-box" class="mt-4 hidden">
+                    <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">
+                        <i class="fa-solid fa-building-columns text-indigo-500 mr-1"></i> Dados para pagamento
+                    </label>
+                    <div class="bg-white border border-gray-200 rounded-xl px-4 py-3">
+                        <p id="bank-info-value" class="text-sm text-gray-700 whitespace-pre-line leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <!-- Dados bancários adicionais (texto pequeno, quando há PIX + paymentInfo) -->
+                <p id="bank-info-note" class="hidden text-xs text-gray-400 mt-2 leading-relaxed"></p>
+
+                <!-- CTA WhatsApp -->
+                <a id="whatsapp-btn" href="#" target="_blank" rel="noopener"
+                    class="mt-5 w-full py-4 rounded-2xl text-white font-bold text-base md:text-lg shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] hover:brightness-105"
+                    style="background: linear-gradient(135deg, #25D366 0%, #1EBE5A 100%); min-height: 56px; box-shadow: 0 8px 24px rgba(37,211,102,0.35)">
+                    <i class="fa-brands fa-whatsapp text-2xl"></i> Já fiz o PIX — enviar comprovante
+                </a>
+                <p class="text-xs text-gray-500 mt-2.5 text-center flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-comment-dots text-emerald-500"></i>
+                    Envie o comprovante no WhatsApp para confirmarmos sua reserva.
+                </p>
+
+                <div class="my-6 border-t border-gray-100"></div>
+            </div>
+
+            <!-- Baixar contrato (sempre presente) -->
+            <div class="text-center">
+                <button type="button" id="success-download-btn"
+                    class="w-full max-w-xs mx-auto py-3.5 bg-white border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-95"
+                    style="min-height: 48px">
+                    <i class="fa-solid fa-file-arrow-down"></i> Baixar minha cópia do contrato
+                </button>
+                <p class="text-xs text-gray-400 mt-3">Você pode salvar este PDF como comprovante.</p>
+            </div>
         </div>
 
         <!-- Saudação -->
@@ -498,6 +574,12 @@
             // Wizard
             step: 1,
             company: null,
+            // Pagamento (entrada/PIX) — hidratado no loadEvent
+            signalAmount: 0,
+            pixKey: null,
+            companyPhone: null,
+            companyPaymentInfo: null,
+            companyName: null,
             // Assinatura simples
             signed: false,
             signedAt: null,
@@ -1419,6 +1501,13 @@
                 state.deliveryFee = ev.deliveryFee;
                 state.company = ev.company || null;
 
+                // Pagamento (entrada/PIX) — usado na etapa pós-envio
+                state.signalAmount = Number(ev.signalAmount || 0);
+                state.pixKey = ev.pixKey || null;
+                state.companyPhone = ev.company?.phone || null;
+                state.companyPaymentInfo = ev.company?.paymentInfo || null;
+                state.companyName = ev.company?.name || null;
+
                 renderItems();
                 renderTotals();
                 setAvailabilityStatus('unchanged');
@@ -1494,6 +1583,136 @@
             }
         }
 
+        // ===== Etapa de pagamento (pós-envio) =====
+        function escapeHtml(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // Normaliza telefone para wa.me: só dígitos, com DDI 55 quando faltar.
+        function toWhatsAppNumber(phone) {
+            let d = onlyDigits(phone);
+            if (!d) return '';
+            // 10-11 dígitos = número BR sem DDI (DDD + número). Prefixa 55.
+            if (d.length <= 11) d = '55' + d;
+            return d;
+        }
+
+        // Monta a mensagem premium de comprovante e devolve o link wa.me.
+        function buildWhatsAppLink(clientName, dateStr, signalAmount) {
+            const num = toWhatsAppNumber(state.companyPhone);
+            if (!num) return null;
+            const fname = firstName(clientName);
+            const dataFmt = dateStr ? formatDateLong(dateStr) : '';
+            const valorFmt = formatCurrency(signalAmount);
+            let msg = 'Olá! ';
+            if (fname) msg += `Aqui é ${fname}. `;
+            msg += 'Acabei de fazer o cadastro do meu evento';
+            if (dataFmt && dataFmt !== NAO_DECLARADO) msg += ` do dia ${dataFmt}`;
+            msg += ` e a entrada de ${valorFmt} via PIX. Segue o comprovante para confirmar a reserva. 😊`;
+            return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+        }
+
+        // Preenche e revela a etapa de pagamento. Retorna true se houve entrada.
+        function renderPaymentStep(clientName, dateStr) {
+            const signal = Number(state.signalAmount || 0);
+            if (!(signal > 0)) return false;
+
+            const block = $('payment-block');
+            block.classList.remove('hidden');
+
+            $('signal-amount').textContent = formatCurrency(signal);
+
+            const hasPix = state.pixKey && String(state.pixKey).trim();
+            const hasBank = state.companyPaymentInfo && String(state.companyPaymentInfo).trim();
+
+            if (hasPix) {
+                // Caixa da chave PIX
+                $('pix-box').classList.remove('hidden');
+                $('pix-key-value').textContent = String(state.pixKey).trim();
+                $('bank-info-box').classList.add('hidden');
+                // Dados bancários como nota pequena adicional (se houver)
+                if (hasBank) {
+                    const note = $('bank-info-note');
+                    note.textContent = 'Dados bancários: ' + String(state.companyPaymentInfo).trim();
+                    note.classList.remove('hidden');
+                } else {
+                    $('bank-info-note').classList.add('hidden');
+                }
+            } else if (hasBank) {
+                // Fallback: sem chave PIX, mostra os dados bancários como caixa principal
+                $('pix-box').classList.add('hidden');
+                $('bank-info-box').classList.remove('hidden');
+                $('bank-info-value').textContent = String(state.companyPaymentInfo).trim();
+                $('bank-info-note').classList.add('hidden');
+            } else {
+                // Sem PIX e sem dados bancários: só o valor + WhatsApp
+                $('pix-box').classList.add('hidden');
+                $('bank-info-box').classList.add('hidden');
+                $('bank-info-note').classList.add('hidden');
+            }
+
+            // CTA WhatsApp
+            const waLink = buildWhatsAppLink(clientName, dateStr, signal);
+            const waBtn = $('whatsapp-btn');
+            if (waLink) {
+                waBtn.href = waLink;
+                waBtn.classList.remove('hidden');
+            } else {
+                // Sem telefone da empresa: esconde o botão (não há para onde enviar).
+                waBtn.classList.add('hidden');
+            }
+            return true;
+        }
+
+        // Copiar SÓ a chave PIX (com feedback visual).
+        (function initCopyPix() {
+            const btn = $('copy-pix-btn');
+            if (!btn) return;
+            btn.addEventListener('click', async () => {
+                const key = ($('pix-key-value').textContent || '').trim();
+                if (!key) return;
+                let ok = false;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(key);
+                        ok = true;
+                    }
+                } catch (_) { ok = false; }
+                if (!ok) {
+                    // Fallback para contextos sem Clipboard API
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = key;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        ok = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                    } catch (_) { ok = false; }
+                }
+                const icon = $('copy-pix-icon');
+                const label = $('copy-pix-label');
+                if (ok) {
+                    icon.className = 'fa-solid fa-check';
+                    label.textContent = 'Copiado!';
+                    btn.classList.add('bg-emerald-600');
+                    btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    setTimeout(() => {
+                        icon.className = 'fa-solid fa-copy';
+                        label.textContent = 'Copiar';
+                        btn.classList.remove('bg-emerald-600');
+                        btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                    }, 2200);
+                } else {
+                    alert('Não foi possível copiar. Copie a chave manualmente: ' + key);
+                }
+            });
+        })();
+
         // ===== Submit =====
         $('event-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1565,11 +1784,26 @@
                     state.submitted = true;
                     state.formDirty = false;
                     const fname = firstName(payload.clientName);
-                    const hadChanges = dateTimeChanged() || state.extraItems.length > 0;
-                    const msg = hadChanges
-                        ? 'Recebemos seus dados e suas alterações. A equipe Aero Festas vai confirmar tudo em breve.'
-                        : 'A equipe Aero Festas entrará em contato em breve para confirmar.';
-                    $('success-message').textContent = fname ? `Obrigado, ${fname}! ${msg}` : msg;
+                    const hasSignal = Number(state.signalAmount || 0) > 0;
+
+                    // Monta a etapa de pagamento (se houver entrada definida).
+                    const hasPayment = renderPaymentStep(payload.clientName, payload.date || state.originalDate);
+
+                    if (hasPayment) {
+                        // Fluxo com entrada: mensagem convidando a finalizar o PIX.
+                        $('success-title').textContent = fname
+                            ? `Falta pouco, ${fname}!` : 'Falta pouco!';
+                        $('success-message').textContent = 'Recebemos seu cadastro. Para garantir a data, é só concluir a entrada abaixo.';
+                    } else {
+                        // Fluxo simples (sem entrada): sucesso + baixar contrato.
+                        const hadChanges = dateTimeChanged() || state.extraItems.length > 0;
+                        const msg = hadChanges
+                            ? 'Recebemos seus dados e suas alterações. A equipe Aero Festas vai confirmar tudo em breve.'
+                            : 'A equipe Aero Festas entrará em contato em breve para confirmar.';
+                        $('success-title').textContent = 'Recebemos seus dados!';
+                        $('success-message').textContent = fname ? `Obrigado, ${fname}! ${msg}` : msg;
+                    }
+
                     $('event-form').classList.add('hidden');
                     $('event-summary').classList.add('hidden');
                     $('greeting-card').classList.add('hidden');

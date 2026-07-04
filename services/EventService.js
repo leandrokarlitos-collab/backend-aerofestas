@@ -123,6 +123,7 @@ function buildEventFields(evt, userId) {
         paymentStatus: evt.paymentStatus,
         signalAmount: toFloatOr(evt.signalAmount, 0),
         signalReceived: evt.signalReceived || false,
+        pixKey: evt.pixKey || null,
         paymentDetails: evt.paymentDetails,
 
         isTicketSale: evt.isTicketSale === true,
@@ -274,6 +275,8 @@ async function getPublicEvent(id) {
         discountValue: event.discountValue,
         deliveryFee: event.deliveryFee,
         price: event.price,
+        signalAmount: event.signalAmount,
+        pixKey: event.pixKey,
         clientType: event.clientType,
         clientName: event.clientName,
         clientCpf: event.clientCpf,
