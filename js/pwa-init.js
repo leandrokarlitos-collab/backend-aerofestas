@@ -158,7 +158,7 @@ function showUpdateToast() {
 
     toast.innerHTML = `
         <i class="fas fa-sync fa-spin"></i>
-        <span>Atualizando para a v3.7.2...</span>
+        <span>Atualizando para a v3.7.3...</span>
     `;
 
     const style = document.createElement('style');
