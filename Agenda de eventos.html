@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./js/theme.js"></script>
     <title>Agenda de Eventos - Integrada</title>
 
     <!-- PWA Config -->
@@ -17,57 +18,27 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        dark: {
-                            bg: '#0f172a',
-                            card: 'rgba(30, 41, 59, 0.7)',
-                            border: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    backdropBlur: {
-                        xs: '2px',
-                    }
-                }
-            }
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Outfit', 'sans-serif'] } } } };
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bibliotecas para Geração de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/aero.css">
     <style>
+        /* Vars locais do calendário/loader — mapeadas aos tokens do design system.
+           (Superfícies, texto, body e --text-muted vêm de tokens.css/aero.css.) */
         :root {
-            --glow-color: hsl(224, 88%, 66%);
+            --glow-color: var(--brand-500);
             --glow-color-meeting: #8b5cf6;
-            --primary: #4f46e5;
-            --secondary: #a855f7;
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --text-muted: #6b7280;
+            --primary: var(--brand-600);
+            --secondary: #7c3aed;
             --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
-        }
-
-        .dark {
-            --glass-bg: rgba(15, 23, 42, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-muted: #94a3b8;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #fdfdfd;
-            color: #1f2937;
-            transition: background-color 0.4s ease, color 0.4s ease;
-        }
-
-        body.dark {
-            background-color: #020617;
-            color: #f8fafc;
         }
 
         /* === Seletor de dias (eventos multi-dia / dias alternados) === */
@@ -79,9 +50,9 @@
             min-width: 56px;
             padding: 6px 10px;
             border-radius: 10px;
-            border: 2px solid #6366f1;
-            background: #eef2ff;
-            color: #3730a3;
+            border: 2px solid var(--brand-500);
+            background: var(--brand-50);
+            color: var(--brand-700);
             font-weight: 600;
             line-height: 1.15;
             cursor: pointer;
@@ -105,57 +76,23 @@
         }
 
         .day-chip-off {
-            border-color: #e2e8f0;
-            background: #f1f5f9;
-            color: #94a3b8;
+            border-color: var(--border);
+            background: var(--surface-2);
+            color: var(--text-faint);
             text-decoration: line-through;
             opacity: 0.75;
         }
 
         .dark .day-chip {
-            border-color: #4f46e5;
-            background: rgba(79, 70, 229, 0.18);
-            color: #c7d2fe;
+            border-color: var(--brand-500);
+            background: var(--brand-100);
+            color: var(--brand-400);
         }
 
         .dark .day-chip-off {
-            border-color: #334155;
-            background: rgba(51, 65, 85, 0.45);
-            color: #64748b;
-        }
-
-        #particles-js {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.4;
-        }
-
-        .dark #particles-js {
-            opacity: 0.2;
-        }
-
-        /* Evolução para Spatial Glass AAA */
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow:
-                0 8px 32px 0 rgba(31, 38, 135, 0.07),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .dark .glassmorphism {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-            inset: 0 0 0 1px rgba(255, 255, 255, 0.02);
+            border-color: var(--border-strong);
+            background: var(--surface-2);
+            color: var(--text-faint);
         }
 
         /* === Overlay de loading da geração do contrato === */
@@ -519,45 +456,27 @@
             height: 100%;
             position: relative;
             overflow: hidden;
-            border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(255, 255, 255, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius);
+            transition: transform var(--dur-slow) var(--ease), box-shadow var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease), background-color var(--dur-slow) var(--ease);
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             padding: 8px;
         }
 
-        .dark .day-cell {
-            background: rgba(30, 41, 59, 0.3);
-            border-color: rgba(255, 255, 255, 0.05);
-        }
-
         .day-cell:hover {
             transform: translateY(-4px) scale(1.02);
-            background: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary);
+            box-shadow: var(--shadow-2);
+            border-color: var(--brand-400);
             z-index: 10;
         }
 
-        .dark .day-cell:hover {
-            background: rgba(30, 41, 59, 0.6);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
-        }
-
-        /* [AAA] Faturamento Card - Cor Uniforme */
-        #monthly-total-container {
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .dark #monthly-total-container {
-            background: rgba(15, 23, 42, 0.6);
-            border-color: rgba(16, 185, 129, 0.3);
+        /* Célula "hoje" — recebe .bg-indigo-200/80 do JS; realça com anel da marca */
+        .day-cell.bg-indigo-200\/80 {
+            border-color: var(--brand-500);
+            box-shadow: 0 0 0 2px var(--brand-500) inset;
         }
 
         /* [AAA] Skeleton Loading */
@@ -781,17 +700,27 @@
             box-shadow: 0 8px 25px 0 rgba(220, 38, 38, 0.6);
         }
 
+        /* ---- Glassmorphism legado → superfície sólida (cards, KPIs e modais) ---- */
         .glassmorphism {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(12px) saturate(180%);
-            -webkit-backdrop-filter: blur(12px) saturate(180%);
-            border: 1px solid rgba(200, 200, 200, 0.3);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-1);
         }
 
         .modal-box.glassmorphism {
-            background: rgba(255, 255, 255, 0.75);
+            background: var(--surface-1);
+            box-shadow: var(--shadow-modal);
         }
+
+        /* Modais legados usam .hidden inline (não .modal-backdrop); restaura larguras Tailwind */
+        .modal-box.max-w-md { max-width: 28rem; }
+        .modal-box.max-w-lg { max-width: 32rem; }
+        .modal-box.max-w-xl { max-width: 36rem; }
+        .modal-box.max-w-2xl { max-width: 42rem; }
+        .modal-box.max-w-3xl { max-width: 48rem; }
+        .modal-box.max-w-4xl { max-width: 56rem; }
+        .modal-box.max-w-5xl { max-width: 64rem; }
 
         @keyframes fadeIn {
             from {
@@ -1333,179 +1262,6 @@
             z-index: 1;
         }
 
-        /* [SUPER-PREMIUM] Unified Fluid Capsule Bottom Nav */
-        .bottom-nav {
-            position: fixed;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 40px);
-            max-width: 420px;
-            height: 75px;
-            background: rgba(255, 255, 255, 0.6);
-            /* Translucidez premium */
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 12px 15px 0 15px;
-            z-index: 10000;
-            border-radius: 40px;
-            box-shadow:
-                0 20px 40px -10px rgba(0, 0, 0, 0.12),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.8);
-            transition: all 0.7s cubic-bezier(0.19, 1, 0.22, 1);
-            user-select: none;
-            overflow: hidden;
-        }
-
-        /* O Handle Tátil Integrado */
-        .bottom-nav-handle {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .bottom-nav-handle::after {
-            content: '';
-            width: 40px;
-            height: 4px;
-            background: rgba(79, 70, 229, 0.2);
-            border-radius: 10px;
-            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Ícone interno (escondido por padrão) */
-        .bottom-nav-handle i {
-            position: absolute;
-            font-size: 1.2rem;
-            color: #4f46e5;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* Morphing: Barra Inteira -> Pílula Compacta */
-        .bottom-nav.collapsed {
-            transform: translateX(-50%) translateY(15px);
-            width: 80px;
-            height: 48px;
-            padding: 0;
-            border-radius: 100px;
-            background: rgba(255, 255, 255, 0.5);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .bottom-nav.collapsed .nav-item {
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-        }
-
-        .bottom-nav.collapsed .bottom-nav-handle::after {
-            opacity: 0;
-            transform: scaleX(0);
-        }
-
-        .bottom-nav.collapsed .bottom-nav-handle i {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        @media (min-width: 1024px) {
-            .bottom-nav {
-                display: none;
-            }
-        }
-
-        .nav-item {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            width: 65px;
-            height: 100%;
-            text-decoration: none;
-            z-index: 1;
-            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        /* The Pill - Fundo do Item Ativo */
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 16px;
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 0;
-            z-index: -1;
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
-        }
-
-        .nav-item.active {
-            color: white;
-            transform: translateY(-8px);
-        }
-
-        .nav-item.active::before {
-            transform: translate(-50%, -60%) scale(1);
-            opacity: 1;
-        }
-
-        .nav-item i {
-            font-size: 1.5rem;
-            margin-bottom: 2px;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .nav-item span {
-            font-size: 0.6rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.8;
-            transition: all 0.3s ease;
-        }
-
-        .nav-item.active span {
-            opacity: 1;
-            transform: translateY(2px);
-            color: #4f46e5;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-size: 0.55rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .nav-item:active {
-            transform: scale(0.9) translateY(0);
-        }
-
-        /* [NEW] Ajuste para Toast no Mobile não sobrepor a Nav */
-        @media (max-width: 1023px) {
-            #toast {
-                bottom: 100px !important;
-            }
-        }
-
         /* Otimização Mobile para o Calendário */
         @media (max-width: 768px) {
             .container {
@@ -1522,45 +1278,17 @@
             }
         }
 
-        /* [AAA] Super-Premium Futuristic Loader */
+        /* ---- Loader (mecanismo preservado: #page-loader / .loader-hidden / .content-ready) ---- */
         #page-loader {
             position: fixed;
             inset: 0;
-            background: #f8fafc;
+            background: var(--bg);
             z-index: 99999;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s, backdrop-filter 0.8s;
-        }
-
-        .dark #page-loader {
-            background: #020617;
-        }
-
-        #page-loader::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
-            filter: blur(100px);
-            animation: mesh-move 15s ease infinite alternate;
-            z-index: -1;
-        }
-
-        @keyframes mesh-move {
-            0% {
-                transform: scale(1) translate(0, 0);
-            }
-
-            100% {
-                transform: scale(1.2) translate(5%, 5%);
-            }
+            transition: opacity 0.5s var(--ease), visibility 0.5s;
         }
 
         .loader-content {
@@ -1568,113 +1296,51 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
         .loader-logo-wrapper {
             position: relative;
-            width: 120px;
-            height: 120px;
+            width: 72px;
+            height: 72px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .loader-logo-glow {
-            position: absolute;
-            inset: -10px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-            filter: blur(20px);
-            opacity: 0.3;
-            animation: morph 8s ease-in-out infinite alternate;
-        }
+        /* Elementos legados do markup do loader — neutralizados no visual simples */
+        .loader-logo-glow { display: none; }
 
         .loader-ring {
             position: absolute;
             inset: 0;
-            border: 3px solid transparent;
-            border-top-color: var(--primary);
-            border-bottom-color: var(--secondary);
+            border: 3px solid var(--surface-2);
+            border-top-color: var(--brand-500);
             border-radius: 50%;
-            animation: loader-spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
-            z-index: 2;
-        }
-
-        .loader-ring::after {
-            content: '';
-            position: absolute;
-            inset: 8px;
-            border: 3px solid transparent;
-            border-left-color: #f093fb;
-            border-right-color: #4f46e5;
-            border-radius: 50%;
-            animation: loader-spin 2s linear infinite reverse;
+            animation: loader-spin 0.9s linear infinite;
         }
 
         @keyframes loader-spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes morph {
-            0% {
-                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-                transform: rotate(0deg);
-            }
-
-            100% {
-                border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
-                transform: rotate(180deg);
-            }
+            to { transform: rotate(360deg); }
         }
 
         .loader-logo-main {
             position: relative;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 18px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-            color: var(--primary);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-            z-index: 3;
-            animation: loader-pulse 2s ease-in-out infinite;
+            font-size: 1.25rem;
+            color: var(--brand-600);
         }
 
-        .dark .loader-logo-main {
-            background: rgba(15, 23, 42, 0.6);
-            border-color: rgba(255, 255, 255, 0.05);
-        }
-
-        @keyframes loader-pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                filter: brightness(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-                filter: brightness(1.1);
-            }
-        }
+        .dark .loader-logo-main { color: var(--brand-400); }
 
         .loader-text-aaa {
             font-size: 0.85rem;
             font-weight: 600;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.08em;
             color: var(--text-muted);
             text-transform: uppercase;
             text-align: center;
@@ -1698,10 +1364,51 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* ============================================================
+           Compensações dark p/ utilitárias Tailwind remanescentes no
+           markup e nas template strings do JS (calendário, modais,
+           cards). Saem conforme cada bloco for tokenizado. Zero hex novo.
+           ============================================================ */
+        /* Superfícies claras → superfícies do tema */
+        .dark .bg-white { background-color: var(--surface-1); }
+        .dark .bg-white\/40, .dark .bg-white\/50, .dark .bg-white\/60,
+        .dark .bg-white\/70, .dark .bg-white\/80, .dark .bg-white\/90 { background-color: var(--surface-2); }
+        .dark .day-cell.bg-white\/40 { background-color: var(--surface-inset); }
+        .dark .bg-gray-50, .dark .bg-gray-100, .dark .bg-gray-100\/50,
+        .dark .bg-gray-100\/80, .dark .bg-gray-200, .dark .bg-slate-50 { background-color: var(--surface-inset); }
+        .dark .bg-gray-100\/50, .dark .bg-slate-800\/20 { background-color: var(--surface-inset); }
+        .dark .bg-indigo-50, .dark .bg-indigo-50\/70, .dark .bg-indigo-100,
+        .dark .bg-blue-50\/80, .dark .bg-purple-50, .dark .bg-purple-100,
+        .dark .bg-violet-50\/70, .dark .bg-violet-200 { background-color: var(--brand-50); }
+        .dark .bg-emerald-50, .dark .bg-green-50, .dark .bg-green-50\/60,
+        .dark .bg-teal-50, .dark .bg-teal-50\/40 { background-color: var(--success-soft); }
+        .dark .bg-amber-50, .dark .bg-amber-50\/70, .dark .bg-amber-100 { background-color: var(--warning-soft); }
+        .dark .bg-red-50, .dark .bg-red-50\/60, .dark .bg-red-100 { background-color: var(--danger-soft); }
+        .dark .bg-indigo-200\/80 { background-color: var(--brand-100); }
+
+        /* Texto */
+        .dark .text-gray-900, .dark .text-gray-800, .dark .text-slate-800 { color: var(--text); }
+        .dark .text-gray-700, .dark .text-gray-600, .dark .text-slate-700, .dark .text-slate-600 { color: var(--text-muted); }
+        .dark .text-gray-500, .dark .text-gray-400, .dark .text-gray-300, .dark .text-slate-500, .dark .text-slate-400 { color: var(--text-faint); }
+        .dark .text-indigo-800, .dark .text-indigo-700, .dark .text-indigo-600, .dark .text-indigo-500 { color: var(--brand-400); }
+        .dark .text-purple-800, .dark .text-purple-700, .dark .text-purple-600, .dark .text-purple-500,
+        .dark .text-violet-900, .dark .text-violet-800, .dark .text-violet-700, .dark .text-violet-600, .dark .text-violet-500, .dark .text-violet-400 { color: #c4b5fd; }
+        .dark .text-emerald-700, .dark .text-emerald-600, .dark .text-emerald-500, .dark .text-green-700, .dark .text-green-600, .dark .text-green-500, .dark .text-teal-900, .dark .text-teal-800, .dark .text-teal-700, .dark .text-teal-600 { color: var(--success); }
+        .dark .text-amber-800, .dark .text-amber-700, .dark .text-amber-600, .dark .text-amber-500, .dark .text-orange-700, .dark .text-orange-500 { color: var(--warning); }
+        .dark .text-red-800, .dark .text-red-700, .dark .text-red-500 { color: var(--danger); }
+
+        /* Bordas */
+        .dark .border-gray-200, .dark .border-gray-300, .dark .border-slate-200 { border-color: var(--border); }
+        .dark .border-indigo-100, .dark .border-indigo-200, .dark .border-indigo-300, .dark .border-indigo-600 { border-color: var(--brand-500); }
+        .dark .border-emerald-200, .dark .border-emerald-300, .dark .border-green-400, .dark .border-teal-200, .dark .border-teal-300 { border-color: var(--success); }
+        .dark .border-amber-200, .dark .border-amber-300 { border-color: var(--warning); }
+        .dark .border-red-200, .dark .border-red-300 { border-color: var(--danger); }
+        .dark .border-purple-300, .dark .border-violet-400 { border-color: var(--brand-400); }
     </style>
 </head>
 
-<body class="min-h-screen">
+<body class="min-h-screen" data-page="agenda">
     <!-- [AAA] Super-Premium Page Loader -->
     <div id="page-loader">
         <div class="loader-content">
@@ -1740,70 +1447,27 @@
         }
     </script>
 
-    <canvas id="particles-js"></canvas>
-
     <div id="page-content-wrapper" class="container mx-auto p-4 md:p-8 relative z-10">
-        <header class="text-center mb-8 relative fade-in">
-            <h1 class="text-4xl md:text-5xl font-bold">Agenda de Eventos</h1>
-            <p class="text-gray-500 mt-2">Sistema de Gestão de Eventos</p>
-            <div class="absolute top-0 left-0 flex space-x-2 p-2">
-                <button onclick="window.location.href='./Dashboard.html'"
-                    class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                    title="Acessar Dashboard">
-                    <i class="fa-solid fa-house"></i>
-                </button>
-                <button id="theme-toggle"
-                    class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                    title="Alternar Tema">
-                    <i class="fas fa-moon dark:hidden"></i>
-                    <i class="fas fa-sun hidden dark:block"></i>
-                </button>
-                <button id="notifications-btn"
-                    class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm relative"
-                    title="Notificações">
-                    <i id="notifications-header-icon" class="fas fa-bell"></i>
-                </button>
+        <header class="page-header fade-in">
+            <div>
+                <h1>Agenda</h1>
+                <p class="page-subtitle">Sistema de gestão de eventos</p>
             </div>
-            <!-- Navegação Desktop (Escondida no Mobile) -->
-            <div class="hidden lg:flex absolute top-0 right-0 space-x-2 p-2">
-                <button
-                    class="bg-indigo-200/80 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 w-10 h-10 rounded-full cursor-default shadow-sm"
-                    title="Você está na Agenda de Eventos">
-                    <i class="fa-solid fa-calendar-days"></i>
-                </button>
-                <button onclick="window.location.href='./Sistema Gestão Financeira.html'"
-                    class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                    title="Acessar Gestão Financeira">
-                    <i class="fas fa-chart-line"></i>
-                </button>
-                <button onclick="window.location.href='./Sistema de CRM.html'"
-                    class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                    title="Acessar CRM">
-                    <i class="fas fa-users"></i>
-                </button>
-                <button onclick="window.location.href='./Equipamentos.html'"
-                    class="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 w-10 h-10 rounded-full hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                    title="Acessar Equipamentos">
-                    <i class="fas fa-cubes text-indigo-500"></i>
-                </button>
-            </div>
+            <button id="notifications-btn" class="btn btn-secondary btn-icon relative" title="Notificações">
+                <i id="notifications-header-icon" class="fas fa-bell"></i>
+            </button>
         </header>
 
-        <div class="text-center mb-8 fade-in" style="animation-delay: 0.1s;">
-            <div class="flex flex-wrap items-stretch justify-center gap-4">
-                <div id="monthly-total-container" class="glassmorphism p-4 rounded-lg shadow-md w-full max-w-sm">
-                    <h2 class="text-lg text-gray-600 font-semibold">Faturamento do Mês</h2>
-                    <p id="monthly-total" class="text-4xl font-bold text-emerald-600"
-                        style="text-shadow: 0 0 10px rgba(5, 150, 105, 0.2);">R$ 0,00</p>
+        <div class="mb-8 fade-in" style="animation-delay: 0.1s;">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                <div id="monthly-total-container" class="kpi-card">
+                    <span class="kpi-label"><i class="fas fa-sack-dollar"></i> Faturamento do Mês</span>
+                    <span id="monthly-total" class="kpi-value is-success">R$ 0,00</span>
                 </div>
-                <div id="monthly-estimated-container" class="glassmorphism p-4 rounded-lg shadow-md w-full max-w-sm hidden border border-amber-200">
-                    <h2 class="text-lg text-gray-600 font-semibold">
-                        <i class="fas fa-chart-line text-amber-600 mr-1"></i>
-                        Valor Estimado do Mês
-                    </h2>
-                    <p id="monthly-estimated" class="text-4xl font-bold text-amber-600"
-                        style="text-shadow: 0 0 10px rgba(217, 119, 6, 0.2);">R$ 0,00</p>
-                    <p class="text-xs text-gray-500 mt-1">Projeção de eventos vendidos por ingresso</p>
+                <div id="monthly-estimated-container" class="kpi-card hidden">
+                    <span class="kpi-label"><i class="fas fa-chart-line" style="color: var(--warning)"></i> Valor Estimado do Mês</span>
+                    <span id="monthly-estimated" class="kpi-value" style="color: var(--warning)">R$ 0,00</span>
+                    <span class="kpi-delta" style="color: var(--text-faint)">Projeção de eventos vendidos por ingresso</span>
                 </div>
             </div>
         </div>
@@ -1811,39 +1475,31 @@
         <main class="flex justify-center fade-in" style="animation-delay: 0.3s;">
             <div class="w-full max-w-4xl space-y-4">
                 <div class="flex justify-end">
-                    <button id="catalog-settings-btn"
-                        class="bg-white/50 text-gray-600 px-4 py-2 rounded-md hover:bg-white/80 transition-colors flex items-center space-x-2"
-                        title="Catálogo de Brinquedos e Empresas">
+                    <button id="catalog-settings-btn" class="btn btn-secondary" title="Catálogo de Brinquedos e Empresas">
                         <i class="fas fa-cog"></i>
                         <span>Catálogo</span>
                     </button>
                 </div>
-                <div class="glassmorphism p-4 rounded-lg">
+                <div class="glassmorphism p-4">
                     <div class="flex items-center justify-between mb-4">
-                        <button id="prev-month-btn"
-                            class="bg-white/50 text-gray-600 px-3 py-1.5 rounded-md hover:bg-white/80 transition-colors text-sm">
+                        <button id="prev-month-btn" class="btn btn-secondary btn-icon" title="Mês anterior">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <h2 id="month-year-header" class="text-lg md:text-xl font-bold"></h2>
+                        <h2 id="month-year-header" class="text-lg md:text-xl font-bold font-display" style="color: var(--text)"></h2>
                         <div class="flex items-center space-x-2">
-                            <button id="filter-events-btn"
-                                class="bg-white/50 text-gray-600 px-3 py-1.5 rounded-md hover:bg-white/80 transition-colors text-sm flex items-center space-x-2"
-                                title="Filtrar Eventos do Mês">
+                            <button id="filter-events-btn" class="btn btn-secondary btn-sm" title="Filtrar Eventos do Mês">
                                 <i class="fas fa-filter"></i>
                                 <span class="hidden md:inline">Filtrar</span>
                             </button>
-                            <button id="next-month-btn"
-                                class="bg-white/50 text-gray-600 px-3 py-1.5 rounded-md hover:bg-white/80 transition-colors text-sm">
+                            <button id="next-month-btn" class="btn btn-secondary btn-icon" title="Próximo mês">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
-                            <button id="settings-btn"
-                                class="bg-white/50 text-gray-600 w-8 h-8 rounded-full hover:bg-white/80 transition-colors text-sm"
-                                title="Configurações da API">
+                            <button id="settings-btn" class="btn btn-ghost btn-icon" title="Configurações da API">
                                 <i class="fas fa-key"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="grid calendar-grid text-center text-xs font-semibold text-gray-500 mb-1.5">
+                    <div class="grid calendar-grid text-center text-xs font-semibold mb-1.5" style="color: var(--text-muted)">
                         <div>Dom</div>
                         <div>Seg</div>
                         <div>Ter</div>
@@ -2915,33 +2571,11 @@
     </div>
 
 
-    <div id="toast"
-        class="fixed bottom-5 right-5 flex items-center text-white px-5 py-3 rounded-lg shadow-xl hidden transition-all duration-300 z-50">
-        <i id="toast-icon" class="text-lg"></i>
-        <p id="toast-message" class="ml-3"></p>
-    </div>
-
     <script type="module">
         import { api } from './js/api.js';
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- LOGICA DE TEMA (DARK MODE) ---
-            const themeToggle = document.getElementById('theme-toggle');
-            const htmlElement = document.documentElement;
-            const bodyElement = document.body;
-
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            if (savedTheme === 'dark') {
-                htmlElement.classList.add('dark');
-                bodyElement.classList.add('dark');
-            }
-
-            themeToggle?.addEventListener('click', () => {
-                const isDark = htmlElement.classList.toggle('dark');
-                bodyElement.classList.toggle('dark');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                showToast(isDark ? "Modo Escuro ativado" : "Modo Claro ativado");
-            });
+            // Tema (dark mode): aplicado por js/theme.js; toggle vem do nav (js/nav.js).
 
             // --- ELEMENTOS DO DOM ---
             const monthYearHeader = document.getElementById('month-year-header');
@@ -3070,9 +2704,6 @@
                     },
                 };
             })();
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            const toastIcon = document.getElementById('toast-icon');
             const settingsBtn = document.getElementById('settings-btn');
             const apiKeyModal = document.getElementById('api-key-modal');
             const cancelApiKeyBtn = document.getElementById('cancel-api-key-btn');
@@ -3169,18 +2800,8 @@
             wireSocialOpen('client-social-open', 'client-social', 'client-social-checked', 'client-social-status');
             wireSocialOpen('pj-social-open', 'pj-social', 'pj-social-checked', 'pj-social-status');
 
-            const showToast = (message, isError = false, duration = 3000) => {
-                toastMessage.textContent = message;
-                toast.classList.toggle('bg-red-600', isError);
-                toast.classList.toggle('bg-green-600', !isError);
-                toastIcon.className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
-                toast.classList.remove('hidden');
-                toast.classList.add('toast-enter');
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                    toast.classList.remove('toast-enter');
-                }, duration);
-            };
+            // Delegado ao design system (js/ui.js) — assinatura legada (msg, isError, duration ignorado)
+            const showToast = (message, isError = false, duration = 3000) => window.UI.toast(message, !!isError);
 
             // INÍCIO DA MODIFICAÇÃO: Busca de CEP
             const handleCepSearch = async () => {
@@ -9572,114 +9193,6 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
             };
             // --- FIM DA MODIFICAÇÃO ---
 
-            // --- INÍCIO DA CORREÇÃO: Restaurando o código de partículas ---
-            const canvas = document.getElementById('particles-js');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            let particlesArray;
-
-            let mouse = {
-                x: null,
-                y: null,
-                radius: (canvas.height / 80) * (canvas.width / 80)
-            };
-
-            window.addEventListener('mousemove', (event) => {
-                mouse.x = event.x;
-                mouse.y = event.y;
-            });
-
-            class Particle {
-                constructor(x, y, directionX, directionY, size, color) {
-                    this.x = x;
-                    this.y = y;
-                    this.directionX = directionX;
-                    this.directionY = directionY;
-                    this.size = size;
-                    this.color = color;
-                }
-                draw() {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                    ctx.fillStyle = 'rgba(100, 116, 139, 0.4)';
-                    ctx.fill();
-                }
-                update() {
-                    if (this.x > canvas.width || this.x < 0) { this.directionX = -this.directionX; } if
-                        (this.y > canvas.height || this.y < 0) { this.directionY = -this.directionY; } let
-                            dx = mouse.x - this.x; let dy = mouse.y - this.y; let distance = Math.sqrt(dx * dx
-                                + dy * dy); if (distance < mouse.radius + this.size) {
-                                    if (mouse.x < this.x
-                                        && this.x < canvas.width - this.size * 10) { this.x += 1; } if (mouse.x >
-                                            this.x && this.x > this.size * 10) {
-                                        this.x -= 1;
-                                    }
-                                    if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
-                                        this.y
-                                            += 1;
-                                    } if (mouse.y > this.y && this.y > this.size * 10) {
-                                        this.y -= 1;
-                                    }
-                                }
-                    this.x += this.directionX;
-                    this.y += this.directionY;
-                    this.draw();
-                }
-            }
-
-            function initParticles() {
-                particlesArray = [];
-                let numberOfParticles = (canvas.height * canvas.width) / 9000;
-                for (let i = 0; i < numberOfParticles; i++) {
-                    let size = (Math.random() *
-                        2) + 1; let x = (Math.random() * ((innerWidth - size * 2) - (size *
-                            2)) + size * 2); let y = (Math.random() * ((innerHeight - size * 2) -
-                                (size * 2)) + size * 2); let directionX = (Math.random() * .4) - .2;
-                    let directionY = (Math.random() * .4) - .2; let
-                        color = 'rgba(100, 116, 139, 0.4)'; particlesArray.push(new
-                            Particle(x, y, directionX, directionY, size, color));
-                }
-            } function
-                connectParticles() {
-                let opacityValue = 1; for (let a = 0; a <
-                    particlesArray.length; a++) {
-                    for (let b = a; b <
-                        particlesArray.length; b++) {
-                        let distance = ((particlesArray[a].x -
-                            particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
-                            + ((particlesArray[a].y - particlesArray[b].y) *
-                                (particlesArray[a].y - particlesArray[b].y)); if (distance <
-                                    (canvas.width / 7) * (canvas.height / 7)) {
-                            opacityValue = 1 -
-                                (distance / 20000); ctx.strokeStyle = `rgba(100, 116, 139,
-            ${opacityValue * 0.5})`; ctx.lineWidth = 1; ctx.beginPath();
-                            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                            ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
-                        }
-                    }
-                }
-            } function animateParticles() {
-                requestAnimationFrame(animateParticles); ctx.clearRect(0, 0,
-                    innerWidth, innerHeight); for (let i = 0; i < particlesArray.length;
-                    i++) { particlesArray[i].update(); } connectParticles();
-            }
-            window.addEventListener('resize', () => {
-                canvas.width = innerWidth;
-                canvas.height = innerHeight;
-                mouse.radius = ((canvas.height / 80) * (canvas.width / 80));
-                initParticles();
-            });
-
-            window.addEventListener('mouseout', () => {
-                mouse.x = undefined;
-                mouse.y = undefined;
-            });
-            // --- FIM DA CORREÇÃO ---
-
-            initParticles();
-            animateParticles();
             renderAll();
             checkBirthdayNotifications(); // <-- Chamada da nova função
             handleUrlParameters();
@@ -9700,58 +9213,9 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
     </div> <!-- Fim de container -->
     </div> <!-- Fim de page-content-wrapper -->
 
-    <!-- Bottom Navigation Bar (Mobile Only) -->
-    <nav class="bottom-nav active" id="main-bottom-nav">
-        <!-- Handle Tátil (Puxador Integrado) -->
-        <div class="bottom-nav-handle" id="bottom-nav-handle">
-            <i class="fas fa-chevron-up"></i>
-        </div>
-
-        <a href="./Dashboard.html" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Início</span>
-        </a>
-        <a href="#" class="nav-item active">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Agenda</span>
-        </a>
-        <a href="./Sistema Gestão Financeira.html" class="nav-item">
-            <i class="fas fa-wallet"></i>
-            <span>Financeiro</span>
-        </a>
-        <a href="./Sistema de CRM.html" class="nav-item">
-            <i class="fas fa-users"></i>
-            <span>Clientes</span>
-        </a>
-        <a href="./Equipamentos.html" class="nav-item">
-            <i class="fas fa-cubes"></i>
-            <span>Equipamentos</span>
-        </a>
-    </nav>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const bottomNav = document.getElementById('main-bottom-nav');
-            const handle = document.getElementById('bottom-nav-handle');
-
-            if (bottomNav) {
-                const toggleNav = (e) => {
-                    e.stopPropagation();
-                    bottomNav.classList.toggle('collapsed');
-                };
-
-                handle?.addEventListener('click', toggleNav);
-
-                bottomNav.addEventListener('click', (e) => {
-                    if (bottomNav.classList.contains('collapsed')) {
-                        toggleNav(e);
-                    }
-                });
-            }
-        });
-    </script>
-
-    <!-- Sistema de Autenticação -->
+    <!-- Design system (toasts/modais), navegação unificada e autenticação -->
+    <script src="js/ui.js"></script>
+    <script src="js/nav.js"></script>
     <script src="js/protect.js"></script>
 
 </body>
