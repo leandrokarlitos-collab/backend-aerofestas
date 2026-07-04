@@ -81,8 +81,46 @@ model Client {
   address String?
   cpf     String?
 
+  // --- CRM v3 (F5): dados ricos que antes viviam só no localStorage ---
+  email         String?
+  instagram     String?
+  birthday      String?   // YYYY-MM-DD
+  stage         String?   @default("novo") // novo|contato|proposta|negociacao|fechado|pos_venda|perdido
+  source        String?   // indicação, instagram, google...
+  tags          String?   // JSON array
+  lastContactAt DateTime?
+
+  notes     ClientNote[]
+  followUps ClientFollowUp[]
+
   whatsappConversations WhatsAppConversation[]
   propostas             Proposta[]
+}
+
+model ClientNote {
+  id        String   @id @default(uuid())
+  clientId  Float
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  text      String
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+}
+
+model ClientFollowUp {
+  id        String    @id @default(uuid())
+  clientId  Float
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  dueDate   String    // YYYY-MM-DD
+  note      String?
+  done      Boolean   @default(false)
+  doneAt    DateTime?
+  createdBy String?
+  createdAt DateTime  @default(now())
+
+  @@index([clientId, done])
+  @@index([done, dueDate])
 }
 
 // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---

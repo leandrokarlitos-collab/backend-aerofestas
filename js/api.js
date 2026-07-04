@@ -28,6 +28,148 @@ export const api = {
         } catch (e) { return []; }
     },
 
+    // --- CRM v3: CLIENTES ---
+
+    getClienteById: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    atualizarCliente: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao atualizar cliente:', e); return null; }
+    },
+
+    criarNotaCliente: async (clientId, text) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/${clientId}/notes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ text })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao criar nota:', e); return null; }
+    },
+
+    deletarNotaCliente: async (noteId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/notes/${noteId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
+
+    criarFollowUpCliente: async (clientId, dueDate, note) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/${clientId}/follow-ups`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ dueDate, note })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao criar follow-up:', e); return null; }
+    },
+
+    atualizarFollowUpCliente: async (id, done) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/follow-ups/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ done })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    getFollowUpsPendentes: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/follow-ups/pending`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { return []; }
+    },
+
+    // Retorno: { ok, status, ...relatório } — relatório: { dryRun, matched, created,
+    // fieldsFilled, notesCreated, followUpsCreated, skipped, conflicts } ou { error }
+    importarClientesLocais: async (items, dryRun) => {
+        try {
+            const token = getToken();
+            const url = `${BASE_URL}/admin/clients/import-local${dryRun ? '?dryRun=1' : ''}`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ items })
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) {
+            console.error('Erro ao importar clientes locais:', e);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
+    },
+
+    // Retorno: { ok, status, text? } ou { ok:false, status, error? } (503 = IA não configurada)
+    analisarClienteIA: async (payload) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/ai/analyze-client`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) {
+            console.error('Erro na análise IA do cliente:', e);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
+    },
+
+    // Criação (POST / existente): grava os campos básicos { name, phone, address, cpf }
+    criarCliente: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao criar cliente:', e); return null; }
+    },
+
+    // Exclusão (DELETE /:id existente) — cascade apaga notas e follow-ups
+    deletarCliente: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/clients/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao deletar cliente:', e); return null; }
+    },
+
     getEventos: async () => {
         try {
             const res = await fetch(`${BASE_URL}/admin/events-full`);
