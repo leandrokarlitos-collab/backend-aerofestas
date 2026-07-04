@@ -4281,7 +4281,7 @@
                         // Badge de status do cadastro público
                         let cadastroStatusBadge = '';
                         if (event.status === 'pendente_cadastro') {
-                            cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-300 text-amber-700 text-xs font-semibold flex items-center gap-1.5"><i class="fas fa-hourglass-half"></i> Aguardando cadastro do cliente</div>`;
+                            cadastroStatusBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-300 text-amber-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer resend-link-btn hover:bg-amber-100 transition-colors" data-id="${event.id}" title="Copiar / reenviar o link de cadastro"><i class="fas fa-hourglass-half"></i> Aguardando cadastro do cliente <span class="ml-auto text-amber-600 font-bold whitespace-nowrap"><i class="fas fa-share-nodes mr-1"></i>Reenviar link</span></div>`;
                         } else if (event.status === 'cadastro_em_andamento') {
                             // Indica que o cliente abriu o link e está preenchendo (auto-save em andamento).
                             const fieldsFilled = [event.clientName, event.clientPhone, event.clientCpf, event.cep, event.clientAddress].filter(Boolean).length;
@@ -4330,6 +4330,7 @@
                             </div>
                         </div>
                         <div class="flex flex-col space-y-2 items-center">
+                            ${(isPending || isInProgress) ? `<button data-id="${event.id}" class="resend-link-btn text-amber-500 hover:text-amber-700 text-lg shrink-0" title="Copiar / reenviar o link de cadastro"><i class="fas fa-share-nodes"></i></button>` : ''}
                              <button data-id="${event.id}" data-date="${dateStr}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
                             ${isMultiDay ? `
                                 <button data-id="${event.id}" data-date="${dateStr}" class="edit-day-time-btn text-indigo-500 hover:text-indigo-700 text-lg shrink-0" title="Editar horário apenas deste dia"><i class="fas fa-clock"></i></button>
@@ -4402,6 +4403,11 @@
                 linkCadastroBtn.onclick = () => openLinkCadastroModal(dateStr);
                 dayEventsList.appendChild(linkCadastroBtn);
 
+                document.querySelectorAll('.resend-link-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const ev = events.find(x => x.id === parseInt(e.currentTarget.dataset.id));
+                    reopenShareForEvent(ev);
+                }));
                 document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date)));
                 document.querySelectorAll('.conclude-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleConcludeEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.cancel-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleCancelEvent(parseInt(e.currentTarget.dataset.id))));
@@ -8226,6 +8232,34 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     showToast('Link copiado!', false);
                 });
             });
+
+            // Reabre o painel de compartilhamento (copiar + WhatsApp) para um evento
+            // JÁ criado — permite reenviar o link sem gerar outro.
+            const reopenShareForEvent = (event) => {
+                if (!event) return;
+                const url = `${window.location.origin}/cadastro-evento.html?id=${event.id}`;
+                const company = (companies || []).find(c => c.id === event.yourCompanyId);
+                const companyName = company?.name || '';
+                const [yy, mm, dd] = String(event.date || '').split('-');
+                const dateBR = (yy && mm && dd) ? `${dd}/${mm}/${yy}` : String(event.date || '');
+                const signalAmount = Number(event.signalAmount) || 0;
+                const clientName = event.clientName || '';
+                linkShareContext = { clientName, companyName, dateBR, signalAmount, url };
+
+                document.getElementById('link-cadastro-url').value = url;
+                document.getElementById('link-share-client').textContent = clientName || 'A definir';
+                document.getElementById('link-share-date').textContent = dateBR || '—';
+                const entradaRow = document.getElementById('link-share-entrada-row');
+                if (signalAmount > 0) {
+                    document.getElementById('link-share-entrada').textContent = `${formatCurrency(signalAmount)} para confirmar`;
+                    entradaRow.classList.remove('hidden');
+                } else {
+                    entradaRow.classList.add('hidden');
+                }
+                document.getElementById('link-cadastro-config').classList.add('hidden');
+                document.getElementById('link-cadastro-share').classList.remove('hidden');
+                document.getElementById('modal-link-cadastro').classList.remove('hidden');
+            };
 
             // Monta a mensagem premium, calorosa e personalizada para o cliente
             const buildLinkShareMessage = () => {
