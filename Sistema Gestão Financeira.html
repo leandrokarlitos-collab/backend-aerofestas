@@ -177,6 +177,7 @@
                 eventos: [],
                 gastos: [],
                 receitas: [], // 🆕 Transações do tipo REVENUE (entradas manuais)
+                salarios: [], // Transações de salário (category "Salários") — listadas na aba Salários
                 contas: [],
                 contasFixas: [],
                 selectedMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
@@ -407,6 +408,23 @@
                                 declaredBy: t.declaredBy || '',
                                 detalhe: t.expenseDetail || '',
                                 comprovantes: []
+                            };
+                        });
+
+                    // 2.05. Lançamentos de salário (category "Salários") — ficam à parte dos gastos
+                    // para serem listados/editados/excluídos na aba Salários.
+                    state.salarios = transacoesCloud
+                        .filter(t => t.type === 'EXPENSE' && t.category?.includes('Salário'))
+                        .map(t => {
+                            const contaRef = contasCloud.find(c => c.id === t.accountId);
+                            return {
+                                id: t.id,
+                                data: t.date,
+                                descricao: t.description,
+                                valor: t.amount,
+                                contaId: t.accountId,
+                                conta: contaRef ? contaRef.name : '-',
+                                pagamento: t.paymentMethod || 'Outro'
                             };
                         });
 
@@ -1348,11 +1366,14 @@
                 const totalBruto = salarioFixo + va + vt + valorComissao;
 
                 // 4. Calcula o que ja foi pago no mês
-                const pagamentosEfetuados = state.gastos.filter(g =>
-                    g.data && g.data.startsWith(state.selectedMonth) &&
-                    g.description && g.description.includes(`Salário: ${funcionario.nome}`)
+                // Lançamentos (salário + bônus) do funcionário neste mês — lidos de state.salarios.
+                const lancamentosFunc = (state.salarios || []).filter(s =>
+                    s.data && s.data.startsWith(state.selectedMonth) &&
+                    s.descricao && s.descricao.includes(funcionario.nome)
                 );
-                const totalPago = pagamentosEfetuados.reduce((acc, g) => acc + (parseFloat(g.amount) || 0), 0);
+                // "Já pago" (para o saldo) conta só os pagamentos de salário fixo; bônus é extra.
+                const pagamentosEfetuados = lancamentosFunc.filter(s => s.descricao.includes(`Salário: ${funcionario.nome}`));
+                const totalPago = pagamentosEfetuados.reduce((acc, s) => acc + (parseFloat(s.valor) || 0), 0);
                 const saldoRestante = totalBruto - totalPago;
 
                 // 5. Atualiza UI
@@ -1386,6 +1407,32 @@
                     btnLancar.classList.remove('bg-green-600');
                     msgLancado.classList.add('hidden');
                 }
+
+                // Lista de lançamentos (salário/bônus) deste mês, com editar/excluir.
+                const contLanc = getById('salario-lancamentos-container');
+                if (contLanc) {
+                    if (!lancamentosFunc.length) {
+                        contLanc.innerHTML = '<p class="text-center text-sm text-gray-500 mt-6">Nenhum lançamento neste mês para este funcionário.</p>';
+                    } else {
+                        contLanc.innerHTML = `
+                            <h4 class="text-sm font-bold text-gray-700 mb-2 mt-6"><i class="fa-solid fa-receipt mr-1"></i> Lançamentos deste mês</h4>
+                            <div class="space-y-2">
+                                ${lancamentosFunc.map(s => `
+                                    <div class="flex items-center justify-between bg-white/60 border border-gray-200 rounded-lg px-3 py-2">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-gray-800 truncate">${s.descricao}</p>
+                                            <p class="text-xs text-gray-500">${(s.data || '').split('-').reverse().join('/')} · ${s.conta} · ${s.pagamento}</p>
+                                        </div>
+                                        <div class="flex items-center gap-3 shrink-0 ml-3">
+                                            <span class="text-sm font-bold text-amber-700">${formatarMoeda(s.valor)}</span>
+                                            <button type="button" onclick="editarSalario('${s.id}')" class="text-indigo-600 hover:text-indigo-900" title="Editar"><i class="fa-solid fa-edit"></i></button>
+                                            <button type="button" onclick="deletarSalario('${s.id}')" class="text-red-600 hover:text-red-900" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>`;
+                    }
+                }
             };
 
             // Event listener para mudança de funcionário no select
@@ -1403,6 +1450,8 @@
 
                 // Preenche o modal de pagamento
                 getById('pag-salario-funcionario-id').value = funcionario.id;
+                getById('form-pagamento-salario').removeAttribute('data-mode');
+                getById('form-pagamento-salario').removeAttribute('data-id');
                 getById('pag-salario-descricao').value = `Salário: ${funcionario.nome} [${state.selectedMonth}]`;
                 getById('pag-salario-valor').value = Math.max(0, saldoRestante).toFixed(2);
                 getById('pag-salario-data').value = new Date().toISOString().split('T')[0];
@@ -1410,7 +1459,7 @@
                 // Popula as contas no modal de pagamento
                 const contaSelect = getById('pag-salario-conta');
                 contaSelect.innerHTML = '<option value="">-- Selecione --</option>' +
-                    (state.contas || []).map(c => `<option value="${c.id}">${c.name} (${c.bank})</option>`).join('');
+                    (state.contas || []).map(c => `<option value="${c.id}">${c.nome} (${c.banco})</option>`).join('');
 
                 showModal('modal-pagamento-salario');
             });
@@ -1425,6 +1474,8 @@
 
                 // Preenche o modal de pagamento
                 getById('pag-salario-funcionario-id').value = funcionario.id;
+                getById('form-pagamento-salario').removeAttribute('data-mode');
+                getById('form-pagamento-salario').removeAttribute('data-id');
                 getById('pag-salario-descricao').value = `Bônus/Adicional: ${funcionario.nome} [${state.selectedMonth}]`;
                 getById('pag-salario-valor').value = "0.00";
                 getById('pag-salario-data').value = new Date().toISOString().split('T')[0];
@@ -1432,7 +1483,7 @@
                 // Popula as contas no modal de pagamento
                 const contaSelect = getById('pag-salario-conta');
                 contaSelect.innerHTML = '<option value="">-- Selecione --</option>' +
-                    (state.contas || []).map(c => `<option value="${c.id}">${c.name} (${c.bank})</option>`).join('');
+                    (state.contas || []).map(c => `<option value="${c.id}">${c.nome} (${c.banco})</option>`).join('');
 
                 showModal('modal-pagamento-salario');
             });
@@ -1454,10 +1505,17 @@
                     paymentMethod: getById('pag-salario-metodo').value
                 };
 
-                const sucesso = await window.api.salvarTransacao(dados);
+                const form = e.target;
+                const mode = form.getAttribute('data-mode');
+                const editId = form.getAttribute('data-id');
+                const sucesso = (mode === 'edit' && editId)
+                    ? await window.api.atualizarTransacao(editId, dados)
+                    : await window.api.salvarTransacao(dados);
                 if (sucesso) {
-                    showToastModal('✅ Pagamento lançado com sucesso!');
+                    showToastModal(mode === 'edit' ? '✅ Lançamento atualizado!' : '✅ Pagamento lançado com sucesso!');
                     hideModal('modal-pagamento-salario');
+                    form.removeAttribute('data-mode');
+                    form.removeAttribute('data-id');
                     await window.loadDataFromCloud();
                     renderSalariosTab();
                 } else {
@@ -1466,6 +1524,36 @@
                 btn.disabled = false;
                 btn.textContent = 'Confirmar Pagamento';
             });
+
+            // Excluir um lançamento de salário/bônus (transação category "Salários").
+            window.deletarSalario = async (id) => {
+                if (!confirm('Excluir este lançamento de salário?')) return;
+                const sucesso = await window.api.deletarItem(id, 'transactions');
+                if (sucesso) {
+                    await window.loadDataFromCloud();
+                    renderSalariosTab();
+                    showToastModal('✅ Lançamento excluído!');
+                } else {
+                    showToastModal('❌ Erro ao excluir lançamento.', true);
+                }
+            };
+            // Editar um lançamento de salário/bônus: reabre o modal de pagamento em modo edição.
+            window.editarSalario = (id) => {
+                const s = (state.salarios || []).find(x => x.id === id);
+                if (!s) return;
+                const form = getById('form-pagamento-salario');
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-id', id);
+                getById('pag-salario-descricao').value = s.descricao;
+                getById('pag-salario-valor').value = s.valor;
+                getById('pag-salario-data').value = s.data;
+                const contaSelect = getById('pag-salario-conta');
+                contaSelect.innerHTML = '<option value="">-- Selecione --</option>' +
+                    (state.contas || []).map(c => `<option value="${c.id}">${c.nome} (${c.banco})</option>`).join('');
+                contaSelect.value = s.contaId || '';
+                getById('pag-salario-metodo').value = s.pagamento || 'PIX';
+                showModal('modal-pagamento-salario');
+            };
 
             // ========== LOGICA DO MODAL DE CONFIGURAÇÕES DE SALÁRIOS ==========
 
@@ -5961,6 +6049,7 @@
                                 <p id="salario-lancado-msg" class="text-green-600 font-semibold mt-4 hidden">
                                     <i class="fa-solid fa-check-circle mr-2"></i> Salário totalmente pago para este mês.
                                 </p>
+                                <div id="salario-lancamentos-container" class="mt-4"></div>
                             </div>
                         </div>
 
