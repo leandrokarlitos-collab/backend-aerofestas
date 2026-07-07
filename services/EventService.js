@@ -14,7 +14,7 @@ const CONTRACT_ALLOWED_MIME = [
 ];
 
 const TRACKED_FIELDS = [
-    'date', 'endDate', 'excludedDates', 'dateOverrides', 'clientName', 'price', 'subtotal', 'paymentStatus',
+    'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
     'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems'
@@ -85,6 +85,8 @@ function buildEventFields(evt, userId) {
         endDate: evt.endDate || null,
         excludedDates: evt.excludedDates !== undefined ? serializeJsonField(evt.excludedDates) : undefined,
         dateOverrides: evt.dateOverrides !== undefined ? serializeJsonField(evt.dateOverrides) : undefined,
+        // Modo de recebimento (rateio): 'perDay' (padrão) | 'upfront'. Guarda só valores válidos.
+        revenueMode: evt.revenueMode === 'upfront' ? 'upfront' : (evt.revenueMode === 'perDay' ? 'perDay' : undefined),
         clientName: evt.clientName,
         yourCompanyId: evt.yourCompanyId ? parseFloat(evt.yourCompanyId) : null,
         startTime: evt.startTime,

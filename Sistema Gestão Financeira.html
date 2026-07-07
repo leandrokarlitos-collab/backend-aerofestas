@@ -186,6 +186,49 @@
             // Torna o state acessível globalmente para os gráficos
             window.state = state;
 
+            // === Rateio de eventos multi-dia entre meses (mesmo critério da Agenda/backend) ===
+            // Opera sobre o shape mapeado em state.eventos (.data = início, .endDate, .excludedDates,
+            // .revenueMode). Reuniões já foram excluídas de state.eventos.
+            const finParseExcluded = (e) => {
+                if (!e.excludedDates) return [];
+                if (Array.isArray(e.excludedDates)) return e.excludedDates;
+                try { return JSON.parse(e.excludedDates) || []; } catch { return []; }
+            };
+            const finActiveDates = (e) => {
+                const start = e.data;
+                if (!start) return [];
+                const end = (e.endDate && e.endDate >= start) ? e.endDate : start;
+                if (end === start) return [start];
+                const excluded = new Set(finParseExcluded(e));
+                const out = [];
+                const d = new Date(start + 'T00:00:00');
+                const ed = new Date(end + 'T00:00:00');
+                while (d <= ed) {
+                    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    if (!excluded.has(iso)) out.push(iso);
+                    d.setDate(d.getDate() + 1);
+                }
+                return out;
+            };
+            // Fração do valor no mês 'YYYY-MM' — upfront: tudo no mês de início; perDay: rateado por dia.
+            const finValueFraction = (e, ym) => {
+                const active = finActiveDates(e);
+                if (!active.length) return 0;
+                if ((e.revenueMode || 'perDay') === 'upfront') return e.data.startsWith(ym) ? 1 : 0;
+                return active.filter(iso => iso.startsWith(ym)).length / active.length;
+            };
+            // O evento conta no mês? upfront: só no mês de início; perDay: em cada mês que toca.
+            const finCountsInMonth = (e, ym) => {
+                if ((e.revenueMode || 'perDay') === 'upfront') return e.data.startsWith(ym) ? 1 : 0;
+                return finActiveDates(e).some(iso => iso.startsWith(ym)) ? 1 : 0;
+            };
+            // Eventos que CONTAM no mês, com .valor JÁ rateado para o mês. Com isso, todos os
+            // cálculos downstream (.reduce(valor), .length, tabelas, ticket médio) ficam corretos
+            // sem precisar alterar cada um deles.
+            const eventosDoMes = (ym) => (state.eventos || [])
+                .filter(e => finCountsInMonth(e, ym) === 1)
+                .map(e => ({ ...e, valor: (Number(e.valor) || 0) * finValueFraction(e, ym) }));
+
             // Função auxiliar para filtrar contas fixas ativas em um mês
             const getContasFixasDoMes = (mesAno) => {
                 if (!state.contasFixas || state.contasFixas.length === 0) return [];
@@ -290,6 +333,9 @@
                         return {
                             id: evt.id.toString(),
                             data: evt.date,
+                            endDate: evt.endDate || null,
+                            excludedDates: evt.excludedDates || null,
+                            revenueMode: evt.revenueMode || null,
                             empresa: evt.company ? evt.company.name : "Aero Festas",
                             contratante: evt.clientName,
                             local: "",
@@ -555,7 +601,7 @@
 
                 // Filtra dados pelo mês selecionado
                 const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
-                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const eventosMes = eventosDoMes(state.selectedMonth);
                 const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
 
                 // Cálculo Mês Anterior para Comparação
@@ -564,7 +610,7 @@
                 const prevMonthStr = prevDate.toISOString().slice(0, 7);
 
                 const gastPrev = state.gastos.filter(g => g.data.startsWith(prevMonthStr));
-                const evPrev = state.eventos.filter(e => e.data.startsWith(prevMonthStr));
+                const evPrev = eventosDoMes(prevMonthStr);
                 const recPrev = state.receitas?.filter(r => r.data.startsWith(prevMonthStr)) || [];
 
                 const monitorPagamentosMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
@@ -728,7 +774,7 @@
                             for (const mes of mesesOrdenados) {
                                 if (mes >= state.selectedMonth) break;
                                 const metaDoMes = METAS_MENSAIS[mes];
-                                const recMes = state.eventos.filter(e => e.data.startsWith(mes)).reduce((s, e) => s + (e.valor || 0), 0)
+                                const recMes = eventosDoMes(mes).reduce((s, e) => s + (e.valor || 0), 0)
                                     + (state.receitas || []).filter(r => r.data.startsWith(mes)).reduce((s, r) => s + (r.valor || 0), 0);
                                 acumulado += recMes - metaDoMes;
                             }
@@ -1232,7 +1278,7 @@
                 if (!funcionario) return;
 
                 // 1. Calcula Entradas Totais do Mês
-                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const eventosMes = eventosDoMes(state.selectedMonth);
                 const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
                 const totalEntradas = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0) +
                     receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
@@ -2744,7 +2790,7 @@
                 };
 
                 const getMonthRevenue = (ym) => {
-                    const ev = state.eventos.filter(e => e.data.startsWith(ym)).reduce((s, e) => s + (parseFloat(e.valor) || 0), 0);
+                    const ev = eventosDoMes(ym).reduce((s, e) => s + (parseFloat(e.valor) || 0), 0);
                     const rec = (state.receitas || []).filter(r => r.data.startsWith(ym)).reduce((s, r) => s + (parseFloat(r.valor) || 0), 0);
                     return ev + rec;
                 };
@@ -2770,7 +2816,7 @@
                     doc.setTextColor(0, 0, 0);
                 };
 
-                const eventosMes = state.eventos.filter(e => e.data.startsWith(state.selectedMonth));
+                const eventosMes = eventosDoMes(state.selectedMonth);
                 const receitasMes = state.receitas?.filter(r => r.data.startsWith(state.selectedMonth)) || [];
                 const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
                 const pagMonMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));

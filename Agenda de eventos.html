@@ -1859,6 +1859,32 @@
                                     <i class="fas fa-umbrella-beach mr-1"></i>Só fins de semana
                                 </button>
                             </div>
+
+                            <!-- Modo de recebimento (rateio do faturamento entre meses) -->
+                            <div class="mt-3 pt-3 border-t border-indigo-200 dark:border-indigo-700/50">
+                                <p class="text-sm font-semibold text-indigo-800 dark:text-indigo-200 flex items-center gap-1.5 mb-1">
+                                    <i class="fas fa-hand-holding-dollar"></i> Como o valor é recebido?
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">
+                                    Define como o faturamento é distribuído quando o evento cruza a virada de mês.
+                                </p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="revenue-mode" value="perDay" class="peer sr-only" checked>
+                                        <div class="h-full p-2.5 rounded-lg border-2 border-indigo-200 bg-white dark:bg-slate-800 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 dark:peer-checked:bg-indigo-900/30 peer-checked:ring-1 peer-checked:ring-indigo-600 transition-all">
+                                            <span class="block text-sm font-bold text-indigo-800 dark:text-indigo-200"><i class="fas fa-calendar-day mr-1"></i>Por dia</span>
+                                            <span class="block text-[11px] text-indigo-500 dark:text-indigo-300 leading-tight mt-0.5">Rateia o valor por dia; cada dia conta no seu mês</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="revenue-mode" value="upfront" class="peer sr-only">
+                                        <div class="h-full p-2.5 rounded-lg border-2 border-indigo-200 bg-white dark:bg-slate-800 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 dark:peer-checked:bg-indigo-900/30 peer-checked:ring-1 peer-checked:ring-indigo-600 transition-all">
+                                            <span class="block text-sm font-bold text-indigo-800 dark:text-indigo-200"><i class="fas fa-sack-dollar mr-1"></i>De uma vez</span>
+                                            <span class="block text-[11px] text-indigo-500 dark:text-indigo-300 leading-tight mt-0.5">Valor inteiro no mês de início</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                         <!-- FIM: Seletor de dias -->
 
@@ -3938,12 +3964,15 @@
                 return out;
             };
 
-            // Fração (0..1) dos dias ativos do evento que caem no ano/mês (mês 0-based).
-            // Base do rateio proporcional de eventos multi-dia que cruzam meses: cada dia
-            // carrega valor_total / nº_dias e conta no mês em que cai.
+            // Fração (0..1) do VALOR do evento atribuível ao ano/mês (mês 0-based), conforme o modo:
+            //  - 'upfront' (valor fechado): 100% no mês de início (data do evento); 0 nos demais.
+            //  - 'perDay' (padrão, inclui null): rateio proporcional pelos dias ativos que caem no mês.
             const eventMonthFraction = (event, year, month) => {
                 const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
                 if (!active.length) return 0;
+                if ((event.revenueMode || 'perDay') === 'upfront') {
+                    return ((+event.date.slice(0, 4)) === year && (+event.date.slice(5, 7) - 1) === month) ? 1 : 0;
+                }
                 const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month).length;
                 return inMonth / active.length;
             };
@@ -4572,7 +4601,9 @@
                     // Valor rateado pelos dias que caem NESTE mês (multi-dia que cruza meses).
                     const monthValue = eventRevenueInMonth(event, year, month);
                     const { inMonth, total } = eventDaysInMonth(event, year, month);
-                    const partialNote = (total > 1 && inMonth < total)
+                    // Nota "N/M dias" só faz sentido quando o valor é rateado (perDay).
+                    const isPerDay = (event.revenueMode || 'perDay') !== 'upfront';
+                    const partialNote = (isPerDay && total > 1 && inMonth < total)
                         ? `<span class="block text-[10px] text-gray-400 font-normal">${inMonth}/${total} dias neste mês</span>`
                         : '';
 
@@ -4721,7 +4752,8 @@
                         // Valor rateado pelos dias que caem NESTE mês (multi-dia que cruza meses).
                         const monthValue = eventRevenueInMonth(event, year, month);
                         const { inMonth, total } = eventDaysInMonth(event, year, month);
-                        const dateCell = (total > 1 && inMonth < total)
+                        const isPerDay = (event.revenueMode || 'perDay') !== 'upfront';
+                        const dateCell = (isPerDay && total > 1 && inMonth < total)
                             ? `${formattedDate} (${inMonth}/${total} dias)`
                             : formattedDate;
 
@@ -5793,6 +5825,7 @@
                 endDate: event.endDate || null,
                 excludedDates: event.excludedDates,
                 dateOverrides: event.dateOverrides,
+                revenueMode: event.revenueMode,
                 clientType: event.clientType,
                 clientName: event.clientName,
                 clientCpf: event.clientCpf,
@@ -7177,6 +7210,8 @@
                     date: finalDate,
                     endDate: finalEndDate, // null = evento de um único dia
                     excludedDates: excludedDates, // dias removidos do intervalo (eventos em dias alternados)
+                    // Modo de recebimento (só faz diferença em multi-dia que cruza meses).
+                    revenueMode: finalEndDate ? getRevenueMode() : 'perDay',
                     clientType: clientType,
                     yourCompanyId: parseInt(document.getElementById('your-company-select').value),
                     clientAddress: document.getElementById('client-address').value,
@@ -7353,7 +7388,16 @@
                 }
             };
 
+            // Modo de recebimento do evento (rateio entre meses) — seletor no editor.
+            const getRevenueMode = () => (document.querySelector('input[name="revenue-mode"]:checked')?.value === 'upfront') ? 'upfront' : 'perDay';
+            const setRevenueMode = (mode) => {
+                const val = (mode === 'upfront') ? 'upfront' : 'perDay';
+                document.querySelectorAll('input[name="revenue-mode"]').forEach(r => { r.checked = (r.value === val); });
+            };
+
             const showEventModal = (dateStr, eventToEdit = null, dayEditDate = null) => {
+                // Padrão para novos eventos; sobrescrito abaixo ao editar um existente.
+                setRevenueMode('perDay');
                 eventForm.reset();
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
@@ -7425,6 +7469,7 @@
                     // FIM DA MODIFICAÇÃO
                     // Reconstrói o seletor de dias refletindo as datas já removidas (dias alternados)
                     renderMultiDaySelector(parseExcludedDates(eventToEdit));
+                    setRevenueMode(eventToEdit.revenueMode);
                     document.getElementById('your-company-select').value = eventToEdit.yourCompanyId || '';
                     document.getElementById('client-address').value = eventToEdit.clientAddress || '';
                     // INÍCIO DA MODIFICAÇÃO: Preencher novo campo

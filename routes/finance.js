@@ -28,10 +28,16 @@ function eventActiveDates(evt) {
     }
     return out;
 }
-// Fração (0..1) dos dias ativos do evento que caem no intervalo [startStr, endStr].
+// Fração (0..1) do VALOR do evento atribuível ao intervalo [startStr, endStr],
+// conforme o modo de recebimento:
+//  - 'upfront' (valor fechado): 100% no mês de início (data do evento); 0 nos demais.
+//  - 'perDay' (padrão, inclui null): rateio proporcional pelos dias ativos que caem no mês.
 function eventFractionInRange(evt, startStr, endStr) {
     const active = eventActiveDates(evt);
     if (!active.length) return 0;
+    if ((evt.revenueMode || 'perDay') === 'upfront') {
+        return (evt.date >= startStr && evt.date <= endStr) ? 1 : 0;
+    }
     const inRange = active.filter(iso => iso >= startStr && iso <= endStr).length;
     return inRange / active.length;
 }

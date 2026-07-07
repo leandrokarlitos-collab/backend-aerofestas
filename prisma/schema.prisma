@@ -145,6 +145,7 @@ model Event {
   endDate      String?  // Data de término (para eventos multi-dia)
   excludedDates  String?  // JSON: ["YYYY-MM-DD", ...] — dias removidos de um evento multi-dia
   dateOverrides  String?  // JSON: { "YYYY-MM-DD": { startTime, endTime } } — horários custom por dia
+  revenueMode    String?  // 'perDay' (rateio por dia entre os meses, padrão) | 'upfront' (valor inteiro no mês de início) — só afeta multi-dia que cruza meses
   clientName   String?
   
   // Ligação com a Empresa

@@ -1561,6 +1561,10 @@
             function eventMonthFractionDash(ev, year, month0) {
                 const active = eventActiveDatesDash(ev);
                 if (!active.length) return 0;
+                // 'upfront' (valor fechado): 100% no mês de início; 'perDay' (padrão): rateio por dia.
+                if ((ev.revenueMode || 'perDay') === 'upfront') {
+                    return ((+ev.date.slice(0, 4)) === year && (+ev.date.slice(5, 7) - 1) === month0) ? 1 : 0;
+                }
                 const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month0).length;
                 return inMonth / active.length;
             }
