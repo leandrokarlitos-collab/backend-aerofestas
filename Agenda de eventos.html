@@ -941,6 +941,60 @@
             box-shadow: 0 30px 60px rgba(15, 23, 42, 0.3);
             overflow: hidden;
         }
+        /* Folha de ações do card de evento (menu ••• com rótulos) */
+        .actions-sheet-box { max-width: 460px; }
+        .actions-sheet-body {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+        }
+        .actions-sheet-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            text-align: left;
+            padding: 11px 12px;
+            border-radius: 12px;
+            background: #fff;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease;
+        }
+        .actions-sheet-item:hover { background: #f1f5f9; }
+        .actions-sheet-item:active { background: #e2e8f0; }
+        .actions-sheet-item.has-sep {
+            margin-top: 10px;
+            padding-top: 17px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .actions-sheet-item.is-danger:hover { background: #fef2f2; }
+        .asi-icon {
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+        .actions-sheet-item.is-danger .asi-icon { background: #fef2f2; }
+        .asi-text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+        .asi-label { font-size: 0.92rem; font-weight: 600; color: #1e293b; line-height: 1.25; }
+        .actions-sheet-item.is-danger .asi-label { color: #dc2626; }
+        .asi-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .asi-chev { color: #cbd5e1; font-size: 0.8rem; flex: 0 0 auto; }
         .conclude-header {
             padding: 18px 22px;
             border-bottom: 1px solid #e2e8f0;
@@ -4329,27 +4383,13 @@
                                 ${birthdayInfoHtml} <!-- ADICIONADO AQUI -->
                             </div>
                         </div>
-                        <div class="flex flex-col space-y-2 items-center">
-                            ${(isPending || isInProgress) ? `<button data-id="${event.id}" class="resend-link-btn text-amber-500 hover:text-amber-700 text-lg shrink-0" title="Copiar / reenviar o link de cadastro"><i class="fas fa-share-nodes"></i></button>` : ''}
-                             <button data-id="${event.id}" data-date="${dateStr}" class="edit-event-btn text-blue-500 hover:text-blue-700 text-lg shrink-0" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
-                            ${isMultiDay ? `
-                                <button data-id="${event.id}" data-date="${dateStr}" class="edit-day-time-btn text-indigo-500 hover:text-indigo-700 text-lg shrink-0" title="Editar horário apenas deste dia"><i class="fas fa-clock"></i></button>
-                                <button data-id="${event.id}" data-date="${dateStr}" class="delete-day-btn text-amber-600 hover:text-amber-800 text-lg shrink-0" title="Remover apenas este dia do evento"><i class="fas fa-calendar-minus"></i></button>
-                            ` : ''}
-                            ${isCancelled
-                                ? `<button data-id="${event.id}" class="reactivate-event-btn text-emerald-500 hover:text-emerald-700 text-lg shrink-0" title="Reativar evento"><i class="fas fa-rotate-left"></i></button>`
-                                : `<button data-id="${event.id}" class="cancel-event-btn text-orange-500 hover:text-orange-700 text-lg shrink-0" title="Cancelar evento (sem excluir)"><i class="fas fa-ban"></i></button>`
-                            }
-                            <button data-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 text-lg shrink-0" title="Excluir Evento"><i class="fas fa-times-circle"></i></button>
-                            <button data-id="${event.id}" class="generate-message-btn text-green-500 hover:text-green-600 text-lg shrink-0" title="✨ Criar Mensagem de Confirmação"><i class="fas fa-comment-dots"></i></button>
-                            <!-- BOTÃO DE IMPRESSÃO INDIVIDUAL REMOVIDO -->
-                            <!-- NOVO CHECKBOX DE SELEÇÃO -->
-                            <input type="checkbox" data-id="${event.id}" data-date="${dateStr}" class="event-print-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500" title="Selecionar para Impressão">
-                            <button data-id="${event.id}" class="generate-contract-btn text-purple-500 hover:text-purple-600 text-lg shrink-0" title="Gerar Contrato"><i class="fas fa-file-signature"></i></button>
-                            ${event.contractFileUrl
-                                ? `<button data-id="${event.id}" class="view-contract-btn text-teal-600 hover:text-teal-800 text-lg shrink-0" title="Ver contrato anexado — ${escAttr(event.contractFileName || 'contrato')}"><i class="fas fa-file-contract"></i></button>`
-                                : `<button data-id="${event.id}" class="attach-contract-btn text-gray-400 hover:text-teal-600 text-lg shrink-0" title="Anexar contrato"><i class="fas fa-paperclip"></i></button>`
-                            }
+                        <div class="flex flex-col gap-2 shrink-0 items-stretch">
+                            <button data-id="${event.id}" data-date="${dateStr}" class="edit-event-btn inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-sm font-semibold transition-colors" title="Editar evento"><i class="fas fa-pencil-alt"></i><span>Editar</span></button>
+                            <button data-id="${event.id}" data-date="${dateStr}" class="event-actions-btn inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 text-sm font-semibold transition-colors" title="Mais ações do evento"><i class="fas fa-ellipsis"></i><span>Ações</span></button>
+                            <label class="flex items-center justify-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none" title="Selecionar este dia/evento para impressão em lote">
+                                <input type="checkbox" data-id="${event.id}" data-date="${dateStr}" class="event-print-checkbox h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500">
+                                <span>Imprimir</span>
+                            </label>
                         </div>
                     </div>
                     ${isCancelled
@@ -4409,6 +4449,7 @@
                     reopenShareForEvent(ev);
                 }));
                 document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date)));
+                document.querySelectorAll('.event-actions-btn').forEach(btn => btn.addEventListener('click', (e) => openEventActionsMenu(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date, e.currentTarget)));
                 document.querySelectorAll('.conclude-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleConcludeEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.cancel-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleCancelEvent(parseInt(e.currentTarget.dataset.id))));
                 document.querySelectorAll('.reactivate-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleReactivateEvent(parseInt(e.currentTarget.dataset.id))));
@@ -6017,6 +6058,86 @@
                         renderAll();
                         if (selectedDate) renderDayEvents(selectedDate);
                     }
+                });
+            };
+
+            // === Menu de ações do evento (folha com rótulos) ===
+            // Substitui a antiga coluna de ícones do card por uma lista onde cada ação tem
+            // o nome escrito. Os itens variam conforme o estado do evento (multi-dia,
+            // cancelado, aguardando cadastro, contrato anexado). Cada item chama o handler
+            // já existente — nenhuma lógica de ação foi duplicada.
+            const openEventActionsMenu = (eventId, dateStr, anchorBtn = null) => {
+                const event = events.find(e => e.id === eventId);
+                if (!event) return showToast('Evento não encontrado.', true);
+
+                const esc = (s) => String(s == null ? '' : s)
+                    .replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+
+                const isMultiDay = !!(event.endDate && event.endDate > event.date) && event.eventType !== 'meeting';
+                const isCancelled = event.status === 'cancelado';
+                const isAwaitingClient = event.status === 'pendente_cadastro' || event.status === 'cadastro_em_andamento';
+                const hasContract = !!event.contractFileUrl;
+                const dayBR = fmtDateBR(dateStr);
+
+                // anchorBtn (o botão "Ações" do card) permanece no DOM após a folha fechar,
+                // então serve de âncora para o spinner de carregamento das ações de IA.
+                const items = [];
+                items.push({ icon: 'fa-pencil-alt', color: '#2563eb', label: 'Editar evento', sub: 'Dados, itens e valores', run: () => handleEditEvent(eventId, dateStr) });
+                if (isMultiDay) {
+                    items.push({ icon: 'fa-clock', color: '#4f46e5', label: 'Editar horário deste dia', sub: `Apenas ${dayBR}, sem afetar os outros`, run: () => handleEditDayTime(eventId, dateStr) });
+                    items.push({ icon: 'fa-calendar-minus', color: '#d97706', label: `Remover só o dia ${dayBR}`, sub: 'Mantém os demais dias agendados', run: () => handleRemoveSingleDay(eventId, dateStr) });
+                }
+                if (isAwaitingClient) {
+                    items.push({ icon: 'fa-share-nodes', color: '#d97706', label: 'Reenviar link de cadastro', sub: 'Copiar / compartilhar com o cliente', run: () => reopenShareForEvent(event) });
+                }
+                items.push({ icon: 'fa-comment-dots', color: '#16a34a', label: 'Criar mensagem de confirmação', sub: 'Gera o texto com IA', run: () => handleGenerateMessage(eventId, anchorBtn) });
+                items.push({ icon: 'fa-file-signature', color: '#9333ea', label: 'Gerar contrato', sub: 'Gera o contrato com IA', run: () => handleGenerateContract(eventId, anchorBtn) });
+                if (hasContract) {
+                    items.push({ icon: 'fa-file-contract', color: '#0d9488', label: 'Ver contrato anexado', sub: esc(event.contractFileName || 'Abrir arquivo'), run: () => handleViewContract(eventId) });
+                } else {
+                    items.push({ icon: 'fa-paperclip', color: '#0d9488', label: 'Anexar contrato', sub: 'PDF, imagem ou Word', run: () => handleAttachContract(eventId) });
+                }
+                if (isCancelled) {
+                    items.push({ icon: 'fa-rotate-left', color: '#059669', label: 'Reativar evento', sub: 'Volta o evento para ativo', sep: true, run: () => handleReactivateEvent(eventId) });
+                } else {
+                    items.push({ icon: 'fa-ban', color: '#ea580c', label: 'Cancelar evento', sub: 'Marca como cancelado (não exclui)', sep: true, run: () => handleCancelEvent(eventId) });
+                }
+                items.push({ icon: 'fa-trash', color: '#dc2626', label: 'Excluir evento', sub: 'Remove o evento por completo', danger: true, run: () => handleDeleteEvent(eventId) });
+
+                const rowsHtml = items.map((it, i) => `
+                    <button type="button" class="actions-sheet-item ${it.danger ? 'is-danger' : ''} ${it.sep ? 'has-sep' : ''}" data-idx="${i}">
+                        <span class="asi-icon" style="color:${it.color}"><i class="fas ${it.icon}"></i></span>
+                        <span class="asi-text">
+                            <span class="asi-label">${it.label}</span>
+                            ${it.sub ? `<span class="asi-sub">${it.sub}</span>` : ''}
+                        </span>
+                        <i class="fas fa-chevron-right asi-chev"></i>
+                    </button>
+                `).join('');
+
+                const overlay = document.createElement('div');
+                overlay.className = 'conclude-overlay actions-sheet-overlay';
+                overlay.innerHTML = `
+                    <div class="conclude-box actions-sheet-box" role="document">
+                        <div class="conclude-header">
+                            <div>
+                                <h3><i class="fas fa-list-ul mr-1"></i> Ações do evento</h3>
+                                <div class="subtitle">${esc(event.clientName || 'Evento')} · ${dayBR}</div>
+                            </div>
+                            <button class="close-x" data-action="close" aria-label="Fechar">&times;</button>
+                        </div>
+                        <div class="conclude-body actions-sheet-body">${rowsHtml}</div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                const close = () => overlay.remove();
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay || e.target.closest('[data-action="close"]')) { close(); return; }
+                    const row = e.target.closest('.actions-sheet-item');
+                    if (!row) return;
+                    const it = items[parseInt(row.dataset.idx)];
+                    close();
+                    if (it && typeof it.run === 'function') it.run();
                 });
             };
 
