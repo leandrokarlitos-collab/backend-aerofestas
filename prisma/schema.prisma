@@ -550,6 +550,7 @@ model FixedExpense {
   recurrenceType String  @default("permanente") // "permanente" ou "parcelada"
   startDate      String? // "YYYY-MM"
   installments   Int?
+  installmentDates String? // JSON: ["YYYY-MM-DD", ...] — vencimento de cada parcela (quando não é o mesmo dia todo mês)
   attachments    String? // Guardaremos como JSON string se houver
 }
 

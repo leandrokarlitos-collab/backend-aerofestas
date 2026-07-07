@@ -76,6 +76,21 @@ function eventRentalsInRange(evt, startStr, endStr) {
     return rentals * eventFractionInRange(evt, startStr, endStr);
 }
 
+// --- Conta fixa parcelada: vencimento por parcela (installmentDates) ---
+// Normaliza para string JSON ao gravar; parse tolerante ao ler.
+function normalizeInstallmentDates(v) {
+    if (v == null) return null;
+    if (typeof v === 'string') { const t = v.trim(); return (t === '' || t === 'null') ? null : t; }
+    if (Array.isArray(v)) return v.length ? JSON.stringify(v) : null;
+    return null;
+}
+function parseInstallmentDatesFE(fe) {
+    const raw = fe.installmentDates;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try { return JSON.parse(raw) || []; } catch { return []; }
+}
+
 // --- AUTENTICAÇÃO ---
 // Todas as rotas de /api/finance exigem token, EXCETO as usadas pelo
 // formulário PÚBLICO de cadastro/atualização de monitores
@@ -178,7 +193,11 @@ router.get('/dashboard', async (req, res) => {
 
         for (const fe of fixedExpenses) {
             let isMonthActive = true;
-            if (fe.recurrenceType === 'parcelada' && fe.startDate) {
+            const installmentDates = parseInstallmentDatesFE(fe);
+            if (installmentDates.length) {
+                // Parcelas com vencimento próprio: ativa só nos meses que têm uma parcela.
+                isMonthActive = installmentDates.some(d => (d || '').slice(0, 7) === monthStr);
+            } else if (fe.recurrenceType === 'parcelada' && fe.startDate) {
                 const [startYear, startMonth] = fe.startDate.split('-').map(Number);
                 const monthsDiff = (currentYear - startYear) * 12 + ((currentMonth + 1) - startMonth);
                 if (monthsDiff < 0 || monthsDiff >= (fe.installments || 0)) {
@@ -379,7 +398,8 @@ router.post('/fixed-expenses', async (req, res) => {
                 category: f.category,
                 recurrenceType: f.recurrenceType,
                 startDate: f.startDate,
-                installments: f.installments ? parseInt(f.installments) : null
+                installments: f.installments ? parseInt(f.installments) : null,
+                installmentDates: normalizeInstallmentDates(f.installmentDates)
             }
         });
         res.json(newFixed);
@@ -400,7 +420,8 @@ router.put('/fixed-expenses/:id', async (req, res) => {
                 category: f.category,
                 recurrenceType: f.recurrenceType,
                 startDate: f.startDate,
-                installments: f.installments ? parseInt(f.installments) : null
+                installments: f.installments ? parseInt(f.installments) : null,
+                installmentDates: normalizeInstallmentDates(f.installmentDates)
             }
         });
         res.json(updatedFixed);
