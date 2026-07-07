@@ -3077,18 +3077,16 @@
             const calculateAndDisplayMonthlyTotal = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
+                // Eventos com ao menos um dia ativo neste mês (inclui multi-dia iniciado
+                // no mês anterior que se estende para cá).
                 const monthlyEvents = events.filter(event => {
                     if (event.eventType === 'meeting') return false;
-                    const eventDate = new Date(event.date + 'T00:00:00');
-                    return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+                    return eventTouchesMonth(event, year, month);
                 });
-                // Faturamento do mês: preço dos eventos normais + líquido realizado dos eventos por ingresso.
-                // (Eventos por ingresso têm price = 0; o líquido só entra depois de concluído/informado.)
-                const total = monthlyEvents.reduce((sum, event) => {
-                    let v = Number(event.price) || 0;
-                    if (event.isTicketSale && event.ticketNetTotal != null) v += Number(event.ticketNetTotal) || 0;
-                    return sum + v;
-                }, 0);
+                // Faturamento do mês: preço dos eventos normais + líquido realizado dos eventos por ingresso,
+                // cada um rateado pelos dias ativos que caem NESTE mês — um evento que cruza a virada de mês
+                // entra proporcionalmente em cada mês. (Eventos por ingresso têm price = 0.)
+                const total = monthlyEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
                 monthlyTotalEl.textContent = formatCurrency(total);
 
                 // Estimado do mês: só eventos por ingresso AINDA não realizados (sem líquido informado).
@@ -3096,7 +3094,7 @@
                 const estimatedTotal = monthlyEvents.reduce((sum, event) => {
                     if (!event.isTicketSale) return sum;
                     if (event.ticketNetTotal != null) return sum;
-                    return sum + (Number(event.estimatedValue) || 0);
+                    return sum + (Number(event.estimatedValue) || 0) * eventMonthFraction(event, year, month);
                 }, 0);
                 const estimatedContainer = document.getElementById('monthly-estimated-container');
                 const estimatedEl = document.getElementById('monthly-estimated');
@@ -3940,6 +3938,30 @@
                 return out;
             };
 
+            // Fração (0..1) dos dias ativos do evento que caem no ano/mês (mês 0-based).
+            // Base do rateio proporcional de eventos multi-dia que cruzam meses: cada dia
+            // carrega valor_total / nº_dias e conta no mês em que cai.
+            const eventMonthFraction = (event, year, month) => {
+                const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
+                if (!active.length) return 0;
+                const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month).length;
+                return inMonth / active.length;
+            };
+            // Receita do evento atribuível ao mês (preço + líquido de venda por ingresso), rateada por dia.
+            const eventRevenueInMonth = (event, year, month) => {
+                let v = Number(event.price) || 0;
+                if (event.isTicketSale && event.ticketNetTotal != null) v += Number(event.ticketNetTotal) || 0;
+                return v * eventMonthFraction(event, year, month);
+            };
+            // true se o evento tem ao menos um dia ativo no ano/mês (para totais e listagens).
+            const eventTouchesMonth = (event, year, month) => eventMonthFraction(event, year, month) > 0;
+            // { inMonth, total } dias ativos — usado nas listagens para mostrar "N/M dias neste mês".
+            const eventDaysInMonth = (event, year, month) => {
+                const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
+                const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month).length;
+                return { inMonth, total: active.length };
+            };
+
             // === Helpers para itens/valores por dia (eventos multi-dia) ===
             // Soma o subtotal (brinquedos) de uma lista de itens (aceita {price|valor, quantity}).
             const subtotalOfItems = (items) => (items || []).reduce((acc, i) => {
@@ -4119,16 +4141,14 @@
                 companyListDiv.innerHTML = '';
                 yourCompanySelectEl.innerHTML = '<option value="">Selecione sua empresa</option>';
 
-                // --- INÍCIO DA MODIFICAÇÃO: Calcular faturamento mensal ---
+                // --- Faturamento mensal por empresa (rateio proporcional de multi-dia) ---
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
 
                 const monthlyEvents = events.filter(event => {
                     if (event.eventType === 'meeting') return false;
-                    const eventDate = new Date(event.date + 'T00:00:00');
-                    return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+                    return eventTouchesMonth(event, year, month);
                 });
-                // --- FIM DA MODIFICAÇÃO ---
 
 
                 if (companies.length === 0) {
@@ -4136,10 +4156,9 @@
                 } else {
                     companies.sort((a, b) => a.name.localeCompare(b.name)).forEach(company => {
 
-                        // --- INÍCIO DA MODIFICAÇÃO: Calcular total da empresa ---
+                        // Total da empresa no mês: cada evento rateado pelos dias ativos que caem neste mês.
                         const companyEvents = monthlyEvents.filter(e => e.yourCompanyId === company.id);
-                        const companyTotal = companyEvents.reduce((sum, event) => sum + (event.price || 0), 0);
-                        // --- FIM DA MODIFICAÇÃO ---
+                        const companyTotal = companyEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
 
                         const companyItem = document.createElement('div');
                         companyItem.className = 'flex justify-between items-center bg-white/60 p-2 rounded-md';
@@ -4477,8 +4496,7 @@
 
                 const monthlyEvents = events.filter(event => {
                     if (event.eventType === 'meeting') return false;
-                    const eventDate = new Date(event.date + 'T00:00:00');
-                    return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+                    return eventTouchesMonth(event, year, month);
                 });
 
                 if (monthlyEvents.length === 0) {
@@ -4517,8 +4535,8 @@
                                 ? aLocation.localeCompare(bLocation, 'pt-BR')
                                 : bLocation.localeCompare(aLocation, 'pt-BR');
                         case 'value':
-                            aValue = a.price || 0;
-                            bValue = b.price || 0;
+                            aValue = eventRevenueInMonth(a, year, month);
+                            bValue = eventRevenueInMonth(b, year, month);
                             return currentSortOrder === 'asc'
                                 ? aValue - bValue
                                 : bValue - aValue;
@@ -4537,12 +4555,19 @@
                     const eventLocation = [event.clientAddress, event.complemento, event.bairro, event.cidade]
                         .filter(Boolean).join(', ') || 'Local a confirmar';
 
+                    // Valor rateado pelos dias que caem NESTE mês (multi-dia que cruza meses).
+                    const monthValue = eventRevenueInMonth(event, year, month);
+                    const { inMonth, total } = eventDaysInMonth(event, year, month);
+                    const partialNote = (total > 1 && inMonth < total)
+                        ? `<span class="block text-[10px] text-gray-400 font-normal">${inMonth}/${total} dias neste mês</span>`
+                        : '';
+
                     return `
                 <tr class="hover:bg-indigo-50 cursor-pointer transition-colors" data-event-id="${event.id}" data-event-date="${event.date}">
                     <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${event.clientName || 'Sem nome'}</td>
                     <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${formattedDate}</td>
                     <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${eventLocation}</td>
-                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700 font-semibold text-emerald-600">${formatCurrency(event.price || 0)}</td>
+                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700 font-semibold text-emerald-600">${formatCurrency(monthValue)}${partialNote}</td>
                 </tr>
             `;
                 }).join('');
@@ -4603,8 +4628,7 @@
 
                 const monthlyEvents = events.filter(event => {
                     if (event.eventType === 'meeting') return false;
-                    const eventDate = new Date(event.date + 'T00:00:00');
-                    return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+                    return eventTouchesMonth(event, year, month);
                 });
 
                 if (monthlyEvents.length === 0) {
@@ -4648,8 +4672,8 @@
                                     ? aLocation.localeCompare(bLocation, 'pt-BR')
                                     : bLocation.localeCompare(aLocation, 'pt-BR');
                             case 'value':
-                                aValue = a.price || 0;
-                                bValue = b.price || 0;
+                                aValue = eventRevenueInMonth(a, year, month);
+                                bValue = eventRevenueInMonth(b, year, month);
                                 return currentSortOrder === 'asc'
                                     ? aValue - bValue
                                     : bValue - aValue;
@@ -4680,16 +4704,23 @@
                         const eventLocation = [event.clientAddress, event.complemento, event.bairro, event.cidade]
                             .filter(Boolean).join(', ') || 'Local a confirmar';
 
+                        // Valor rateado pelos dias que caem NESTE mês (multi-dia que cruza meses).
+                        const monthValue = eventRevenueInMonth(event, year, month);
+                        const { inMonth, total } = eventDaysInMonth(event, year, month);
+                        const dateCell = (total > 1 && inMonth < total)
+                            ? `${formattedDate} (${inMonth}/${total} dias)`
+                            : formattedDate;
+
                         return [
                             event.clientName || 'Sem nome',
-                            formattedDate,
+                            dateCell,
                             eventLocation,
-                            formatCurrency(event.price || 0)
+                            formatCurrency(monthValue)
                         ];
                     });
 
-                    // Adicionar linha de total
-                    const totalValue = sortedEvents.reduce((sum, event) => sum + (event.price || 0), 0);
+                    // Adicionar linha de total (rateado — bate com o faturamento do mês)
+                    const totalValue = sortedEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
                     rows.push(['TOTAL', '', '', formatCurrency(totalValue)]);
 
                     // Calcular larguras das colunas (coluna de valor com o dobro)

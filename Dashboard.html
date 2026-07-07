@@ -1534,6 +1534,41 @@
             const formatarMoeda = (valor) => (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             const formatarData = str => { if (!str) return '-'; const p = str.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
 
+            // --- Rateio proporcional de eventos multi-dia entre meses ---
+            // Mesmo critério da Agenda/Financeiro: um evento que cruza a virada de mês
+            // contribui em cada mês na proporção de dias ativos que caem naquele mês.
+            function parseExcludedDatesDash(ev) {
+                if (!ev.excludedDates) return [];
+                if (Array.isArray(ev.excludedDates)) return ev.excludedDates;
+                try { return JSON.parse(ev.excludedDates) || []; } catch { return []; }
+            }
+            function eventActiveDatesDash(ev) {
+                const start = ev.date;
+                if (!start) return [];
+                const end = (ev.endDate && ev.endDate >= start) ? ev.endDate : start;
+                if (ev.eventType === 'meeting' || end === start) return [start];
+                const excluded = new Set(parseExcludedDatesDash(ev));
+                const out = [];
+                const d = new Date(start + 'T00:00:00');
+                const ed = new Date(end + 'T00:00:00');
+                while (d <= ed) {
+                    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    if (!excluded.has(iso)) out.push(iso);
+                    d.setDate(d.getDate() + 1);
+                }
+                return out;
+            }
+            function eventMonthFractionDash(ev, year, month0) {
+                const active = eventActiveDatesDash(ev);
+                if (!active.length) return 0;
+                const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month0).length;
+                return inMonth / active.length;
+            }
+            function eventRevenueInMonthDash(ev, year, month0) {
+                const value = parseFloat(ev.totalPrice || ev.price) || 0;
+                return value * eventMonthFractionDash(ev, year, month0);
+            }
+
             /**
              * Busca e calcula os dados financeiros da API.
              */
@@ -1565,13 +1600,14 @@
                         });
                     };
 
-                    const filteredEventos = filterByMonth(eventos);
                     // Filtra apenas gastos (despesas)
                     const transacoesMes = filterByMonth(transacoes);
                     const filteredGastos = transacoesMes.filter(t => t.type === 'EXPENSE');
 
-                    // Calcula receitas (soma dos eventos + entradas manuais de receita se houver)
-                    const totalEventos = filteredEventos.reduce((acc, ev) => acc + (parseFloat(ev.totalPrice || ev.price) || 0), 0);
+                    // Calcula receitas (soma dos eventos + entradas manuais de receita se houver).
+                    // Eventos multi-dia que cruzam a virada de mês entram proporcionalmente pelos
+                    // dias ativos que caem NESTE mês (rateio por dia).
+                    const totalEventos = (eventos || []).reduce((acc, ev) => acc + eventRevenueInMonthDash(ev, year, monthNum - 1), 0);
                     const totalReceitasManuais = transacoesMes.filter(t => t.type === 'REVENUE').reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
                     const totalReceitas = totalEventos + totalReceitasManuais;
 

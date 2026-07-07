@@ -3,6 +3,39 @@ const router = express.Router();
 const prisma = require('../prisma/client');
 const { authenticate } = require('../middleware/auth');
 
+// --- Rateio proporcional de eventos multi-dia entre meses ---
+// Um evento que cruza a virada de mês contribui em cada mês na proporção de dias
+// ativos que caem naquele mês: valor_total / nº_dias_ativos × dias_no_mês.
+// Respeita excludedDates (dias alternados). Reuniões e eventos de 1 dia = 1 dia só.
+function parseExcludedDatesFin(evt) {
+    if (!evt.excludedDates) return [];
+    if (Array.isArray(evt.excludedDates)) return evt.excludedDates;
+    try { return JSON.parse(evt.excludedDates) || []; } catch { return []; }
+}
+function eventActiveDates(evt) {
+    const start = evt.date;
+    if (!start) return [];
+    const end = (evt.endDate && evt.endDate >= start) ? evt.endDate : start;
+    if (evt.eventType === 'meeting' || end === start) return [start];
+    const excluded = new Set(parseExcludedDatesFin(evt));
+    const out = [];
+    const d = new Date(start + 'T00:00:00');
+    const ed = new Date(end + 'T00:00:00');
+    while (d <= ed) {
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!excluded.has(iso)) out.push(iso);
+        d.setDate(d.getDate() + 1);
+    }
+    return out;
+}
+// Fração (0..1) dos dias ativos do evento que caem no intervalo [startStr, endStr].
+function eventFractionInRange(evt, startStr, endStr) {
+    const active = eventActiveDates(evt);
+    if (!active.length) return 0;
+    const inRange = active.filter(iso => iso >= startStr && iso <= endStr).length;
+    return inRange / active.length;
+}
+
 // --- AUTENTICAÇÃO ---
 // Todas as rotas de /api/finance exigem token, EXCETO as usadas pelo
 // formulário PÚBLICO de cadastro/atualização de monitores
@@ -42,32 +75,37 @@ router.get('/dashboard', async (req, res) => {
         const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
         // 1. Receitas de Eventos — eventos cancelados NÃO entram na receita.
-        // Mantemos a query retornando todos pra que o frontend possa exibir
-        // a lista com a tag "Cancelado", mas o totalizador filtra.
+        // Busca eventos que SE SOBREPÕEM ao mês (não só os que começam nele): um
+        // evento multi-dia que cruza a virada de mês precisa contribuir em cada mês
+        // tocado, na proporção de dias ativos (ver eventFractionInRange).
         const events = await prisma.event.findMany({
-            where: { date: { gte: startStr, lte: endStr } },
+            where: {
+                date: { lte: endStr },
+                OR: [
+                    { endDate: { gte: startStr } }, // multi-dia que termina dentro/após o mês
+                    { date: { gte: startStr } }     // qualquer evento que começa no mês (inclui 1 dia)
+                ]
+            },
             include: { externalRentals: true }
         });
+        const eventosDoMes = events.filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado');
         // Eventos vendidos por ingresso têm price = 0; sua receita é o líquido realizado
         // (ticketNetTotal), que entra no faturamento assim que informado no fechamento.
-        const receitaEventos = events
-            .filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado')
-            .reduce((acc, evt) => {
-                let v = evt.price || 0;
-                if (evt.isTicketSale && evt.ticketNetTotal != null) v += Number(evt.ticketNetTotal) || 0;
-                return acc + v;
-            }, 0);
+        // Rateio proporcional: só a parcela de dias que caem neste mês entra aqui.
+        const receitaEventos = eventosDoMes.reduce((acc, evt) => {
+            let v = evt.price || 0;
+            if (evt.isTicketSale && evt.ticketNetTotal != null) v += Number(evt.ticketNetTotal) || 0;
+            return acc + v * eventFractionInRange(evt, startStr, endStr);
+        }, 0);
 
         // 1.2 Locações externas (custo de equipamentos de terceiros usados em eventos)
         // - Só contam de eventos não-cancelados
-        // - Entram como despesa no totalizador
-        const externalRentalsExpense = events
-            .filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado')
-            .reduce((acc, evt) => {
-                const rentalsTotal = (evt.externalRentals || [])
-                    .reduce((s, r) => s + (Number(r.cost) || 0), 0);
-                return acc + rentalsTotal;
-            }, 0);
+        // - Entram como despesa no totalizador (rateadas por dia, igual à receita)
+        const externalRentalsExpense = eventosDoMes.reduce((acc, evt) => {
+            const rentalsTotal = (evt.externalRentals || [])
+                .reduce((s, r) => s + (Number(r.cost) || 0), 0);
+            return acc + rentalsTotal * eventFractionInRange(evt, startStr, endStr);
+        }, 0);
 
         // 1.1 Receitas Manuais (Transações)
         const revenueTransactions = await prisma.transaction.findMany({
