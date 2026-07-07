@@ -4425,42 +4425,56 @@
                     });
                 }
 
-                // <!-- INÍCIO DA MODIFICAÇÃO: Botão de Imprimir e Checkbox de Ocultar Valores -->
-                if (dayEvents.length > 0) {
-                    const hidePricesContainer = document.createElement('div');
-                    hidePricesContainer.className = 'flex items-center justify-center mt-4';
-                    hidePricesContainer.innerHTML = `
-                <input type="checkbox" id="hide-prices-checkbox" class="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500 mr-2">
-                <label for="hide-prices-checkbox" class="text-sm text-gray-700 select-none cursor-pointer">Ocultar valores na impressão</label>
-            `;
-                    dayEventsList.appendChild(hidePricesContainer);
+                // === Ações do dia (rodapé do painel) ===
+                // Hierarquia clara: ação principal (Adicionar evento) em destaque; ações
+                // secundárias (Reunião / Link) lado a lado; e o grupo de impressão — só
+                // quando há eventos — com contador ao vivo dos selecionados e botão
+                // desabilitado enquanto nada está marcado.
+                const hasDayEvents = dayEvents.length > 0;
+                const dayActions = document.createElement('div');
+                dayActions.className = 'mt-4 space-y-2';
+                dayActions.innerHTML = `
+                    <button type="button" id="day-add-event-btn" class="w-full px-4 py-2.5 rounded-lg shiny-btn font-semibold flex items-center justify-center gap-2" title="Adicionar um novo evento neste dia">
+                        <i class="fas fa-plus"></i><span>Adicionar evento</span>
+                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="day-add-meeting-btn" class="px-3 py-2 rounded-lg bg-white border border-violet-200 text-violet-700 hover:bg-violet-50 text-sm font-semibold flex items-center justify-center gap-2 transition-colors" title="Agendar uma reunião neste dia">
+                            <i class="fas fa-handshake"></i><span>Reunião</span>
+                        </button>
+                        <button type="button" id="day-link-cadastro-btn" class="px-3 py-2 rounded-lg bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 text-sm font-semibold flex items-center justify-center gap-2 transition-colors" title="Gerar link de cadastro para o cliente preencher">
+                            <i class="fas fa-link"></i><span>Link de cadastro</span>
+                        </button>
+                    </div>
+                    ${hasDayEvents ? `
+                    <div class="mt-1 p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                        <button type="button" id="print-selected-events-btn" class="w-full px-3 py-2 rounded-md bg-red-500 hover:bg-red-600 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fas fa-print"></i><span>Imprimir O.S. selecionadas<span id="print-count-label"></span></span>
+                        </button>
+                        <label class="flex items-center justify-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                            <input type="checkbox" id="hide-prices-checkbox" class="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500">
+                            <span>Ocultar valores na impressão</span>
+                        </label>
+                    </div>
+                    ` : ''}
+                `;
+                dayEventsList.appendChild(dayActions);
 
-                    const printSelectedBtn = document.createElement('button');
-                    printSelectedBtn.id = 'print-selected-events-btn';
-                    printSelectedBtn.textContent = 'Imprimir Ordens de Serviço Selecionadas';
-                    printSelectedBtn.className = 'mt-2 w-full px-4 py-2 rounded-md shiny-btn-red'; // mt-2 em vez de mt-4
-                    printSelectedBtn.onclick = () => handlePrintSelectedEvents();
-                    dayEventsList.appendChild(printSelectedBtn);
+                dayActions.querySelector('#day-add-event-btn').onclick = () => showEventModal(dateStr);
+                dayActions.querySelector('#day-add-meeting-btn').onclick = () => showMeetingModalForDate(dateStr);
+                dayActions.querySelector('#day-link-cadastro-btn').onclick = () => openLinkCadastroModal(dateStr);
+                if (hasDayEvents) {
+                    const printBtn = dayActions.querySelector('#print-selected-events-btn');
+                    const countLabel = dayActions.querySelector('#print-count-label');
+                    printBtn.onclick = () => handlePrintSelectedEvents();
+                    // Reflete quantos eventos estão marcados para impressão (habilita/desabilita).
+                    const updatePrintCount = () => {
+                        const n = document.querySelectorAll('.event-print-checkbox:checked').length;
+                        printBtn.disabled = n === 0;
+                        countLabel.textContent = n > 0 ? ` (${n})` : '';
+                    };
+                    document.querySelectorAll('.event-print-checkbox').forEach(cb => cb.addEventListener('change', updatePrintCount));
+                    updatePrintCount();
                 }
-                // <!-- FIM DA MODIFICAÇÃO -->
-
-                const addEventBtn = document.createElement('button');
-                addEventBtn.innerHTML = '<i class="fas fa-birthday-cake mr-2"></i>Adicionar Evento';
-                addEventBtn.className = 'mt-4 w-full px-4 py-2 rounded-md shiny-btn';
-                addEventBtn.onclick = () => showEventModal(dateStr);
-                dayEventsList.appendChild(addEventBtn);
-
-                const addMeetingBtn = document.createElement('button');
-                addMeetingBtn.innerHTML = '<i class="fas fa-handshake mr-2"></i>Agendar Reunião';
-                addMeetingBtn.className = 'mt-2 w-full px-4 py-2 rounded-md shiny-btn-violet';
-                addMeetingBtn.onclick = () => showMeetingModalForDate(dateStr);
-                dayEventsList.appendChild(addMeetingBtn);
-
-                const linkCadastroBtn = document.createElement('button');
-                linkCadastroBtn.innerHTML = '<i class="fas fa-link mr-2"></i>Link para cadastro de Agendamento';
-                linkCadastroBtn.className = 'mt-2 w-full px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors';
-                linkCadastroBtn.onclick = () => openLinkCadastroModal(dateStr);
-                dayEventsList.appendChild(linkCadastroBtn);
 
                 document.querySelectorAll('.resend-link-btn').forEach(btn => btn.addEventListener('click', (e) => {
                     e.stopPropagation();
