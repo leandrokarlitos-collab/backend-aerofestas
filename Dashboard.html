@@ -1568,11 +1568,11 @@
             }
             function dayValueDash(dayIso, basePerDay, overrides) {
                 const ov = overrides[dayIso];
-                if (ov && ov.subtotal != null) return Number(ov.subtotal);
-                if (ov && Array.isArray(ov.items)) return subtotalOfItemsDash(ov.items);
+                if (ov && Array.isArray(ov.items)) return (ov.subtotal != null) ? Number(ov.subtotal) : subtotalOfItemsDash(ov.items);
                 return basePerDay;
             }
-            // Valor do evento no ano/mês (0-based) — cada dia com seu VALOR REAL; extras no mês de início.
+            // Valor do evento no ano/mês (0-based) — distribui o TOTAL (price) pelo PESO (valor real)
+            // de cada dia; conserva sempre o total (nunca infla, mesmo em valor fechado).
             function eventRevenueInMonthDash(ev, year, month0) {
                 const active = eventActiveDatesDash(ev);
                 if (!active.length) return 0;
@@ -1582,19 +1582,18 @@
                     if (ev.ticketNetTotal == null) return 0;
                     return startMonth === ym ? (Number(ev.ticketNetTotal) || 0) : 0;
                 }
+                if ((ev.revenueMode || 'perDay') === 'upfront') {
+                    return startMonth === ym ? (Number(ev.price) || 0) : 0;
+                }
                 const overrides = parseOverridesDash(ev);
                 const basePerDay = subtotalOfItemsDash(ev.items || ev.toys);
-                const attractionsTotal = active.reduce((a, d) => a + dayValueDash(d, basePerDay, overrides), 0);
-                const rentals = (ev.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
-                const dv = Number(ev.discountValue) || 0;
-                const discount = (ev.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
-                const extras = (Number(ev.deliveryFee) || 0) + rentals - discount;
-                if ((ev.revenueMode || 'perDay') === 'upfront') {
-                    return startMonth === ym ? (attractionsTotal + extras) : 0;
-                }
-                let sum = active.filter(d => d.slice(0, 7) === ym).reduce((a, d) => a + dayValueDash(d, basePerDay, overrides), 0);
-                if (startMonth === ym) sum += extras;
-                return sum;
+                const weights = active.map(d => dayValueDash(d, basePerDay, overrides));
+                let totalW = weights.reduce((a, b) => a + b, 0);
+                const useCount = totalW <= 0;
+                if (useCount) totalW = active.length;
+                let monthW = 0;
+                active.forEach((d, i) => { if (d.slice(0, 7) === ym) monthW += (useCount ? 1 : weights[i]); });
+                return totalW > 0 ? (Number(ev.price) || 0) * (monthW / totalW) : 0;
             }
 
             /**

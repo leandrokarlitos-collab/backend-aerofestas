@@ -218,12 +218,11 @@
             };
             const finDayValue = (dayIso, basePerDay, overrides) => {
                 const ov = overrides[dayIso];
-                if (ov && ov.subtotal != null) return Number(ov.subtotal);
-                if (ov && Array.isArray(ov.items)) return finSubtotalItems(ov.items);
+                if (ov && Array.isArray(ov.items)) return (ov.subtotal != null) ? Number(ov.subtotal) : finSubtotalItems(ov.items);
                 return basePerDay;
             };
-            // Valor do evento no mês 'YYYY-MM' — cada dia com seu VALOR REAL (não total ÷ dias);
-            // extras (frete + locações − desconto) contam uma vez, no mês de início.
+            // Valor do evento no mês 'YYYY-MM' — distribui o TOTAL (valorOriginal = price) pelo PESO
+            // (valor real) de cada dia; conserva sempre o total (nunca infla, mesmo em valor fechado).
             const finEventValueForYm = (e, ym) => {
                 if (e.cancelado) return 0;
                 const active = finActiveDates(e);
@@ -233,19 +232,19 @@
                     if (e.ticketNetTotal == null) return 0;
                     return startMonth === ym ? (Number(e.ticketNetTotal) || 0) : 0;
                 }
+                const total = Number(e.valorOriginal) || 0;
+                if ((e.revenueMode || 'perDay') === 'upfront') {
+                    return startMonth === ym ? total : 0;
+                }
                 const overrides = finParseOverrides(e);
                 const basePerDay = finSubtotalItems(e.rawItems);
-                const attractionsTotal = active.reduce((a, d) => a + finDayValue(d, basePerDay, overrides), 0);
-                const rentals = (e.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
-                const dv = Number(e.discountValue) || 0;
-                const discount = (e.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
-                const extras = (Number(e.deliveryFee) || 0) + rentals - discount;
-                if ((e.revenueMode || 'perDay') === 'upfront') {
-                    return startMonth === ym ? (attractionsTotal + extras) : 0;
-                }
-                let sum = active.filter(d => d.slice(0, 7) === ym).reduce((a, d) => a + finDayValue(d, basePerDay, overrides), 0);
-                if (startMonth === ym) sum += extras;
-                return sum;
+                const weights = active.map(d => finDayValue(d, basePerDay, overrides));
+                let totalW = weights.reduce((a, b) => a + b, 0);
+                const useCount = totalW <= 0;
+                if (useCount) totalW = active.length;
+                let monthW = 0;
+                active.forEach((d, i) => { if (d.slice(0, 7) === ym) monthW += (useCount ? 1 : weights[i]); });
+                return totalW > 0 ? total * (monthW / totalW) : 0;
             };
             // O evento conta no mês? upfront/ingresso: mês de início; perDay: em cada mês que toca.
             const finCountsInMonth = (e, ym) => {

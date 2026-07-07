@@ -39,40 +39,41 @@ function parseOverridesFin(evt) {
 }
 function dayValueFin(dayIso, basePerDay, overrides) {
     const ov = overrides[dayIso];
-    if (ov && ov.subtotal != null) return Number(ov.subtotal);
-    if (ov && Array.isArray(ov.items)) return subtotalOfItemsFin(ov.items);
+    if (ov && Array.isArray(ov.items)) return (ov.subtotal != null) ? Number(ov.subtotal) : subtotalOfItemsFin(ov.items);
     return basePerDay;
 }
-// Receita do evento atribuível ao intervalo [startStr, endStr] — cada dia com seu VALOR REAL
-// (não o total ÷ nº de dias). Extras (frete + locações externas − desconto) contam uma vez, no
-// mês de início. 'upfront' joga tudo no mês de início; 'perDay' (padrão) soma o valor de cada dia.
-function eventRevenueInRange(evt, startStr, endStr) {
+// Fração do evento atribuível ao intervalo [startStr, endStr], pelo PESO (valor real) de cada dia.
+// Distribuir o total do evento por esse peso CONSERVA sempre o total — nunca infla, inclusive em
+// eventos de "valor fechado" (item = total do evento). 'upfront'/ingresso: tudo no mês de início.
+function eventFractionInRange(evt, startStr, endStr) {
     const active = eventActiveDates(evt);
     if (!active.length) return 0;
-    const inStartMonth = (evt.date >= startStr && evt.date <= endStr);
-    if (evt.isTicketSale) {
-        if (evt.ticketNetTotal == null) return 0;
-        return inStartMonth ? (Number(evt.ticketNetTotal) || 0) : 0;
+    if (evt.isTicketSale || (evt.revenueMode || 'perDay') === 'upfront') {
+        return (evt.date >= startStr && evt.date <= endStr) ? 1 : 0;
     }
     const overrides = parseOverridesFin(evt);
     const basePerDay = subtotalOfItemsFin(evt.items);
-    const attractionsTotal = active.reduce((a, d) => a + dayValueFin(d, basePerDay, overrides), 0);
-    const rentals = (evt.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
-    const dv = Number(evt.discountValue) || 0;
-    const discount = (evt.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
-    const extras = (Number(evt.deliveryFee) || 0) + rentals - discount;
-    if ((evt.revenueMode || 'perDay') === 'upfront') {
-        return inStartMonth ? (attractionsTotal + extras) : 0;
-    }
-    let sum = active.filter(d => d >= startStr && d <= endStr).reduce((a, d) => a + dayValueFin(d, basePerDay, overrides), 0);
-    if (inStartMonth) sum += extras;
-    return sum;
+    const weights = active.map(d => dayValueFin(d, basePerDay, overrides));
+    let totalW = weights.reduce((a, b) => a + b, 0);
+    const useCount = totalW <= 0;      // sem valor por dia → peso igual por dia
+    if (useCount) totalW = active.length;
+    let rangeW = 0;
+    active.forEach((d, i) => { if (d >= startStr && d <= endStr) rangeW += (useCount ? 1 : weights[i]); });
+    return totalW > 0 ? rangeW / totalW : 0;
 }
-// Custo de locações externas atribuível ao intervalo (uma vez, no mês de início — igual à receita).
+// Receita: ingresso = líquido no mês de início; senão o preço do evento distribuído pelo peso dos dias.
+function eventRevenueInRange(evt, startStr, endStr) {
+    if (evt.isTicketSale) {
+        if (evt.ticketNetTotal == null) return 0;
+        return (evt.date >= startStr && evt.date <= endStr) ? (Number(evt.ticketNetTotal) || 0) : 0;
+    }
+    return (Number(evt.price) || 0) * eventFractionInRange(evt, startStr, endStr);
+}
+// Custo de locações externas atribuído ao intervalo pela mesma fração (conserva o total).
 function eventRentalsInRange(evt, startStr, endStr) {
     const rentals = (evt.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
     if (!rentals) return 0;
-    return (evt.date >= startStr && evt.date <= endStr) ? rentals : 0;
+    return rentals * eventFractionInRange(evt, startStr, endStr);
 }
 
 // --- AUTENTICAÇÃO ---

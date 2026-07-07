@@ -3965,33 +3965,34 @@
                 return out;
             };
 
-            // === Valor do evento por mês — cada dia com seu VALOR REAL (não o total ÷ nº dias) ===
-            // Cada dia carrega seu próprio subtotal (daySubtotalForDate: override do dia ou base por dia).
-            // Extras (frete + locações externas − desconto) contam UMA vez, no mês de início.
-            //  - 'perDay' (padrão): cada dia soma no mês em que cai.
-            //  - 'upfront' (valor fechado): tudo (dias + extras) no mês de início.
-            const eventValueForYm = (event, ym) => {
+            // === Valor do evento por mês — distribui o TOTAL (event.price) pelo PESO de cada dia ===
+            // Cada dia pesa pelo seu valor real (daySubtotalForDate: override do dia ou base por dia).
+            // Distribuir o total pelo peso CONSERVA sempre o total do evento — nunca infla, mesmo em
+            // eventos de "valor fechado" (item = total). Dias iguais → rateio simples por dia.
+            //  - 'perDay' (padrão): distribui entre os meses conforme o peso dos dias de cada mês.
+            //  - 'upfront'/ingresso: tudo no mês de início.
+            const eventMonthWeightFraction = (event, ym) => {
                 const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
                 if (!active.length) return 0;
-                const startMonth = (event.date || '').slice(0, 7);
-                // Venda por ingresso: só o líquido REALIZADO entra no faturamento (o estimado fica à
-                // parte), como realização única no mês de início.
-                if (event.isTicketSale) {
-                    if (event.ticketNetTotal == null) return 0;
-                    return startMonth === ym ? (Number(event.ticketNetTotal) || 0) : 0;
+                if (event.isTicketSale || (event.revenueMode || 'perDay') === 'upfront') {
+                    return (event.date || '').slice(0, 7) === ym ? 1 : 0;
                 }
                 const basePerDay = subtotalOfItems(event.items || event.toys);
-                const attractionsTotal = active.reduce((a, d) => a + daySubtotalForDate(event, d, basePerDay), 0);
-                const rentals = (event.externalRentals || []).reduce((a, r) => a + (Number(r.cost) || 0), 0);
-                const dv = Number(event.discountValue) || 0;
-                const discount = (event.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
-                const extras = (Number(event.deliveryFee) || 0) + rentals - discount;
-                if ((event.revenueMode || 'perDay') === 'upfront') {
-                    return startMonth === ym ? (attractionsTotal + extras) : 0;
+                const weights = active.map(d => daySubtotalForDate(event, d, basePerDay));
+                let totalW = weights.reduce((a, b) => a + b, 0);
+                const useCount = totalW <= 0;      // sem valor por dia → peso igual por dia
+                if (useCount) totalW = active.length;
+                let monthW = 0;
+                active.forEach((d, i) => { if (d.slice(0, 7) === ym) monthW += (useCount ? 1 : weights[i]); });
+                return totalW > 0 ? monthW / totalW : 0;
+            };
+            const eventValueForYm = (event, ym) => {
+                // Venda por ingresso: só o líquido REALIZADO entra (o estimado fica à parte), no mês de início.
+                if (event.isTicketSale) {
+                    if (event.ticketNetTotal == null) return 0;
+                    return (event.date || '').slice(0, 7) === ym ? (Number(event.ticketNetTotal) || 0) : 0;
                 }
-                let sum = active.filter(d => d.slice(0, 7) === ym).reduce((a, d) => a + daySubtotalForDate(event, d, basePerDay), 0);
-                if (startMonth === ym) sum += extras;
-                return sum;
+                return (Number(event.price) || 0) * eventMonthWeightFraction(event, ym);
             };
             // Valor do evento atribuível ao ano/mês (mês 0-based).
             const eventRevenueInMonth = (event, year, month) => eventValueForYm(event, `${year}-${String(month + 1).padStart(2, '0')}`);
@@ -7321,33 +7322,33 @@
                     eventData.clientSocialChecked = document.getElementById('pj-social-checked').value === 'true';
                 }
 
-                // Preço final unificado (inclui locações externas e a multiplicação das atrações pelos dias)
+                // Preço final unificado (inclui locações externas e frete)
                 eventData.price = pricing.finalPrice;
 
                 // === Modo "todos os dias": preserva personalizações por dia (não-destrutivo) ===
-                // Se o evento já tinha dias com itens customizados, mantém esses overrides e recalcula
-                // o total somando cada dia (dias sem override usam os novos itens base). Overrides de
-                // dias que deixaram de existir (removidos do intervalo) são descartados.
+                // Mantém os overrides dos dias que continuam ativos; descarta os de dias removidos.
+                let finalOverrides = {};
                 if (eventId && !eventData.isTicketSale) {
                     const existingEv = events.find(ev => ev.id === eventId);
                     const existingOverrides = existingEv ? parseDateOverrides(existingEv) : {};
-                    const hasItemOverrides = Object.keys(existingOverrides).some(d => Array.isArray(existingOverrides[d].items));
                     if (Object.keys(existingOverrides).length) {
                         const activeSet = new Set(getEventActiveDates({ date: finalDate, endDate: finalEndDate, excludedDates }));
-                        const kept = {};
-                        Object.keys(existingOverrides).forEach(d => { if (activeSet.has(d)) kept[d] = existingOverrides[d]; });
-                        eventData.dateOverrides = Object.keys(kept).length ? JSON.stringify(kept) : null;
-                        if (hasItemOverrides) {
-                            const totals = recomputeEventTotals({
-                                date: finalDate, endDate: finalEndDate, excludedDates,
-                                items: eventData.items, externalRentals: eventData.externalRentals,
-                                deliveryFee: eventData.deliveryFee, discountType: eventData.discountType,
-                                discountValue: eventData.discountValue, dateOverrides: kept
-                            });
-                            eventData.subtotal = totals.attractionsTotal;
-                            eventData.price = totals.finalPrice;
-                        }
+                        Object.keys(existingOverrides).forEach(d => { if (activeSet.has(d)) finalOverrides[d] = existingOverrides[d]; });
+                        eventData.dateOverrides = Object.keys(finalOverrides).length ? JSON.stringify(finalOverrides) : null;
                     }
+                }
+                // SEMPRE recalcula subtotal/preço a partir do VALOR REAL de cada dia (respeita os
+                // overrides por dia), para o total armazenado nunca dessincronizar da soma dos dias.
+                // Sem overrides equivale a base × dias (inalterado para eventos simples).
+                if (!eventData.isTicketSale) {
+                    const totals = recomputeEventTotals({
+                        date: finalDate, endDate: finalEndDate, excludedDates,
+                        items: eventData.items, externalRentals: eventData.externalRentals,
+                        deliveryFee: eventData.deliveryFee, discountType: eventData.discountType,
+                        discountValue: eventData.discountValue, dateOverrides: finalOverrides
+                    });
+                    eventData.subtotal = totals.attractionsTotal;
+                    eventData.price = totals.finalPrice;
                 }
 
                 // Vendido por ingresso: não há valor de locação, só o estimado (que vai à parte).
