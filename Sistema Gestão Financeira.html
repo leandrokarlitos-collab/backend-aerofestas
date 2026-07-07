@@ -210,24 +210,54 @@
                 }
                 return out;
             };
-            // Fração do valor no mês 'YYYY-MM' — upfront: tudo no mês de início; perDay: rateado por dia.
-            const finValueFraction = (e, ym) => {
+            const finSubtotalItems = (items) => (items || []).reduce((a, i) => a + ((i.price != null ? Number(i.price) : (Number(i.valor) || 0)) * (i.quantity || 1)), 0);
+            const finParseOverrides = (e) => {
+                if (!e.dateOverrides) return {};
+                if (typeof e.dateOverrides === 'object') return e.dateOverrides;
+                try { return JSON.parse(e.dateOverrides) || {}; } catch { return {}; }
+            };
+            const finDayValue = (dayIso, basePerDay, overrides) => {
+                const ov = overrides[dayIso];
+                if (ov && ov.subtotal != null) return Number(ov.subtotal);
+                if (ov && Array.isArray(ov.items)) return finSubtotalItems(ov.items);
+                return basePerDay;
+            };
+            // Valor do evento no mês 'YYYY-MM' — cada dia com seu VALOR REAL (não total ÷ dias);
+            // extras (frete + locações − desconto) contam uma vez, no mês de início.
+            const finEventValueForYm = (e, ym) => {
+                if (e.cancelado) return 0;
                 const active = finActiveDates(e);
                 if (!active.length) return 0;
-                if ((e.revenueMode || 'perDay') === 'upfront') return e.data.startsWith(ym) ? 1 : 0;
-                return active.filter(iso => iso.startsWith(ym)).length / active.length;
+                const startMonth = (e.data || '').slice(0, 7);
+                if (e.isTicketSale) {
+                    if (e.ticketNetTotal == null) return 0;
+                    return startMonth === ym ? (Number(e.ticketNetTotal) || 0) : 0;
+                }
+                const overrides = finParseOverrides(e);
+                const basePerDay = finSubtotalItems(e.rawItems);
+                const attractionsTotal = active.reduce((a, d) => a + finDayValue(d, basePerDay, overrides), 0);
+                const rentals = (e.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+                const dv = Number(e.discountValue) || 0;
+                const discount = (e.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
+                const extras = (Number(e.deliveryFee) || 0) + rentals - discount;
+                if ((e.revenueMode || 'perDay') === 'upfront') {
+                    return startMonth === ym ? (attractionsTotal + extras) : 0;
+                }
+                let sum = active.filter(d => d.slice(0, 7) === ym).reduce((a, d) => a + finDayValue(d, basePerDay, overrides), 0);
+                if (startMonth === ym) sum += extras;
+                return sum;
             };
-            // O evento conta no mês? upfront: só no mês de início; perDay: em cada mês que toca.
+            // O evento conta no mês? upfront/ingresso: mês de início; perDay: em cada mês que toca.
             const finCountsInMonth = (e, ym) => {
-                if ((e.revenueMode || 'perDay') === 'upfront') return e.data.startsWith(ym) ? 1 : 0;
+                if (e.isTicketSale || (e.revenueMode || 'perDay') === 'upfront') return (e.data || '').startsWith(ym) ? 1 : 0;
                 return finActiveDates(e).some(iso => iso.startsWith(ym)) ? 1 : 0;
             };
-            // Eventos que CONTAM no mês, com .valor JÁ rateado para o mês. Com isso, todos os
-            // cálculos downstream (.reduce(valor), .length, tabelas, ticket médio) ficam corretos
-            // sem precisar alterar cada um deles.
+            // Eventos que CONTAM no mês, com .valor JÁ ajustado (valor real dos dias que caem no mês).
+            // Com isso os cálculos downstream (.reduce(valor), .length, tabelas, ticket médio) ficam
+            // corretos sem alterar cada um deles.
             const eventosDoMes = (ym) => (state.eventos || [])
                 .filter(e => finCountsInMonth(e, ym) === 1)
-                .map(e => ({ ...e, valor: (Number(e.valor) || 0) * finValueFraction(e, ym) }));
+                .map(e => ({ ...e, valor: finEventValueForYm(e, ym) }));
 
             // Função auxiliar para filtrar contas fixas ativas em um mês
             const getContasFixasDoMes = (mesAno) => {
@@ -336,6 +366,14 @@
                             endDate: evt.endDate || null,
                             excludedDates: evt.excludedDates || null,
                             revenueMode: evt.revenueMode || null,
+                            dateOverrides: evt.dateOverrides || null,
+                            deliveryFee: evt.deliveryFee || 0,
+                            discountType: evt.discountType || 'fixed',
+                            discountValue: evt.discountValue || 0,
+                            externalRentals: evt.externalRentals || [],
+                            isTicketSale: !!evt.isTicketSale,
+                            ticketNetTotal: evt.ticketNetTotal,
+                            rawItems: evt.items || [], // itens crus (com preço/qtd) para o valor por dia
                             empresa: evt.company ? evt.company.name : "Aero Festas",
                             contratante: evt.clientName,
                             local: "",

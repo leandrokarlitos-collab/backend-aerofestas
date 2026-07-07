@@ -28,18 +28,51 @@ function eventActiveDates(evt) {
     }
     return out;
 }
-// Fração (0..1) do VALOR do evento atribuível ao intervalo [startStr, endStr],
-// conforme o modo de recebimento:
-//  - 'upfront' (valor fechado): 100% no mês de início (data do evento); 0 nos demais.
-//  - 'perDay' (padrão, inclui null): rateio proporcional pelos dias ativos que caem no mês.
-function eventFractionInRange(evt, startStr, endStr) {
+// Valor real de UM dia do evento: override do dia (subtotal ou itens) ou a base por dia.
+function subtotalOfItemsFin(items) {
+    return (items || []).reduce((a, i) => a + ((i.price != null ? Number(i.price) : 0) * (i.quantity || 1)), 0);
+}
+function parseOverridesFin(evt) {
+    if (!evt.dateOverrides) return {};
+    if (typeof evt.dateOverrides === 'object') return evt.dateOverrides;
+    try { return JSON.parse(evt.dateOverrides) || {}; } catch { return {}; }
+}
+function dayValueFin(dayIso, basePerDay, overrides) {
+    const ov = overrides[dayIso];
+    if (ov && ov.subtotal != null) return Number(ov.subtotal);
+    if (ov && Array.isArray(ov.items)) return subtotalOfItemsFin(ov.items);
+    return basePerDay;
+}
+// Receita do evento atribuível ao intervalo [startStr, endStr] — cada dia com seu VALOR REAL
+// (não o total ÷ nº de dias). Extras (frete + locações externas − desconto) contam uma vez, no
+// mês de início. 'upfront' joga tudo no mês de início; 'perDay' (padrão) soma o valor de cada dia.
+function eventRevenueInRange(evt, startStr, endStr) {
     const active = eventActiveDates(evt);
     if (!active.length) return 0;
-    if ((evt.revenueMode || 'perDay') === 'upfront') {
-        return (evt.date >= startStr && evt.date <= endStr) ? 1 : 0;
+    const inStartMonth = (evt.date >= startStr && evt.date <= endStr);
+    if (evt.isTicketSale) {
+        if (evt.ticketNetTotal == null) return 0;
+        return inStartMonth ? (Number(evt.ticketNetTotal) || 0) : 0;
     }
-    const inRange = active.filter(iso => iso >= startStr && iso <= endStr).length;
-    return inRange / active.length;
+    const overrides = parseOverridesFin(evt);
+    const basePerDay = subtotalOfItemsFin(evt.items);
+    const attractionsTotal = active.reduce((a, d) => a + dayValueFin(d, basePerDay, overrides), 0);
+    const rentals = (evt.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+    const dv = Number(evt.discountValue) || 0;
+    const discount = (evt.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
+    const extras = (Number(evt.deliveryFee) || 0) + rentals - discount;
+    if ((evt.revenueMode || 'perDay') === 'upfront') {
+        return inStartMonth ? (attractionsTotal + extras) : 0;
+    }
+    let sum = active.filter(d => d >= startStr && d <= endStr).reduce((a, d) => a + dayValueFin(d, basePerDay, overrides), 0);
+    if (inStartMonth) sum += extras;
+    return sum;
+}
+// Custo de locações externas atribuível ao intervalo (uma vez, no mês de início — igual à receita).
+function eventRentalsInRange(evt, startStr, endStr) {
+    const rentals = (evt.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+    if (!rentals) return 0;
+    return (evt.date >= startStr && evt.date <= endStr) ? rentals : 0;
 }
 
 // --- AUTENTICAÇÃO ---
@@ -83,7 +116,7 @@ router.get('/dashboard', async (req, res) => {
         // 1. Receitas de Eventos — eventos cancelados NÃO entram na receita.
         // Busca eventos que SE SOBREPÕEM ao mês (não só os que começam nele): um
         // evento multi-dia que cruza a virada de mês precisa contribuir em cada mês
-        // tocado, na proporção de dias ativos (ver eventFractionInRange).
+        // tocado, com o valor real dos dias daquele mês (ver eventRevenueInRange).
         const events = await prisma.event.findMany({
             where: {
                 date: { lte: endStr },
@@ -92,26 +125,18 @@ router.get('/dashboard', async (req, res) => {
                     { date: { gte: startStr } }     // qualquer evento que começa no mês (inclui 1 dia)
                 ]
             },
-            include: { externalRentals: true }
+            include: { externalRentals: true, items: true }
         });
         const eventosDoMes = events.filter(evt => evt.status !== 'cancelado' && evt.paymentStatus !== 'Cancelado');
-        // Eventos vendidos por ingresso têm price = 0; sua receita é o líquido realizado
-        // (ticketNetTotal), que entra no faturamento assim que informado no fechamento.
-        // Rateio proporcional: só a parcela de dias que caem neste mês entra aqui.
-        const receitaEventos = eventosDoMes.reduce((acc, evt) => {
-            let v = evt.price || 0;
-            if (evt.isTicketSale && evt.ticketNetTotal != null) v += Number(evt.ticketNetTotal) || 0;
-            return acc + v * eventFractionInRange(evt, startStr, endStr);
-        }, 0);
+        // Receita: cada dia com seu VALOR REAL (ver eventRevenueInRange). Eventos multi-dia que
+        // cruzam a virada de mês somam, em cada mês, o valor dos dias que caem nele. Eventos por
+        // ingresso entram pelo líquido realizado, no mês de início.
+        const receitaEventos = eventosDoMes.reduce((acc, evt) => acc + eventRevenueInRange(evt, startStr, endStr), 0);
 
         // 1.2 Locações externas (custo de equipamentos de terceiros usados em eventos)
         // - Só contam de eventos não-cancelados
-        // - Entram como despesa no totalizador (rateadas por dia, igual à receita)
-        const externalRentalsExpense = eventosDoMes.reduce((acc, evt) => {
-            const rentalsTotal = (evt.externalRentals || [])
-                .reduce((s, r) => s + (Number(r.cost) || 0), 0);
-            return acc + rentalsTotal * eventFractionInRange(evt, startStr, endStr);
-        }, 0);
+        // - Entram como despesa no mês de início do evento (uma vez).
+        const externalRentalsExpense = eventosDoMes.reduce((acc, evt) => acc + eventRentalsInRange(evt, startStr, endStr), 0);
 
         // 1.1 Receitas Manuais (Transações)
         const revenueTransactions = await prisma.transaction.findMany({

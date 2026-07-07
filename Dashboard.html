@@ -1558,19 +1558,43 @@
                 }
                 return out;
             }
-            function eventMonthFractionDash(ev, year, month0) {
+            function subtotalOfItemsDash(items) {
+                return (items || []).reduce((a, i) => a + ((i.price != null ? Number(i.price) : (Number(i.valor) || 0)) * (i.quantity || 1)), 0);
+            }
+            function parseOverridesDash(ev) {
+                if (!ev.dateOverrides) return {};
+                if (typeof ev.dateOverrides === 'object') return ev.dateOverrides;
+                try { return JSON.parse(ev.dateOverrides) || {}; } catch { return {}; }
+            }
+            function dayValueDash(dayIso, basePerDay, overrides) {
+                const ov = overrides[dayIso];
+                if (ov && ov.subtotal != null) return Number(ov.subtotal);
+                if (ov && Array.isArray(ov.items)) return subtotalOfItemsDash(ov.items);
+                return basePerDay;
+            }
+            // Valor do evento no ano/mês (0-based) — cada dia com seu VALOR REAL; extras no mês de início.
+            function eventRevenueInMonthDash(ev, year, month0) {
                 const active = eventActiveDatesDash(ev);
                 if (!active.length) return 0;
-                // 'upfront' (valor fechado): 100% no mês de início; 'perDay' (padrão): rateio por dia.
-                if ((ev.revenueMode || 'perDay') === 'upfront') {
-                    return ((+ev.date.slice(0, 4)) === year && (+ev.date.slice(5, 7) - 1) === month0) ? 1 : 0;
+                const ym = `${year}-${String(month0 + 1).padStart(2, '0')}`;
+                const startMonth = (ev.date || '').slice(0, 7);
+                if (ev.isTicketSale) {
+                    if (ev.ticketNetTotal == null) return 0;
+                    return startMonth === ym ? (Number(ev.ticketNetTotal) || 0) : 0;
                 }
-                const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month0).length;
-                return inMonth / active.length;
-            }
-            function eventRevenueInMonthDash(ev, year, month0) {
-                const value = parseFloat(ev.totalPrice || ev.price) || 0;
-                return value * eventMonthFractionDash(ev, year, month0);
+                const overrides = parseOverridesDash(ev);
+                const basePerDay = subtotalOfItemsDash(ev.items || ev.toys);
+                const attractionsTotal = active.reduce((a, d) => a + dayValueDash(d, basePerDay, overrides), 0);
+                const rentals = (ev.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+                const dv = Number(ev.discountValue) || 0;
+                const discount = (ev.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
+                const extras = (Number(ev.deliveryFee) || 0) + rentals - discount;
+                if ((ev.revenueMode || 'perDay') === 'upfront') {
+                    return startMonth === ym ? (attractionsTotal + extras) : 0;
+                }
+                let sum = active.filter(d => d.slice(0, 7) === ym).reduce((a, d) => a + dayValueDash(d, basePerDay, overrides), 0);
+                if (startMonth === ym) sum += extras;
+                return sum;
             }
 
             /**

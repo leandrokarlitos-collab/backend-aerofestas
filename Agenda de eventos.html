@@ -3120,7 +3120,8 @@
                 const estimatedTotal = monthlyEvents.reduce((sum, event) => {
                     if (!event.isTicketSale) return sum;
                     if (event.ticketNetTotal != null) return sum;
-                    return sum + (Number(event.estimatedValue) || 0) * eventMonthFraction(event, year, month);
+                    // monthlyEvents já restringe ao mês em que o evento conta (mês de início do ingresso).
+                    return sum + (Number(event.estimatedValue) || 0);
                 }, 0);
                 const estimatedContainer = document.getElementById('monthly-estimated-container');
                 const estimatedEl = document.getElementById('monthly-estimated');
@@ -3964,26 +3965,47 @@
                 return out;
             };
 
-            // Fração (0..1) do VALOR do evento atribuível ao ano/mês (mês 0-based), conforme o modo:
-            //  - 'upfront' (valor fechado): 100% no mês de início (data do evento); 0 nos demais.
-            //  - 'perDay' (padrão, inclui null): rateio proporcional pelos dias ativos que caem no mês.
-            const eventMonthFraction = (event, year, month) => {
+            // === Valor do evento por mês — cada dia com seu VALOR REAL (não o total ÷ nº dias) ===
+            // Cada dia carrega seu próprio subtotal (daySubtotalForDate: override do dia ou base por dia).
+            // Extras (frete + locações externas − desconto) contam UMA vez, no mês de início.
+            //  - 'perDay' (padrão): cada dia soma no mês em que cai.
+            //  - 'upfront' (valor fechado): tudo (dias + extras) no mês de início.
+            const eventValueForYm = (event, ym) => {
                 const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
                 if (!active.length) return 0;
-                if ((event.revenueMode || 'perDay') === 'upfront') {
-                    return ((+event.date.slice(0, 4)) === year && (+event.date.slice(5, 7) - 1) === month) ? 1 : 0;
+                const startMonth = (event.date || '').slice(0, 7);
+                // Venda por ingresso: só o líquido REALIZADO entra no faturamento (o estimado fica à
+                // parte), como realização única no mês de início.
+                if (event.isTicketSale) {
+                    if (event.ticketNetTotal == null) return 0;
+                    return startMonth === ym ? (Number(event.ticketNetTotal) || 0) : 0;
                 }
-                const inMonth = active.filter(iso => (+iso.slice(0, 4)) === year && (+iso.slice(5, 7) - 1) === month).length;
-                return inMonth / active.length;
+                const basePerDay = subtotalOfItems(event.items || event.toys);
+                const attractionsTotal = active.reduce((a, d) => a + daySubtotalForDate(event, d, basePerDay), 0);
+                const rentals = (event.externalRentals || []).reduce((a, r) => a + (Number(r.cost) || 0), 0);
+                const dv = Number(event.discountValue) || 0;
+                const discount = (event.discountType === 'percent') ? attractionsTotal * dv / 100 : dv;
+                const extras = (Number(event.deliveryFee) || 0) + rentals - discount;
+                if ((event.revenueMode || 'perDay') === 'upfront') {
+                    return startMonth === ym ? (attractionsTotal + extras) : 0;
+                }
+                let sum = active.filter(d => d.slice(0, 7) === ym).reduce((a, d) => a + daySubtotalForDate(event, d, basePerDay), 0);
+                if (startMonth === ym) sum += extras;
+                return sum;
             };
-            // Receita do evento atribuível ao mês (preço + líquido de venda por ingresso), rateada por dia.
-            const eventRevenueInMonth = (event, year, month) => {
-                let v = Number(event.price) || 0;
-                if (event.isTicketSale && event.ticketNetTotal != null) v += Number(event.ticketNetTotal) || 0;
-                return v * eventMonthFraction(event, year, month);
+            // Valor do evento atribuível ao ano/mês (mês 0-based).
+            const eventRevenueInMonth = (event, year, month) => eventValueForYm(event, `${year}-${String(month + 1).padStart(2, '0')}`);
+            // O evento conta no ano/mês? upfront/ingresso: mês de início; perDay: cada mês que toca.
+            const eventCountsInMonth = (event, year, month) => {
+                const ym = `${year}-${String(month + 1).padStart(2, '0')}`;
+                if (event.isTicketSale || (event.revenueMode || 'perDay') === 'upfront') {
+                    return (event.date || '').slice(0, 7) === ym ? 1 : 0;
+                }
+                const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
+                return active.some(d => d.slice(0, 7) === ym) ? 1 : 0;
             };
-            // true se o evento tem ao menos um dia ativo no ano/mês (para totais e listagens).
-            const eventTouchesMonth = (event, year, month) => eventMonthFraction(event, year, month) > 0;
+            // true se o evento conta no ano/mês (para totais e listagens).
+            const eventTouchesMonth = (event, year, month) => eventCountsInMonth(event, year, month) === 1;
             // { inMonth, total } dias ativos — usado nas listagens para mostrar "N/M dias neste mês".
             const eventDaysInMonth = (event, year, month) => {
                 const active = (event.eventType === 'meeting') ? [event.date] : getEventActiveDates(event);
