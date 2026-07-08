@@ -382,7 +382,9 @@ model Monitor {
   email             String?
   endereco          String?
   observacoes       String?
-  status            String?             @default("reserva")
+  status            String?             @default("reserva") // ativo | reserva | alerta | desqualificado
+  statusMotivo      String?             // Observação da classificação (evidenciada no card p/ alerta/desqualificado)
+  ocorrencias       String?             // JSON array de tags de ocorrência (atraso, celular, proatividade, etc.)
   cnh               Boolean?            @default(false)
   cnhCategoria      String?
   fotoPerfil        String?             // Base64 ou URL

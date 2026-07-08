@@ -95,6 +95,61 @@
 
     .count-text { font-size: 12.5px; color: var(--text-faint); margin: 10px 2px 0; }
 
+    /* ---- Classificação de monitores (alerta / desqualificado / ocorrências) ---- */
+    .m-card { position: relative; }
+    .m-card.is-alerta { border-color: var(--warning); box-shadow: inset 3px 0 0 var(--warning); }
+    .m-card.is-desq   { border-color: var(--danger);  box-shadow: inset 3px 0 0 var(--danger); }
+    .m-call-count {
+        position: absolute; top: -7px; left: -7px; z-index: 3;
+        min-width: 22px; height: 22px; padding: 0 6px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 999px; background: var(--grad-brand); color: #fff;
+        font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+        box-shadow: 0 2px 6px rgba(0,0,0,.22); border: 2px solid var(--surface-1);
+    }
+    .badge-alerta { background: var(--warning-soft); color: #B45309; }
+    .dark .badge-alerta { color: var(--warning); }
+    .m-alert {
+        display: flex; align-items: flex-start; gap: 6px;
+        font-size: 12px; font-weight: 600; line-height: 1.32;
+        padding: 6px 9px; border-radius: var(--radius-sm); margin: 6px 0 2px;
+        overflow-wrap: anywhere;
+    }
+    .m-alert i { margin-top: 1px; flex: none; }
+    .m-alert-warning { background: var(--warning-soft); color: #B45309; }
+    .m-alert-danger  { background: var(--danger-soft);  color: var(--danger); }
+    .dark .m-alert-warning { color: var(--warning); }
+    .occ-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .occ-chip {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 10.5px; font-weight: 600; padding: 2px 7px;
+        border-radius: 999px; background: var(--surface-2); color: var(--text-muted);
+    }
+    .occ-chip i { font-size: 9px; }
+    .occ-chip.is-neg { background: var(--danger-soft); color: var(--danger); }
+
+    /* Modal de classificação */
+    .status-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .status-opt {
+        display: flex; align-items: center; gap: 8px; cursor: pointer;
+        border: 1.5px solid var(--border); border-radius: var(--radius);
+        padding: 10px 12px; font-weight: 600; font-size: 14px; color: var(--text);
+        transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+    }
+    .status-opt input { accent-color: var(--brand-600); }
+    .status-opt .so-ic { width: 16px; text-align: center; }
+    .status-opt:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); }
+    .occ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .occ-check {
+        display: flex; align-items: center; gap: 8px; cursor: pointer;
+        border: 1px solid var(--border); border-radius: var(--radius-sm);
+        padding: 8px 10px; font-size: 13px; color: var(--text-muted); user-select: none;
+    }
+    .occ-check input { accent-color: var(--danger); flex: none; }
+    .occ-check .oc-ic { width: 15px; text-align: center; }
+    .occ-check:has(input:checked) { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+    @media (max-width: 480px) { .status-picker, .occ-grid { grid-template-columns: 1fr; } }
+
     /* ---- Modal largo + detalhe ---- */
     .modal-box.modal-wide { max-width: 720px; }
     .detail-grid {
@@ -339,6 +394,14 @@
                 <span class="kpi-value" id="kpi-reserva">—</span>
             </div>
             <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-triangle-exclamation" style="color:var(--warning);"></i> Alerta</span>
+                <span class="kpi-value" id="kpi-alerta">—</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label"><i class="fas fa-ban" style="color:var(--danger);"></i> Desqualificados</span>
+                <span class="kpi-value" id="kpi-desq">—</span>
+            </div>
+            <div class="kpi-card">
                 <span class="kpi-label"><i class="fas fa-users"></i> Total</span>
                 <span class="kpi-value" id="kpi-total">—</span>
             </div>
@@ -353,6 +416,8 @@
                 <option value="">Status: todos</option>
                 <option value="ativo">Ativos</option>
                 <option value="reserva">Reserva</option>
+                <option value="alerta">Alerta</option>
+                <option value="desqualificado">Desqualificados</option>
             </select>
             <select id="mon-filtro-cnh" class="select" title="CNH">
                 <option value="">CNH: todos</option>
@@ -468,10 +533,47 @@
         </div>
         <div class="modal-body" id="detalhe-body"></div>
         <div class="modal-footer hidden" id="detalhe-footer" style="flex-wrap:wrap;">
-            <button type="button" id="btn-det-status" class="btn btn-ghost"></button>
+            <button type="button" id="btn-det-classificar" class="btn btn-primary"><i class="fas fa-user-tag"></i> Classificar</button>
             <button type="button" id="btn-det-excluir" class="btn btn-danger-soft"><i class="fas fa-trash-can"></i> Excluir</button>
             <button type="button" id="btn-det-editar" class="btn btn-secondary"><i class="fas fa-pen-to-square"></i> Editar</button>
         </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: CLASSIFICAR MONITOR ================= -->
+<div id="modal-classificar" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box" style="max-width:520px;" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title">Classificar monitor</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-classificar" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="form-classificar">
+            <div class="modal-body">
+                <input type="hidden" id="fc-id">
+                <p id="fc-nome" style="font-weight:700;color:var(--text);margin-bottom:14px;font-family:var(--font-display);font-size:16px;"></p>
+
+                <label class="input-label">Status</label>
+                <div class="status-picker" id="fc-status-picker">
+                    <label class="status-opt"><input type="radio" name="fc-status" value="ativo"><span class="so-ic" style="color:var(--success);"><i class="fas fa-user-check"></i></span> Ativo</label>
+                    <label class="status-opt"><input type="radio" name="fc-status" value="reserva"><span class="so-ic" style="color:var(--warning);"><i class="fas fa-clock-rotate-left"></i></span> Reserva</label>
+                    <label class="status-opt"><input type="radio" name="fc-status" value="alerta"><span class="so-ic" style="color:var(--warning);"><i class="fas fa-triangle-exclamation"></i></span> Alerta</label>
+                    <label class="status-opt"><input type="radio" name="fc-status" value="desqualificado"><span class="so-ic" style="color:var(--danger);"><i class="fas fa-ban"></i></span> Desqualificado</label>
+                </div>
+
+                <label class="input-label" style="margin-top:16px;">Ocorrências (marque o que se aplica)</label>
+                <div class="occ-grid" id="fc-ocorrencias"></div>
+
+                <div style="margin-top:16px;">
+                    <label class="input-label" for="fc-motivo">Observação <span id="fc-motivo-req" class="hidden" style="color:var(--danger);">*</span></label>
+                    <textarea id="fc-motivo" class="textarea" rows="3" placeholder="Ex: Chegou 40min atrasado e ficou no celular durante o evento."></textarea>
+                    <p class="hint-text" id="fc-motivo-hint">Aparece em destaque no card quando o status for Alerta ou Desqualificado.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close="modal-classificar">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="fc-submit"><i class="fas fa-check"></i> Salvar classificação</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -534,6 +636,8 @@
                         <select id="fm-status" class="select">
                             <option value="ativo">Ativo</option>
                             <option value="reserva">Reserva</option>
+                            <option value="alerta">Alerta</option>
+                            <option value="desqualificado">Desqualificado</option>
                         </select>
                     </div>
                     <div class="fg-full">
@@ -835,11 +939,62 @@ async function ensureMonitores(force = false) {
     finally { state.monitoresCarregando = null; }
 }
 
+/* ---------- Classificação (status + ocorrências) ---------- */
+const STATUS_META = {
+    ativo:          { label: 'Ativo',         badge: 'badge-success', icon: 'fa-user-check',           alert: null },
+    reserva:        { label: 'Reserva',       badge: 'badge-warning', icon: 'fa-clock-rotate-left',    alert: null },
+    alerta:         { label: 'Alerta',        badge: 'badge-alerta',  icon: 'fa-triangle-exclamation', alert: 'warning' },
+    desqualificado: { label: 'Desqualificado', badge: 'badge-danger', icon: 'fa-ban',                  alert: 'danger' }
+};
+const STATUS_ORDER = { desqualificado: 0, alerta: 1, ativo: 2, reserva: 3 };
+const OCORRENCIAS = [
+    { key: 'atraso',       label: 'Atraso',                 icon: 'fa-clock' },
+    { key: 'falta',        label: 'Faltou',                 icon: 'fa-user-xmark' },
+    { key: 'celular',      label: 'Celular em serviço',     icon: 'fa-mobile-screen-button' },
+    { key: 'proatividade', label: 'Pouca proatividade',     icon: 'fa-battery-quarter' },
+    { key: 'postura',      label: 'Postura/desrespeito',    icon: 'fa-face-angry' },
+    { key: 'uniforme',     label: 'Uniforme incorreto',     icon: 'fa-shirt' },
+    { key: 'saiu_cedo',    label: 'Saiu antes do fim',      icon: 'fa-door-open' },
+    { key: 'orientacoes',  label: 'Não seguiu orientações', icon: 'fa-list-check' }
+];
+const OCC_LABEL = Object.fromEntries(OCORRENCIAS.map(o => [o.key, o]));
+
+function statusDe(m) {
+    const s = m.status || 'ativo';
+    return STATUS_META[s] ? s : 'ativo';
+}
+function statusBadgeHtml(m) {
+    const meta = STATUS_META[statusDe(m)];
+    return `<span class="badge ${meta.badge}"><i class="fas ${meta.icon}"></i> ${meta.label}</span>`;
+}
+function parseOcorrencias(m) {
+    const raw = m && m.ocorrencias;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function convocacoesDe(m) {
+    if (m && m._count && typeof m._count.pagamentos === 'number') return m._count.pagamentos;
+    if (m && Array.isArray(m.pagamentos)) return m.pagamentos.length;
+    return 0;
+}
+function occChipsHtml(occs, limite) {
+    const arr = limite ? occs.slice(0, limite) : occs;
+    const chips = arr.map(k => {
+        const o = OCC_LABEL[k];
+        return o ? `<span class="occ-chip is-neg"><i class="fas ${o.icon}"></i> ${escapeHtml(o.label)}</span>` : '';
+    }).join('');
+    const resto = limite && occs.length > limite ? `<span class="occ-chip is-neg">+${occs.length - limite}</span>` : '';
+    return `<div class="occ-row">${chips}${resto}</div>`;
+}
+
 function renderKpisMonitores() {
-    const ativos = state.monitores.filter(m => (m.status || 'ativo') === 'ativo').length;
-    const reserva = state.monitores.filter(m => m.status === 'reserva').length;
-    UI.countUp($('kpi-ativos'), ativos);
-    UI.countUp($('kpi-reserva'), reserva);
+    const cont = { ativo: 0, reserva: 0, alerta: 0, desqualificado: 0 };
+    state.monitores.forEach(m => { cont[statusDe(m)]++; });
+    UI.countUp($('kpi-ativos'), cont.ativo);
+    UI.countUp($('kpi-reserva'), cont.reserva);
+    UI.countUp($('kpi-alerta'), cont.alerta);
+    UI.countUp($('kpi-desq'), cont.desqualificado);
     UI.countUp($('kpi-total'), state.monitores.length);
 }
 
@@ -855,7 +1010,7 @@ function renderMonitores() {
     const ordem = $('mon-ordenar').value;
 
     let lista = [...state.monitores];
-    if (fStatus) lista = lista.filter(m => (m.status || 'ativo') === fStatus);
+    if (fStatus) lista = lista.filter(m => statusDe(m) === fStatus);
     if (fCnh) lista = lista.filter(m => temCNH(m) === (fCnh === 'sim'));
     if (fPs) lista = lista.filter(m => temPS(m) === (fPs === 'sim'));
     if (busca) {
@@ -865,11 +1020,9 @@ function renderMonitores() {
             (m.email || '').toLowerCase().includes(busca));
     }
     if (ordem === 'status') {
-        lista.sort((a, b) => {
-            const sa = (a.status || 'ativo') === 'ativo' ? 0 : 1;
-            const sb = (b.status || 'ativo') === 'ativo' ? 0 : 1;
-            return sa - sb || (a.nome || '').localeCompare(b.nome || '');
-        });
+        // Prioriza quem precisa de atenção: desqualificado → alerta → ativo → reserva
+        lista.sort((a, b) =>
+            (STATUS_ORDER[statusDe(a)] - STATUS_ORDER[statusDe(b)]) || (a.nome || '').localeCompare(b.nome || ''));
     } else {
         lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     }
@@ -891,10 +1044,10 @@ function renderMonitores() {
     }
 
     grid.innerHTML = lista.map(m => {
-        const ativo = (m.status || 'ativo') === 'ativo';
-        const statusBadge = ativo
-            ? '<span class="badge badge-success">Ativo</span>'
-            : '<span class="badge badge-warning">Reserva</span>';
+        const s = statusDe(m);
+        const meta = STATUS_META[s];
+        const cardCls = s === 'alerta' ? ' is-alerta' : (s === 'desqualificado' ? ' is-desq' : '');
+        const statusBadge = `<span class="badge ${meta.badge}"><i class="fas ${meta.icon}"></i> ${meta.label}</span>`;
         const cnhChip = temCNH(m)
             ? `<span class="chip chip-sm"><i class="fas fa-id-card"></i> CNH ${escapeHtml(m.cnhCategoria || '')}</span>` : '';
         const psChip = temPS(m)
@@ -902,13 +1055,27 @@ function renderMonitores() {
         const avatar = m.fotoPerfil
             ? `<div class="m-avatar"><img src="${escapeHtml(m.fotoPerfil)}" loading="lazy" alt=""></div>`
             : `<div class="m-avatar">${escapeHtml(iniciais(m.nome))}</div>`;
+        const conv = convocacoesDe(m);
+        const countBadge = conv > 0
+            ? `<span class="m-call-count" title="${conv} ${conv === 1 ? 'convocação' : 'convocações'} (diárias registradas)">${conv}</span>` : '';
+        const motivo = (m.statusMotivo || '').trim();
+        const alertStrip = meta.alert
+            ? `<div class="m-alert m-alert-${meta.alert}"><i class="fas ${meta.icon}"></i><span>${motivo
+                ? escapeHtml(motivo)
+                : (s === 'alerta' ? 'Monitor em alerta — sem observação registrada.' : 'Monitor desqualificado — sem observação registrada.')}</span></div>`
+            : '';
+        const occs = parseOcorrencias(m);
+        const occRow = occs.length ? occChipsHtml(occs, 4) : '';
         return `
-        <article class="surface surface-hover m-card" data-id="${escapeHtml(m.id)}" title="Ver detalhes">
+        <article class="surface surface-hover m-card${cardCls}" data-id="${escapeHtml(m.id)}" title="Ver detalhes">
+            ${countBadge}
             ${avatar}
             <div class="min-w-0" style="flex:1;">
                 <h3 class="m-nome">${escapeHtml(m.nome)}</h3>
                 <div class="m-badges">${statusBadge}${cnhChip}${psChip}</div>
                 <p class="m-tel"><i class="fas fa-phone"></i> ${escapeHtml(m.telefone || 'Sem telefone')}</p>
+                ${alertStrip}
+                ${occRow}
             </div>
         </article>`;
     }).join('');
@@ -992,7 +1159,9 @@ function listaDesempenhoHtml(avaliacoes) {
 
 function renderDetalheMonitor(m) {
     const body = $('detalhe-body');
-    const ativo = (m.status || 'ativo') === 'ativo';
+    const s = statusDe(m);
+    const meta = STATUS_META[s];
+    const conv = convocacoesDe(m);
 
     let hab = null;
     try { hab = m.habilidades ? JSON.parse(m.habilidades) : null; } catch { hab = null; }
@@ -1002,10 +1171,21 @@ function renderDetalheMonitor(m) {
         : `<div class="m-avatar lg">${escapeHtml(iniciais(m.nome))}</div>`;
 
     const badges = [
-        ativo ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-warning">Reserva</span>',
+        statusBadgeHtml(m),
+        `<span class="chip chip-sm" title="Diárias/pagamentos registrados"><i class="fas fa-bullhorn"></i> ${conv} ${conv === 1 ? 'convocação' : 'convocações'}</span>`,
         temCNH(m) ? `<span class="chip chip-sm"><i class="fas fa-id-card"></i> CNH ${escapeHtml(m.cnhCategoria || '')}</span>` : '',
         temPS(m) ? '<span class="chip chip-sm"><i class="fas fa-heart-pulse"></i> Curso PS</span>' : ''
     ].join('');
+
+    /* Faixa de classificação (alerta/desqualificado) + ocorrências */
+    const motivoTxt = (m.statusMotivo || '').trim();
+    const alertBox = meta.alert
+        ? `<div class="m-alert m-alert-${meta.alert}" style="font-size:13px;margin-top:10px;"><i class="fas ${meta.icon}"></i><span>${motivoTxt
+            ? escapeHtml(motivoTxt)
+            : (s === 'alerta' ? 'Monitor em alerta — registre a observação em "Classificar".' : 'Monitor desqualificado — registre o motivo em "Classificar".')}</span></div>`
+        : '';
+    const occsDet = parseOcorrencias(m);
+    const occBox = occsDet.length ? occChipsHtml(occsDet) : '';
 
     /* Saúde */
     const saudeHtml = `<div class="detail-grid" style="margin-top:4px;">
@@ -1078,6 +1258,8 @@ function renderDetalheMonitor(m) {
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">${badges}</div>
             </div>
         </div>
+        ${alertBox}
+        ${occBox}
         <div class="detail-grid">
             ${ddItem('Nascimento', fmtData(m.nascimento))}
             ${ddItem('CPF', escapeHtml(m.cpf || ''))}
@@ -1107,12 +1289,7 @@ function renderDetalheMonitor(m) {
     });
 
     /* Footer */
-    const footer = $('detalhe-footer');
-    footer.classList.remove('hidden');
-    const btnStatus = $('btn-det-status');
-    btnStatus.innerHTML = ativo
-        ? '<i class="fas fa-arrow-down"></i> Mover para reserva'
-        : '<i class="fas fa-arrow-up"></i> Ativar';
+    $('detalhe-footer').classList.remove('hidden');
 }
 
 $('btn-det-editar').addEventListener('click', () => {
@@ -1121,22 +1298,76 @@ $('btn-det-editar').addEventListener('click', () => {
     abrirFormMonitor(state.detalhe);
 });
 
-$('btn-det-status').addEventListener('click', async () => {
-    const m = state.detalhe;
+$('btn-det-classificar').addEventListener('click', () => {
+    if (state.detalhe) abrirClassificar(state.detalhe);
+});
+
+/* ---------- Classificar monitor (status + ocorrências + observação) ---------- */
+function renderOcorrenciasChecklist(selecionadas) {
+    const set = new Set(selecionadas || []);
+    $('fc-ocorrencias').innerHTML = OCORRENCIAS.map(o => `
+        <label class="occ-check">
+            <input type="checkbox" value="${o.key}" ${set.has(o.key) ? 'checked' : ''}>
+            <span class="oc-ic"><i class="fas ${o.icon}"></i></span> ${escapeHtml(o.label)}
+        </label>`).join('');
+}
+function fcStatusSelecionado() {
+    const r = document.querySelector('input[name="fc-status"]:checked');
+    return r ? r.value : '';
+}
+function fcAtualizarMotivoObrigatorio() {
+    const st = fcStatusSelecionado();
+    const req = st === 'alerta' || st === 'desqualificado';
+    $('fc-motivo-req').classList.toggle('hidden', !req);
+    $('fc-motivo-hint').textContent = req
+        ? 'Obrigatório — aparece em destaque no card deste monitor.'
+        : 'Aparece em destaque no card quando o status for Alerta ou Desqualificado.';
+}
+function abrirClassificar(m) {
     if (!m) return;
-    const novo = (m.status || 'ativo') === 'ativo' ? 'reserva' : 'ativo';
-    const btn = $('btn-det-status');
+    $('fc-id').value = m.id;
+    $('fc-nome').textContent = m.nome || 'Monitor';
+    const s = statusDe(m);
+    const radio = document.querySelector(`input[name="fc-status"][value="${s}"]`);
+    if (radio) radio.checked = true;
+    renderOcorrenciasChecklist(parseOcorrencias(m));
+    $('fc-motivo').value = m.statusMotivo || '';
+    fcAtualizarMotivoObrigatorio();
+    abrirModal('modal-classificar');
+}
+$('fc-status-picker').addEventListener('change', fcAtualizarMotivoObrigatorio);
+
+$('form-classificar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = $('fc-id').value;
+    const status = fcStatusSelecionado();
+    if (!status) { UI.toast('Selecione um status', 'error'); return; }
+    const ocorrencias = [...$('fc-ocorrencias').querySelectorAll('input:checked')].map(i => i.value);
+    const motivo = $('fc-motivo').value.trim();
+    if ((status === 'alerta' || status === 'desqualificado') && !motivo) {
+        UI.toast('Descreva a observação para Alerta/Desqualificado', 'error'); return;
+    }
+
+    const btn = $('fc-submit');
+    const original = btn.innerHTML;
     btn.disabled = true;
-    const ok = await api.alternarStatusMonitor(m.id, novo);
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+    const ok = await api.alternarStatusMonitor(id, status, { statusMotivo: motivo, ocorrencias });
     btn.disabled = false;
-    if (!ok) { UI.toast('Erro ao alterar status do monitor', 'error'); return; }
-    m.status = novo;
-    const naLista = state.monitores.find(x => x.id === m.id);
-    if (naLista) naLista.status = novo;
+    btn.innerHTML = original;
+    if (!ok) { UI.toast('Erro ao classificar monitor', 'error'); return; }
+
+    // Atualiza o estado local sem recarregar tudo
+    const patch = { status, statusMotivo: motivo, ocorrencias: JSON.stringify(ocorrencias) };
+    const naLista = state.monitores.find(x => x.id === id);
+    if (naLista) Object.assign(naLista, patch);
+    if (state.detalhe && state.detalhe.id === id) Object.assign(state.detalhe, patch);
+
+    fecharModal('modal-classificar');
     renderKpisMonitores();
     renderMonitores();
-    renderDetalheMonitor(m);
-    UI.toast(novo === 'ativo' ? `${m.nome} ativado` : `${m.nome} movido para a reserva`);
+    if (state.detalhe && state.detalhe.id === id) renderDetalheMonitor(state.detalhe);
+    UI.toast('Classificação atualizada');
 });
 
 $('btn-det-excluir').addEventListener('click', async () => {
@@ -1209,7 +1440,7 @@ function abrirFormMonitor(m) {
         $('fm-endereco').value = m.endereco || '';
         $('fm-cnh').checked = temCNH(m);
         $('fm-cnh-categoria').value = m.cnhCategoria || '';
-        $('fm-status').value = (m.status || 'ativo') === 'reserva' ? 'reserva' : 'ativo';
+        $('fm-status').value = statusDe(m);
         $('fm-observacoes').value = m.observacoes || '';
         setFotoPreview(m.fotoPerfil || '');
     } else {

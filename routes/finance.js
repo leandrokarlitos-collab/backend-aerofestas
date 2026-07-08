@@ -543,6 +543,21 @@ router.post('/seed-categories', async (req, res) => {
 
 // --- MONITORES ---
 
+// Status de classificação permitidos para o monitor
+const MONITOR_STATUS_VALIDOS = ['ativo', 'reserva', 'alerta', 'desqualificado'];
+
+// Normaliza ocorrências para string JSON (aceita array do front ou string já serializada)
+function normalizeOcorrencias(v) {
+    if (v == null) return undefined; // undefined = não mexe no campo
+    if (Array.isArray(v)) return JSON.stringify(v);
+    if (typeof v === 'string') {
+        const t = v.trim();
+        if (t === '' || t === 'null' || t === '[]') return null;
+        return t;
+    }
+    return null;
+}
+
 // GET /api/finance/monitores (Otimizado para Performance)
 router.get('/monitores', async (req, res) => {
     try {
@@ -564,6 +579,8 @@ router.get('/monitores', async (req, res) => {
                 endereco: true,
                 observacoes: true,
                 status: true,
+                statusMotivo: true,   // Observação da classificação (alerta/desqualificado)
+                ocorrencias: true,    // JSON de tags de ocorrência
                 cnh: true,
                 cnhCategoria: true,
                 tamanhoCamiseta: true,
@@ -572,7 +589,9 @@ router.get('/monitores', async (req, res) => {
                 fotoDocumento: false, // Documento não precisa na listagem
                 fotoCertificadoPS: false, // PS não precisa na listagem
                 // Relacionamentos básicos se necessário
-                desempenho: { take: 1, orderBy: { data: 'desc' } }
+                desempenho: { take: 1, orderBy: { data: 'desc' } },
+                // Nº de convocações = diárias/pagamentos registrados (mostrado no card)
+                _count: { select: { pagamentos: true } }
             },
             skip: skip,
             take: parseInt(limit),
@@ -646,6 +665,8 @@ router.post('/monitores', async (req, res) => {
                 endereco: m.endereco,
                 observacoes: m.observacoes,
                 status: m.status, // default do Prisma: "reserva"
+                statusMotivo: m.statusMotivo || null,
+                ocorrencias: normalizeOcorrencias(m.ocorrencias) ?? null,
                 cnh: m.cnh || false,
                 cnhCategoria: m.cnhCategoria,
                 fotoPerfil: m.fotoPerfil,
@@ -701,6 +722,8 @@ router.put('/monitores/:id', async (req, res) => {
                 endereco: m.endereco,
                 observacoes: m.observacoes,
                 status: m.status,
+                statusMotivo: m.statusMotivo,
+                ocorrencias: normalizeOcorrencias(m.ocorrencias),
                 cnh: m.cnh,
                 cnhCategoria: m.cnhCategoria,
                 fotoPerfil: m.fotoPerfil,
@@ -743,17 +766,20 @@ router.put('/monitores/:id', async (req, res) => {
 });
 
 // PATCH /api/finance/monitores/:id/status
+// Classificação do monitor: status + observação (motivo) + ocorrências.
 router.patch('/monitores/:id/status', async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
-        if (!['ativo', 'reserva'].includes(status)) {
-            return res.status(400).json({ error: "Status inválido. Use 'ativo' ou 'reserva'." });
+        const { status, statusMotivo, ocorrencias } = req.body;
+        if (!MONITOR_STATUS_VALIDOS.includes(status)) {
+            return res.status(400).json({ error: `Status inválido. Use um de: ${MONITOR_STATUS_VALIDOS.join(', ')}.` });
         }
-        const updated = await prisma.monitor.update({
-            where: { id },
-            data: { status }
-        });
+        const data = { status };
+        // Só grava motivo/ocorrências quando enviados (permite classificar sem apagar o resto)
+        if (statusMotivo !== undefined) data.statusMotivo = statusMotivo || null;
+        const ocorr = normalizeOcorrencias(ocorrencias);
+        if (ocorr !== undefined) data.ocorrencias = ocorr;
+        const updated = await prisma.monitor.update({ where: { id }, data });
         res.json(updated);
     } catch (e) {
         console.error("Erro ao alterar status do monitor:", e);

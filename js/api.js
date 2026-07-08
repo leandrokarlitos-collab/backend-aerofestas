@@ -965,7 +965,7 @@ export const api = {
         }
     },
 
-    alternarStatusMonitor: async (id, status) => {
+    alternarStatusMonitor: async (id, status, extra = {}) => {
         try {
             const token = getToken();
             const res = await fetch(`${BASE_URL}/finance/monitores/${id}/status`, {
@@ -974,7 +974,8 @@ export const api = {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ status })
+                // extra pode conter statusMotivo e ocorrencias (classificação completa)
+                body: JSON.stringify({ status, ...extra })
             });
             return res.ok;
         } catch (e) {

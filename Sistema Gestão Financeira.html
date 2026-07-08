@@ -1656,6 +1656,46 @@
 
             // ========== LOGICA DA ABA MONITORES (REWORK MOBILE) ==========
 
+            // --- Metadados de classificação de monitores ---
+            const MON_STATUS_META = {
+                ativo:          { label: 'Ativo',          cls: 'bg-emerald-100 text-emerald-700', icon: 'fa-user-check',           strip: null },
+                reserva:        { label: 'Reserva',        cls: 'bg-amber-100 text-amber-700',     icon: 'fa-clock-rotate-left',    strip: null },
+                alerta:         { label: 'Alerta',         cls: 'bg-amber-100 text-amber-800',     icon: 'fa-triangle-exclamation', strip: 'warning' },
+                desqualificado: { label: 'Desqualificado', cls: 'bg-red-100 text-red-700',         icon: 'fa-ban',                  strip: 'danger' }
+            };
+            const MON_OCORRENCIAS = [
+                { key: 'atraso',       label: 'Atraso',                 icon: 'fa-clock' },
+                { key: 'falta',        label: 'Faltou',                 icon: 'fa-user-xmark' },
+                { key: 'celular',      label: 'Celular em serviço',     icon: 'fa-mobile-screen-button' },
+                { key: 'proatividade', label: 'Pouca proatividade',     icon: 'fa-battery-quarter' },
+                { key: 'postura',      label: 'Postura/desrespeito',    icon: 'fa-face-angry' },
+                { key: 'uniforme',     label: 'Uniforme incorreto',     icon: 'fa-shirt' },
+                { key: 'saiu_cedo',    label: 'Saiu antes do fim',      icon: 'fa-door-open' },
+                { key: 'orientacoes',  label: 'Não seguiu orientações', icon: 'fa-list-check' }
+            ];
+            const MON_OCC_LABEL = Object.fromEntries(MON_OCORRENCIAS.map(o => [o.key, o]));
+            function monStatusDe(m) { const s = m.status || 'ativo'; return MON_STATUS_META[s] ? s : 'ativo'; }
+            function monParseOcorr(m) {
+                const raw = m && m.ocorrencias;
+                if (!raw) return [];
+                if (Array.isArray(raw)) return raw;
+                try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+            }
+            function monConvoc(m) {
+                if (m && m._count && typeof m._count.pagamentos === 'number') return m._count.pagamentos;
+                if (m && Array.isArray(m.pagamentos)) return m.pagamentos.length;
+                return 0;
+            }
+            function monOccChips(occs, limite) {
+                const arr = limite ? occs.slice(0, limite) : occs;
+                const chips = arr.map(k => {
+                    const o = MON_OCC_LABEL[k];
+                    return o ? `<span class="bg-red-50 text-red-600 text-[9px] px-1.5 py-0.5 rounded-full font-bold whitespace-nowrap"><i class="fa-solid ${o.icon} mr-0.5"></i>${o.label}</span>` : '';
+                }).join('');
+                const resto = limite && occs.length > limite ? `<span class="bg-red-50 text-red-600 text-[9px] px-1.5 py-0.5 rounded-full font-bold">+${occs.length - limite}</span>` : '';
+                return `<div class="flex flex-wrap gap-1 mt-1.5">${chips}${resto}</div>`;
+            }
+
             function renderMonitorCards() {
                 const container = getById('monitor-cards-container');
                 const countText = getById('monitor-count-text');
@@ -1663,9 +1703,20 @@
 
                 let monitores = [...(state.monitores || [])];
 
-                // --- Filtrar por status (ativo/reserva) ---
+                // --- Filtrar por bucket (reserva x cadastrados) ---
+                // "cadastrados" (não-reserva) inclui ativo, alerta e desqualificado — assim
+                // um monitor classificado nunca some da lista.
                 const statusFilter = state.monitorStatusFilter || 'ativo';
-                monitores = monitores.filter(m => (m.status || 'ativo') === statusFilter);
+                const isReserva = statusFilter === 'reserva';
+                monitores = isReserva
+                    ? monitores.filter(m => monStatusDe(m) === 'reserva')
+                    : monitores.filter(m => monStatusDe(m) !== 'reserva');
+
+                // Sub-filtro de classificação (só no bucket de cadastrados)
+                const classifWrap = getById('filter-classif-wrap');
+                if (classifWrap) classifWrap.style.display = isReserva ? 'none' : '';
+                const classif = !isReserva ? (getById('filter-monitor-classif')?.value || '') : '';
+                if (classif) monitores = monitores.filter(m => monStatusDe(m) === classif);
 
                 // --- Aplicar Filtros ---
                 const filterCNH = getById('filter-monitor-cnh')?.checked;
@@ -1689,21 +1740,22 @@
                     });
                 }
 
-                const label = statusFilter === 'reserva' ? 'monitores em reserva' : 'monitores ativos';
+                const label = isReserva ? 'monitores em reserva' : 'monitores cadastrados';
                 countText.textContent = `${monitores.length} ${label}`;
 
                 if (monitores.length === 0) {
-                    const msg = statusFilter === 'reserva'
+                    const msg = isReserva
                         ? 'Nenhum monitor em reserva.'
                         : 'Nenhum monitor encontrado com estes filtros.';
                     container.innerHTML = `<div class="col-span-full py-10 text-center text-gray-500">${msg}</div>`;
                     return;
                 }
 
-                const isReserva = statusFilter === 'reserva';
-
                 container.innerHTML = monitores.map(m => {
                     const iniciais = m.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                    const st = monStatusDe(m);
+                    const meta = MON_STATUS_META[st];
+                    const statusBadge = `<span class="${meta.cls} text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><i class="fa-solid ${meta.icon}"></i> ${meta.label}</span>`;
                     const cnhInfo = m.cnh ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">CNH ${m.cnhCategoria || ''}</span>` : '';
                     const psBadge = (m.possuiCursoPS === true || m.possuiCursoPS === 'Sim' || m.possuiCursoPS === 'true') ? `<span class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1" title="Possui Curso de Primeiros Socorros"><i class="fa-solid fa-heart-pulse"></i> PS</span>` : '';
 
@@ -1712,7 +1764,24 @@
                         ? `<div class="monitor-avatar overflow-hidden"><img src="${window.getCloudinaryThumbnail(m.fotoPerfil, 100, 100)}" loading="lazy" class="w-full h-full object-cover" alt="${m.nome}"></div>`
                         : `<div class="monitor-avatar">${iniciais}</div>`;
 
-                    // Preview de observações (truncado)
+                    // Contador de convocações (diárias registradas) no canto superior esquerdo
+                    const conv = monConvoc(m);
+                    const convBadge = conv > 0
+                        ? `<span class="absolute -top-2 -left-2 z-10 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full bg-indigo-600 text-white text-[11px] font-bold shadow-md border-2 border-white" title="${conv} ${conv === 1 ? 'convocação' : 'convocações'} (diárias registradas)">${conv}</span>`
+                        : '';
+
+                    // Faixa de observação em destaque (alerta/desqualificado)
+                    const motivo = (m.statusMotivo || '').trim();
+                    const stripColor = meta.strip === 'danger' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-200';
+                    const alertStrip = meta.strip
+                        ? `<div class="${stripColor} border text-[11px] font-semibold rounded-lg px-2.5 py-1.5 flex items-start gap-1.5"><i class="fa-solid ${meta.icon} mt-0.5"></i><span>${motivo ? motivo.replace(/</g, '&lt;') : (st === 'alerta' ? 'Monitor em alerta — sem observação registrada.' : 'Monitor desqualificado — sem observação registrada.')}</span></div>`
+                        : '';
+
+                    // Chips de ocorrências
+                    const occs = monParseOcorr(m);
+                    const occRow = occs.length ? monOccChips(occs, 4) : '';
+
+                    // Preview de observações gerais (truncado)
                     const obsPreview = m.observacoes
                         ? `<p class="text-[11px] text-gray-400 italic truncate mt-1" title="${m.observacoes.replace(/"/g, '&quot;')}"><i class="fa-solid fa-comment-dots mr-1"></i>${m.observacoes.length > 80 ? m.observacoes.slice(0, 80) + '...' : m.observacoes}</p>`
                         : '';
@@ -1723,23 +1792,30 @@
                         : `<button onclick="window.moverMonitor('${m.id}', 'reserva')" class="btn-action-small bg-amber-50 text-amber-600 hover:bg-amber-100" title="Mover para Reserva"><i class="fa-solid fa-arrow-down text-sm"></i></button>`;
 
                     return `
-                        <div class="monitor-card p-4 rounded-2xl flex flex-col gap-4 border border-white/50 relative group cursor-pointer hover:bg-white/40 transition-all" onclick="visualizarMonitor('${m.id}')">
+                        <div class="monitor-card p-4 rounded-2xl flex flex-col gap-3 border border-white/50 relative group cursor-pointer hover:bg-white/40 transition-all" onclick="visualizarMonitor('${m.id}')">
+                            ${convBadge}
                             <div class="flex items-center gap-4">
                                 ${avatarHTML}
                                 <div class="flex-grow min-w-0">
                                     <h4 class="font-bold text-gray-800 truncate">${m.nome}</h4>
-                                    <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                        ${statusBadge}
                                         ${cnhInfo}
                                         ${psBadge}
-                                        <span class="text-xs text-gray-500">${m.telefone || 'Sem tel'}</span>
                                     </div>
+                                    <span class="text-xs text-gray-500">${m.telefone || 'Sem tel'}</span>
                                     ${obsPreview}
                                 </div>
                             </div>
+                            ${alertStrip}
+                            ${occRow}
 
                             <div class="flex justify-between items-center pt-2 border-t border-gray-100/50">
                                 <span class="text-xs font-medium text-gray-400">ID: #${m.id ? m.id.slice(-4) : '????'}</span>
                                 <div class="flex gap-2" onclick="event.stopPropagation()">
+                                    <button onclick="window.classificarMonitor('${m.id}')" class="btn-action-small bg-violet-50 text-violet-600 hover:bg-violet-100" title="Classificar (status / ocorrências)">
+                                        <i class="fa-solid fa-user-tag text-sm"></i>
+                                    </button>
                                     ${moverBtn}
                                     <button onclick="window.copiarLinkMonitor('${m.id}')" class="btn-action-small bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Copiar Link de Atualização">
                                         <i class="fa-solid fa-link text-sm"></i>
@@ -1759,6 +1835,7 @@
 
             // Adicionar event listeners para os filtros
             getById('filter-monitor-sort')?.addEventListener('change', renderMonitorCards);
+            getById('filter-monitor-classif')?.addEventListener('change', renderMonitorCards);
             getById('filter-monitor-cnh')?.addEventListener('change', renderMonitorCards);
             getById('filter-monitor-ps')?.addEventListener('change', renderMonitorCards);
 
@@ -2209,6 +2286,24 @@
                 const idiomas = parseIdiomas(m.idiomas);
                 const waPhone = m.telefone ? m.telefone.replace(/\D/g, '') : '';
 
+                // Classificação (status + observação + ocorrências + convocações)
+                const stDet = monStatusDe(m);
+                const metaDet = MON_STATUS_META[stDet];
+                const convDet = monConvoc(m);
+                const occsDet = monParseOcorr(m);
+                const motivoDet = (m.statusMotivo || '').trim();
+                const stripColorDet = metaDet.strip === 'danger' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-800 border-amber-200';
+                const classifBannerHTML = `
+                    <div class="p-4 bg-white/60 rounded-xl border border-gray-100 flex flex-col gap-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="${metaDet.cls} text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1"><i class="fa-solid ${metaDet.icon}"></i> ${metaDet.label}</span>
+                            <span class="bg-indigo-50 text-indigo-700 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1" title="Diárias/pagamentos registrados"><i class="fa-solid fa-bullhorn"></i> ${convDet} ${convDet === 1 ? 'convocação' : 'convocações'}</span>
+                            <button onclick="window.classificarMonitor('${m.id}')" class="ml-auto text-xs bg-violet-50 text-violet-600 hover:bg-violet-100 px-3 py-1 rounded-full font-bold flex items-center gap-1"><i class="fa-solid fa-user-tag"></i> Classificar</button>
+                        </div>
+                        ${metaDet.strip ? `<div class="${stripColorDet} border text-xs font-semibold rounded-lg px-3 py-2 flex items-start gap-2"><i class="fa-solid ${metaDet.icon} mt-0.5"></i><span>${motivoDet ? motivoDet.replace(/</g, '&lt;') : (stDet === 'alerta' ? 'Monitor em alerta — registre a observação em "Classificar".' : 'Monitor desqualificado — registre o motivo em "Classificar".')}</span></div>` : ''}
+                        ${occsDet.length ? monOccChips(occsDet) : ''}
+                    </div>`;
+
                 body.innerHTML = `
                     <div class="flex flex-col gap-6">
                         <div class="flex items-center gap-6">
@@ -2233,6 +2328,8 @@
                                 </div>
                             </div>
                         </div>
+
+                        ${classifBannerHTML}
 
                         ${m.fotoPerfil ? `
                         <div class="w-full flex flex-col items-center gap-2">
@@ -2594,6 +2691,62 @@
                     showToast('Erro ao mover monitor', true);
                 }
             };
+
+            // --- Classificar monitor (status + ocorrências + observação) ---
+            function renderClassifOcorrencias(selecionadas) {
+                const set = new Set(selecionadas || []);
+                const wrap = getById('classif-ocorrencias');
+                if (!wrap) return;
+                wrap.innerHTML = MON_OCORRENCIAS.map(o => `
+                    <label class="flex items-center gap-2 cursor-pointer border rounded-lg px-2.5 py-2 text-xs font-semibold ${set.has(o.key) ? 'border-red-300 bg-red-50 text-red-600' : 'border-gray-200 text-gray-600'}">
+                        <input type="checkbox" value="${o.key}" ${set.has(o.key) ? 'checked' : ''} class="accent-red-500">
+                        <i class="fa-solid ${o.icon}"></i> ${o.label}
+                    </label>`).join('');
+            }
+            function classifStatusSelecionado() {
+                const r = document.querySelector('input[name="classif-status"]:checked');
+                return r ? r.value : '';
+            }
+            function classifAtualizarMotivo() {
+                const st = classifStatusSelecionado();
+                const req = st === 'alerta' || st === 'desqualificado';
+                const reqEl = getById('classif-motivo-req');
+                if (reqEl) reqEl.classList.toggle('hidden', !req);
+            }
+            window.classificarMonitor = function (id) {
+                const m = (state.monitores || []).find(x => x.id === id);
+                if (!m) return;
+                getById('classif-monitor-id').value = id;
+                getById('classif-monitor-nome').textContent = m.nome || 'Monitor';
+                const st = monStatusDe(m);
+                const radio = document.querySelector(`input[name="classif-status"][value="${st}"]`);
+                if (radio) radio.checked = true;
+                renderClassifOcorrencias(monParseOcorr(m));
+                getById('classif-motivo').value = m.statusMotivo || '';
+                classifAtualizarMotivo();
+                getById('modal-classificar-monitor').classList.remove('hidden');
+            };
+
+            getById('classif-status-picker')?.addEventListener('change', classifAtualizarMotivo);
+            getById('form-classificar-monitor')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = getById('classif-monitor-id').value;
+                const status = classifStatusSelecionado();
+                if (!status) { showToastModal('Selecione um status', true); return; }
+                const ocorrencias = [...getById('classif-ocorrencias').querySelectorAll('input:checked')].map(i => i.value);
+                const motivo = getById('classif-motivo').value.trim();
+                if ((status === 'alerta' || status === 'desqualificado') && !motivo) {
+                    showToastModal('Descreva a observação para Alerta/Desqualificado', true);
+                    return;
+                }
+                const ok = await window.api.alternarStatusMonitor(id, status, { statusMotivo: motivo, ocorrencias });
+                if (!ok) { showToastModal('Erro ao classificar monitor', true); return; }
+                const m = (state.monitores || []).find(x => x.id === id);
+                if (m) { m.status = status; m.statusMotivo = motivo; m.ocorrencias = JSON.stringify(ocorrencias); }
+                getById('modal-classificar-monitor').classList.add('hidden');
+                renderMonitorCards();
+                showToastModal('Classificação atualizada');
+            });
 
             // Estado do filtro de status dos monitores
             state.monitorStatusFilter = 'ativo';
@@ -6882,6 +7035,17 @@
                         </select>
                     </div>
 
+                    <div class="flex items-center gap-2" id="filter-classif-wrap">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Classif.:</label>
+                        <select id="filter-monitor-classif"
+                            class="text-xs bg-white border border-indigo-200 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 font-bold text-gray-700 cursor-pointer">
+                            <option value="">Todos</option>
+                            <option value="ativo">Ativos</option>
+                            <option value="alerta">Alerta</option>
+                            <option value="desqualificado">Desqualificados</option>
+                        </select>
+                    </div>
+
                     <div class="flex items-center gap-3 border-l border-indigo-200 pl-4">
                         <label class="flex items-center gap-2 cursor-pointer group">
                             <input type="checkbox" id="filter-monitor-cnh"
@@ -6910,6 +7074,60 @@
                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-2 flex-grow">
                 <!-- Cards renderizados via JS -->
             </div>
+        </div>
+    </div>
+
+    <!-- Modal: Classificar Monitor (status / ocorrências / observação) -->
+    <div id="modal-classificar-monitor"
+        class="modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center hidden z-[60] p-4">
+        <div class="modal-content glassmorphism p-6 rounded-2xl shadow-2xl w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-user-tag text-violet-600"></i> Classificar monitor
+                </h2>
+                <button type="button" onclick="document.getElementById('modal-classificar-monitor').classList.add('hidden')"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
+            </div>
+            <form id="form-classificar-monitor" class="space-y-4">
+                <input type="hidden" id="classif-monitor-id">
+                <p id="classif-monitor-nome" class="font-bold text-gray-800 text-lg"></p>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Status</label>
+                    <div id="classif-status-picker" class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
+                            <input type="radio" name="classif-status" value="ativo" class="accent-indigo-600"><i class="fa-solid fa-user-check text-emerald-600"></i> Ativo</label>
+                        <label class="flex items-center gap-2 cursor-pointer border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
+                            <input type="radio" name="classif-status" value="reserva" class="accent-indigo-600"><i class="fa-solid fa-clock-rotate-left text-amber-500"></i> Reserva</label>
+                        <label class="flex items-center gap-2 cursor-pointer border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
+                            <input type="radio" name="classif-status" value="alerta" class="accent-indigo-600"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Alerta</label>
+                        <label class="flex items-center gap-2 cursor-pointer border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50">
+                            <input type="radio" name="classif-status" value="desqualificado" class="accent-indigo-600"><i class="fa-solid fa-ban text-red-600"></i> Desqualificado</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Ocorrências (marque o que se aplica)</label>
+                    <div id="classif-ocorrencias" class="grid grid-cols-2 gap-2"></div>
+                </div>
+
+                <div>
+                    <label for="classif-motivo" class="block text-sm font-bold text-gray-700 mb-1">
+                        Observação <span id="classif-motivo-req" class="hidden text-red-500">*</span>
+                    </label>
+                    <textarea id="classif-motivo" rows="3" class="form-input w-full"
+                        placeholder="Ex: Chegou 40min atrasado e ficou no celular durante o evento."></textarea>
+                    <p class="text-[11px] text-gray-400 mt-1">Aparece em destaque no card quando o status for Alerta ou Desqualificado.</p>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-classificar-monitor').classList.add('hidden')"
+                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 shiny-btn text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Salvar classificação</button>
+                </div>
+            </form>
         </div>
     </div>
 
