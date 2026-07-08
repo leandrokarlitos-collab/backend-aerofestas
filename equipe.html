@@ -352,6 +352,18 @@
         justify-content: space-between;
         margin-bottom: 16px;
     }
+
+    /* Cabeçalhos ordenáveis da tabela de pagamentos */
+    .table th.th-sort {
+        cursor: pointer;
+        user-select: none;
+        transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+    }
+    .table th.th-sort:hover { color: var(--text); background: var(--surface-2); }
+    .table th.th-sort:focus-visible { outline: 2px solid var(--brand-500); outline-offset: -2px; }
+    .table th.th-sort.is-active { color: var(--brand-600); }
+    .th-sort-ico { margin-left: 4px; font-size: 11px; opacity: .4; }
+    .table th.th-sort.is-active .th-sort-ico { opacity: 1; }
 </style>
 </head>
 
@@ -897,6 +909,7 @@ const state = {
     faixas: [],
     fixaOk: false,
     mes: (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; })(),
+    pagOrdem: { col: 'data', dir: 'desc' }, // ordenação da tabela de pagamentos (coluna + direção)
     detalhe: null,         // monitor aberto no modal de detalhe
     pagEditando: null,     // pagamento em edição
     fotoBase64: ''         // nova foto escolhida no form de monitor
@@ -1571,13 +1584,36 @@ function totalPagamento(p) {
     return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
 }
 
+// Colunas ordenáveis da tabela de pagamentos. `val` extrai o valor de comparação;
+// `defDir` é a direção ao clicar na coluna pela 1ª vez (datas/números: maior primeiro).
+const PAG_COLS = [
+    { key: 'data',        label: 'Data',      type: 'date', defDir: 'desc', val: p => String(p.data || '') },
+    { key: 'nome',        label: 'Monitor',   type: 'text', defDir: 'asc',  val: p => (p.nome || '').toLowerCase() },
+    { key: 'valorBase',   label: 'Base',      type: 'num',  defDir: 'desc', val: p => parseFloat(p.valorBase) || 0 },
+    { key: 'adicional',   label: 'Adicional', type: 'num',  defDir: 'desc', val: p => parseFloat(p.adicional) || 0 },
+    { key: 'horasExtras', label: 'H. Extras', type: 'num',  defDir: 'desc', val: p => parseFloat(p.horasExtras) || 0 },
+    { key: 'total',       label: 'Total',     type: 'num',  defDir: 'desc', val: p => totalPagamento(p) },
+    { key: 'status',      label: 'Status',    type: 'text', defDir: 'asc',  val: p => (p.statusPagamento || '') },
+];
+
+function compararPagamentos(a, b) {
+    const col = PAG_COLS.find(c => c.key === state.pagOrdem.col) || PAG_COLS[0];
+    const dir = state.pagOrdem.dir === 'asc' ? 1 : -1;
+    const va = col.val(a), vb = col.val(b);
+    let cmp = col.type === 'num' ? (va - vb) : String(va).localeCompare(String(vb), 'pt-BR');
+    cmp *= dir;
+    // Desempate estável: mais recente primeiro (independe da direção escolhida)
+    if (cmp === 0) cmp = String(b.data || '').localeCompare(String(a.data || ''));
+    return cmp;
+}
+
 function renderPagamentos() {
     $('label-mes').textContent = new Date(state.mes.y, state.mes.m - 1, 1)
         .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
     const doMes = state.pagamentos
         .filter(p => String(p.data || '').startsWith(chaveMes()))
-        .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+        .sort(compararPagamentos);
 
     const pago = doMes.filter(p => p.statusPagamento === 'Executado').reduce((s, p) => s + totalPagamento(p), 0);
     const pendente = doMes.filter(p => p.statusPagamento !== 'Executado').reduce((s, p) => s + totalPagamento(p), 0);
@@ -1639,15 +1675,20 @@ function renderPagamentos() {
     }).join('');
 
     const subtotal = doMes.reduce((s, p) => s + totalPagamento(p), 0);
+    const ths = PAG_COLS.map(c => {
+        const ativo = state.pagOrdem.col === c.key;
+        const icone = ativo
+            ? (state.pagOrdem.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down')
+            : 'fa-sort';
+        const aria = ativo ? (state.pagOrdem.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+        return `<th class="th-sort${ativo ? ' is-active' : ''}" data-sort="${c.key}" role="button" tabindex="0" aria-sort="${aria}" title="Ordenar por ${c.label}">${c.label} <i class="fas ${icone} th-sort-ico"></i></th>`;
+    }).join('');
     wrap.innerHTML = `
         ${avisoTeto}
         <div class="table-wrap">
             <table class="table">
                 <thead>
-                    <tr>
-                        <th>Data</th><th>Monitor</th><th>Base</th><th>Adicional</th>
-                        <th>H. Extras</th><th>Total</th><th>Status</th><th></th>
-                    </tr>
+                    <tr>${ths}<th></th></tr>
                 </thead>
                 <tbody>${linhas}</tbody>
                 <tfoot>
@@ -1668,6 +1709,29 @@ $('btn-mes-prev').addEventListener('click', () => {
 $('btn-mes-next').addEventListener('click', () => {
     state.mes.m++; if (state.mes.m > 12) { state.mes.m = 1; state.mes.y++; }
     renderPagamentos();
+});
+
+// Ordenação: clique ou Enter/Espaço num cabeçalho de coluna
+function ordenarPorColuna(col) {
+    const def = PAG_COLS.find(c => c.key === col);
+    if (!def) return;
+    if (state.pagOrdem.col === col) {
+        state.pagOrdem.dir = state.pagOrdem.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.pagOrdem = { col, dir: def.defDir };
+    }
+    renderPagamentos();
+}
+$('pag-lista').addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-sort]');
+    if (th) ordenarPorColuna(th.dataset.sort);
+});
+$('pag-lista').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    e.preventDefault();
+    ordenarPorColuna(th.dataset.sort);
 });
 
 $('pag-lista').addEventListener('click', async (e) => {
