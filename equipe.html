@@ -421,6 +421,23 @@
     .rec-nome { font-weight: 600; font-size: 13.5px; color: var(--text); }
     .rec-meta { font-size: 12px; color: var(--text-muted); }
     .rec-badge { display:inline-block; padding:1px 7px; border-radius:999px; background:#fef3c7; color:#b45309; font-size:10px; font-weight:700; margin-left:6px; }
+
+    /* Menu suspenso de status inline na tabela de pagamentos */
+    .status-inline {
+        border: 1.5px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        background: var(--surface-1);
+        color: var(--text);
+        transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .status-inline.is-pago { color: var(--success); border-color: var(--success); }
+    .status-inline.is-pendente { color: var(--warning); border-color: var(--warning); }
+    .status-inline:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 1px; }
+    .status-inline:disabled { opacity: .55; cursor: default; }
 </style>
 </head>
 
@@ -833,7 +850,7 @@
                         <label class="input-label" for="fp-valor-base" id="fp-valor-label">Valor da diária (R$) *</label>
                         <input type="number" id="fp-valor-base" class="input" step="0.01" min="0" value="100.00" required>
                     </div>
-                    <div class="fp-diaria-only">
+                    <div>
                         <label class="input-label" for="fp-status">Status</label>
                         <select id="fp-status" class="select">
                             <option value="Executado">Pago / Executado</option>
@@ -1974,9 +1991,10 @@ function renderPagamentos() {
 
     const linhas = doMes.map(p => {
         const isPago = p.statusPagamento === 'Executado';
-        const statusBadge = isPago
-            ? '<span class="badge badge-success">Pago</span>'
-            : '<span class="badge badge-warning">Pendente</span>';
+        const statusSelect = `<select class="status-inline ${isPago ? 'is-pago' : 'is-pendente'}" data-action="status-inline" data-id="${escapeHtml(p.id)}" title="Alterar status">
+            <option value="Pendente"${isPago ? '' : ' selected'}>Pendente</option>
+            <option value="Executado"${isPago ? ' selected' : ''}>Pago</option>
+        </select>`;
         const motorista = p.foiMotorista
             ? ` <span class="chip chip-sm" title="Foi motorista (${escapeHtml(String(p.numEventos || 0))} eventos)"><i class="fas fa-truck-fast"></i></span>` : '';
         const indicacoesN = parseInt(p.indicacoes) || 0;
@@ -1998,7 +2016,7 @@ function renderPagamentos() {
             <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.adicional)}</td>
             <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.horasExtras)}</td>
             <td class="tabular-nums" style="font-weight:700;">${fmtBRL(totalPagamento(p))}</td>
-            <td>${statusBadge}</td>
+            <td>${statusSelect}</td>
             <td>
                 <div class="row-actions">
                     <button type="button" data-action="editar" data-id="${escapeHtml(p.id)}" title="Editar"><i class="fas fa-pen-to-square"></i></button>
@@ -2066,6 +2084,25 @@ $('pag-lista').addEventListener('keydown', (e) => {
     if (!th) return;
     e.preventDefault();
     ordenarPorColuna(th.dataset.sort);
+});
+
+// Troca de status pelo menu suspenso na coluna. Envia o registro COMPLETO (spread)
+// para o PUT não zerar campos como indicacoes/bônus (mesmo cuidado da tela financeira).
+$('pag-lista').addEventListener('change', async (e) => {
+    const sel = e.target.closest('select[data-action="status-inline"]');
+    if (!sel) return;
+    const p = state.pagamentos.find(x => x.id === sel.dataset.id);
+    if (!p) return;
+    const anterior = p.statusPagamento;
+    const novo = sel.value;
+    if (novo === anterior) return;
+    sel.disabled = true;
+    const ok = await api.atualizarPagamentoMonitor(p.id, { ...p, statusPagamento: novo });
+    sel.disabled = false;
+    if (!ok) { UI.toast('Erro ao atualizar status', 'error'); sel.value = anterior; return; }
+    p.statusPagamento = novo;
+    renderPagamentos(); // atualiza KPIs, cor do select e subtotais
+    UI.toast(novo === 'Executado' ? 'Marcado como pago' : 'Marcado como pendente');
 });
 
 $('pag-lista').addEventListener('click', async (e) => {
@@ -2180,6 +2217,9 @@ function setTipoPagamento(tipo) {
         $('fp-he').value = '0.00';
         $('fp-motorista').checked = false;
         $('fp-indicacoes').value = '0';
+        // Novo diverso: padrão "Executado" (caso comum). Em edição, o status salvo é
+        // reaplicado depois em abrirFormPagamento, então não sobrescrevemos aqui.
+        if (!state.pagEditando) $('fp-status').value = 'Executado';
         resetDiasMulti();
     } else {
         // Voltar para "Diária": recalcula a HE a partir de entrada/saída ainda preenchidas,
@@ -2301,9 +2341,12 @@ function abrirFormPagamento(p) {
     resetDiasMulti();
     $('fp-descricao').value = p ? (p.descricao || '') : '';
     setTipoPagamento(p && p.tipo === 'diverso' ? 'diverso' : 'diaria');
-    // Na edição, o HE gravado prevalece sobre o recálculo automático do setTipoPagamento
-    // (senão uma HE ajustada manualmente seria sobrescrita ao reabrir a diária).
-    if (p) $('fp-he').value = (parseFloat(p.horasExtras) || 0).toFixed(2);
+    // Na edição, o HE e o status gravados prevalecem sobre os defaults do setTipoPagamento
+    // (senão uma HE ajustada ou um diverso pendente seriam sobrescritos ao reabrir).
+    if (p) {
+        $('fp-he').value = (parseFloat(p.horasExtras) || 0).toFixed(2);
+        $('fp-status').value = p.statusPagamento === 'Executado' ? 'Executado' : 'Pendente';
+    }
     atualizarCalculosPagamento();
     abrirModal('modal-pagamento');
 }
@@ -2335,7 +2378,7 @@ $('form-pagamento').addEventListener('submit', async (e) => {
     const montarPayload = (dia) => ({
         id: dia.id || undefined,
         data: dia.data,
-        dataPagamento: tipo === 'diverso' ? dia.data : ($('fp-data-pagamento').value || null),
+        dataPagamento: tipo === 'diverso' ? ($('fp-status').value === 'Executado' ? dia.data : null) : ($('fp-data-pagamento').value || null),
         eventoId: state.pagEditando ? (state.pagEditando.eventoId || null) : null,
         monitorId: monitorId || null,
         nome,
@@ -2344,7 +2387,7 @@ $('form-pagamento').addEventListener('submit', async (e) => {
         horasExtras: dia.horasExtras,
         horasDiaria: dia.jornada,
         pagamento: dia.valorBase + dia.adicional + dia.horasExtras + (dia.indicacoes || 0) * VALOR_INDICACAO,
-        statusPagamento: tipo === 'diverso' ? 'Executado' : $('fp-status').value,
+        statusPagamento: $('fp-status').value,
         horaEntrada: dia.horaEntrada || null,
         horaSaida: dia.horaSaida || null,
         foiMotorista: dia.foiMotorista,
