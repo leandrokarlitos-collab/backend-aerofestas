@@ -431,12 +431,13 @@ model PagamentoMonitor {
   data            String   // YYYY-MM-DD (Data do Evento)
   dataPagamento   String?  // YYYY-MM-DD
   eventoId        String?  // ID do evento vinculado (opcional)
-  monitorId       String
-  monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  nome            String   // Nome do monitor (denormalizado para performance)
+  monitorId       String?  // null = monitor avulso/não-cadastrado (usa apenas o campo nome)
+  monitor         Monitor? @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  nome            String   // Nome do monitor (denormalizado; para avulsos é a única referência)
   valorBase       Float    // Valor da diária base
   adicional       Float    // Adicional de motorista (R$ 20,00 por evento entregue)
   horasExtras     Float    // Valor de horas extras
+  horasDiaria     Float?   @default(11) // Tamanho da jornada (h) coberta pela diária, usado no cálculo de hora extra
   pagamento       Float    // Total = valorBase + adicional + horasExtras
   statusPagamento String   @default("Executado") // "Executado" ou "Pendente"
   horaEntrada     String?  // HH:MM

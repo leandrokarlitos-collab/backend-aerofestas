@@ -570,10 +570,21 @@
                         <input type="date" id="fp-data-pagamento" class="input">
                     </div>
                     <div class="fg-full">
+                        <label class="check-row" for="fp-nao-cadastrado">
+                            <input type="checkbox" id="fp-nao-cadastrado">
+                            <span><i class="fas fa-user-tag" style="color:var(--brand-600);"></i> Monitor não-cadastrado (avulso)</span>
+                        </label>
+                    </div>
+                    <div class="fg-full" id="fp-monitor-wrap">
                         <label class="input-label" for="fp-monitor">Monitor *</label>
-                        <select id="fp-monitor" class="select" required>
+                        <select id="fp-monitor" class="select">
                             <option value="">Selecione um monitor…</option>
                         </select>
+                    </div>
+                    <div class="fg-full hidden" id="fp-monitor-nome-wrap">
+                        <label class="input-label" for="fp-monitor-nome">Nome do monitor avulso *</label>
+                        <input type="text" id="fp-monitor-nome" class="input" placeholder="Nome de quem trabalhou neste dia">
+                        <p class="hint-text">Registra o pagamento sem criar um cadastro de monitor.</p>
                     </div>
                     <div>
                         <label class="input-label" for="fp-valor-base">Valor da diária (R$) *</label>
@@ -594,10 +605,15 @@
                         <label class="input-label" for="fp-saida">Hora de saída</label>
                         <input type="time" id="fp-saida" class="input">
                     </div>
-                    <div class="fg-full">
+                    <div>
+                        <label class="input-label" for="fp-jornada">Horas da diária *</label>
+                        <input type="number" id="fp-jornada" class="input" step="0.5" min="1" value="11" required>
+                        <p class="hint-text">Jornada coberta pela diária (padrão 11h).</p>
+                    </div>
+                    <div>
                         <label class="input-label" for="fp-he">Horas extras (R$)</label>
                         <input type="number" id="fp-he" class="input" step="0.01" min="0" value="0.00">
-                        <p class="hint-text" id="fp-he-hint">Calculado automaticamente pelas horas (diária cobre 11h) — pode ajustar manualmente.</p>
+                        <p class="hint-text" id="fp-he-hint">Calculado automaticamente pelas horas — pode ajustar manualmente.</p>
                     </div>
                     <div class="fg-full motorista-box">
                         <label class="check-row" for="fp-motorista">
@@ -1438,9 +1454,10 @@ function calcularHEAutomatico() {
     const entrada = $('fp-entrada').value;
     const saida = $('fp-saida').value;
     const base = parseFloat($('fp-valor-base').value) || 0;
+    const jornada = parseFloat($('fp-jornada').value) || 11;
     const hint = $('fp-he-hint');
     if (!entrada || !saida) {
-        hint.textContent = 'Calculado automaticamente pelas horas (diária cobre 11h) — pode ajustar manualmente.';
+        hint.textContent = 'Calculado automaticamente pelas horas — pode ajustar manualmente.';
         hint.classList.remove('is-on');
         return;
     }
@@ -1450,21 +1467,30 @@ function calcularHEAutomatico() {
     const minEntrada = hE * 60 + mE;
     if (minSaida < minEntrada) minSaida += 24 * 60; // virou o dia
     const totalHoras = (minSaida - minEntrada) / 60;
-    const horasExtras = Math.max(0, totalHoras - 11);
-    const valorHE = horasExtras * (base / 11);
+    const horasExtras = Math.max(0, totalHoras - jornada);
+    const valorHE = jornada > 0 ? horasExtras * (base / jornada) : 0;
     $('fp-he').value = valorHE.toFixed(2);
     hint.textContent = horasExtras > 0
         ? `+${horasExtras.toFixed(2)}h extra (${fmtBRL(valorHE)})`
-        : 'Sem horas extras (jornada até 11h).';
+        : `Sem horas extras (jornada até ${jornada}h).`;
     hint.classList.toggle('is-on', horasExtras > 0);
     atualizarCalculosPagamento();
 }
 
+// Alterna entre monitor cadastrado (select) e monitor avulso (nome livre)
+function toggleMonitorAvulso() {
+    const avulso = $('fp-nao-cadastrado').checked;
+    $('fp-monitor-wrap').classList.toggle('hidden', avulso);
+    $('fp-monitor-nome-wrap').classList.toggle('hidden', !avulso);
+}
+
 ['fp-entrada', 'fp-saida'].forEach(id => $(id).addEventListener('change', calcularHEAutomatico));
 $('fp-valor-base').addEventListener('input', () => { calcularHEAutomatico(); atualizarCalculosPagamento(); });
+$('fp-jornada').addEventListener('input', () => { calcularHEAutomatico(); atualizarCalculosPagamento(); });
 $('fp-he').addEventListener('input', atualizarCalculosPagamento);
 $('fp-motorista').addEventListener('change', atualizarCalculosPagamento);
 $('fp-eventos').addEventListener('input', atualizarCalculosPagamento);
+$('fp-nao-cadastrado').addEventListener('change', toggleMonitorAvulso);
 
 async function abrirFormPagamentoNovo() {
     await ensureMonitores();
@@ -1479,8 +1505,12 @@ function abrirFormPagamento(p) {
     if (p) {
         $('fp-data').value = (p.data || '').split('T')[0];
         $('fp-data-pagamento').value = (p.dataPagamento || '').split('T')[0];
+        const avulso = !p.monitorId;
+        $('fp-nao-cadastrado').checked = avulso;
         $('fp-monitor').value = p.monitorId || '';
+        $('fp-monitor-nome').value = avulso ? (p.nome || '') : '';
         $('fp-valor-base').value = (parseFloat(p.valorBase) || 0).toFixed(2);
+        $('fp-jornada').value = p.horasDiaria != null ? p.horasDiaria : 11;
         $('fp-he').value = (parseFloat(p.horasExtras) || 0).toFixed(2);
         $('fp-entrada').value = p.horaEntrada || '';
         $('fp-saida').value = p.horaSaida || '';
@@ -1489,12 +1519,15 @@ function abrirFormPagamento(p) {
         $('fp-eventos').value = p.numEventos != null ? p.numEventos : 0;
     } else {
         $('fp-data').value = hojeISO();
+        $('fp-nao-cadastrado').checked = false;
         $('fp-valor-base').value = '100.00';
+        $('fp-jornada').value = '11';
         $('fp-he').value = '0.00';
         $('fp-status').value = 'Pendente';
         $('fp-eventos').value = '0';
     }
-    $('fp-he-hint').textContent = 'Calculado automaticamente pelas horas (diária cobre 11h) — pode ajustar manualmente.';
+    toggleMonitorAvulso();
+    $('fp-he-hint').textContent = 'Calculado automaticamente pelas horas — pode ajustar manualmente.';
     $('fp-he-hint').classList.remove('is-on');
     atualizarCalculosPagamento();
     abrirModal('modal-pagamento');
@@ -1505,11 +1538,22 @@ $('btn-lancar-pagamento').addEventListener('click', abrirFormPagamentoNovo);
 $('form-pagamento').addEventListener('submit', async (e) => {
     e.preventDefault();
     const editId = $('fp-id').value;
-    const monitorId = $('fp-monitor').value;
-    if (!monitorId) { UI.toast('Selecione o monitor', 'error'); return; }
-    const monitor = state.monitores.find(m => m.id === monitorId);
+
+    const avulso = $('fp-nao-cadastrado').checked;
+    let monitorId = null;
+    let nome = '';
+    if (avulso) {
+        nome = $('fp-monitor-nome').value.trim();
+        if (!nome) { UI.toast('Informe o nome do monitor avulso', 'error'); return; }
+    } else {
+        monitorId = $('fp-monitor').value;
+        if (!monitorId) { UI.toast('Selecione o monitor', 'error'); return; }
+        const monitor = state.monitores.find(m => m.id === monitorId);
+        nome = monitor ? monitor.nome : (state.pagEditando ? state.pagEditando.nome : '');
+    }
 
     const base = parseFloat($('fp-valor-base').value) || 0;
+    const jornada = parseFloat($('fp-jornada').value) || 11;
     const he = parseFloat($('fp-he').value) || 0;
     const motorista = $('fp-motorista').checked;
     const eventos = motorista ? (parseFloat($('fp-eventos').value) || 0) : 0;
@@ -1519,11 +1563,12 @@ $('form-pagamento').addEventListener('submit', async (e) => {
         data: $('fp-data').value,
         dataPagamento: $('fp-data-pagamento').value || null,
         eventoId: state.pagEditando ? (state.pagEditando.eventoId || null) : null,
-        monitorId,
-        nome: monitor ? monitor.nome : (state.pagEditando ? state.pagEditando.nome : ''),
+        monitorId: monitorId || null,
+        nome,
         valorBase: base,
         adicional,
         horasExtras: he,
+        horasDiaria: jornada,
         pagamento: base + adicional + he,
         statusPagamento: $('fp-status').value,
         horaEntrada: $('fp-entrada').value || null,
