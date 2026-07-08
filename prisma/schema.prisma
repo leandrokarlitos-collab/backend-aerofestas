@@ -382,6 +382,9 @@ model Monitor {
   email             String?
   endereco          String?
   observacoes       String?
+  comoChegou        String?             // Como chegou até nós: "indicacao" | "outro"
+  indicadoPor       String?             // Nome de quem indicou (preenchido quando comoChegou = "indicacao")
+  disponibilidade   String?             // JSON: { dias: [...], turnos: [...] } — dias/turnos disponíveis p/ trabalhar
   status            String?             @default("reserva") // ativo | reserva | alerta | desqualificado
   statusMotivo      String?             // Observação da classificação (evidenciada no card p/ alerta/desqualificado)
   ocorrencias       String?             // JSON array de tags de ocorrência (atraso, celular, proatividade, etc.)
@@ -449,6 +452,7 @@ model PagamentoMonitor {
   observacoes     String?  // Observações do evento (texto livre)
   tipo            String   @default("diaria") // "diaria" ou "diverso" (pagamento que não corresponde a uma diária)
   descricao       String?  // Descrição livre do pagamento (usada em pagamentos "diverso")
+  indicacoes      Int      @default(0) // Nº de indicações pagas neste lançamento (R$ 20,00 cada, somado ao total)
 }
 
 model Funcionario {

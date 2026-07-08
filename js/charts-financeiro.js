@@ -31,6 +31,13 @@ let chartPagMonitores = null;
 let chartDaily = null;
 let chartMonitorPerf = null;
 
+// Total autoritativo do pagamento de monitor (inclui bônus de indicação, R$20 cada).
+function custoPagamentoMonitor(p) {
+    const s = parseFloat(p && p.pagamento);
+    if (!isNaN(s)) return s;
+    return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0) + (parseInt(p.indicacoes) || 0) * 20;
+}
+
 /**
  * Cria gradiente vertical para gráficos de área
  */
@@ -150,7 +157,7 @@ function renderDespesasGeraisChart(state) {
 
     // Adiciona pagamentos de monitores como categoria separada
     const totalMonitores = pagamentosMonitoresDoMes.reduce((acc, p) => {
-        const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+        const total = custoPagamentoMonitor(p);
         return acc + total;
     }, 0);
     if (totalMonitores > 0) {
@@ -249,7 +256,7 @@ function renderPagamentosMonitoresChart(state) {
 
     const pagamentosPorMonitor = {};
     pagamentosDoMes.forEach(p => {
-        const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+        const total = custoPagamentoMonitor(p);
         pagamentosPorMonitor[p.nome] = (pagamentosPorMonitor[p.nome] || 0) + total;
     });
 
@@ -331,7 +338,7 @@ function renderDailyChart(state, month) {
             const dayStr = pag.data.split('-')[2];
             const day = parseInt(dayStr) - 1;
             if (day >= 0 && day < daysInMonth) {
-                const total = (parseFloat(pag.valorBase) || 0) + (parseFloat(pag.horasExtras) || 0) + (parseFloat(pag.adicional) || 0);
+                const total = custoPagamentoMonitor(pag);
                 despesasPorDia[day] += total;
             }
         }

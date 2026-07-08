@@ -1069,6 +1069,25 @@ export const api = {
         }
     },
 
+    // Vincula diárias avulsas (monitorId null) a um monitor. Retorna { transferidos } ou null.
+    transferirPagamentosAvulsos: async (monitorId, ids) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/pagamentos-monitores/transferir`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ monitorId, ids })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao transferir diárias avulsas:", e);
+            return null;
+        }
+    },
+
     // --- FUNCIONÁRIOS ---
 
     getFuncionarios: async () => {

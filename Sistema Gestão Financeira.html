@@ -187,6 +187,13 @@
             // Torna o state acessível globalmente para os gráficos
             window.state = state;
 
+            // Total autoritativo do pagamento de monitor (inclui bônus de indicação, R$20 cada).
+            function custoPagamentoMonitor(p) {
+                const s = parseFloat(p && p.pagamento);
+                if (!isNaN(s)) return s;
+                return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0) + (parseInt(p.indicacoes) || 0) * 20;
+            }
+
             // === Rateio de eventos multi-dia entre meses (mesmo critério da Agenda/backend) ===
             // Opera sobre o shape mapeado em state.eventos (.data = início, .endDate, .excludedDates,
             // .revenueMode). Reuniões já foram excluídas de state.eventos.
@@ -523,6 +530,7 @@
                         adicional: p.adicional,
                         horasExtras: p.horasExtras,
                         pagamento: p.pagamento,
+                        indicacoes: p.indicacoes || 0,
                         statusPagamento: p.statusPagamento,
                         horaEntrada: p.horaEntrada,
                         horaSaida: p.horaSaida,
@@ -675,7 +683,7 @@
 
                 const monitorPagamentosMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
                 const despMonitores = monitorPagamentosMes.reduce((acc, p) => {
-                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+                    const total = custoPagamentoMonitor(p);
                     return acc + total;
                 }, 0);
 
@@ -687,7 +695,7 @@
                 // Valores Anteriores (Cálculo local para comparação histórica rápida)
                 const monitorPagamentosPrev = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(prevMonthStr));
                 const despMonitoresPrev = monitorPagamentosPrev.reduce((acc, p) => {
-                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.horasExtras) || 0) + (parseFloat(p.adicional) || 0);
+                    const total = custoPagamentoMonitor(p);
                     return acc + total;
                 }, 0);
 
@@ -1857,7 +1865,7 @@
                 let subtotalMes = 0;
 
                 tbody.innerHTML = pagamentos.sort((a, b) => b.data.localeCompare(a.data)).map(p => {
-                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    const total = custoPagamentoMonitor(p);
                     subtotalMes += total;
 
                     const isPago = p.statusPagamento === 'Executado';
@@ -2217,7 +2225,7 @@
                         </h4>
                         <div class="space-y-3 max-h-64 overflow-y-auto">
                             ${eventosRelacionados.map(({ pagamento, evento }) => {
-                    const total = (parseFloat(pagamento.valorBase) || 0) + (parseFloat(pagamento.adicional) || 0) + (parseFloat(pagamento.horasExtras) || 0);
+                    const total = custoPagamentoMonitor(pagamento);
                     const isPago = pagamento.statusPagamento === 'Executado';
                     const statusBadge = isPago
                         ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">PAGO</span>'
@@ -3091,7 +3099,7 @@
                 const getMonthExpenses = (ym) => {
                     const gastos = state.gastos.filter(g => g.data.startsWith(ym)).reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
                     const monitores = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(ym)).reduce((acc, p) => {
-                        return acc + (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                        return acc + custoPagamentoMonitor(p);
                     }, 0);
                     return gastos + monitores;
                 };
@@ -3119,7 +3127,7 @@
                 const totalReceitasVal = entradasEventosVal + entradasAvulsasVal;
                 const despesasOperacionaisVal = gastosMes.reduce((acc, g) => acc + (parseFloat(g.valor) || 0), 0);
                 const monitoresVal = pagMonMes.reduce((acc, p) => {
-                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    const total = custoPagamentoMonitor(p);
                     return acc + total;
                 }, 0);
                 const totalEntradasVal = totalReceitasVal;
@@ -3801,7 +3809,7 @@
                 doc.setFontSize(12);
                 doc.text('Pagamentos de Monitores', 15, 35);
                 const dataMon = pagMonMes.map(p => {
-                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    const total = custoPagamentoMonitor(p);
                     return [formatarData(p.data), p.nome, formatarMoeda(total)];
                 });
 
@@ -3900,7 +3908,7 @@
                 doc.text(`Período: ${state.selectedMonth}`, 14, 28);
 
                 const data = pagamentos.map(p => {
-                    const total = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                    const total = custoPagamentoMonitor(p);
                     return [p.data, p.nome, `R$ ${p.valorBase}`, `R$ ${p.horasExtras}`, `R$ ${total.toFixed(2)}`, p.numEventos || '-'];
                 });
 
@@ -4068,6 +4076,10 @@
                 const eventosEntregues = foiMotorista ? (parseFloat(getById('pag-monitor-eventos').value) || 0) : 0;
                 const adicionalMotorista = eventosEntregues * 20.00;
 
+                // Preserva o bônus de indicação do lançamento (esta tela não edita indicações).
+                const _pagExist = editId ? state.pagamentosMonitores.find(x => String(x.id) === String(editId)) : null;
+                const indicacoesExist = _pagExist ? (parseInt(_pagExist.indicacoes) || 0) : 0;
+
                 const dados = {
                     data: getById('pag-monitor-data').value,
                     dataPagamento: getById('pag-monitor-data-pagamento').value,
@@ -4078,7 +4090,8 @@
                     adicional: adicionalMotorista,
                     horasExtras: horasExtras,
                     horasDiaria: horasDiaria,
-                    pagamento: valorBase + adicionalMotorista + horasExtras,
+                    indicacoes: indicacoesExist,
+                    pagamento: valorBase + adicionalMotorista + horasExtras + indicacoesExist * 20,
                     horaEntrada: getById('pag-monitor-entrada').value,
                     horaSaida: getById('pag-monitor-saida').value,
                     statusPagamento: getById('pag-monitor-status').value,

@@ -364,6 +364,63 @@
     .table th.th-sort.is-active { color: var(--brand-600); }
     .th-sort-ico { margin-left: 4px; font-size: 11px; opacity: .4; }
     .table th.th-sort.is-active .th-sort-ico { opacity: 1; }
+
+    /* Busca de "indicado por" (typeahead) — sugere monitores sem expor a lista toda */
+    .typeahead-box {
+        position: absolute;
+        left: 0; right: 0;
+        top: 100%;
+        z-index: 30;
+        margin-top: 4px;
+        background: var(--surface-1);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-sm);
+        box-shadow: 0 8px 24px rgba(0,0,0,.14);
+        overflow: hidden;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+    .typeahead-item {
+        display: flex; align-items: center; gap: 8px;
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        background: transparent;
+        text-align: left;
+        font-size: 13.5px;
+        color: var(--text);
+        cursor: pointer;
+    }
+    .typeahead-item i { color: var(--text-faint); font-size: 12px; }
+    .typeahead-item:hover { background: var(--surface-2); }
+
+    /* Checkboxes em pílula (disponibilidade: dias e turnos) */
+    .chip-check-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .chip-check {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 7px 13px;
+        border: 1.5px solid var(--border);
+        border-radius: 999px;
+        font-size: 13px; font-weight: 600; color: var(--text-muted);
+        cursor: pointer; user-select: none;
+        transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .chip-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .chip-check:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); color: var(--brand-600); }
+
+    /* Lista de reconciliação de diárias avulsas */
+    .rec-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        margin-bottom: 8px;
+    }
+    .rec-item > input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--brand-500); cursor: pointer; }
+    .rec-info { flex: 1; min-width: 0; }
+    .rec-nome { font-weight: 600; font-size: 13.5px; color: var(--text); }
+    .rec-meta { font-size: 12px; color: var(--text-muted); }
+    .rec-badge { display:inline-block; padding:1px 7px; border-radius:999px; background:#fef3c7; color:#b45309; font-size:10px; font-weight:700; margin-left:6px; }
 </style>
 </head>
 
@@ -546,9 +603,33 @@
         <div class="modal-body" id="detalhe-body"></div>
         <div class="modal-footer hidden" id="detalhe-footer" style="flex-wrap:wrap;">
             <button type="button" id="btn-det-classificar" class="btn btn-primary"><i class="fas fa-user-tag"></i> Classificar</button>
+            <button type="button" id="btn-det-avulsas" class="btn btn-secondary"><i class="fas fa-link"></i> Diárias avulsas</button>
             <button type="button" id="btn-det-excluir" class="btn btn-danger-soft"><i class="fas fa-trash-can"></i> Excluir</button>
             <button type="button" id="btn-det-editar" class="btn btn-secondary"><i class="fas fa-pen-to-square"></i> Editar</button>
         </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: RECONCILIAR DIÁRIAS AVULSAS ================= -->
+<div id="modal-reconciliar" class="modal-backdrop sheet-on-mobile is-closed">
+    <div class="modal-box" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title">Diárias avulsas encontradas</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close="modal-reconciliar" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="form-reconciliar">
+            <div class="modal-body">
+                <p id="rec-intro" class="hint-text" style="margin-bottom:12px;"></p>
+                <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                    <button type="button" id="rec-toggle-todas" class="btn btn-ghost btn-sm">Desmarcar todas</button>
+                </div>
+                <div id="rec-lista"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close="modal-reconciliar">Agora não</button>
+                <button type="submit" class="btn btn-primary" id="rec-submit"><i class="fas fa-link"></i> Transferir selecionadas</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -652,6 +733,40 @@
                             <option value="desqualificado">Desqualificado</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="input-label" for="fm-como-chegou">Como chegou até nós? *</label>
+                        <select id="fm-como-chegou" class="select" required>
+                            <option value="">Selecione…</option>
+                            <option value="indicacao">Indicação</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="fg-full hidden" id="fm-indicado-wrap" style="position:relative;">
+                        <label class="input-label" for="fm-indicado-por">Indicado por quem? *</label>
+                        <input type="text" id="fm-indicado-por" class="input" autocomplete="off" placeholder="Nome de quem indicou">
+                        <div id="fm-indicado-sug" class="typeahead-box hidden"></div>
+                        <p class="hint-text">Digite o nome; se já for monitor cadastrado, aparece na busca.</p>
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label">Dias disponíveis para trabalhar *</label>
+                        <div class="chip-check-row" id="fm-dias">
+                            <label class="chip-check"><input type="checkbox" value="dom"> Dom</label>
+                            <label class="chip-check"><input type="checkbox" value="seg"> Seg</label>
+                            <label class="chip-check"><input type="checkbox" value="ter"> Ter</label>
+                            <label class="chip-check"><input type="checkbox" value="qua"> Qua</label>
+                            <label class="chip-check"><input type="checkbox" value="qui"> Qui</label>
+                            <label class="chip-check"><input type="checkbox" value="sex"> Sex</label>
+                            <label class="chip-check"><input type="checkbox" value="sab"> Sáb</label>
+                        </div>
+                    </div>
+                    <div class="fg-full">
+                        <label class="input-label">Turnos disponíveis *</label>
+                        <div class="chip-check-row" id="fm-turnos">
+                            <label class="chip-check"><input type="checkbox" value="manha"> Manhã</label>
+                            <label class="chip-check"><input type="checkbox" value="tarde"> Tarde</label>
+                            <label class="chip-check"><input type="checkbox" value="noite"> Noite</label>
+                        </div>
+                    </div>
                     <div class="fg-full">
                         <label class="input-label" for="fm-observacoes">Observações internas</label>
                         <textarea id="fm-observacoes" class="textarea" rows="2" placeholder="Informações relevantes sobre o monitor…"></textarea>
@@ -753,6 +868,11 @@
                             <input type="number" id="fp-eventos" class="input" step="0.5" min="0" value="0">
                             <p class="hint-text" id="fp-adicional-label"></p>
                         </div>
+                    </div>
+                    <div class="fg-full fp-diaria-only">
+                        <label class="input-label" for="fp-indicacoes"><i class="fas fa-user-plus" style="color:var(--brand-600);"></i> Indicações (R$ 20,00 cada)</label>
+                        <input type="number" id="fp-indicacoes" class="input" step="1" min="0" value="0">
+                        <p class="hint-text" id="fp-indicacoes-hint">Nº de indicações a pagar neste lançamento. Deixe 0 se não houve.</p>
                     </div>
                     <div class="fg-full total-live">
                         <span class="tl-label">Total do lançamento</span>
@@ -914,6 +1034,76 @@ const state = {
     pagEditando: null,     // pagamento em edição
     fotoBase64: ''         // nova foto escolhida no form de monitor
 };
+
+/* ---------- Disponibilidade (dias + turnos) ---------- */
+const DIAS_SEMANA = [
+    { k: 'dom', l: 'Dom' }, { k: 'seg', l: 'Seg' }, { k: 'ter', l: 'Ter' },
+    { k: 'qua', l: 'Qua' }, { k: 'qui', l: 'Qui' }, { k: 'sex', l: 'Sex' }, { k: 'sab', l: 'Sáb' }
+];
+const TURNOS = [
+    { k: 'manha', l: 'Manhã' }, { k: 'tarde', l: 'Tarde' }, { k: 'noite', l: 'Noite' }
+];
+function parseDisponibilidade(m) {
+    try {
+        const d = m && m.disponibilidade ? JSON.parse(m.disponibilidade) : null;
+        if (d && typeof d === 'object') return { dias: Array.isArray(d.dias) ? d.dias : [], turnos: Array.isArray(d.turnos) ? d.turnos : [] };
+    } catch {}
+    return { dias: [], turnos: [] };
+}
+function labelDias(dias) {
+    if (!dias || !dias.length) return '';
+    if (dias.length === 7) return 'Todos os dias';
+    return DIAS_SEMANA.filter(d => dias.includes(d.k)).map(d => d.l).join(', ');
+}
+function labelTurnos(turnos) {
+    if (!turnos || !turnos.length) return '';
+    return TURNOS.filter(t => turnos.includes(t.k)).map(t => t.l).join(', ');
+}
+function checkboxesMarcados(containerId) {
+    return [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)].map(c => c.value);
+}
+function marcarCheckboxes(containerId, valores) {
+    const set = new Set(valores || []);
+    document.querySelectorAll(`#${containerId} input[type="checkbox"]`).forEach(c => { c.checked = set.has(c.value); });
+}
+
+/* ---------- Correspondência aproximada de nomes (reconciliação de avulsos) ---------- */
+function normalizarNome(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+        const cur = [i];
+        for (let j = 1; j <= n; j++)
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = cur;
+    }
+    return prev[n];
+}
+// Retorna null | 'exato' | 'aproximado' comparando dois nomes.
+function grauCorrespondencia(a, b) {
+    const na = normalizarNome(a), nb = normalizarNome(b);
+    if (!na || !nb) return null;
+    if (na === nb) return 'exato';
+    if (na.includes(nb) || nb.includes(na)) return 'aproximado';
+    const ta = na.split(' ').filter(t => t.length > 2), tb = nb.split(' ').filter(t => t.length > 2);
+    if (ta.filter(t => tb.includes(t)).length >= 2) return 'aproximado'; // ≥2 tokens em comum (nome+sobrenome)
+    const maxLen = Math.max(na.length, nb.length);
+    if (maxLen && (1 - levenshtein(na, nb) / maxLen) >= 0.82) return 'aproximado'; // tolera erro de digitação
+    return null;
+}
+function diariasAvulsasParecidas(nomeMonitor) {
+    const res = [];
+    for (const p of (state.pagamentos || [])) {
+        if (p.monitorId || !p.nome) continue; // só avulsas (sem monitor vinculado)
+        const grau = grauCorrespondencia(p.nome, nomeMonitor);
+        if (grau) res.push({ pag: p, grau });
+    }
+    return res;
+}
 
 /* ================= Modais estáticos ================= */
 function abrirModal(id) { $(id).classList.remove('is-closed'); }
@@ -1084,6 +1274,11 @@ function renderMonitores() {
             ? `<span class="chip chip-sm"><i class="fas fa-id-card"></i> CNH ${escapeHtml(m.cnhCategoria || '')}</span>` : '';
         const psChip = temPS(m)
             ? '<span class="chip chip-sm" title="Possui curso de primeiros socorros"><i class="fas fa-heart-pulse"></i> PS</span>' : '';
+        const indChip = m.comoChegou === 'indicacao'
+            ? `<span class="chip chip-sm" title="Indicado por ${escapeHtml(m.indicadoPor || '—')}"><i class="fas fa-user-plus"></i> Indicado${m.indicadoPor ? ' · ' + escapeHtml(m.indicadoPor) : ''}</span>` : '';
+        const _dispCard = parseDisponibilidade(m);
+        const dispChip = _dispCard.dias.length
+            ? `<span class="chip chip-sm" title="Disponível: ${escapeHtml(labelDias(_dispCard.dias))}${_dispCard.turnos.length ? ' · ' + escapeHtml(labelTurnos(_dispCard.turnos)) : ''}"><i class="fas fa-calendar-check"></i> ${escapeHtml(labelDias(_dispCard.dias))}</span>` : '';
         const avatar = m.fotoPerfil
             ? `<div class="m-avatar"><img src="${escapeHtml(m.fotoPerfil)}" loading="lazy" alt=""></div>`
             : `<div class="m-avatar">${escapeHtml(iniciais(m.nome))}</div>`;
@@ -1104,7 +1299,7 @@ function renderMonitores() {
             ${avatar}
             <div class="min-w-0" style="flex:1;">
                 <h3 class="m-nome">${escapeHtml(m.nome)}</h3>
-                <div class="m-badges">${statusBadge}${cnhChip}${psChip}</div>
+                <div class="m-badges">${statusBadge}${cnhChip}${psChip}${indChip}${dispChip}</div>
                 <p class="m-tel"><i class="fas fa-phone"></i> ${escapeHtml(m.telefone || 'Sem telefone')}</p>
                 ${alertStrip}
                 ${occRow}
@@ -1282,6 +1477,17 @@ function renderDetalheMonitor(m) {
         ? `<p style="font-size:14px;color:var(--text);white-space:pre-wrap;">${escapeHtml(m.observacoes)}</p>`
         : '<p class="hint-text">Sem observações.</p>';
 
+    /* Origem do cadastro (como chegou / indicação) */
+    const origemTxt = m.comoChegou === 'indicacao'
+        ? `<i class="fas fa-user-plus" style="color:var(--brand-600);"></i> Indicação${m.indicadoPor ? ' — <b>' + escapeHtml(m.indicadoPor) + '</b>' : ''}`
+        : (m.comoChegou === 'outro' ? 'Outro' : '');
+
+    /* Disponibilidade (dias + turnos) */
+    const _dispDet = parseDisponibilidade(m);
+    const dispTxt = (_dispDet.dias.length || _dispDet.turnos.length)
+        ? escapeHtml(labelDias(_dispDet.dias) + (_dispDet.turnos.length ? ' · ' + labelTurnos(_dispDet.turnos) : ''))
+        : '';
+
     body.innerHTML = `
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
             ${avatar}
@@ -1298,6 +1504,8 @@ function renderDetalheMonitor(m) {
             ${ddItem('Telefone', escapeHtml(m.telefone || ''))}
             ${ddItem('Email', escapeHtml(m.email || ''))}
             ${ddItem('Endereço', escapeHtml(m.endereco || ''))}
+            ${ddItem('Como chegou', origemTxt)}
+            ${ddItem('Disponibilidade', dispTxt)}
         </div>
         ${secao('fa-heart-pulse', 'Saúde', saudeHtml)}
         ${secao('fa-bolt', 'Habilidades', habilidadesHtml)}
@@ -1474,12 +1682,22 @@ function abrirFormMonitor(m) {
         $('fm-cnh-categoria').value = m.cnhCategoria || '';
         $('fm-status').value = statusDe(m);
         $('fm-observacoes').value = m.observacoes || '';
+        $('fm-como-chegou').value = m.comoChegou || '';
+        $('fm-indicado-por').value = m.indicadoPor || '';
+        const _disp = parseDisponibilidade(m);
+        marcarCheckboxes('fm-dias', _disp.dias);
+        marcarCheckboxes('fm-turnos', _disp.turnos);
+        state.fmFotoExistente = !!m.fotoPerfil;
         setFotoPreview(m.fotoPerfil || '');
     } else {
         $('fm-status').value = 'ativo';
+        marcarCheckboxes('fm-dias', []);
+        marcarCheckboxes('fm-turnos', []);
+        state.fmFotoExistente = false;
         setFotoPreview('');
     }
     $('fm-cnh-cat-wrap').classList.toggle('hidden', !$('fm-cnh').checked);
+    toggleIndicadoPor();
     abrirModal('modal-monitor');
 }
 
@@ -1499,6 +1717,45 @@ $('fm-foto-input').addEventListener('change', async (e) => {
     }
 });
 
+/* ---------- Origem do cadastro: "como chegou" + typeahead de indicação ---------- */
+// O campo "indicado por" é texto livre; ao digitar, sugere monitores já cadastrados
+// que batem com o texto — sem despejar a lista toda (evita expor todos os nomes).
+function toggleIndicadoPor() {
+    const isInd = $('fm-como-chegou').value === 'indicacao';
+    $('fm-indicado-wrap').classList.toggle('hidden', !isInd);
+    if (!isInd) { $('fm-indicado-por').value = ''; ocultarSugestoesIndicado(); }
+}
+function ocultarSugestoesIndicado() {
+    const box = $('fm-indicado-sug');
+    box.classList.add('hidden');
+    box.innerHTML = '';
+}
+$('fm-como-chegou').addEventListener('change', toggleIndicadoPor);
+$('fm-indicado-por').addEventListener('input', () => {
+    const q = $('fm-indicado-por').value.trim().toLowerCase();
+    if (q.length < 2) { ocultarSugestoesIndicado(); return; }
+    const editId = $('fm-id').value;
+    const matches = (state.monitores || [])
+        .filter(m => m.id !== editId && (m.nome || '').toLowerCase().includes(q))
+        .slice(0, 6);
+    if (!matches.length) { ocultarSugestoesIndicado(); return; }
+    const box = $('fm-indicado-sug');
+    box.innerHTML = matches.map(m =>
+        `<button type="button" class="typeahead-item" data-nome="${escapeHtml(m.nome)}"><i class="fas fa-user"></i> ${escapeHtml(m.nome)}</button>`).join('');
+    box.classList.remove('hidden');
+});
+$('fm-indicado-sug').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-nome]');
+    if (!btn) return;
+    $('fm-indicado-por').value = btn.dataset.nome;
+    ocultarSugestoesIndicado();
+    $('fm-indicado-por').focus();
+});
+// Fecha as sugestões ao clicar fora do campo de indicação
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#fm-indicado-wrap')) ocultarSugestoesIndicado();
+});
+
 $('form-monitor').addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = $('fm-id').value;
@@ -1513,11 +1770,25 @@ $('form-monitor').addEventListener('submit', async (e) => {
         cnh: cnhMarcado,
         cnhCategoria: cnhMarcado ? $('fm-cnh-categoria').value.trim() : '',
         status: $('fm-status').value,
-        observacoes: $('fm-observacoes').value.trim()
+        observacoes: $('fm-observacoes').value.trim(),
+        comoChegou: $('fm-como-chegou').value,
+        indicadoPor: $('fm-como-chegou').value === 'indicacao' ? $('fm-indicado-por').value.trim() : ''
     };
+    const diasSel = checkboxesMarcados('fm-dias');
+    const turnosSel = checkboxesMarcados('fm-turnos');
+    dados.disponibilidade = JSON.stringify({ dias: diasSel, turnos: turnosSel });
     if (!dados.nome) { UI.toast('Informe o nome do monitor', 'error'); return; }
+    if (!dados.comoChegou) { UI.toast('Informe como o monitor chegou até nós', 'error'); return; }
+    if (dados.comoChegou === 'indicacao' && !dados.indicadoPor) { UI.toast('Informe quem indicou o monitor', 'error'); return; }
+    if (!diasSel.length) { UI.toast('Selecione ao menos um dia disponível', 'error'); return; }
+    if (!turnosSel.length) { UI.toast('Selecione ao menos um turno disponível', 'error'); return; }
+    if (!state.fotoBase64 && !state.fmFotoExistente) { UI.toast('A foto do monitor é obrigatória', 'error'); return; }
     if (state.fotoBase64) dados.fotoPerfil = state.fotoBase64;
+    let novoMonitorId = null;
     if (!id) {
+        // id gerado no cliente para sabermos qual monitor reconciliar após salvar
+        novoMonitorId = novoIdPagamento();
+        dados.id = novoMonitorId;
         // Objeto puro: o backend faz JSON.stringify — enviar string dupla-stringifica
         dados.habilidades = { forca: 10, agilidade: 10, proatividade: 10, comunicacao: 10, disponibilidade: 10, respeito: 10 };
     }
@@ -1534,6 +1805,64 @@ $('form-monitor').addEventListener('submit', async (e) => {
     fecharModal('modal-monitor');
     UI.toast(id ? 'Monitor atualizado' : 'Monitor cadastrado');
     await ensureMonitores(true);
+    // Ao cadastrar um NOVO monitor, confronta com diárias avulsas de nome parecido
+    if (!id && novoMonitorId) {
+        await verificarDiariasAvulsas(novoMonitorId, dados.nome, { silencioso: true });
+    }
+});
+
+/* ---------- Reconciliação: transferir diárias avulsas ao monitor ---------- */
+let recMonitorId = null;
+function abrirReconciliacao(monitorId, nomeMonitor, matches) {
+    recMonitorId = monitorId;
+    $('rec-intro').innerHTML = `Encontramos <b>${matches.length}</b> diária(s) avulsa(s) com nome parecido a <b>${escapeHtml(nomeMonitor)}</b>. Marque as que pertencem a este monitor.`;
+    // exatos primeiro, depois por data (mais recente primeiro)
+    const ordenadas = [...matches].sort((a, b) =>
+        (a.grau === b.grau ? 0 : a.grau === 'exato' ? -1 : 1) || String(b.pag.data).localeCompare(String(a.pag.data)));
+    $('rec-lista').innerHTML = ordenadas.map(({ pag, grau }) => `
+        <label class="rec-item">
+            <input type="checkbox" value="${escapeHtml(pag.id)}" checked>
+            <div class="rec-info">
+                <div class="rec-nome">${escapeHtml(pag.nome)}${grau === 'aproximado' ? '<span class="rec-badge">parecido</span>' : ''}</div>
+                <div class="rec-meta">${fmtData(pag.data)} · ${fmtBRL(totalPagamento(pag))}${pag.tipo === 'diverso' ? ' · Diverso' : ''}</div>
+            </div>
+        </label>`).join('');
+    $('rec-toggle-todas').textContent = 'Desmarcar todas';
+    abrirModal('modal-reconciliar');
+}
+// Busca avulsos de nome parecido e abre o modal; se não houver e não for silencioso, avisa.
+async function verificarDiariasAvulsas(monitorId, nomeMonitor, { silencioso = false } = {}) {
+    await ensurePagamentos();
+    const matches = diariasAvulsasParecidas(nomeMonitor);
+    if (!matches.length) {
+        if (!silencioso) UI.toast('Nenhuma diária avulsa com nome parecido');
+        return;
+    }
+    abrirReconciliacao(monitorId, nomeMonitor, matches);
+}
+$('rec-toggle-todas').addEventListener('click', () => {
+    const checks = [...document.querySelectorAll('#rec-lista input[type="checkbox"]')];
+    const algum = checks.some(c => c.checked);
+    checks.forEach(c => { c.checked = !algum; });
+    $('rec-toggle-todas').textContent = algum ? 'Marcar todas' : 'Desmarcar todas';
+});
+$('form-reconciliar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ids = [...document.querySelectorAll('#rec-lista input[type="checkbox"]:checked')].map(c => c.value);
+    if (!ids.length) { UI.toast('Marque ao menos uma diária', 'error'); return; }
+    if (!recMonitorId) { UI.toast('Monitor não identificado', 'error'); return; }
+    const btn = $('rec-submit'); const original = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transferindo…';
+    const r = await api.transferirPagamentosAvulsos(recMonitorId, ids);
+    btn.disabled = false; btn.innerHTML = original;
+    if (!r) { UI.toast('Erro ao transferir diárias', 'error'); return; }
+    fecharModal('modal-reconciliar');
+    UI.toast(`${r.transferidos} diária(s) transferida(s)`);
+    await ensurePagamentos(true); // recarrega para refletir o novo vínculo
+});
+$('btn-det-avulsas').addEventListener('click', () => {
+    if (!state.detalhe) return;
+    verificarDiariasAvulsas(state.detalhe.id, state.detalhe.nome);
 });
 
 /* ---------- Link de cadastro público ---------- */
@@ -1580,8 +1909,10 @@ async function ensurePagamentos(force = false) {
 function chaveMes() {
     return `${state.mes.y}-${String(state.mes.m).padStart(2, '0')}`;
 }
+const VALOR_INDICACAO = 20; // R$ pagos por indicação
 function totalPagamento(p) {
-    return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+    return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0)
+        + (parseInt(p.indicacoes) || 0) * VALOR_INDICACAO;
 }
 
 // Colunas ordenáveis da tabela de pagamentos. `val` extrai o valor de comparação;
@@ -1648,6 +1979,9 @@ function renderPagamentos() {
             : '<span class="badge badge-warning">Pendente</span>';
         const motorista = p.foiMotorista
             ? ` <span class="chip chip-sm" title="Foi motorista (${escapeHtml(String(p.numEventos || 0))} eventos)"><i class="fas fa-truck-fast"></i></span>` : '';
+        const indicacoesN = parseInt(p.indicacoes) || 0;
+        const indChip = indicacoesN > 0
+            ? ` <span class="chip chip-sm" title="${indicacoesN} indicação(ões) — +${fmtBRL(indicacoesN * VALOR_INDICACAO)}"><i class="fas fa-user-plus"></i> ${indicacoesN}</span>` : '';
         // Pagamento diverso (não-diária): tag + descrição do que se trata; colunas de diária ficam "—"
         const isDiverso = p.tipo === 'diverso';
         const diversoTag = isDiverso
@@ -1659,7 +1993,7 @@ function renderPagamentos() {
         return `
         <tr>
             <td style="white-space:nowrap;">${fmtData(p.data)}</td>
-            <td style="font-weight:600;">${escapeHtml(p.nome || '—')}${motorista}${diversoTag}${descricaoLinha}</td>
+            <td style="font-weight:600;">${escapeHtml(p.nome || '—')}${motorista}${indChip}${diversoTag}${descricaoLinha}</td>
             <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.valorBase)}</td>
             <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.adicional)}</td>
             <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.horasExtras)}</td>
@@ -1765,11 +2099,18 @@ function atualizarCalculosPagamento() {
     const motorista = $('fp-motorista').checked;
     const eventos = motorista ? (parseFloat($('fp-eventos').value) || 0) : 0;
     const adicional = eventos * 20;
+    const diverso = $('fp-tipo').value === 'diverso';
+    const indicacoes = diverso ? 0 : Math.max(0, parseInt($('fp-indicacoes').value) || 0);
+    const bonusInd = indicacoes * VALOR_INDICACAO;
 
     $('fp-eventos-wrap').classList.toggle('hidden', !motorista);
     $('fp-adicional-label').textContent = motorista
         ? `Adicional de motorista: ${fmtBRL(adicional)} (${eventos} × R$ 20,00)` : '';
-    $('fp-total').textContent = fmtBRL(base + adicional + he);
+    const hintInd = $('fp-indicacoes-hint');
+    if (hintInd) hintInd.textContent = indicacoes > 0
+        ? `Bônus de indicação: ${fmtBRL(bonusInd)} (${indicacoes} × R$ 20,00)`
+        : 'Nº de indicações a pagar neste lançamento. Deixe 0 se não houve.';
+    $('fp-total').textContent = fmtBRL(base + adicional + he + bonusInd);
 }
 
 function calcularHEAutomatico() {
@@ -1812,6 +2153,7 @@ $('fp-jornada').addEventListener('input', () => { calcularHEAutomatico(); atuali
 $('fp-he').addEventListener('input', atualizarCalculosPagamento);
 $('fp-motorista').addEventListener('change', atualizarCalculosPagamento);
 $('fp-eventos').addEventListener('input', atualizarCalculosPagamento);
+$('fp-indicacoes').addEventListener('input', atualizarCalculosPagamento);
 $('fp-nao-cadastrado').addEventListener('change', toggleMonitorAvulso);
 
 /* ---------- Tipo de pagamento: Diária x Diverso (não-diária) ---------- */
@@ -1834,9 +2176,10 @@ function setTipoPagamento(tipo) {
     document.querySelectorAll('#fp-tipo-toggle > button').forEach(b =>
         b.classList.toggle('active', b.dataset.tipo === (diverso ? 'diverso' : 'diaria')));
     if (diverso) {
-        // Diverso não tem hora extra, motorista nem acúmulo de dias
+        // Diverso não tem hora extra, motorista, indicações nem acúmulo de dias
         $('fp-he').value = '0.00';
         $('fp-motorista').checked = false;
+        $('fp-indicacoes').value = '0';
         resetDiasMulti();
     } else {
         // Voltar para "Diária": recalcula a HE a partir de entrada/saída ainda preenchidas,
@@ -1940,6 +2283,7 @@ function abrirFormPagamento(p) {
         $('fp-status').value = p.statusPagamento === 'Executado' ? 'Executado' : 'Pendente';
         $('fp-motorista').checked = !!p.foiMotorista;
         $('fp-eventos').value = p.numEventos != null ? p.numEventos : 0;
+        $('fp-indicacoes').value = p.indicacoes != null ? p.indicacoes : 0;
     } else {
         $('fp-data').value = hojeISO();
         $('fp-nao-cadastrado').checked = false;
@@ -1948,6 +2292,7 @@ function abrirFormPagamento(p) {
         $('fp-he').value = '0.00';
         $('fp-status').value = 'Pendente';
         $('fp-eventos').value = '0';
+        $('fp-indicacoes').value = '0';
     }
     toggleMonitorAvulso();
     $('fp-he-hint').textContent = 'Calculado automaticamente pelas horas — pode ajustar manualmente.';
@@ -1969,6 +2314,8 @@ $('form-pagamento').addEventListener('submit', async (e) => {
     e.preventDefault();
     const editId = $('fp-id').value;
     const tipo = $('fp-tipo').value === 'diverso' ? 'diverso' : 'diaria';
+    // Bônus de indicação (R$20 cada) é por-monitor, não por-dia: aplicado a UM registro.
+    const indicacoes = tipo === 'diverso' ? 0 : Math.max(0, parseInt($('fp-indicacoes').value) || 0);
 
     // Favorecido: sempre um monitor (cadastrado ou não-cadastrado), tanto na diária quanto no diverso
     const avulso = $('fp-nao-cadastrado').checked;
@@ -1996,12 +2343,13 @@ $('form-pagamento').addEventListener('submit', async (e) => {
         adicional: dia.adicional,
         horasExtras: dia.horasExtras,
         horasDiaria: dia.jornada,
-        pagamento: dia.valorBase + dia.adicional + dia.horasExtras,
+        pagamento: dia.valorBase + dia.adicional + dia.horasExtras + (dia.indicacoes || 0) * VALOR_INDICACAO,
         statusPagamento: tipo === 'diverso' ? 'Executado' : $('fp-status').value,
         horaEntrada: dia.horaEntrada || null,
         horaSaida: dia.horaSaida || null,
         foiMotorista: dia.foiMotorista,
         numEventos: dia.numEventos,
+        indicacoes: dia.indicacoes || 0,
         tipo,
         descricao: tipo === 'diverso' ? ($('fp-descricao').value.trim() || null) : null,
         observacoes: state.pagEditando ? (state.pagEditando.observacoes || null) : null
@@ -2019,7 +2367,7 @@ $('form-pagamento').addEventListener('submit', async (e) => {
         if (!(valor > 0)) { UI.toast('Informe o valor do pagamento (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
         const payload = montarPayload({
             id: editId || novoIdPagamento(), data, horaEntrada: null, horaSaida: null,
-            valorBase: valor, jornada: null, horasExtras: 0, foiMotorista: false, numEventos: 0, adicional: 0
+            valorBase: valor, jornada: null, horasExtras: 0, foiMotorista: false, numEventos: 0, adicional: 0, indicacoes: 0
         });
         if (editId) delete payload.id;
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
@@ -2037,6 +2385,7 @@ $('form-pagamento').addEventListener('submit', async (e) => {
         const dia = coletarDiaPagamento();
         if (!dia) { UI.toast('Informe a data do evento', 'error'); return; }
         if (!(dia.valorBase > 0)) { UI.toast('Informe o valor da diária (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
+        dia.indicacoes = indicacoes;
         const payload = montarPayload(dia);
         delete payload.id;
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
@@ -2055,6 +2404,10 @@ $('form-pagamento').addEventListener('submit', async (e) => {
     if (diaAtual && !(diaAtual.valorBase > 0)) { UI.toast('Informe o valor da diária (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
     if (diaAtual) dias.push(diaAtual);
     if (dias.length === 0) { UI.toast('Informe ao menos um dia (data do evento)', 'error'); return; }
+    // Bônus soma UMA vez, no 1º dia SEM bônus do lote. O guard `!dias.some(...)` evita
+    // re-aplicar num retry após falha parcial — o dia que já carrega o bônus o mantém,
+    // e o campo é zerado no ramo de falha para o reenvio não cobrar de novo.
+    if (dias.length && !dias.some(d => d.indicacoes)) dias[0].indicacoes = indicacoes;
 
     btn.disabled = true;
     let ok = 0; const falhas = [];
@@ -2072,7 +2425,7 @@ $('form-pagamento').addEventListener('submit', async (e) => {
     } else {
         state.diasPagamento = falhas;
         $('fp-data').value = ''; $('fp-entrada').value = ''; $('fp-saida').value = ''; $('fp-he').value = '0.00';
-        $('fp-motorista').checked = false; $('fp-eventos').value = '0';
+        $('fp-motorista').checked = false; $('fp-eventos').value = '0'; $('fp-indicacoes').value = '0';
         renderDiasMulti(); atualizarCalculosPagamento();
         UI.toast(`${ok} salvo(s), ${falhas.length} falharam. Tente novamente.`, 'error');
         await ensurePagamentos(true);

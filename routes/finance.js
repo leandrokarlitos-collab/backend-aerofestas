@@ -593,6 +593,9 @@ router.get('/monitores', async (req, res) => {
                 status: true,
                 statusMotivo: true,   // Observação da classificação (alerta/desqualificado)
                 ocorrencias: true,    // JSON de tags de ocorrência
+                comoChegou: true,     // Origem (indicação/outro) — exibida no card
+                indicadoPor: true,    // Quem indicou — exibido no card
+                disponibilidade: true, // Dias/turnos disponíveis — exibida no card
                 cnh: true,
                 cnhCategoria: true,
                 tamanhoCamiseta: true,
@@ -675,6 +678,9 @@ router.post('/monitores', async (req, res) => {
             email: m.email,
             endereco: m.endereco,
             observacoes: m.observacoes,
+            comoChegou: m.comoChegou || null,
+            indicadoPor: m.indicadoPor || null,
+            disponibilidade: m.disponibilidade || null,
             cnh: m.cnh || false,
             cnhCategoria: m.cnhCategoria,
             fotoPerfil: m.fotoPerfil,
@@ -732,6 +738,9 @@ router.put('/monitores/:id', async (req, res) => {
             email: m.email,
             endereco: m.endereco,
             observacoes: m.observacoes,
+            comoChegou: m.comoChegou,
+            indicadoPor: m.indicadoPor,
+            disponibilidade: m.disponibilidade,
             cnh: m.cnh,
             cnhCategoria: m.cnhCategoria,
             fotoPerfil: m.fotoPerfil,
@@ -880,7 +889,8 @@ router.post('/pagamentos-monitores', async (req, res) => {
             numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
             observacoes: p.observacoes || null,
             tipo: p.tipo === 'diverso' ? 'diverso' : 'diaria',
-            descricao: p.descricao || null
+            descricao: p.descricao || null,
+            indicacoes: Math.max(0, parseInt(p.indicacoes) || 0)
         };
         // Upsert (não create) para tornar o POST idempotente: se a resposta HTTP de
         // um lançamento se perder depois do commit, o retry com o mesmo id (UUID gerado
@@ -894,6 +904,29 @@ router.post('/pagamentos-monitores', async (req, res) => {
     } catch (e) {
         console.error("Erro ao criar pagamento:", e);
         res.status(500).json({ error: "Erro ao criar pagamento" });
+    }
+});
+
+// POST /api/finance/pagamentos-monitores/transferir
+// Vincula diárias avulsas (monitorId null) a um monitor cadastrado. Usado na
+// reconciliação: quando um monitor é cadastrado e há diárias avulsas com nome
+// parecido, o usuário do painel escolhe quais transferir.
+router.post('/pagamentos-monitores/transferir', async (req, res) => {
+    try {
+        const { monitorId, ids } = req.body;
+        if (!monitorId || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: "Informe monitorId e a lista de diárias (ids)." });
+        }
+        // Guarda monitorId:null — só transfere o que ainda está avulso, nunca "rouba"
+        // uma diária já vinculada a outro monitor.
+        const result = await prisma.pagamentoMonitor.updateMany({
+            where: { id: { in: ids }, monitorId: null },
+            data: { monitorId }
+        });
+        res.json({ success: true, transferidos: result.count });
+    } catch (e) {
+        console.error("Erro ao transferir diárias avulsas:", e);
+        res.status(500).json({ error: "Erro ao transferir diárias avulsas" });
     }
 });
 
@@ -928,7 +961,8 @@ router.put('/pagamentos-monitores/:id', async (req, res) => {
                 numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
                 observacoes: p.observacoes || null,
                 tipo: p.tipo === 'diverso' ? 'diverso' : 'diaria',
-                descricao: p.descricao || null
+                descricao: p.descricao || null,
+                indicacoes: Math.max(0, parseInt(p.indicacoes) || 0)
             }
         });
 

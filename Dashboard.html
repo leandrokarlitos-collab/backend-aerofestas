@@ -1690,10 +1690,16 @@
                     });
 
                     // 2. Salários de Monitores Pendentes
+                    // Total autoritativo do pagamento de monitor (inclui bônus de indicação, R$20 cada).
+                    function custoPagamentoMonitor(p) {
+                        const s = parseFloat(p && p.pagamento);
+                        if (!isNaN(s)) return s;
+                        return (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0) + (parseInt(p.indicacoes) || 0) * 20;
+                    }
                     const pagamentosMes = filterByMonth(pagamentosMonitores, 'data');
                     pagamentosMes.forEach(p => {
                         if (p.statusPagamento !== 'Executado') {
-                            const totalPag = (parseFloat(p.valorBase) || 0) + (parseFloat(p.adicional) || 0) + (parseFloat(p.horasExtras) || 0);
+                            const totalPag = custoPagamentoMonitor(p);
                             totalPendentes += totalPag;
                             pendingDetails.push({ id: p.id, description: `Monitor: ${p.nome}`, amount: totalPag, type: 'monitor' });
                         }

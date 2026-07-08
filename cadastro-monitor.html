@@ -283,6 +283,40 @@
                     <input type="text" id="endereco" name="endereco" placeholder="Rua, Número, Bairro, Cidade"
                         class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
                 </div>
+                <div class="md:col-span-2">
+                    <label for="comoChegou" class="form-label">Como você chegou até nós? *</label>
+                    <select id="comoChegou" name="comoChegou" required
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                        <option value="">Selecione…</option>
+                        <option value="indicacao">Indicação de alguém</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                <div id="indicado-por-wrapper" class="md:col-span-2 hidden">
+                    <label for="indicadoPor" class="form-label">Quem indicou você? *</label>
+                    <input type="text" id="indicadoPor" name="indicadoPor" placeholder="Nome de quem te indicou"
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="form-label">Dias disponíveis para trabalhar *</label>
+                    <div class="flex flex-wrap gap-2 mt-1" id="dias-disponiveis">
+                        <label class="cursor-pointer"><input type="checkbox" value="dom" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Dom</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="seg" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Seg</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="ter" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Ter</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="qua" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Qua</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="qui" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Qui</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="sex" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Sex</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="sab" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Sáb</span></label>
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="form-label">Turnos disponíveis *</label>
+                    <div class="flex flex-wrap gap-2 mt-1" id="turnos-disponiveis">
+                        <label class="cursor-pointer"><input type="checkbox" value="manha" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Manhã</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="tarde" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Tarde</span></label>
+                        <label class="cursor-pointer"><input type="checkbox" value="noite" class="hidden peer"><span class="inline-block px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-bold peer-checked:bg-primary-50 peer-checked:border-primary-500 peer-checked:text-primary-600 transition-all">Noite</span></label>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:col-span-2">
                     <div>
                         <label for="cnh" class="form-label">Possui CNH?</label>
@@ -900,6 +934,17 @@
             }
         });
 
+        // "Como chegou": revela "quem indicou" só na Indicação e o torna obrigatório
+        document.getElementById('comoChegou').addEventListener('change', function (e) {
+            const wrapper = document.getElementById('indicado-por-wrapper');
+            const input = document.getElementById('indicadoPor');
+            const isInd = e.target.value === 'indicacao';
+            wrapper.classList.toggle('hidden', !isInd);
+            if (isInd) wrapper.classList.add('animate-fade-in');
+            input.required = isInd;
+            if (!isInd) input.value = '';
+        });
+
         // Idiomas Logic
         function addIdiomaRow(data = { name: '', level: 'Básico' }) {
             const container = document.getElementById('idiomas-container');
@@ -1103,6 +1148,23 @@
                 }
                 document.getElementById('endereco').value = m.endereco || '';
 
+                // Origem do cadastro (como chegou / indicação)
+                document.getElementById('comoChegou').value = m.comoChegou || '';
+                if (m.comoChegou === 'indicacao') {
+                    document.getElementById('indicado-por-wrapper').classList.remove('hidden');
+                    document.getElementById('indicadoPor').value = m.indicadoPor || '';
+                    document.getElementById('indicadoPor').required = true;
+                }
+
+                // Disponibilidade (dias + turnos)
+                if (m.disponibilidade) {
+                    try {
+                        const disp = JSON.parse(m.disponibilidade);
+                        (disp.dias || []).forEach(d => { const c = document.querySelector(`#dias-disponiveis input[value="${d}"]`); if (c) c.checked = true; });
+                        (disp.turnos || []).forEach(t => { const c = document.querySelector(`#turnos-disponiveis input[value="${t}"]`); if (c) c.checked = true; });
+                    } catch (e) { /* JSON inválido: ignora */ }
+                }
+
                 // CNH
                 document.getElementById('cnh').value = m.cnh ? 'true' : 'false';
                 if (m.cnh) {
@@ -1168,6 +1230,7 @@
 
                 // PRIVACIDADE: Não mostrar foto de perfil ou documento existente
                 if (m.fotoPerfil) {
+                    window.__fotoPerfilExistente = true; // já tem foto: satisfaz a obrigatoriedade na edição
                     const preview = document.getElementById('preview-perfil');
                     preview.classList.remove('hidden');
                     preview.style.display = 'none';
@@ -1203,6 +1266,20 @@
 
             const id = document.getElementById('monitor-id').value;
 
+            // Disponibilidade (dias + turnos) e foto — obrigatórios
+            const diasSel = [...document.querySelectorAll('#dias-disponiveis input:checked')].map(c => c.value);
+            const turnosSel = [...document.querySelectorAll('#turnos-disponiveis input:checked')].map(c => c.value);
+            const temFoto = !!document.getElementById('foto-perfil-base64').value || !!window.__fotoPerfilExistente;
+            const erroValidacao = (msg, elId) => {
+                submitBtn.disabled = false; submitBtn.innerHTML = originalContent;
+                alert(msg);
+                const el = elId && document.getElementById(elId);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            };
+            if (!diasSel.length) { erroValidacao('Selecione ao menos um dia disponível para trabalhar.', 'dias-disponiveis'); return; }
+            if (!turnosSel.length) { erroValidacao('Selecione ao menos um turno disponível.', 'turnos-disponiveis'); return; }
+            if (!temFoto) { erroValidacao('A foto de rosto é obrigatória.', 'fotoPerfilInput'); return; }
+
             // Collect Idiomas
             const idiomasList = [];
             document.querySelectorAll('#idiomas-container > div').forEach(row => {
@@ -1225,6 +1302,9 @@
                 email: document.getElementById('email').value,
                 cpf: document.getElementById('cpf').value,
                 endereco: document.getElementById('endereco').value,
+                comoChegou: document.getElementById('comoChegou').value,
+                indicadoPor: document.getElementById('comoChegou').value === 'indicacao' ? document.getElementById('indicadoPor').value : '',
+                disponibilidade: JSON.stringify({ dias: diasSel, turnos: turnosSel }),
                 status: 'reserva',
                 cnh: document.getElementById('cnh').value === 'true',
                 cnhCategoria: document.getElementById('cnhCategoria').value,
