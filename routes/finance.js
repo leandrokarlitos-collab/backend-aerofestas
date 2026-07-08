@@ -878,7 +878,8 @@ router.post('/pagamentos-monitores', async (req, res) => {
                 horaEntrada: p.horaEntrada,
                 horaSaida: p.horaSaida,
                 foiMotorista: p.foiMotorista || false,
-                numEventos: p.numEventos ? parseFloat(p.numEventos) : null
+                numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
+                observacoes: p.observacoes || null
             }
         });
         res.json(novoPagamento);
@@ -916,7 +917,8 @@ router.put('/pagamentos-monitores/:id', async (req, res) => {
                 horaEntrada: p.horaEntrada,
                 horaSaida: p.horaSaida,
                 foiMotorista: p.foiMotorista || false,
-                numEventos: p.numEventos ? parseFloat(p.numEventos) : null
+                numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
+                observacoes: p.observacoes || null
             }
         });
 
