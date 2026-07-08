@@ -28,6 +28,23 @@ async function authenticate(req, res, next) {
 }
 
 /**
+ * Verifica (sem bloquear) se a requisição traz um token JWT válido.
+ * Usado em rotas públicas que precisam liberar campos administrativos
+ * apenas quando o chamador está autenticado. Retorna boolean.
+ */
+function isAuthenticated(req) {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
+        const token = authHeader.substring(7);
+        jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+/**
  * Middleware para verificar se o usuário é administrador
  */
 function isAdmin(req, res, next) {
@@ -44,6 +61,7 @@ function isAdmin(req, res, next) {
 
 module.exports = {
     authenticate,
+    isAuthenticated,
     isAdmin
 };
 

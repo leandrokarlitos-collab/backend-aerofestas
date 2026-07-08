@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, isAuthenticated } = require('../middleware/auth');
 
 // --- Rateio proporcional de eventos multi-dia entre meses ---
 // Um evento que cruza a virada de mês contribui em cada mês na proporção de dias
@@ -558,6 +558,18 @@ function normalizeOcorrencias(v) {
     return null;
 }
 
+// Aplica os campos administrativos de classificação (status, statusMotivo, ocorrências)
+// ao objeto `data` SOMENTE quando a requisição está autenticada. Rotas de monitor
+// (POST/PUT) são públicas para o formulário de cadastro do candidato; sem esta trava,
+// qualquer um poderia alterar/zerar a classificação disciplinar de um monitor.
+function aplicarClassificacaoSePermitido(data, m, req) {
+    if (!isAuthenticated(req)) return;
+    if (MONITOR_STATUS_VALIDOS.includes(m.status)) data.status = m.status;
+    if (m.statusMotivo !== undefined) data.statusMotivo = m.statusMotivo || null;
+    const ocorr = normalizeOcorrencias(m.ocorrencias);
+    if (ocorr !== undefined) data.ocorrencias = ocorr;
+}
+
 // GET /api/finance/monitores (Otimizado para Performance)
 router.get('/monitores', async (req, res) => {
     try {
@@ -654,47 +666,48 @@ router.post('/monitores', async (req, res) => {
     try {
         const m = req.body;
         const cpfLimpo = m.cpf ? String(m.cpf).trim() : '';
-        const novoMonitor = await prisma.monitor.create({
-            data: {
-                id: m.id || Date.now().toString(),
-                nome: m.nome,
-                cpf: cpfLimpo || null,
-                nascimento: m.nascimento,
-                telefone: m.telefone,
-                email: m.email,
-                endereco: m.endereco,
-                observacoes: m.observacoes,
-                status: m.status, // default do Prisma: "reserva"
-                statusMotivo: m.statusMotivo || null,
-                ocorrencias: normalizeOcorrencias(m.ocorrencias) ?? null,
-                cnh: m.cnh || false,
-                cnhCategoria: m.cnhCategoria,
-                fotoPerfil: m.fotoPerfil,
-                fotoDocumento: m.fotoDocumento,
-                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null,
-                tipoSanguineo: m.tipoSanguineo,
-                medicamentos: m.medicamentos,
-                restricoesAlimentares: m.restricoesAlimentares,
-                alergias: m.alergias,
-                planoSaude: m.planoSaude,
-                condicaoMedica: m.condicaoMedica,
-                tamanhoCamiseta: m.tamanhoCamiseta,
-                escolaridade: m.escolaridade,
-                possuiCursoPS: m.possuiCursoPS,
-                fotoCertificadoPS: m.fotoCertificadoPS,
-                habilidadesEspecificas: m.habilidadesEspecificas,
-                idiomas: m.idiomas, // Já vem como stringified JSON do front
-                experiencias: m.experiencias,
-                fobias: m.fobias,
-                contatoEmergenciaNome: m.contatoEmergenciaNome,
-                contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
-                contatoEmergenciaTelefone: m.contatoEmergenciaTelefone,
-                instagram: m.instagram,
-                facebook: m.facebook,
-                linkedin: m.linkedin,
-                tiktok: m.tiktok
-            }
-        });
+        const dadosMonitor = {
+            id: m.id || Date.now().toString(),
+            nome: m.nome,
+            cpf: cpfLimpo || null,
+            nascimento: m.nascimento,
+            telefone: m.telefone,
+            email: m.email,
+            endereco: m.endereco,
+            observacoes: m.observacoes,
+            cnh: m.cnh || false,
+            cnhCategoria: m.cnhCategoria,
+            fotoPerfil: m.fotoPerfil,
+            fotoDocumento: m.fotoDocumento,
+            habilidades: m.habilidades ? JSON.stringify(m.habilidades) : null,
+            tipoSanguineo: m.tipoSanguineo,
+            medicamentos: m.medicamentos,
+            restricoesAlimentares: m.restricoesAlimentares,
+            alergias: m.alergias,
+            planoSaude: m.planoSaude,
+            condicaoMedica: m.condicaoMedica,
+            tamanhoCamiseta: m.tamanhoCamiseta,
+            escolaridade: m.escolaridade,
+            possuiCursoPS: m.possuiCursoPS,
+            fotoCertificadoPS: m.fotoCertificadoPS,
+            habilidadesEspecificas: m.habilidadesEspecificas,
+            idiomas: m.idiomas, // Já vem como stringified JSON do front
+            experiencias: m.experiencias,
+            fobias: m.fobias,
+            contatoEmergenciaNome: m.contatoEmergenciaNome,
+            contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
+            contatoEmergenciaTelefone: m.contatoEmergenciaTelefone,
+            instagram: m.instagram,
+            facebook: m.facebook,
+            linkedin: m.linkedin,
+            tiktok: m.tiktok
+        };
+        // Classificação (status/motivo/ocorrências) é administrativa: só é aceita de
+        // requisições autenticadas. No cadastro público, status cai no default do
+        // schema ("reserva") e motivo/ocorrências ficam nulos — impossível um candidato
+        // (ou terceiro sem token) se auto-classificar via o link público.
+        aplicarClassificacaoSePermitido(dadosMonitor, m, req);
+        const novoMonitor = await prisma.monitor.create({ data: dadosMonitor });
         res.json(novoMonitor);
     } catch (e) {
         console.error("Erro ao criar monitor:", e);
@@ -711,47 +724,47 @@ router.put('/monitores/:id', async (req, res) => {
         const { id } = req.params;
         const m = req.body;
         const cpfLimpo = m.cpf !== undefined ? (String(m.cpf).trim() || null) : undefined;
-        const updated = await prisma.monitor.update({
-            where: { id },
-            data: {
-                nome: m.nome,
-                cpf: cpfLimpo,
-                nascimento: m.nascimento,
-                telefone: m.telefone,
-                email: m.email,
-                endereco: m.endereco,
-                observacoes: m.observacoes,
-                status: m.status,
-                statusMotivo: m.statusMotivo,
-                ocorrencias: normalizeOcorrencias(m.ocorrencias),
-                cnh: m.cnh,
-                cnhCategoria: m.cnhCategoria,
-                fotoPerfil: m.fotoPerfil,
-                fotoDocumento: m.fotoDocumento,
-                habilidades: m.habilidades ? JSON.stringify(m.habilidades) : undefined,
-                tipoSanguineo: m.tipoSanguineo,
-                medicamentos: m.medicamentos,
-                restricoesAlimentares: m.restricoesAlimentares,
-                alergias: m.alergias,
-                planoSaude: m.planoSaude,
-                condicaoMedica: m.condicaoMedica,
-                tamanhoCamiseta: m.tamanhoCamiseta,
-                escolaridade: m.escolaridade,
-                possuiCursoPS: m.possuiCursoPS,
-                fotoCertificadoPS: m.fotoCertificadoPS,
-                habilidadesEspecificas: m.habilidadesEspecificas,
-                idiomas: m.idiomas,
-                experiencias: m.experiencias,
-                fobias: m.fobias,
-                contatoEmergenciaNome: m.contatoEmergenciaNome,
-                contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
-                contatoEmergenciaTelefone: m.contatoEmergenciaTelefone,
-                instagram: m.instagram,
-                facebook: m.facebook,
-                linkedin: m.linkedin,
-                tiktok: m.tiktok
-            }
-        });
+        const dadosMonitor = {
+            nome: m.nome,
+            cpf: cpfLimpo,
+            nascimento: m.nascimento,
+            telefone: m.telefone,
+            email: m.email,
+            endereco: m.endereco,
+            observacoes: m.observacoes,
+            cnh: m.cnh,
+            cnhCategoria: m.cnhCategoria,
+            fotoPerfil: m.fotoPerfil,
+            fotoDocumento: m.fotoDocumento,
+            habilidades: m.habilidades ? JSON.stringify(m.habilidades) : undefined,
+            tipoSanguineo: m.tipoSanguineo,
+            medicamentos: m.medicamentos,
+            restricoesAlimentares: m.restricoesAlimentares,
+            alergias: m.alergias,
+            planoSaude: m.planoSaude,
+            condicaoMedica: m.condicaoMedica,
+            tamanhoCamiseta: m.tamanhoCamiseta,
+            escolaridade: m.escolaridade,
+            possuiCursoPS: m.possuiCursoPS,
+            fotoCertificadoPS: m.fotoCertificadoPS,
+            habilidadesEspecificas: m.habilidadesEspecificas,
+            idiomas: m.idiomas,
+            experiencias: m.experiencias,
+            fobias: m.fobias,
+            contatoEmergenciaNome: m.contatoEmergenciaNome,
+            contatoEmergenciaParentesco: m.contatoEmergenciaParentesco,
+            contatoEmergenciaTelefone: m.contatoEmergenciaTelefone,
+            instagram: m.instagram,
+            facebook: m.facebook,
+            linkedin: m.linkedin,
+            tiktok: m.tiktok
+        };
+        // status/statusMotivo/ocorrências só mudam via requisição autenticada. O
+        // formulário PÚBLICO de atualização do candidato (cadastro-monitor.html, que
+        // envia status:'reserva' fixo) NÃO pode rebaixar/limpar a classificação de um
+        // monitor já marcado como alerta/desqualificado — os campos são ignorados aqui.
+        aplicarClassificacaoSePermitido(dadosMonitor, m, req);
+        const updated = await prisma.monitor.update({ where: { id }, data: dadosMonitor });
         res.json(updated);
     } catch (e) {
         console.error("Erro ao atualizar monitor:", e);
