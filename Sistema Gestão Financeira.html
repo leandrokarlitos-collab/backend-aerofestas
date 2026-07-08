@@ -3141,7 +3141,7 @@
                 const valorLabel = getById('pag-monitor-valor-label');
                 if (valorLabel) valorLabel.textContent = isAvulso ? 'Valor do Pagamento (R$)' : 'Valor da Diária (R$)';
                 const dataLabel = getById('pag-monitor-data-label');
-                if (dataLabel) dataLabel.textContent = isAvulso ? 'Data de Referência' : 'Data do Evento';
+                if (dataLabel) dataLabel.textContent = isAvulso ? 'Data do Pagamento' : 'Data do Evento';
                 // Em avulso não há hora extra nem acúmulo de dias
                 if (isAvulso) {
                     getById('pag-monitor-he').value = '0.00';
@@ -4215,9 +4215,11 @@
             getById('form-pagamento-monitor')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const editId = getById('pag-monitor-edit-id')?.value; // ID do pagamento sendo editado
+                const tipoAtual = getById('pag-monitor-tipo')?.value === 'avulso' ? 'avulso' : 'diaria';
                 const monitorId = getById('pag-monitor-select').value;
                 const isNaoCadastrado = monitorId === 'NAO_CADASTRADO';
 
+                // O favorecido é sempre um monitor (cadastrado ou não), tanto na diária quanto no avulso
                 if (!monitorId) {
                     showToastModal('❌ Selecione o monitor.', true);
                     return;
@@ -4236,7 +4238,6 @@
                 }
 
                 // Pagamento avulso exige descrição do que se trata
-                const tipoAtual = getById('pag-monitor-tipo')?.value === 'avulso' ? 'avulso' : 'diaria';
                 if (tipoAtual === 'avulso' && !(getById('pag-monitor-descricao')?.value || '').trim()) {
                     showToastModal('❌ Descreva do que se trata o pagamento avulso.', true);
                     return;
@@ -4244,14 +4245,14 @@
 
                 // Campos compartilhados por todos os dias deste lançamento
                 const dataPagamento = getById('pag-monitor-data-pagamento').value;
-                const statusPagamento = getById('pag-monitor-status').value;
+                const statusPagamento = tipoAtual === 'avulso' ? 'Executado' : getById('pag-monitor-status').value;
                 const observacoes = getById('pag-monitor-obs').value;
 
                 // Monta o payload de um pagamento a partir de um "dia" + campos compartilhados
                 const montarPayload = (dia) => ({
                     id: dia.id,
                     data: dia.data,
-                    dataPagamento,
+                    dataPagamento: dia.tipo === 'avulso' ? dia.data : dataPagamento,
                     eventoId: dia.eventoId || null,
                     monitorId: isNaoCadastrado ? null : monitorId,
                     nome: nomeMonitor,
@@ -7393,7 +7394,7 @@
                         <input type="date" id="pag-monitor-data" required class="form-input w-full">
                     </div>
 
-                    <div class="space-y-1 lg:col-span-2">
+                    <div class="space-y-1 lg:col-span-2 pag-diaria-only">
                         <label for="pag-monitor-evento" class="block text-sm font-bold text-gray-700">
                             <i class="fa-solid fa-link text-indigo-600 mr-1"></i>
                             Vincular a Evento da Agenda (opcional)
@@ -7407,7 +7408,7 @@
                         </p>
                     </div>
 
-                    <div class="space-y-1">
+                    <div class="space-y-1 pag-diaria-only">
                         <label for="pag-monitor-data-pagamento" class="block text-sm font-bold text-gray-700">Data
                             do
                             Pagamento</label>
@@ -7472,7 +7473,7 @@
 
                     <input type="hidden" id="pag-monitor-he" value="0.00">
 
-                    <div class="space-y-1">
+                    <div class="space-y-1 pag-diaria-only">
                         <label for="pag-monitor-status" class="block text-sm font-bold text-gray-700">Status</label>
                         <select id="pag-monitor-status" class="form-input w-full">
                             <option value="Executado">Pago / Executado</option>
