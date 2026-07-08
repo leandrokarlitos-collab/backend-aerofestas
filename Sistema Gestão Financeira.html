@@ -663,6 +663,93 @@
                 '2026-12': 200000
             };
 
+            /* ===== Tabela de gastos: ordenação clicável por coluna ===== */
+            let gastosOrdem = { col: 'data', dir: 'asc' };
+            const GASTOS_COL_TIPO = { data: 'date', descricao: 'text', categoria: 'text', conta: 'text', pagamento: 'text', valor: 'num' };
+            const GASTOS_COL_DEFDIR = { data: 'asc', descricao: 'asc', categoria: 'asc', conta: 'asc', pagamento: 'asc', valor: 'desc' };
+            function compararGastos(a, b) {
+                const col = gastosOrdem.col;
+                const dir = gastosOrdem.dir === 'asc' ? 1 : -1;
+                const tipo = GASTOS_COL_TIPO[col] || 'text';
+                let cmp;
+                if (tipo === 'num') cmp = (parseFloat(a[col]) || 0) - (parseFloat(b[col]) || 0);
+                else cmp = String(a[col] || '').localeCompare(String(b[col] || ''), 'pt-BR', { sensitivity: 'base', numeric: true });
+                cmp *= dir;
+                if (cmp === 0) cmp = String(a.data || '').localeCompare(String(b.data || '')); // desempate estável por data
+                return cmp;
+            }
+            function renderTabelaGastos() {
+                const tabela = getById('tabela-gastos');
+                if (!tabela) return;
+                const thead = tabela.querySelector('thead');
+                const tbody = tabela.querySelector('tbody');
+                // Liga o clique de ordenação uma única vez
+                if (thead && !thead.dataset.sortBound) {
+                    thead.dataset.sortBound = '1';
+                    thead.addEventListener('click', (e) => {
+                        const th = e.target.closest('th.th-sort');
+                        if (!th) return;
+                        const col = th.dataset.sort;
+                        if (gastosOrdem.col === col) gastosOrdem.dir = gastosOrdem.dir === 'asc' ? 'desc' : 'asc';
+                        else gastosOrdem = { col, dir: GASTOS_COL_DEFDIR[col] || 'asc' };
+                        renderTabelaGastos();
+                    });
+                }
+                // Atualiza os indicadores (seta) no cabeçalho
+                if (thead) thead.querySelectorAll('th.th-sort').forEach(th => {
+                    const ativo = th.dataset.sort === gastosOrdem.col;
+                    th.classList.toggle('is-active', ativo);
+                    const ind = th.querySelector('.sort-ind');
+                    if (ind) ind.textContent = ativo ? (gastosOrdem.dir === 'asc' ? '▲' : '▼') : '';
+                });
+                if (!tbody) return;
+                const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
+                if (gastosMes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = [...gastosMes].sort(compararGastos).map(g => {
+                    const isFromEvent = g.origem === 'evento';
+                    const eventLink = isFromEvent && g.eventoId
+                        ? `<a href="./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(g.eventoId)}" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Abrir evento na Agenda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
+                        : '';
+                    const editBtn = g.bloqueado
+                        ? ''
+                        : `<button onclick="editarGasto('${g.id}')" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Editar Gasto"><i class="fa-solid fa-edit"></i></button>`;
+                    const delBtn = g.bloqueado
+                        ? ''
+                        : `<button onclick="deletarGasto('${g.id}')" class="text-red-600 hover:text-red-900 transition-colors" title="Excluir Gasto"><i class="fa-solid fa-trash-can"></i></button>`;
+                    const histBtn = g.bloqueado
+                        ? ''
+                        : `<button onclick="mostrarHistoricoTransacao('${g.id}')" class="text-gray-400 hover:text-indigo-600 transition-colors" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>`;
+                    const rowClass = isFromEvent ? 'class="bg-amber-50/40"' : '';
+                    const catBadge = isFromEvent
+                        ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"><i class="fa-solid fa-truck-arrow-right"></i> ${g.categoria}</span>`
+                        : g.categoria;
+                    const detalheChip = g.detalhe
+                        ? ` <span class="chip chip-sm" title="Detalhe: ${escapeHtml(g.detalhe)}">${escapeHtml(g.detalhe)}</span>`
+                        : '';
+                    const declaranteIcon = g.declaredBy
+                        ? ` <span class="declared-by" title="Declarado por ${escapeHtml(g.declaredBy)}"><i class="fa-solid fa-user-pen"></i></span>`
+                        : '';
+                    return `
+                                    <tr ${rowClass}>
+                                        <td>${formatarData(g.data)}</td>
+                                        <td>${g.descricao}</td>
+                                        <td>${catBadge}${detalheChip}</td>
+                                        <td>${g.conta}${declaranteIcon}</td>
+                                        <td>${g.pagamento}</td>
+                                        <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
+                                        <td>
+                                            <div class="flex space-x-2">
+                                                ${editBtn}${delBtn}${histBtn}${eventLink}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                }).join('');
+            }
+
             function renderAll() {
                 const monthInput = getById('month-filter-global');
                 if (monthInput) monthInput.value = state.selectedMonth;
@@ -924,54 +1011,7 @@
 
                 // Renderiza Tabela de Gastos (Apenas se estiver na aba Gastos)
                 if (tab === 'gastos') {
-                    const tbodyGastos = getById('tabela-gastos')?.querySelector('tbody');
-                    if (tbodyGastos) {
-                        if (gastosMes.length === 0) {
-                            tbodyGastos.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
-                        } else {
-                            tbodyGastos.innerHTML = gastosMes.sort((a, b) => new Date(a.data) - new Date(b.data)).map(g => {
-                                const isFromEvent = g.origem === 'evento';
-                                const eventLink = isFromEvent && g.eventoId
-                                    ? `<a href="./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(g.eventoId)}" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Abrir evento na Agenda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
-                                    : '';
-                                const editBtn = g.bloqueado
-                                    ? ''
-                                    : `<button onclick="editarGasto('${g.id}')" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Editar Gasto"><i class="fa-solid fa-edit"></i></button>`;
-                                const delBtn = g.bloqueado
-                                    ? ''
-                                    : `<button onclick="deletarGasto('${g.id}')" class="text-red-600 hover:text-red-900 transition-colors" title="Excluir Gasto"><i class="fa-solid fa-trash-can"></i></button>`;
-                                const histBtn = g.bloqueado
-                                    ? ''
-                                    : `<button onclick="mostrarHistoricoTransacao('${g.id}')" class="text-gray-400 hover:text-indigo-600 transition-colors" title="Histórico de alterações"><i class="fa-solid fa-clock-rotate-left"></i></button>`;
-                                const rowClass = isFromEvent ? 'class="bg-amber-50/40"' : '';
-                                const catBadge = isFromEvent
-                                    ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"><i class="fa-solid fa-truck-arrow-right"></i> ${g.categoria}</span>`
-                                    : g.categoria;
-                                // Campos novos v3.1.1: detalhe da categoria (chip) e quem declarou (ícone)
-                                const detalheChip = g.detalhe
-                                    ? ` <span class="chip chip-sm" title="Detalhe: ${escapeHtml(g.detalhe)}">${escapeHtml(g.detalhe)}</span>`
-                                    : '';
-                                const declaranteIcon = g.declaredBy
-                                    ? ` <span class="declared-by" title="Declarado por ${escapeHtml(g.declaredBy)}"><i class="fa-solid fa-user-pen"></i></span>`
-                                    : '';
-                                return `
-                                    <tr ${rowClass}>
-                                        <td>${formatarData(g.data)}</td>
-                                        <td>${g.descricao}</td>
-                                        <td>${catBadge}${detalheChip}</td>
-                                        <td>${g.conta}${declaranteIcon}</td>
-                                        <td>${g.pagamento}</td>
-                                        <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
-                                        <td>
-                                            <div class="flex space-x-2">
-                                                ${editBtn}${delBtn}${histBtn}${eventLink}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('');
-                        }
-                    }
+                    renderTabelaGastos();
 
                     // Renderiza Tabela de Contas Bancárias (Config de Gastos)
                     const tbodyContas = getById('tabela-contas-db')?.querySelector('tbody');
@@ -4654,6 +4694,12 @@
 
         body { overflow-x: hidden; }
 
+        /* Cabeçalhos ordenáveis da tabela de gastos */
+        #tabela-gastos thead th.th-sort { cursor: pointer; user-select: none; white-space: nowrap; transition: color .15s ease; }
+        #tabela-gastos thead th.th-sort:hover { color: var(--brand-600, #4f46e5); }
+        #tabela-gastos thead th.th-sort.is-active { color: var(--brand-600, #4f46e5); }
+        #tabela-gastos thead th .sort-ind { font-size: 10px; margin-left: 3px; }
+
         /* ---- Page loader (id/mecanismo preservados, visual simplificado) ---- */
         #page-loader {
             position: fixed;
@@ -5454,12 +5500,12 @@
                             <table id="tabela-gastos" class="table">
                                 <thead>
                                     <tr>
-                                        <th>Data</th>
-                                        <th>Descrição</th>
-                                        <th>Categoria</th>
-                                        <th>Conta</th>
-                                        <th>Pagamento</th>
-                                        <th>Valor</th>
+                                        <th class="th-sort" data-sort="data">Data <span class="sort-ind"></span></th>
+                                        <th class="th-sort" data-sort="descricao">Descrição <span class="sort-ind"></span></th>
+                                        <th class="th-sort" data-sort="categoria">Categoria <span class="sort-ind"></span></th>
+                                        <th class="th-sort" data-sort="conta">Conta <span class="sort-ind"></span></th>
+                                        <th class="th-sort" data-sort="pagamento">Pagamento <span class="sort-ind"></span></th>
+                                        <th class="th-sort" data-sort="valor">Valor <span class="sort-ind"></span></th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
