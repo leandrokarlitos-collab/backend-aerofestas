@@ -861,28 +861,34 @@ router.post('/pagamentos-monitores', async (req, res) => {
         if (!p.monitorId && !(p.nome && String(p.nome).trim())) {
             return res.status(400).json({ error: "Informe o monitor ou o nome do monitor avulso." });
         }
-        const novoPagamento = await prisma.pagamentoMonitor.create({
-            data: {
-                id: p.id || Date.now().toString(),
-                data: p.data,
-                dataPagamento: p.dataPagamento,
-                eventoId: p.eventoId || null,
-                monitorId: p.monitorId || null,
-                nome: p.nome,
-                valorBase: parseFloat(p.valorBase),
-                adicional: parseFloat(p.adicional) || 0,
-                horasExtras: parseFloat(p.horasExtras) || 0,
-                horasDiaria: p.horasDiaria != null ? parseFloat(p.horasDiaria) : 11,
-                pagamento: parseFloat(p.pagamento),
-                statusPagamento: p.statusPagamento || 'Executado',
-                horaEntrada: p.horaEntrada,
-                horaSaida: p.horaSaida,
-                foiMotorista: p.foiMotorista || false,
-                numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
-                observacoes: p.observacoes || null,
-                tipo: p.tipo === 'avulso' ? 'avulso' : 'diaria',
-                descricao: p.descricao || null
-            }
+        const id = p.id || Date.now().toString();
+        const dados = {
+            data: p.data,
+            dataPagamento: p.dataPagamento,
+            eventoId: p.eventoId || null,
+            monitorId: p.monitorId || null,
+            nome: p.nome,
+            valorBase: parseFloat(p.valorBase),
+            adicional: parseFloat(p.adicional) || 0,
+            horasExtras: parseFloat(p.horasExtras) || 0,
+            horasDiaria: p.horasDiaria != null ? parseFloat(p.horasDiaria) : 11,
+            pagamento: parseFloat(p.pagamento),
+            statusPagamento: p.statusPagamento || 'Executado',
+            horaEntrada: p.horaEntrada,
+            horaSaida: p.horaSaida,
+            foiMotorista: p.foiMotorista || false,
+            numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
+            observacoes: p.observacoes || null,
+            tipo: p.tipo === 'diverso' ? 'diverso' : 'diaria',
+            descricao: p.descricao || null
+        };
+        // Upsert (não create) para tornar o POST idempotente: se a resposta HTTP de
+        // um lançamento se perder depois do commit, o retry com o mesmo id (UUID gerado
+        // no cliente) reaproveita o registro em vez de estourar violação de PK.
+        const novoPagamento = await prisma.pagamentoMonitor.upsert({
+            where: { id },
+            create: { id, ...dados },
+            update: dados
         });
         res.json(novoPagamento);
     } catch (e) {
@@ -921,7 +927,7 @@ router.put('/pagamentos-monitores/:id', async (req, res) => {
                 foiMotorista: p.foiMotorista || false,
                 numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
                 observacoes: p.observacoes || null,
-                tipo: p.tipo === 'avulso' ? 'avulso' : 'diaria',
+                tipo: p.tipo === 'diverso' ? 'diverso' : 'diaria',
                 descricao: p.descricao || null
             }
         });

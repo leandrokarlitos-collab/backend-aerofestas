@@ -661,15 +661,22 @@
             <div class="modal-title" id="modal-pagamento-title">Lançar pagamento</div>
             <button type="button" class="btn btn-ghost btn-icon" data-close="modal-pagamento" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
         </div>
-        <form id="form-pagamento">
+        <form id="form-pagamento" novalidate>
             <div class="modal-body">
                 <input type="hidden" id="fp-id">
                 <div class="form-grid">
-                    <div>
-                        <label class="input-label" for="fp-data">Data do evento *</label>
-                        <input type="date" id="fp-data" class="input" required>
+                    <input type="hidden" id="fp-tipo" value="diaria">
+                    <div class="fg-full">
+                        <div class="segmented" id="fp-tipo-toggle" role="tablist">
+                            <button type="button" data-tipo="diaria" class="active"><i class="fas fa-calendar-day mr-1"></i> Diária</button>
+                            <button type="button" data-tipo="diverso"><i class="fas fa-receipt mr-1"></i> Diverso</button>
+                        </div>
                     </div>
                     <div>
+                        <label class="input-label" for="fp-data" id="fp-data-label">Data do evento *</label>
+                        <input type="date" id="fp-data" class="input" required>
+                    </div>
+                    <div class="fp-diaria-only">
                         <label class="input-label" for="fp-data-pagamento">Data do pagamento</label>
                         <input type="date" id="fp-data-pagamento" class="input">
                     </div>
@@ -690,36 +697,41 @@
                         <input type="text" id="fp-monitor-nome" class="input" placeholder="Nome de quem trabalhou neste dia">
                         <p class="hint-text">Registra o pagamento sem criar um cadastro de monitor.</p>
                     </div>
-                    <div>
-                        <label class="input-label" for="fp-valor-base">Valor da diária (R$) *</label>
-                        <input type="number" id="fp-valor-base" class="input" step="0.01" min="0" value="100.00" required>
+                    <div class="fg-full hidden" id="fp-descricao-wrap">
+                        <label class="input-label" for="fp-descricao"><i class="fas fa-tag" style="color:var(--brand-600);"></i> Descrição do pagamento *</label>
+                        <input type="text" id="fp-descricao" class="input" placeholder="Ex: reembolso de transporte, bônus, material, ajuda de custo…">
+                        <p class="hint-text">Do que se trata este pagamento (aparece na lista).</p>
                     </div>
                     <div>
+                        <label class="input-label" for="fp-valor-base" id="fp-valor-label">Valor da diária (R$) *</label>
+                        <input type="number" id="fp-valor-base" class="input" step="0.01" min="0" value="100.00" required>
+                    </div>
+                    <div class="fp-diaria-only">
                         <label class="input-label" for="fp-status">Status</label>
                         <select id="fp-status" class="select">
                             <option value="Executado">Pago / Executado</option>
                             <option value="Pendente" selected>Pendente</option>
                         </select>
                     </div>
-                    <div>
+                    <div class="fp-diaria-only">
                         <label class="input-label" for="fp-entrada">Hora de entrada</label>
                         <input type="time" id="fp-entrada" class="input">
                     </div>
-                    <div>
+                    <div class="fp-diaria-only">
                         <label class="input-label" for="fp-saida">Hora de saída</label>
                         <input type="time" id="fp-saida" class="input">
                     </div>
-                    <div>
+                    <div class="fp-diaria-only">
                         <label class="input-label" for="fp-jornada">Horas da diária *</label>
                         <input type="number" id="fp-jornada" class="input" step="0.5" min="1" value="11" required>
                         <p class="hint-text">Jornada coberta pela diária (padrão 11h).</p>
                     </div>
-                    <div>
+                    <div class="fp-diaria-only">
                         <label class="input-label" for="fp-he">Horas extras (R$)</label>
                         <input type="number" id="fp-he" class="input" step="0.01" min="0" value="0.00">
                         <p class="hint-text" id="fp-he-hint">Calculado automaticamente pelas horas — pode ajustar manualmente.</p>
                     </div>
-                    <div class="fg-full motorista-box">
+                    <div class="fg-full motorista-box fp-diaria-only">
                         <label class="check-row" for="fp-motorista">
                             <input type="checkbox" id="fp-motorista">
                             <span><i class="fas fa-truck-fast" style="color:var(--brand-600);"></i> Foi motorista neste dia?</span>
@@ -733,6 +745,13 @@
                     <div class="fg-full total-live">
                         <span class="tl-label">Total do lançamento</span>
                         <span class="tl-value tabular-nums" id="fp-total">R$ 0,00</span>
+                    </div>
+                    <!-- Multi-dias: acumula vários dias do mesmo monitor num único lançamento (só diária) -->
+                    <div class="fg-full fp-diaria-only" id="fp-multidia">
+                        <button type="button" class="btn btn-ghost" id="fp-add-dia" style="width:100%;">
+                            <i class="fas fa-calendar-plus"></i> Adicionar outro dia deste monitor
+                        </button>
+                        <div id="fp-dias-lista" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
                     </div>
                 </div>
             </div>
@@ -1564,7 +1583,7 @@ function renderPagamentos() {
     const pendente = doMes.filter(p => p.statusPagamento !== 'Executado').reduce((s, p) => s + totalPagamento(p), 0);
     UI.countUp($('kpi-pago'), pago, { prefix: 'R$ ', decimals: 2 });
     UI.countUp($('kpi-pendente'), pendente, { prefix: 'R$ ', decimals: 2 });
-    UI.countUp($('kpi-diarias'), doMes.length);
+    UI.countUp($('kpi-diarias'), doMes.filter(p => p.tipo !== 'diverso').length);
 
     const wrap = $('pag-lista');
     // Aviso quando o mês navegado é anterior ao alcance dos 500 registros carregados
@@ -1593,13 +1612,21 @@ function renderPagamentos() {
             : '<span class="badge badge-warning">Pendente</span>';
         const motorista = p.foiMotorista
             ? ` <span class="chip chip-sm" title="Foi motorista (${escapeHtml(String(p.numEventos || 0))} eventos)"><i class="fas fa-truck-fast"></i></span>` : '';
+        // Pagamento diverso (não-diária): tag + descrição do que se trata; colunas de diária ficam "—"
+        const isDiverso = p.tipo === 'diverso';
+        const diversoTag = isDiverso
+            ? ' <span style="display:inline-block;padding:1px 8px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;vertical-align:middle;"><i class="fas fa-receipt"></i> DIVERSO</span>'
+            : '';
+        const descricaoLinha = (isDiverso && p.descricao)
+            ? `<div style="font-weight:400;font-size:12px;color:var(--text-2,#6b7280);margin-top:2px;"><i class="fas fa-tag" style="opacity:.6;"></i> ${escapeHtml(p.descricao)}</div>`
+            : '';
         return `
         <tr>
             <td style="white-space:nowrap;">${fmtData(p.data)}</td>
-            <td style="font-weight:600;">${escapeHtml(p.nome || '—')}${motorista}</td>
-            <td class="tabular-nums">${fmtBRL(p.valorBase)}</td>
-            <td class="tabular-nums">${fmtBRL(p.adicional)}</td>
-            <td class="tabular-nums">${fmtBRL(p.horasExtras)}</td>
+            <td style="font-weight:600;">${escapeHtml(p.nome || '—')}${motorista}${diversoTag}${descricaoLinha}</td>
+            <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.valorBase)}</td>
+            <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.adicional)}</td>
+            <td class="tabular-nums">${isDiverso ? '—' : fmtBRL(p.horasExtras)}</td>
             <td class="tabular-nums" style="font-weight:700;">${fmtBRL(totalPagamento(p))}</td>
             <td>${statusBadge}</td>
             <td>
@@ -1723,6 +1750,107 @@ $('fp-motorista').addEventListener('change', atualizarCalculosPagamento);
 $('fp-eventos').addEventListener('input', atualizarCalculosPagamento);
 $('fp-nao-cadastrado').addEventListener('change', toggleMonitorAvulso);
 
+/* ---------- Tipo de pagamento: Diária x Diverso (não-diária) ---------- */
+// "Diverso" = pagamento que não corresponde a uma diária (reembolso, bônus, material…).
+// Guarda-se internamente como tipo 'diverso'; na diária o fluxo segue como sempre.
+function setTipoPagamento(tipo) {
+    let diverso = tipo === 'diverso';
+    // Trocar para "Diverso" descarta os dias já acumulados: confirmar antes de perder o trabalho.
+    if (diverso && (state.diasPagamento || []).length) {
+        const n = state.diasPagamento.length;
+        if (!confirm(`Trocar para "Diverso" vai descartar ${n} dia(s) já adicionado(s) na lista. Continuar?`)) {
+            diverso = false; // usuário cancelou: mantém "Diária" e preserva os dias
+        }
+    }
+    $('fp-tipo').value = diverso ? 'diverso' : 'diaria';
+    document.querySelectorAll('.fp-diaria-only').forEach(el => el.classList.toggle('hidden', diverso));
+    $('fp-descricao-wrap').classList.toggle('hidden', !diverso);
+    $('fp-data-label').textContent = diverso ? 'Data do pagamento *' : 'Data do evento *';
+    $('fp-valor-label').textContent = diverso ? 'Valor do pagamento (R$) *' : 'Valor da diária (R$) *';
+    document.querySelectorAll('#fp-tipo-toggle > button').forEach(b =>
+        b.classList.toggle('active', b.dataset.tipo === (diverso ? 'diverso' : 'diaria')));
+    if (diverso) {
+        // Diverso não tem hora extra, motorista nem acúmulo de dias
+        $('fp-he').value = '0.00';
+        $('fp-motorista').checked = false;
+        resetDiasMulti();
+    } else {
+        // Voltar para "Diária": recalcula a HE a partir de entrada/saída ainda preenchidas,
+        // senão o zero deixado pelo "Diverso" seria salvo silenciosamente.
+        calcularHEAutomatico();
+    }
+    atualizarCalculosPagamento();
+}
+document.querySelectorAll('#fp-tipo-toggle > button').forEach(b =>
+    b.addEventListener('click', () => setTipoPagamento(b.dataset.tipo)));
+
+/* ---------- Multi-dias: acumular vários dias do mesmo monitor (só diária) ---------- */
+function novoIdPagamento() {
+    return (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+}
+// Lê os campos "por dia" (diária) do formulário. Retorna null se faltar a data.
+function coletarDiaPagamento() {
+    const data = $('fp-data').value;
+    if (!data) return null;
+    const base = parseFloat($('fp-valor-base').value) || 0;
+    const jornada = parseFloat($('fp-jornada').value) || 11;
+    const he = parseFloat($('fp-he').value) || 0;
+    const motorista = $('fp-motorista').checked;
+    const eventos = motorista ? (parseFloat($('fp-eventos').value) || 0) : 0;
+    const adicional = eventos * 20;
+    return {
+        id: novoIdPagamento(), data,
+        horaEntrada: $('fp-entrada').value || null,
+        horaSaida: $('fp-saida').value || null,
+        valorBase: base, jornada, horasExtras: he,
+        foiMotorista: motorista, numEventos: eventos, adicional,
+        pagamento: base + adicional + he
+    };
+}
+function renderDiasMulti() {
+    const lista = $('fp-dias-lista');
+    if (!lista) return;
+    const dias = state.diasPagamento || [];
+    lista.innerHTML = dias.map((d, i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface-2,#f4f5fb);border:1px solid var(--border,#e5e7f0);border-radius:10px;padding:8px 12px;">
+            <span style="font-size:13px;"><b>${i + 1}.</b> ${fmtData(d.data)}${d.horasExtras > 0 ? ' · +HE' : ''}${d.foiMotorista ? ' · 🚗' : ''} — <b>${fmtBRL(d.pagamento)}</b></span>
+            <button type="button" data-remove-dia="${escapeHtml(d.id)}" class="btn btn-ghost btn-icon" title="Remover"><i class="fas fa-xmark"></i></button>
+        </div>`).join('');
+}
+function resetDiasMulti() {
+    state.diasPagamento = [];
+    renderDiasMulti();
+}
+$('fp-dias-lista').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-remove-dia]');
+    if (!btn) return;
+    state.diasPagamento = (state.diasPagamento || []).filter(d => d.id !== btn.dataset.removeDia);
+    renderDiasMulti();
+});
+$('fp-add-dia').addEventListener('click', () => {
+    // valida o favorecido (monitor) igual ao submit
+    if ($('fp-nao-cadastrado').checked) {
+        if (!$('fp-monitor-nome').value.trim()) { UI.toast('Informe o nome do monitor avulso', 'error'); return; }
+    } else if (!$('fp-monitor').value) { UI.toast('Selecione o monitor', 'error'); return; }
+    const dia = coletarDiaPagamento();
+    if (!dia) { UI.toast('Informe a data do dia', 'error'); return; }
+    if (!(dia.valorBase > 0)) { UI.toast('Informe o valor da diária (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
+    state.diasPagamento = state.diasPagamento || [];
+    state.diasPagamento.push(dia);
+    renderDiasMulti();
+    // limpa só os campos por-dia para o próximo
+    $('fp-data').value = '';
+    $('fp-entrada').value = '';
+    $('fp-saida').value = '';
+    $('fp-he').value = '0.00';
+    $('fp-motorista').checked = false;
+    $('fp-eventos').value = '0';
+    atualizarCalculosPagamento();
+    UI.toast(`Dia ${fmtData(dia.data)} adicionado (${state.diasPagamento.length} na lista)`);
+    $('fp-data').focus();
+});
+
 async function abrirFormPagamentoNovo() {
     await ensureMonitores();
     abrirFormPagamento(null);
@@ -1760,6 +1888,13 @@ function abrirFormPagamento(p) {
     toggleMonitorAvulso();
     $('fp-he-hint').textContent = 'Calculado automaticamente pelas horas — pode ajustar manualmente.';
     $('fp-he-hint').classList.remove('is-on');
+    // Multi-dias sempre limpo ao abrir; tipo e descrição conforme o pagamento (edição) ou padrão diária (novo)
+    resetDiasMulti();
+    $('fp-descricao').value = p ? (p.descricao || '') : '';
+    setTipoPagamento(p && p.tipo === 'diverso' ? 'diverso' : 'diaria');
+    // Na edição, o HE gravado prevalece sobre o recálculo automático do setTipoPagamento
+    // (senão uma HE ajustada manualmente seria sobrescrita ao reabrir a diária).
+    if (p) $('fp-he').value = (parseFloat(p.horasExtras) || 0).toFixed(2);
     atualizarCalculosPagamento();
     abrirModal('modal-pagamento');
 }
@@ -1769,7 +1904,9 @@ $('btn-lancar-pagamento').addEventListener('click', abrirFormPagamentoNovo);
 $('form-pagamento').addEventListener('submit', async (e) => {
     e.preventDefault();
     const editId = $('fp-id').value;
+    const tipo = $('fp-tipo').value === 'diverso' ? 'diverso' : 'diaria';
 
+    // Favorecido: sempre um monitor (cadastrado ou não-cadastrado), tanto na diária quanto no diverso
     const avulso = $('fp-nao-cadastrado').checked;
     let monitorId = null;
     let nome = '';
@@ -1783,45 +1920,99 @@ $('form-pagamento').addEventListener('submit', async (e) => {
         nome = monitor ? monitor.nome : (state.pagEditando ? state.pagEditando.nome : '');
     }
 
-    const base = parseFloat($('fp-valor-base').value) || 0;
-    const jornada = parseFloat($('fp-jornada').value) || 11;
-    const he = parseFloat($('fp-he').value) || 0;
-    const motorista = $('fp-motorista').checked;
-    const eventos = motorista ? (parseFloat($('fp-eventos').value) || 0) : 0;
-    const adicional = eventos * 20;
-
-    const dados = {
-        data: $('fp-data').value,
-        dataPagamento: $('fp-data-pagamento').value || null,
+    // Monta o payload a partir de um "dia" (diária) ou do diverso + o favorecido resolvido
+    const montarPayload = (dia) => ({
+        id: dia.id || undefined,
+        data: dia.data,
+        dataPagamento: tipo === 'diverso' ? dia.data : ($('fp-data-pagamento').value || null),
         eventoId: state.pagEditando ? (state.pagEditando.eventoId || null) : null,
         monitorId: monitorId || null,
         nome,
-        valorBase: base,
-        adicional,
-        horasExtras: he,
-        horasDiaria: jornada,
-        pagamento: base + adicional + he,
-        statusPagamento: $('fp-status').value,
-        horaEntrada: $('fp-entrada').value || null,
-        horaSaida: $('fp-saida').value || null,
-        foiMotorista: motorista,
-        numEventos: eventos
-    };
+        valorBase: dia.valorBase,
+        adicional: dia.adicional,
+        horasExtras: dia.horasExtras,
+        horasDiaria: dia.jornada,
+        pagamento: dia.valorBase + dia.adicional + dia.horasExtras,
+        statusPagamento: tipo === 'diverso' ? 'Executado' : $('fp-status').value,
+        horaEntrada: dia.horaEntrada || null,
+        horaSaida: dia.horaSaida || null,
+        foiMotorista: dia.foiMotorista,
+        numEventos: dia.numEventos,
+        tipo,
+        descricao: tipo === 'diverso' ? ($('fp-descricao').value.trim() || null) : null,
+        observacoes: state.pagEditando ? (state.pagEditando.observacoes || null) : null
+    });
 
     const btn = $('fp-submit');
     const original = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
-    const ok = editId
-        ? await api.atualizarPagamentoMonitor(editId, dados)
-        : await api.salvarPagamentoMonitor(dados);
-    btn.disabled = false;
-    btn.innerHTML = original;
 
-    if (!ok) { UI.toast('Erro ao salvar pagamento', 'error'); return; }
-    fecharModal('modal-pagamento');
-    UI.toast(editId ? 'Pagamento atualizado' : 'Pagamento registrado');
-    await ensurePagamentos(true);
+    // ----- DIVERSO: pagamento único (não-diária) -----
+    if (tipo === 'diverso') {
+        const data = $('fp-data').value;
+        if (!data) { UI.toast('Informe a data do pagamento', 'error'); return; }
+        if (!$('fp-descricao').value.trim()) { UI.toast('Descreva do que se trata o pagamento', 'error'); return; }
+        const valor = parseFloat($('fp-valor-base').value) || 0;
+        if (!(valor > 0)) { UI.toast('Informe o valor do pagamento (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
+        const payload = montarPayload({
+            id: editId || novoIdPagamento(), data, horaEntrada: null, horaSaida: null,
+            valorBase: valor, jornada: null, horasExtras: 0, foiMotorista: false, numEventos: 0, adicional: 0
+        });
+        if (editId) delete payload.id;
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+        const ok = editId ? await api.atualizarPagamentoMonitor(editId, payload) : await api.salvarPagamentoMonitor(payload);
+        btn.disabled = false; btn.innerHTML = original;
+        if (!ok) { UI.toast('Erro ao salvar pagamento', 'error'); return; }
+        fecharModal('modal-pagamento');
+        UI.toast(editId ? 'Pagamento atualizado' : 'Pagamento registrado');
+        await ensurePagamentos(true);
+        return;
+    }
+
+    // ----- DIÁRIA: edição de um único registro -----
+    if (editId) {
+        const dia = coletarDiaPagamento();
+        if (!dia) { UI.toast('Informe a data do evento', 'error'); return; }
+        if (!(dia.valorBase > 0)) { UI.toast('Informe o valor da diária (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
+        const payload = montarPayload(dia);
+        delete payload.id;
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando…';
+        const ok = await api.atualizarPagamentoMonitor(editId, payload);
+        btn.disabled = false; btn.innerHTML = original;
+        if (!ok) { UI.toast('Erro ao salvar pagamento', 'error'); return; }
+        fecharModal('modal-pagamento');
+        UI.toast('Pagamento atualizado');
+        await ensurePagamentos(true);
+        return;
+    }
+
+    // ----- DIÁRIA: criação com um ou vários dias -----
+    const dias = [...(state.diasPagamento || [])];
+    const diaAtual = coletarDiaPagamento();
+    if (diaAtual && !(diaAtual.valorBase > 0)) { UI.toast('Informe o valor da diária (maior que zero)', 'error'); $('fp-valor-base').focus(); return; }
+    if (diaAtual) dias.push(diaAtual);
+    if (dias.length === 0) { UI.toast('Informe ao menos um dia (data do evento)', 'error'); return; }
+
+    btn.disabled = true;
+    let ok = 0; const falhas = [];
+    for (let i = 0; i < dias.length; i++) {
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Salvando ${i + 1}/${dias.length}…`;
+        const sucesso = await api.salvarPagamentoMonitor(montarPayload(dias[i]));
+        if (sucesso) ok++; else falhas.push(dias[i]);
+    }
+    btn.disabled = false; btn.innerHTML = original;
+
+    if (falhas.length === 0) {
+        fecharModal('modal-pagamento');
+        UI.toast(`${ok} lançamento(s) registrado(s)`);
+        await ensurePagamentos(true);
+    } else {
+        state.diasPagamento = falhas;
+        $('fp-data').value = ''; $('fp-entrada').value = ''; $('fp-saida').value = ''; $('fp-he').value = '0.00';
+        $('fp-motorista').checked = false; $('fp-eventos').value = '0';
+        renderDiasMulti(); atualizarCalculosPagamento();
+        UI.toast(`${ok} salvo(s), ${falhas.length} falharam. Tente novamente.`, 'error');
+        await ensurePagamentos(true);
+    }
 });
 
 /* ============================================================

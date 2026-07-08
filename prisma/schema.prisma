@@ -447,8 +447,8 @@ model PagamentoMonitor {
   foiMotorista    Boolean  @default(false) // Se trabalhou como motorista
   numEventos      Float?   // Número de eventos entregues (para cálculo de adicional de motorista)
   observacoes     String?  // Observações do evento (texto livre)
-  tipo            String   @default("diaria") // "diaria" ou "avulso" (pagamento que não corresponde a uma diária)
-  descricao       String?  // Descrição livre do pagamento (usada em pagamentos avulsos)
+  tipo            String   @default("diaria") // "diaria" ou "diverso" (pagamento que não corresponde a uma diária)
+  descricao       String?  // Descrição livre do pagamento (usada em pagamentos "diverso")
 }
 
 model Funcionario {
