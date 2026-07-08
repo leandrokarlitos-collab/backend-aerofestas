@@ -3182,699 +3182,149 @@
                     custo: (totalReceitasVal > 0 && (totalDespesasGeral / totalReceitasVal) <= 0.75) ? 'verde' : ((totalReceitasVal > 0 && (totalDespesasGeral / totalReceitasVal) <= 0.9) ? 'amarelo' : 'vermelho')
                 };
 
-                // --- PÁGINA 1: RESUMO EXECUTIVO ---
+                // ============ PÁGINA 1 — RESUMO DO MÊS ============
                 doc.setFillColor(...secondaryColor);
                 doc.rect(0, 0, pageWidth, 40, 'F');
                 doc.setTextColor(255, 255, 255);
-                doc.setFontSize(24);
+                doc.setFontSize(22);
                 doc.setFont('helvetica', 'bold');
-                doc.text('AERO & ABC FESTAS', 15, 20);
+                doc.text('AERO & ABC FESTAS', 15, 19);
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'normal');
-                doc.text('Relatório Executivo de Desempenho Financeiro', 15, 28);
+                doc.text('Relatório Financeiro do Mês', 15, 28);
                 doc.setFontSize(10);
                 doc.text(`Período: ${state.selectedMonth}`, pageWidth - 15, 20, { align: 'right' });
                 doc.text(`Gerado em: ${new Date().toLocaleDateString()}`, pageWidth - 15, 28, { align: 'right' });
 
-                doc.setFillColor(...softGray);
-                doc.rect(15, 47, pageWidth - 30, 26, 'F');
-                doc.setTextColor(...secondaryColor);
-                doc.setFontSize(10);
+                // Veredito em destaque (lucro/prejuízo do mês)
+                const resultadoPositivo = saldoLiquidoVal >= 0;
+                doc.setFillColor(...(resultadoPositivo ? successColor : dangerColor));
+                doc.rect(0, 40, pageWidth, 15, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(13);
                 doc.setFont('helvetica', 'bold');
-                doc.text('Leitura de Diretoria', 20, 55);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9);
-                const narrativa = `No período ${state.selectedMonth}, o resultado consolidado fechou em ${formatarMoeda(saldoLiquidoVal)}, com margem líquida de ${margemLiquida.toFixed(1)}%. O relatório destaca crescimento de receita, estrutura de custos e principais alavancas de eficiência operacional.`;
-                doc.text(doc.splitTextToSize(narrativa, pageWidth - 42), 20, 60);
+                doc.text(`${resultadoPositivo ? 'Lucro' : 'Prejuízo'} do mês: ${formatarMoeda(saldoLiquidoVal)}   ·   Margem ${margemLiquida.toFixed(1)}%`, pageWidth / 2, 49, { align: 'center' });
+                doc.setTextColor(0, 0, 0);
 
-                let currentY = 80;
-                doc.setTextColor(...secondaryColor);
-                doc.setFontSize(15);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Painel Executivo de Indicadores', 15, currentY);
-                currentY += 6;
-
-                drawKpiCard({
-                    x: 15, y: currentY, w: 87, h: 23,
-                    title: 'RECEITA CONSOLIDADA',
-                    value: formatarMoeda(totalReceitasVal),
-                    tone: successColor,
-                    subtitle: `${eventosMes.length} eventos + ${receitasMes.length} receitas avulsas`
-                });
-                drawKpiCard({
-                    x: 108, y: currentY, w: 87, h: 23,
-                    title: 'DESPESA TOTAL',
-                    value: formatarMoeda(totalDespesasGeral),
-                    tone: dangerColor,
-                    subtitle: 'Gastos, monitores e folha'
-                });
+                // Números-chave
+                let currentY = 66;
+                drawKpiCard({ x: 15, y: currentY, w: 87, h: 23, title: 'RECEITA TOTAL', value: formatarMoeda(totalReceitasVal), tone: successColor, subtitle: `${eventosMes.length} eventos + ${receitasMes.length} avulsas` });
+                drawKpiCard({ x: 108, y: currentY, w: 87, h: 23, title: 'DESPESA TOTAL', value: formatarMoeda(totalDespesasGeral), tone: dangerColor, subtitle: 'Gastos, monitores e folha' });
                 currentY += 28;
-
-                drawKpiCard({
-                    x: 15, y: currentY, w: 87, h: 23,
-                    title: 'SALDO LIQUIDO',
-                    value: formatarMoeda(saldoLiquidoVal),
-                    tone: saldoLiquidoVal >= 0 ? successColor : dangerColor,
-                    subtitle: saldoLiquidoVal >= 0 ? 'Operacao com excedente' : 'Operacao com déficit'
-                });
-                drawKpiCard({
-                    x: 108, y: currentY, w: 87, h: 23,
-                    title: 'MARGEM E TICKET MEDIO',
-                    value: `${margemLiquida.toFixed(1)}%`,
-                    tone: primaryColor,
-                    subtitle: `Ticket medio por evento: ${formatarMoeda(ticketMedioEvento)}`
-                });
+                drawKpiCard({ x: 15, y: currentY, w: 87, h: 23, title: 'SALDO LÍQUIDO', value: formatarMoeda(saldoLiquidoVal), tone: resultadoPositivo ? successColor : dangerColor, subtitle: resultadoPositivo ? 'Sobrou no mês' : 'Faltou no mês' });
+                drawKpiCard({ x: 108, y: currentY, w: 87, h: 23, title: 'TICKET MÉDIO', value: formatarMoeda(ticketMedioEvento), tone: primaryColor, subtitle: 'Por evento realizado' });
                 currentY += 32;
 
                 addDivider(currentY);
                 currentY += 8;
 
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Composição Financeira do Período', 15, currentY);
-                currentY += 4;
-
-                doc.autoTable({
-                    startY: currentY,
-                    head: [['Categoria Estratégica', 'Valor']],
-                    body: [
-                        ['Entradas de Eventos', formatarMoeda(entradasEventosVal)],
-                        ['Entradas Avulsas', formatarMoeda(entradasAvulsasVal)],
-                        ['Despesas Operacionais', formatarMoeda(despesasOperacionaisVal)],
-                        ['Pagamentos de Monitores', formatarMoeda(monitoresVal)],
-                        ['Folha e Comissões da Equipe', formatarMoeda(totalSalariosVal)],
-                        ['Saldo Líquido Consolidado', formatarMoeda(saldoLiquidoVal)]
-                    ],
-                    theme: 'grid',
-                    headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
-                    bodyStyles: { textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.1 },
-                    alternateRowStyles: { fillColor: [249, 250, 251] },
-                    columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }
-                });
-
-                currentY = doc.lastAutoTable.finalY + 15;
-
-                // Gráficos
-                const chart1 = document.getElementById('empresas-chart');
-                const chart2 = document.getElementById('despesas-gerais-chart');
-                if (chart1 && chart2) {
-                    doc.setFontSize(14);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('Análise Visual de Performance', 15, currentY);
-                    currentY += 5;
-                    const img1 = chart1.toDataURL('image/png');
-                    const img2 = chart2.toDataURL('image/png');
-                    doc.addImage(img1, 'PNG', 15, currentY, 85, 55);
-                    doc.addImage(img2, 'PNG', 110, currentY, 85, 55);
-                    currentY += 65;
-                }
-
-                // Insights
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Insights Estratégicos', 15, currentY);
-                currentY += 8;
-                const insights = Array.from(document.querySelectorAll('#quick-insights .insight-pill'))
-                    .map(el => '• ' + el.textContent.trim());
-                doc.setFontSize(10);
-                doc.setTextColor(50, 50, 50);
-                if (insights.length > 0) {
-                    insights.forEach(insight => {
-                        doc.text(insight, 20, currentY);
-                        currentY += 6;
-                    });
-                } else {
-                    doc.text('Sem insights específicos para este período.', 20, currentY);
-                }
-
-                // --- PÁGINA 2: INDICADORES DE SAÚDE FINANCEIRA ---
-                doc.addPage();
-                addPageHeader('Indicadores de Saúde Financeira da Empresa');
-
-                // ---- Cálculos dos indicadores avançados ----
-                const contasFixasVal = (state.contasFixas || []).reduce((acc, cf) => acc + (parseFloat(cf.valor) || 0), 0);
-                const custosVariaveisVal = despesasOperacionaisVal + monitoresVal; // Custos que oscilam com a operação
-                const custosFixosTotais = contasFixasVal + totalSalariosVal; // Contas fixas + folha
-                const margemContribuicao = totalReceitasVal - custosVariaveisVal;
-                const ratioMC = totalReceitasVal > 0 ? margemContribuicao / totalReceitasVal : 0;
-
-                // 1) Margem de Contribuição (%)
-                const margemContribuicaoPct = totalReceitasVal > 0 ? (margemContribuicao / totalReceitasVal) * 100 : 0;
-                // 2) Ponto de Equilíbrio (Break-even em R$)
-                const pontoEquilibrio = ratioMC > 0 ? custosFixosTotais / ratioMC : 0;
-                // 3) Margem de Segurança (%)
-                const margemSeguranca = totalReceitasVal > 0 && pontoEquilibrio > 0 ? ((totalReceitasVal - pontoEquilibrio) / totalReceitasVal) * 100 : 0;
-                // 4) GAO – Grau de Alavancagem Operacional
-                const gao = saldoLiquidoVal !== 0 ? margemContribuicao / saldoLiquidoVal : 0;
-                // 5) EBITDA Proxy (sem depreciação/juros disponíveis, usa resultado operacional)
-                const ebitdaProxy = margemContribuicao - custosFixosTotais; // Aproximação simplificada
-                const margemEbitda = totalReceitasVal > 0 ? (ebitdaProxy / totalReceitasVal) * 100 : 0;
-                // 6) Índice de Eficiência Operacional
-                const eficienciaOperacional = totalDespesasGeral > 0 ? totalReceitasVal / totalDespesasGeral : 0;
-                // 7) Burn Rate (taxa de queima mensal)
-                const burnRate = totalDespesasGeral;
-                // 8) Runway (meses de operação com saldo atual)
-                const runway = burnRate > 0 && saldoLiquidoVal > 0 ? saldoLiquidoVal / burnRate : 0;
-                // 9) Índice de Concentração de Receita (Herfindahl-Hirschman simplificado)
-                const hhiShares = Object.values(revenueByCompany).map(v => totalReceitasVal > 0 ? (v / totalReceitasVal) : 0);
-                const hhi = hhiShares.reduce((acc, s) => acc + Math.pow(s, 2), 0) * 10000;
-                // 10) Crescimento MoM
-                const prevMonth = shiftMonth(state.selectedMonth, -1);
-                const receitaMesAnterior = getMonthRevenue(prevMonth);
-                const crescimentoMoM = receitaMesAnterior > 0 ? ((totalReceitasVal - receitaMesAnterior) / receitaMesAnterior) * 100 : 0;
-                // 11) Elasticidade Custo-Receita
-                const despesaMesAnterior = getMonthExpenses(prevMonth);
-                const varReceita = receitaMesAnterior > 0 ? (totalReceitasVal - receitaMesAnterior) / receitaMesAnterior : 0;
-                const varDespesa = despesaMesAnterior > 0 ? (totalDespesasGeral - despesaMesAnterior) / despesaMesAnterior : 0;
-                const elasticidade = varReceita !== 0 ? varDespesa / varReceita : 0;
-                // 12) Custo por Evento
-                const custoMedioPorEvento = eventosMes.length > 0 ? totalDespesasGeral / eventosMes.length : 0;
-                // 13) Lucratividade por Evento
-                const lucratividadePorEvento = eventosMes.length > 0 ? saldoLiquidoVal / eventosMes.length : 0;
-                // 14) Índice de Comprometimento de Receita
-                const comprometimentoReceita = totalReceitasVal > 0 ? (custosFixosTotais / totalReceitasVal) * 100 : 0;
-
-                let yInd = 34;
+                // Composição do resultado
                 doc.setFontSize(13);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(...secondaryColor);
-                doc.text('Análise de Indicadores Econômico-Financeiros', 15, yInd);
-                yInd += 3;
-
-                // Definição dos indicadores com semáforo e explicação
-                const indicadores = [
-                    {
-                        nome: 'Margem de Contribuição',
-                        valor: `${margemContribuicaoPct.toFixed(1)}%`,
-                        status: margemContribuicaoPct >= 40 ? 'verde' : (margemContribuicaoPct >= 20 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Percentual da receita que sobra após cobrir custos variáveis (operacionais + monitores). Indica quanto cada real de venda contribui para cobrir custos fixos e gerar lucro.'
-                    },
-                    {
-                        nome: 'Ponto de Equilíbrio (Break-even)',
-                        valor: formatarMoeda(pontoEquilibrio),
-                        status: totalReceitasVal >= pontoEquilibrio ? 'verde' : 'vermelho',
-                        explicacao: 'Faturamento mínimo necessário para cobrir todos os custos (fixos + variáveis). Abaixo desse valor a empresa opera no prejuízo.'
-                    },
-                    {
-                        nome: 'Margem de Segurança',
-                        valor: `${margemSeguranca.toFixed(1)}%`,
-                        status: margemSeguranca >= 25 ? 'verde' : (margemSeguranca >= 10 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Distância percentual entre a receita atual e o ponto de equilíbrio. Quanto maior, mais resiliente a empresa é a quedas de faturamento.'
-                    },
-                    {
-                        nome: 'GAO (Alavancagem Operacional)',
-                        valor: gao.toFixed(2) + 'x',
-                        status: (gao > 0 && gao <= 3) ? 'verde' : (gao > 3 && gao <= 5 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Mede a sensibilidade do lucro a variações na receita. GAO de 2x significa que um aumento de 10% na receita gera 20% de aumento no lucro — mas o inverso também vale.'
-                    },
-                    {
-                        nome: 'EBITDA Proxy',
-                        valor: formatarMoeda(ebitdaProxy) + ` (${margemEbitda.toFixed(1)}%)`,
-                        status: margemEbitda >= 15 ? 'verde' : (margemEbitda >= 5 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Aproximação do lucro operacional antes de juros, impostos e depreciação. Indica a capacidade de geração de caixa da operação pura.'
-                    },
-                    {
-                        nome: 'Eficiência Operacional',
-                        valor: eficienciaOperacional.toFixed(2) + 'x',
-                        status: eficienciaOperacional >= 1.3 ? 'verde' : (eficienciaOperacional >= 1.0 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Cada R$1 gasto na operação gera R$' + eficienciaOperacional.toFixed(2) + ' em receita. Valores acima de 1,3x indicam boa eficiência; abaixo de 1x indica prejuízo.'
-                    },
-                    {
-                        nome: 'Comprometimento de Receita (Custos Fixos)',
-                        valor: `${comprometimentoReceita.toFixed(1)}%`,
-                        status: comprometimentoReceita <= 40 ? 'verde' : (comprometimentoReceita <= 60 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Percentual da receita absorvido por custos fixos (folha + contas fixas). Quanto menor, mais flexível a estrutura. Acima de 60% é sinal de rigidez financeira.'
-                    },
-                    {
-                        nome: 'Crescimento MoM',
-                        valor: `${crescimentoMoM >= 0 ? '+' : ''}${crescimentoMoM.toFixed(1)}%`,
-                        status: crescimentoMoM >= 5 ? 'verde' : (crescimentoMoM >= -5 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Variação percentual da receita em relação ao mês anterior. Mede a dinâmica de crescimento da empresa no curto prazo.'
-                    },
-                    {
-                        nome: 'Elasticidade Custo-Receita',
-                        valor: elasticidade.toFixed(2),
-                        status: (elasticidade >= 0 && elasticidade < 1) ? 'verde' : (elasticidade >= 1 && elasticidade <= 1.2 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Se < 1, os custos crescem menos que a receita (ganho de escala). Se > 1, os custos crescem mais rápido que a receita (perda de eficiência).'
-                    },
-                    {
-                        nome: 'Concentração de Receita (HHI)',
-                        valor: hhi.toFixed(0) + ' pontos',
-                        status: hhi < 2500 ? 'verde' : (hhi < 5000 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Índice Herfindahl-Hirschman: mede a dependência de poucas fontes de receita. Até 2.500 = diversificado; 2.500–5.000 = moderada concentração; acima = alta dependência.'
-                    },
-                    {
-                        nome: 'Ticket Médio por Evento',
-                        valor: formatarMoeda(ticketMedioEvento),
-                        status: ticketMedioEvento >= 1500 ? 'verde' : (ticketMedioEvento >= 800 ? 'amarelo' : 'vermelho'),
-                        explicacao: 'Valor médio faturado por evento realizado. Indicador de precificação e posicionamento de mercado.'
-                    },
-                    {
-                        nome: 'Lucratividade por Evento',
-                        valor: formatarMoeda(lucratividadePorEvento),
-                        status: lucratividadePorEvento > 0 ? 'verde' : 'vermelho',
-                        explicacao: 'Lucro líquido médio por evento. Combina eficiência de custo com capacidade de geração de receita por operação unitária.'
-                    }
-                ];
-
-                // Renderiza indicadores como tabela compacta com semáforo
+                doc.text('Composição do Resultado', 15, currentY);
                 doc.autoTable({
-                    startY: yInd + 2,
-                    head: [['', 'Indicador', 'Valor', 'Análise']],
-                    body: indicadores.map(ind => {
-                        const dot = ind.status === 'verde' ? '●' : (ind.status === 'amarelo' ? '●' : '●');
-                        return [dot, ind.nome, ind.valor, ind.explicacao];
-                    }),
-                    theme: 'grid',
-                    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-                    bodyStyles: { textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.1, fontSize: 7.5, cellPadding: 2 },
-                    alternateRowStyles: { fillColor: [249, 250, 251] },
-                    columnStyles: {
-                        0: { cellWidth: 6, halign: 'center', fontSize: 10 },
-                        1: { cellWidth: 38, fontStyle: 'bold', fontSize: 8 },
-                        2: { cellWidth: 30, halign: 'right', fontStyle: 'bold', fontSize: 8 },
-                        3: { cellWidth: 'auto', fontSize: 7 }
-                    },
-                    didParseCell: function(data) {
-                        if (data.column.index === 0 && data.section === 'body') {
-                            const ind = indicadores[data.row.index];
-                            if (ind) {
-                                if (ind.status === 'verde') data.cell.styles.textColor = [16, 185, 129];
-                                else if (ind.status === 'amarelo') data.cell.styles.textColor = [245, 158, 11];
-                                else data.cell.styles.textColor = [239, 68, 68];
-                            }
-                        }
-                    }
-                });
-
-                // --- PÁGINA 3: GRÁFICO DE BARRAS — DISTRIBUIÇÃO DE DESPESAS ---
-                doc.addPage();
-                addPageHeader('Distribuição de Despesas — Análise por Categoria');
-
-                // Coleta despesas por categoria para o gráfico de barras
-                const despesasCategorias = {};
-                gastosMes.forEach(g => {
-                    const cat = g.categoria || 'Sem Categoria';
-                    despesasCategorias[cat] = (despesasCategorias[cat] || 0) + (parseFloat(g.valor) || 0);
-                });
-                if (monitoresVal > 0) despesasCategorias['Monitores'] = monitoresVal;
-                if (totalSalariosVal > 0) despesasCategorias['Folha & Comissões'] = totalSalariosVal;
-                if (contasFixasVal > 0) despesasCategorias['Contas Fixas'] = contasFixasVal;
-
-                const catEntries = Object.entries(despesasCategorias).sort((a, b) => b[1] - a[1]);
-                const barColors = [
-                    [239, 68, 68], [245, 158, 11], [139, 92, 246], [59, 130, 246],
-                    [236, 72, 153], [20, 184, 166], [99, 102, 241], [16, 185, 129],
-                    [251, 146, 60], [168, 85, 247]
-                ];
-
-                if (catEntries.length > 0) {
-                    const chartStartY = 38;
-                    const chartX = 55;
-                    const chartW = 120;
-                    const barH = 7;
-                    const barGap = 3;
-                    const maxVal = catEntries[0][1]; // Already sorted desc
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...secondaryColor);
-                    doc.text('Despesas por Categoria (R$)', 15, chartStartY - 2);
-
-                    catEntries.forEach(([cat, val], idx) => {
-                        const y = chartStartY + 6 + idx * (barH + barGap);
-                        const barW = maxVal > 0 ? (val / maxVal) * chartW : 0;
-                        const color = barColors[idx % barColors.length];
-                        const pct = totalDespesasGeral > 0 ? ((val / totalDespesasGeral) * 100).toFixed(1) : '0.0';
-
-                        // Label da categoria (à esquerda)
-                        doc.setFontSize(7);
-                        doc.setFont('helvetica', 'bold');
-                        doc.setTextColor(...secondaryColor);
-                        const catLabel = cat.length > 18 ? cat.substring(0, 18) + '…' : cat;
-                        doc.text(catLabel, chartX - 2, y + barH / 2 + 1, { align: 'right' });
-
-                        // Barra
-                        doc.setFillColor(...color);
-                        doc.roundedRect(chartX, y, Math.max(barW, 2), barH, 1.5, 1.5, 'F');
-
-                        // Valor e % (à direita da barra)
-                        doc.setFontSize(7);
-                        doc.setFont('helvetica', 'bold');
-                        doc.setTextColor(...color);
-                        doc.text(`${formatarMoeda(val)} (${pct}%)`, chartX + barW + 3, y + barH / 2 + 1);
-                    });
-
-                    // Linha base do gráfico
-                    const baseY = chartStartY + 6 + catEntries.length * (barH + barGap);
-                    doc.setDrawColor(200, 200, 200);
-                    doc.line(chartX, baseY, chartX + chartW, baseY);
-
-                    // Legenda de escala
-                    doc.setFontSize(7);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(150, 150, 150);
-                    doc.text('R$ 0', chartX, baseY + 4);
-                    doc.text(formatarMoeda(maxVal), chartX + chartW, baseY + 4, { align: 'right' });
-
-                    // Tabela complementar — nova página para não cortar
-                    doc.addPage();
-                    addPageHeader('Detalhamento Numérico de Despesas');
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...secondaryColor);
-                    doc.text('Detalhamento Numérico por Categoria', 15, 35);
-
-                    doc.autoTable({
-                        startY: 40,
-                        head: [['#', 'Categoria', 'Valor (R$)', '% do Total', 'Acumulado %']],
-                        body: (() => {
-                            let acum = 0;
-                            return catEntries.map(([cat, val], idx) => {
-                                const pct = totalDespesasGeral > 0 ? (val / totalDespesasGeral) * 100 : 0;
-                                acum += pct;
-                                return [idx + 1, cat, formatarMoeda(val), `${pct.toFixed(1)}%`, `${acum.toFixed(1)}%`];
-                            });
-                        })(),
-                        theme: 'grid',
-                        headStyles: { fillColor: [239, 68, 68], textColor: [255, 255, 255], fontSize: 9 },
-                        bodyStyles: { fontSize: 8.5 },
-                        alternateRowStyles: { fillColor: [254, 242, 242] },
-                        columnStyles: {
-                            0: { cellWidth: 8, halign: 'center' },
-                            2: { halign: 'right', fontStyle: 'bold' },
-                            3: { halign: 'right' },
-                            4: { halign: 'right', fontStyle: 'bold' }
-                        }
-                    });
-
-                    // Análise de Pareto
-                    let yPareto = doc.lastAutoTable.finalY + 10;
-                    doc.setFontSize(11);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...secondaryColor);
-                    doc.text('Análise de Pareto (80/20)', 15, yPareto);
-                    yPareto += 6;
-
-                    let acumPareto = 0;
-                    let categoriasPareto = 0;
-                    for (const [, val] of catEntries) {
-                        acumPareto += totalDespesasGeral > 0 ? (val / totalDespesasGeral) * 100 : 0;
-                        categoriasPareto++;
-                        if (acumPareto >= 80) break;
-                    }
-
-                    doc.setFontSize(9);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(50, 50, 50);
-                    doc.text(`${categoriasPareto} de ${catEntries.length} categorias representam ${acumPareto.toFixed(1)}% das despesas totais.`, 18, yPareto);
-                    doc.text(`Concentrar esforços de redução nessas ${categoriasPareto} categorias gera o maior impacto no resultado.`, 18, yPareto + 6);
-                }
-
-                // --- PÁGINA 4 (antiga 2): METAS, SEMÁFORO E DESTAQUES ---
-                doc.addPage();
-                addPageHeader('Metas, Risco Executivo e Destaques');
-
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Metas vs. Realizado', 15, 35);
-
-                doc.autoTable({
-                    startY: 40,
-                    head: [['Indicador', 'Meta', 'Realizado', 'Variação']],
+                    startY: currentY + 3,
                     body: [
-                        [
-                            'Receita Mensal',
-                            metaMesVal > 0 ? formatarMoeda(metaMesVal) : 'Não definida',
-                            formatarMoeda(totalReceitasVal),
-                            metaMesVal > 0 ? `${(atingimentoMeta - 100).toFixed(1)}%` : 'N/A'
-                        ],
-                        [
-                            'Saldo Líquido',
-                            '--',
-                            formatarMoeda(saldoLiquidoVal),
-                            `${margemLiquida.toFixed(1)}% margem`
-                        ],
-                        [
-                            'Ticket Médio por Evento',
-                            '--',
-                            formatarMoeda(ticketMedioEvento),
-                            `${eventosMes.length} eventos`
-                        ]
+                        ['(+) Entradas de eventos', formatarMoeda(entradasEventosVal)],
+                        ['(+) Entradas avulsas', formatarMoeda(entradasAvulsasVal)],
+                        ['(-) Gastos operacionais', formatarMoeda(despesasOperacionaisVal)],
+                        ['(-) Pagamentos de monitores', formatarMoeda(monitoresVal)],
+                        ['(-) Folha e comissões', formatarMoeda(totalSalariosVal)],
+                        [{ content: '(=) Saldo líquido', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }, { content: formatarMoeda(saldoLiquidoVal), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
                     ],
-                    theme: 'grid',
-                    headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
-                    alternateRowStyles: { fillColor: [248, 250, 252] },
-                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
+                    theme: 'plain',
+                    bodyStyles: { textColor: [30, 41, 59], fontSize: 10, cellPadding: 2.5 },
+                    columnStyles: { 0: { cellWidth: 130 }, 1: { halign: 'right', fontStyle: 'bold' } }
                 });
+                currentY = doc.lastAutoTable.finalY + 12;
 
-                let ySemaforo = doc.lastAutoTable.finalY + 12;
-                doc.setFontSize(12);
+                // Destaques do mês
+                doc.setFontSize(13);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(...secondaryColor);
-                doc.text('Semáforo Executivo', 15, ySemaforo);
-                ySemaforo += 8;
-
-                const semaforoRows = [
-                    ['Receita x Meta', semaforo.receita, `Atingimento: ${metaMesVal > 0 ? `${atingimentoMeta.toFixed(1)}%` : 'meta não definida'}`],
-                    ['Margem Líquida', semaforo.margem, `Margem atual: ${margemLiquida.toFixed(1)}%`],
-                    ['Saúde de Caixa', semaforo.caixa, `Saldo líquido: ${formatarMoeda(saldoLiquidoVal)}`],
-                    ['Eficiência de Custos', semaforo.custo, `Despesa/Receita: ${totalReceitasVal > 0 ? ((totalDespesasGeral / totalReceitasVal) * 100).toFixed(1) : '0.0'}%`]
+                doc.text('Destaques do Mês', 15, currentY);
+                currentY += 8;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(50, 50, 50);
+                const destaques = [
+                    `Maior cliente: ${companyRows[0] ? `${companyRows[0][0]} (${companyRows[0][1]})` : 'sem dados de empresa'}`,
+                    `Maior custo: ${costDrivers[0].label} (${formatarMoeda(costDrivers[0].value)})`
                 ];
-                const statusColor = { verde: [16, 185, 129], amarelo: [245, 158, 11], vermelho: [239, 68, 68] };
+                if (metaMesVal > 0) {
+                    destaques.push(atingimentoMeta >= 100
+                        ? `Meta batida: ${atingimentoMeta.toFixed(0)}% da meta de ${formatarMoeda(metaMesVal)}`
+                        : `Meta: ${atingimentoMeta.toFixed(0)}% atingido — faltou ${formatarMoeda(faltaMeta)}`);
+                }
+                destaques.forEach((d, i) => doc.text(`• ${d}`, 18, currentY + i * 6));
 
-                semaforoRows.forEach(([indicador, status, detalhe], idx) => {
-                    const y = ySemaforo + (idx * 12);
-                    doc.setFillColor(...statusColor[status]);
-                    doc.circle(20, y - 1.3, 2.2, 'F');
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(...secondaryColor);
-                    doc.text(indicador, 26, y);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(detalhe, 88, y);
-                });
-
-                const yHighlights = ySemaforo + 55;
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Highlights do Mês', 15, yHighlights);
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`• Principal driver de receita: ${companyRows[0] ? companyRows[0][0] : 'Sem dados de empresa'} (${companyRows[0] ? companyRows[0][1] : 'R$ 0,00'})`, 18, yHighlights + 7);
-                doc.text(`• Maior centro de custo: ${costDrivers[0].label} (${formatarMoeda(costDrivers[0].value)})`, 18, yHighlights + 13);
-                doc.text(`• Gap para meta do mês: ${metaMesVal > 0 ? formatarMoeda(faltaMeta) : 'Meta não definida'}`, 18, yHighlights + 19);
-                doc.text(`• Benchmark interno: receita do mês em ${(trendAvg6Revenue > 0 ? ((totalReceitasVal / trendAvg6Revenue - 1) * 100) : 0).toFixed(1)}% vs média móvel 6M`, 18, yHighlights + 25);
-
-                // --- PÁGINA 3: TENDÊNCIA, BENCHMARK E PROJEÇÃO ---
+                // ============ ANÁLISE DETALHADA — LANÇAMENTOS DO MÊS ============
+                // Entradas
                 doc.addPage();
-                addPageHeader('Tendência Financeira, Benchmark e Projeção 90 Dias');
-
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Evolução dos Últimos 6 Meses', 15, 35);
-
-                doc.autoTable({
-                    startY: 40,
-                    head: [['Mês', 'Receita', 'Despesa', 'Saldo', 'Margem']],
-                    body: trendRows.map(r => [monthLabel(r.ym), formatarMoeda(r.rev), formatarMoeda(r.exp), formatarMoeda(r.bal), `${r.margin.toFixed(1)}%`]),
-                    theme: 'grid',
-                    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
-                    alternateRowStyles: { fillColor: [248, 250, 252] },
-                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } }
-                });
-
-                let yBench = doc.lastAutoTable.finalY + 10;
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Benchmark Interno', 15, yBench);
-                yBench += 6;
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(10);
-                doc.text(`Receita atual vs média 3M: ${(trendAvg3Revenue > 0 ? ((totalReceitasVal / trendAvg3Revenue - 1) * 100) : 0).toFixed(1)}%`, 18, yBench);
-                doc.text(`Receita atual vs média 6M: ${(trendAvg6Revenue > 0 ? ((totalReceitasVal / trendAvg6Revenue - 1) * 100) : 0).toFixed(1)}%`, 18, yBench + 6);
-                doc.text(`Saldo atual vs média 6M: ${(trendAvg6Balance !== 0 ? ((saldoLiquidoVal / trendAvg6Balance - 1) * 100) : 0).toFixed(1)}%`, 18, yBench + 12);
-
-                const cenarioConservador = { rev: totalReceitasVal * 0.9 * 3, exp: totalDespesasGeral * 0.98 * 3 };
-                const cenarioBase = { rev: totalReceitasVal * 1.0 * 3, exp: totalDespesasGeral * 1.0 * 3 };
-                const cenarioOtimista = { rev: totalReceitasVal * 1.12 * 3, exp: totalDespesasGeral * 1.02 * 3 };
-
-                doc.autoTable({
-                    startY: yBench + 20,
-                    head: [['Cenário 90 dias', 'Receita Projetada', 'Despesa Projetada', 'Saldo Projetado']],
-                    body: [
-                        ['Conservador', formatarMoeda(cenarioConservador.rev), formatarMoeda(cenarioConservador.exp), formatarMoeda(cenarioConservador.rev - cenarioConservador.exp)],
-                        ['Base', formatarMoeda(cenarioBase.rev), formatarMoeda(cenarioBase.exp), formatarMoeda(cenarioBase.rev - cenarioBase.exp)],
-                        ['Otimista', formatarMoeda(cenarioOtimista.rev), formatarMoeda(cenarioOtimista.exp), formatarMoeda(cenarioOtimista.rev - cenarioOtimista.exp)]
-                    ],
-                    theme: 'grid',
-                    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
-                    alternateRowStyles: { fillColor: [248, 250, 252] },
-                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
-                });
-
-                // --- PÁGINA 4: BREAKDOWN DE RECEITA E DRIVERS ---
-                doc.addPage();
-                addPageHeader('Breakdown por Unidade e Drivers Financeiros');
-
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Participação por Empresa', 15, 35);
-                doc.autoTable({
-                    startY: 40,
-                    head: [['Empresa', 'Receita', 'Participação']],
-                    body: companyRows.length > 0 ? companyRows : [['Sem dados no mês', 'R$ 0,00', '0%']],
-                    theme: 'grid',
-                    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255] },
-                    alternateRowStyles: { fillColor: [248, 250, 252] },
-                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } }
-                });
-
-                let yCost = doc.lastAutoTable.finalY + 10;
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Top Drivers de Custo', 15, yCost);
-                yCost += 6;
-                doc.autoTable({
-                    startY: yCost,
-                    head: [['Driver', 'Valor', '% sobre Despesa']],
-                    body: costDrivers.map(d => [d.label, formatarMoeda(d.value), `${totalDespesasGeral > 0 ? ((d.value / totalDespesasGeral) * 100).toFixed(1) : '0.0'}%`]),
-                    theme: 'grid',
-                    headStyles: { fillColor: [147, 51, 234], textColor: [255, 255, 255] },
-                    alternateRowStyles: { fillColor: [248, 250, 252] },
-                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } }
-                });
-
-                let yReco = doc.lastAutoTable.finalY + 12;
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Recomendação da Diretoria (próximo ciclo)', 15, yReco);
-                yReco += 7;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-
-                const recomendacoes = [
-                    (metaMesVal > 0 && totalReceitasVal < metaMesVal)
-                        ? `Foco comercial imediato para recuperar ${formatarMoeda(faltaMeta)} de gap da meta mensal.`
-                        : 'Consolidar estratégia comercial atual e escalar canais com melhor conversão.',
-                    (margemLiquida < 12)
-                        ? 'Aplicar plano de eficiência de custos: renegociação de fornecedores e revisão de despesas variáveis.'
-                        : 'Preservar margem com disciplina de preço e controle de descontos por evento.',
-                    (costDrivers[0].value > (totalDespesasGeral * 0.45))
-                        ? `Mitigar concentração de custos em ${costDrivers[0].label} com teto orçamentário e acompanhamento semanal.`
-                        : 'Manter governança de custos com monitoramento quinzenal por centro de despesa.',
-                    `Preparar operação para cenário base de 90 dias com meta de saldo projetado de ${formatarMoeda(cenarioBase.rev - cenarioBase.exp)}.`
-                ];
-                recomendacoes.forEach((r, i) => doc.text(`• ${r}`, 18, yReco + (i * 6)));
-
-                // --- PÁGINA 5: DETALHAMENTO DE ENTRADAS ---
-                doc.addPage();
-                addPageHeader('Detalhamento de Entradas');
-
+                addPageHeader('Análise Detalhada — Entradas');
                 const todasEntradas = [
                     ...eventosMes.map(e => [formatarData(e.data), 'Evento', e.contratante, formatarMoeda(e.valor)]),
                     ...receitasMes.map(r => [formatarData(r.data), 'Avulsa', r.descricao, formatarMoeda(r.valor)])
                 ].sort((a, b) => a[0].localeCompare(b[0]));
-
                 doc.autoTable({
-                    startY: 35,
+                    startY: 32,
                     head: [['Data', 'Tipo', 'Descrição', 'Valor']],
-                    body: todasEntradas,
+                    body: todasEntradas.length ? todasEntradas : [['—', '—', 'Sem entradas no mês', formatarMoeda(0)]],
                     headStyles: { fillColor: successColor, textColor: [255, 255, 255] },
                     alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 3: { halign: 'right' } }
                 });
 
-                // --- PÁGINA 6: DETALHAMENTO DE SAÍDAS (GASTOS) ---
+                // Saídas: gastos & contas
                 doc.addPage();
-                addPageHeader('Detalhamento de Saídas: Gastos & Contas');
-
+                addPageHeader('Análise Detalhada — Gastos & Contas');
                 const dataGastos = gastosMes.map(g => [formatarData(g.data), g.categoria, g.descricao, formatarMoeda(g.valor)])
                     .sort((a, b) => a[0].localeCompare(b[0]));
-
                 doc.autoTable({
-                    startY: 35,
+                    startY: 32,
                     head: [['Data', 'Categoria', 'Descrição', 'Valor']],
-                    body: dataGastos,
+                    body: dataGastos.length ? dataGastos : [['—', '—', 'Sem gastos no mês', formatarMoeda(0)]],
                     headStyles: { fillColor: dangerColor, textColor: [255, 255, 255] },
                     alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 3: { halign: 'right' } }
                 });
 
-                // --- PÁGINA 7: DETALHAMENTO DE SAÍDAS (MONITORES & SALÁRIOS) ---
+                // Saídas: monitores & equipe
                 doc.addPage();
-                addPageHeader('Detalhamento de Saídas: Monitores & Equipe');
-
+                addPageHeader('Análise Detalhada — Monitores & Equipe');
                 doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...secondaryColor);
                 doc.text('Pagamentos de Monitores', 15, 35);
-                const dataMon = pagMonMes.map(p => {
-                    const total = custoPagamentoMonitor(p);
-                    return [formatarData(p.data), p.nome, formatarMoeda(total)];
-                });
-
+                const dataMon = pagMonMes.map(p => [formatarData(p.data), p.nome, formatarMoeda(custoPagamentoMonitor(p))]);
                 doc.autoTable({
                     startY: 40,
                     head: [['Data', 'Monitor', 'Total Pago']],
-                    body: dataMon,
+                    body: dataMon.length ? dataMon : [['—', 'Sem pagamentos', formatarMoeda(0)]],
                     headStyles: { fillColor: [100, 116, 139], textColor: [255, 255, 255] },
                     alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 2: { halign: 'right' } }
                 });
-
-                let nextY = doc.lastAutoTable.finalY + 15;
-                doc.text('Cálculo de Salários (Equipe)', 15, nextY);
-                nextY += 5;
-
+                let nextY = doc.lastAutoTable.finalY + 12;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...secondaryColor);
+                doc.text('Salários da Equipe', 15, nextY);
                 const dataSalarios = (state.funcionarios || []).map(f => {
                     const faixa = [...(state.faixasComissao || [])].sort((a, b) => a.ateValor - b.ateValor).find(fx => totalEntradasVal <= fx.ateValor) || { percentual: 0 };
                     const vComissao = totalEntradasVal * (faixa?.percentual || 0);
                     const tBruto = (parseFloat(f.salarioFixo) || 0) + (parseFloat(f.va) || 0) + (parseFloat(f.vt) || 0) + vComissao;
                     return [f.nome, formatarMoeda(f.salarioFixo), formatarMoeda(vComissao), formatarMoeda(tBruto)];
                 });
-
                 doc.autoTable({
-                    startY: nextY,
+                    startY: nextY + 5,
                     head: [['Funcionário', 'Fixo', 'Comissão', 'Total Bruto']],
-                    body: dataSalarios,
+                    body: dataSalarios.length ? dataSalarios : [['—', formatarMoeda(0), formatarMoeda(0), formatarMoeda(0)]],
                     headStyles: { fillColor: [100, 116, 139], textColor: [255, 255, 255] },
                     alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
                 });
-
-                // --- PÁGINA 8: BALANÇO GERAL + FECHAMENTO EXECUTIVO ---
-                doc.addPage();
-                addPageHeader('Balanço Geral Final');
-
-                const totalGastosVal = dataGastos.reduce((acc, curr) => acc + parseMoney(curr[3]), 0);
-                const totalMonitoresVal = dataMon.reduce((acc, curr) => acc + parseMoney(curr[2]), 0);
-                const totalSalariosTabVal = dataSalarios.reduce((acc, curr) => acc + parseMoney(curr[3]), 0);
-                const totalDespesasTabVal = totalGastosVal + totalMonitoresVal + totalSalariosTabVal;
-
-                doc.autoTable({
-                    startY: 35,
-                    head: [['Grupo de Lançamento', 'Total acumulado']],
-                    body: [
-                        ['(+) Total de Entradas (Eventos/Avulsas)', formatarMoeda(totalReceitasVal)],
-                        ['(-) Gastos Operacionais & Contas Fixas', formatarMoeda(totalGastosVal)],
-                        ['(-) Pagamentos de Monitores', formatarMoeda(totalMonitoresVal)],
-                        ['(-) Salários & Comissões da Equipe', formatarMoeda(totalSalariosTabVal)],
-                        [{ content: 'BALANÇO LÍQUIDO FINAL', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }, { content: formatarMoeda(totalReceitasVal - totalDespesasTabVal), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
-                    ],
-                    theme: 'grid',
-                    headStyles: { fillColor: secondaryColor }
-                });
-
-                let yClose = doc.lastAutoTable.finalY + 14;
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Fechamento Executivo', 15, yClose);
-                yClose += 7;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Resultado final do mês: ${formatarMoeda(totalReceitasVal - totalDespesasTabVal)} com margem de ${margemLiquida.toFixed(1)}%.`, 15, yClose);
-                doc.text(`Responsável pelo relatório: Sistema Financeiro Aero Festas | Versão: Premium Board v1`, 15, yClose + 6);
-                doc.text(`Data e hora de geração: ${new Date().toLocaleString()}`, 15, yClose + 12);
 
                 // Rodapé
                 const totalPages = doc.internal.getNumberOfPages();
