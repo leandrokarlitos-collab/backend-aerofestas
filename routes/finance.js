@@ -879,7 +879,9 @@ router.post('/pagamentos-monitores', async (req, res) => {
                 horaSaida: p.horaSaida,
                 foiMotorista: p.foiMotorista || false,
                 numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
-                observacoes: p.observacoes || null
+                observacoes: p.observacoes || null,
+                tipo: p.tipo === 'avulso' ? 'avulso' : 'diaria',
+                descricao: p.descricao || null
             }
         });
         res.json(novoPagamento);
@@ -918,7 +920,9 @@ router.put('/pagamentos-monitores/:id', async (req, res) => {
                 horaSaida: p.horaSaida,
                 foiMotorista: p.foiMotorista || false,
                 numEventos: p.numEventos ? parseFloat(p.numEventos) : null,
-                observacoes: p.observacoes || null
+                observacoes: p.observacoes || null,
+                tipo: p.tipo === 'avulso' ? 'avulso' : 'diaria',
+                descricao: p.descricao || null
             }
         });
 

@@ -1867,8 +1867,17 @@
                     
                     // Tag para monitor não cadastrado
                     const isNaoCadastrado = p.isNaoCadastrado || !p.monitorId;
-                    const tagNaoCadastrado = isNaoCadastrado 
-                        ? '<span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-bold rounded-full border border-gray-300" title="Monitor não está cadastrado no sistema"><i class="fa-solid fa-user-slash"></i> NÃO CADASTRADO</span>' 
+                    const tagNaoCadastrado = isNaoCadastrado
+                        ? '<span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-bold rounded-full border border-gray-300" title="Monitor não está cadastrado no sistema"><i class="fa-solid fa-user-slash"></i> NÃO CADASTRADO</span>'
+                        : '';
+
+                    // Pagamento avulso (não-diária): tag + descrição do que se trata
+                    const isAvulso = p.tipo === 'avulso';
+                    const tagAvulso = isAvulso
+                        ? '<span class="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded-full border border-purple-300" title="Pagamento avulso (não corresponde a uma diária)"><i class="fa-solid fa-receipt"></i> AVULSO</span>'
+                        : '';
+                    const linhaDescricao = (isAvulso && p.descricao)
+                        ? `<p class="text-xs text-gray-500 font-normal mt-0.5"><i class="fa-solid fa-tag text-purple-400 mr-1"></i>${window.escapeHtml(p.descricao)}</p>`
                         : '';
 
                     return `
@@ -1884,10 +1893,12 @@
                                 <div class="flex items-center flex-wrap">
                                     ${p.nome}
                                     ${tagNaoCadastrado}
+                                    ${tagAvulso}
                                 </div>
+                                ${linhaDescricao}
                             </td>
-                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.valorBase) || 0).toFixed(2)}</td>
-                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">R$ ${(parseFloat(p.horasExtras) || 0).toFixed(2)}</td>
+                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">${isAvulso ? '—' : 'R$ ' + (parseFloat(p.valorBase) || 0).toFixed(2)}</td>
+                            <td class="hidden sm:table-cell text-xs text-gray-500 border-b border-gray-100">${isAvulso ? '—' : 'R$ ' + (parseFloat(p.horasExtras) || 0).toFixed(2)}</td>
                             <td class="font-bold text-indigo-600 border-b border-gray-100">R$ ${total.toFixed(2)}</td>
                             <td class="text-xs border-b border-gray-100">
                                 <span class="px-2 py-1 rounded-full border ${statusClass} font-bold text-[10px] uppercase tracking-wider">${statusText}</span>
@@ -2767,6 +2778,9 @@
                 await window.loadMonitores();
             });
             getById('open-pagamento-modal-btn')?.addEventListener('click', () => {
+                // Restaura todos os campos aos defaults, evitando vazamento de uma edição fechada sem salvar
+                // (valor da diária, status, data de pagamento etc. herdados do registro editado anteriormente).
+                getById('form-pagamento-monitor')?.reset();
                 const select = getById('pag-monitor-select');
                 if (select) {
                     select.innerHTML = '<option value="">Selecione um monitor...</option>' +
@@ -2789,6 +2803,12 @@
                 // Reset campo de monitor não cadastrado
                 getById('pag-monitor-nome-container').classList.add('hidden');
                 getById('pag-monitor-nome-nao-cadastrado').value = '';
+                // Modo criação: limpa edit-id e o acumulador de dias, e mostra os controles multi-dia
+                const eidCreate = getById('pag-monitor-edit-id'); if (eidCreate) eidCreate.value = '';
+                getById('pag-monitor-obs').value = '';
+                getById('pag-monitor-multidia')?.classList.remove('hidden');
+                if (typeof window.resetMultiDiaPagamento === 'function') window.resetMultiDiaPagamento();
+                if (typeof window.setTipoPagamento === 'function') window.setTipoPagamento('diaria');
                 getById('modal-pagamento-monitor').classList.remove('hidden');
             });
 
@@ -2977,6 +2997,169 @@
             };
 
             eventosInput?.addEventListener('input', calcularAdicionalMotorista);
+
+            // ========== MULTI-DIA: acumular vários dias do mesmo monitor ==========
+            state.diasParaLancar = state.diasParaLancar || [];
+
+            // Lê os campos "por dia" do formulário e monta um objeto de dia.
+            // Retorna null se a data não estiver preenchida.
+            function coletarDiaAtual() {
+                const data = getById('pag-monitor-data').value;
+                if (!data) return null;
+                const eventoSel = getById('pag-monitor-evento');
+                const valorBase = parseFloat(getById('pag-monitor-valor').value) || 0;
+                const tipo = getById('pag-monitor-tipo')?.value === 'avulso' ? 'avulso' : 'diaria';
+                const id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+                const eventoId = eventoSel.value || null;
+                const eventoLabel = eventoSel.value ? (eventoSel.options[eventoSel.selectedIndex]?.text || '') : '';
+
+                // Pagamento avulso: valor livre + descrição, sem cálculo de diária/hora extra/motorista.
+                if (tipo === 'avulso') {
+                    return {
+                        id, data, eventoId, eventoLabel, tipo,
+                        descricao: (getById('pag-monitor-descricao')?.value || '').trim(),
+                        horaEntrada: '', horaSaida: '',
+                        horasExtras: 0, foiMotorista: false, numEventos: 0, adicional: 0,
+                        valorBase, jornada: null,
+                        pagamento: valorBase
+                    };
+                }
+
+                const jornada = parseFloat(getById('pag-monitor-jornada').value) || 11;
+                const horasExtras = parseFloat(getById('pag-monitor-he').value) || 0;
+                const foiMotorista = getById('pag-monitor-motorista').checked;
+                const numEventos = foiMotorista ? (parseFloat(getById('pag-monitor-eventos').value) || 0) : 0;
+                const adicional = numEventos * 20.00;
+                return {
+                    id, data, eventoId, eventoLabel, tipo, descricao: '',
+                    horaEntrada: getById('pag-monitor-entrada').value,
+                    horaSaida: getById('pag-monitor-saida').value,
+                    horasExtras,
+                    foiMotorista,
+                    numEventos,
+                    adicional,
+                    valorBase,
+                    jornada,
+                    pagamento: valorBase + adicional + horasExtras
+                };
+            }
+
+            // Limpa apenas os campos que variam por dia (mantém monitor, valor, jornada, status, avaliação).
+            function resetCamposDia() {
+                getById('pag-monitor-data').value = '';
+                const ev = getById('pag-monitor-evento');
+                if (ev) ev.innerHTML = '<option value="">Sem vínculo - Trabalho avulso</option>';
+                getById('pag-monitor-entrada').value = '';
+                getById('pag-monitor-saida').value = '';
+                getById('pag-monitor-he').value = '0.00';
+                const st = getById('pag-monitor-he-status'); if (st) st.textContent = '';
+                getById('pag-monitor-motorista').checked = false;
+                getById('pag-monitor-eventos').value = '0';
+                getById('pag-monitor-eventos-container').classList.add('hidden');
+                getById('pag-monitor-adicional-status').textContent = '';
+            }
+
+            function atualizarResumoDias() {
+                const dias = state.diasParaLancar || [];
+                const count = dias.length;
+                const total = dias.reduce((a, d) => a + d.pagamento, 0);
+                const resumo = getById('pag-monitor-dias-resumo');
+                if (getById('pag-monitor-dias-count')) getById('pag-monitor-dias-count').textContent = count;
+                if (getById('pag-monitor-dias-total')) getById('pag-monitor-dias-total').textContent = total.toFixed(2).replace('.', ',');
+                if (resumo) resumo.classList.toggle('hidden', count === 0);
+                const btn = getById('pag-monitor-submit-btn');
+                const emEdicao = getById('pag-monitor-edit-id')?.value;
+                if (btn && !emEdicao) {
+                    btn.innerHTML = count > 0
+                        ? '<i class="fa-solid fa-check mr-2"></i> Confirmar Lançamentos'
+                        : '<i class="fa-solid fa-check mr-2"></i> Confirmar Lançamento';
+                }
+            }
+
+            function renderDiasLista() {
+                const lista = getById('pag-monitor-dias-lista');
+                if (!lista) return;
+                const dias = state.diasParaLancar || [];
+                lista.innerHTML = dias.map((d, i) => `
+                    <div class="flex items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2 shadow-sm">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-xs shrink-0">${i + 1}</span>
+                            <div class="min-w-0">
+                                <p class="font-bold text-gray-800 text-sm">
+                                    ${formatarData(d.data)}${d.horasExtras > 0 ? ' · <span class="text-amber-600">+HE</span>' : ''}${d.foiMotorista ? ' · <span class="text-indigo-600">🚗</span>' : ''}
+                                </p>
+                                <p class="text-xs text-gray-500 truncate">${d.eventoLabel ? window.escapeHtml(d.eventoLabel) : 'Trabalho avulso'} · R$ ${d.pagamento.toFixed(2).replace('.', ',')}</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="window.removerDiaLancamento('${d.id}')"
+                            class="text-gray-400 hover:text-red-500 text-xl font-bold px-2 shrink-0" title="Remover dia">&times;</button>
+                    </div>
+                `).join('');
+                atualizarResumoDias();
+            }
+
+            window.removerDiaLancamento = (id) => {
+                state.diasParaLancar = (state.diasParaLancar || []).filter(d => d.id !== id);
+                renderDiasLista();
+            };
+
+            // Reseta todo o estado multi-dia (usado ao abrir/fechar o modal)
+            window.resetMultiDiaPagamento = () => {
+                state.diasParaLancar = [];
+                renderDiasLista();
+            };
+
+            getById('pag-monitor-add-dia')?.addEventListener('click', () => {
+                const monitorId = getById('pag-monitor-select').value;
+                if (!monitorId) { showToastModal('Selecione o monitor primeiro.', true); return; }
+                if (monitorId === 'NAO_CADASTRADO' && !getById('pag-monitor-nome-nao-cadastrado').value.trim()) {
+                    showToastModal('Informe o nome do monitor não-cadastrado.', true); return;
+                }
+                const dia = coletarDiaAtual();
+                if (!dia) { showToastModal('Informe a data do evento para adicionar o dia.', true); return; }
+                state.diasParaLancar = state.diasParaLancar || [];
+                state.diasParaLancar.push(dia);
+                renderDiasLista();
+                resetCamposDia();
+                showToast(`Dia ${formatarData(dia.data)} adicionado (${state.diasParaLancar.length} na lista)`, false);
+                getById('pag-monitor-data').focus();
+            });
+
+            // ========== TIPO DE PAGAMENTO: Diária x Avulso (não-diária) ==========
+            window.setTipoPagamento = function (tipo) {
+                const isAvulso = tipo === 'avulso';
+                const hidden = getById('pag-monitor-tipo');
+                if (hidden) hidden.value = isAvulso ? 'avulso' : 'diaria';
+                // Campos exclusivos de diária (jornada, entrada, saída, motorista, multi-dia, avaliação)
+                document.querySelectorAll('.pag-diaria-only').forEach(el => el.classList.toggle('hidden', isAvulso));
+                getById('pag-monitor-multidia')?.classList.toggle('hidden', isAvulso);
+                getById('pag-monitor-avaliacao-section')?.classList.toggle('hidden', isAvulso);
+                // Campo exclusivo de avulso (descrição)
+                getById('pag-avulso-desc-container')?.classList.toggle('hidden', !isAvulso);
+                const desc = getById('pag-monitor-descricao'); if (desc) desc.required = isAvulso;
+                // Relabels
+                const valorLabel = getById('pag-monitor-valor-label');
+                if (valorLabel) valorLabel.textContent = isAvulso ? 'Valor do Pagamento (R$)' : 'Valor da Diária (R$)';
+                const dataLabel = getById('pag-monitor-data-label');
+                if (dataLabel) dataLabel.textContent = isAvulso ? 'Data de Referência' : 'Data do Evento';
+                // Em avulso não há hora extra nem acúmulo de dias
+                if (isAvulso) {
+                    getById('pag-monitor-he').value = '0.00';
+                    const st = getById('pag-monitor-he-status'); if (st) st.textContent = '';
+                    if (typeof window.resetMultiDiaPagamento === 'function') window.resetMultiDiaPagamento();
+                }
+                // Estado visual do toggle
+                document.querySelectorAll('.pag-tipo-btn').forEach(b => {
+                    const active = b.dataset.tipo === (isAvulso ? 'avulso' : 'diaria');
+                    b.classList.toggle('bg-white', active);
+                    b.classList.toggle('shadow', active);
+                    b.classList.toggle('text-indigo-700', active);
+                    b.classList.toggle('text-gray-500', !active);
+                });
+            };
+            document.querySelectorAll('.pag-tipo-btn').forEach(btn => {
+                btn.addEventListener('click', () => window.setTipoPagamento(btn.dataset.tipo));
+            });
 
             // Máscaras de Telefone
             const aplicarMascaraTelefone = (id) => {
@@ -4033,11 +4216,14 @@
                 e.preventDefault();
                 const editId = getById('pag-monitor-edit-id')?.value; // ID do pagamento sendo editado
                 const monitorId = getById('pag-monitor-select').value;
-                
-                // Verifica se é monitor não cadastrado
                 const isNaoCadastrado = monitorId === 'NAO_CADASTRADO';
+
+                if (!monitorId) {
+                    showToastModal('❌ Selecione o monitor.', true);
+                    return;
+                }
+
                 let nomeMonitor;
-                
                 if (isNaoCadastrado) {
                     nomeMonitor = getById('pag-monitor-nome-nao-cadastrado').value.trim();
                     if (!nomeMonitor) {
@@ -4049,67 +4235,109 @@
                     nomeMonitor = monitor ? monitor.nome : 'Monitor Desconhecido';
                 }
 
-                // Calcula nota média das estrelas/ranges
-                const notas = [
-                    parseInt(getById('nota-proatividade').value),
-                    parseInt(getById('nota-cordialidade').value),
-                    parseInt(getById('nota-pontualidade').value),
-                    parseInt(getById('nota-lideranca').value)
-                ];
-                const mediaNota = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
-
-
-                const valorBase = parseFloat(getById('pag-monitor-valor').value) || 0;
-                const horasExtras = parseFloat(getById('pag-monitor-he').value) || 0;
-                const horasDiaria = parseFloat(getById('pag-monitor-jornada').value) || 11;
-
-                // Calcula adicional de motorista
-                const foiMotorista = getById('pag-monitor-motorista').checked;
-                const eventosEntregues = foiMotorista ? (parseFloat(getById('pag-monitor-eventos').value) || 0) : 0;
-                const adicionalMotorista = eventosEntregues * 20.00;
-
-                const dados = {
-                    data: getById('pag-monitor-data').value,
-                    dataPagamento: getById('pag-monitor-data-pagamento').value,
-                    eventoId: getById('pag-monitor-evento').value || null,
-                    monitorId: isNaoCadastrado ? null : monitorId,
-                    nome: nomeMonitor,
-                    valorBase: valorBase,
-                    adicional: adicionalMotorista,
-                    horasExtras: horasExtras,
-                    horasDiaria: horasDiaria,
-                    pagamento: valorBase + adicionalMotorista + horasExtras,
-                    horaEntrada: getById('pag-monitor-entrada').value,
-                    horaSaida: getById('pag-monitor-saida').value,
-                    statusPagamento: getById('pag-monitor-status').value,
-                    foiMotorista: foiMotorista,
-                    numEventos: eventosEntregues,
-                    observacoes: getById('pag-monitor-obs').value,
-                    isNaoCadastrado: isNaoCadastrado
-                };
-
-                let sucesso;
-                if (editId) {
-                    // Modo edição
-                    sucesso = await window.api.atualizarPagamentoMonitor(editId, dados);
-                } else {
-                    // Modo criação
-                    sucesso = await window.api.salvarPagamentoMonitor(dados);
+                // Pagamento avulso exige descrição do que se trata
+                const tipoAtual = getById('pag-monitor-tipo')?.value === 'avulso' ? 'avulso' : 'diaria';
+                if (tipoAtual === 'avulso' && !(getById('pag-monitor-descricao')?.value || '').trim()) {
+                    showToastModal('❌ Descreva do que se trata o pagamento avulso.', true);
+                    return;
                 }
 
-                if (sucesso) {
-                    showToastModal(`✅ Pagamento ${editId ? 'atualizado' : 'registrado'} com sucesso!`);
+                // Campos compartilhados por todos os dias deste lançamento
+                const dataPagamento = getById('pag-monitor-data-pagamento').value;
+                const statusPagamento = getById('pag-monitor-status').value;
+                const observacoes = getById('pag-monitor-obs').value;
+
+                // Monta o payload de um pagamento a partir de um "dia" + campos compartilhados
+                const montarPayload = (dia) => ({
+                    id: dia.id,
+                    data: dia.data,
+                    dataPagamento,
+                    eventoId: dia.eventoId || null,
+                    monitorId: isNaoCadastrado ? null : monitorId,
+                    nome: nomeMonitor,
+                    valorBase: dia.valorBase,
+                    adicional: dia.adicional,
+                    horasExtras: dia.horasExtras,
+                    horasDiaria: dia.jornada,
+                    pagamento: dia.valorBase + dia.adicional + dia.horasExtras,
+                    horaEntrada: dia.horaEntrada,
+                    horaSaida: dia.horaSaida,
+                    statusPagamento,
+                    foiMotorista: dia.foiMotorista,
+                    numEventos: dia.numEventos,
+                    tipo: dia.tipo === 'avulso' ? 'avulso' : 'diaria',
+                    descricao: dia.descricao || null,
+                    observacoes,
+                    isNaoCadastrado
+                });
+
+                const fecharEResetar = () => {
                     getById('modal-pagamento-monitor').classList.add('hidden');
                     getById('form-pagamento-monitor').reset();
-                    // Limpa o ID de edição
-                    if (getById('pag-monitor-edit-id')) {
-                        getById('pag-monitor-edit-id').value = '';
-                    }
-                    // Esconde o campo de nome de monitor não cadastrado
+                    const eid = getById('pag-monitor-edit-id'); if (eid) eid.value = '';
                     getById('pag-monitor-nome-container').classList.add('hidden');
+                    getById('pag-monitor-he-status').textContent = '';
+                    getById('pag-monitor-adicional-status').textContent = '';
+                    getById('pag-monitor-eventos-container').classList.add('hidden');
+                    if (typeof window.resetMultiDiaPagamento === 'function') window.resetMultiDiaPagamento();
+                };
+
+                // ===== MODO EDIÇÃO: atualiza um único pagamento existente =====
+                if (editId) {
+                    const dia = coletarDiaAtual();
+                    if (!dia) {
+                        showToastModal('❌ Informe a data do evento.', true);
+                        return;
+                    }
+                    const payload = montarPayload(dia);
+                    delete payload.id; // mantém o id original no update
+                    const ok = await window.api.atualizarPagamentoMonitor(editId, payload);
+                    if (ok) {
+                        showToastModal('✅ Pagamento atualizado com sucesso!');
+                        fecharEResetar();
+                        await window.loadDataFromCloud();
+                    } else {
+                        showToastModal('❌ Erro ao salvar pagamento.', true);
+                    }
+                    return;
+                }
+
+                // ===== MODO CRIAÇÃO: lança a lista acumulada + o dia preenchido no formulário =====
+                const dias = [...(state.diasParaLancar || [])];
+                const diaAtual = coletarDiaAtual();
+                if (diaAtual) dias.push(diaAtual);
+
+                if (dias.length === 0) {
+                    showToastModal('❌ Informe ao menos um dia (data do evento).', true);
+                    return;
+                }
+
+                const submitBtn = getById('pag-monitor-submit-btn');
+                const btnOriginal = submitBtn ? submitBtn.innerHTML : '';
+                if (submitBtn) submitBtn.disabled = true;
+
+                let ok = 0;
+                const diasFalhos = [];
+                for (let i = 0; i < dias.length; i++) {
+                    if (submitBtn) submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Salvando ${i + 1}/${dias.length}...`;
+                    const sucesso = await window.api.salvarPagamentoMonitor(montarPayload(dias[i]));
+                    if (sucesso) ok++; else diasFalhos.push(dias[i]);
+                }
+
+                if (submitBtn) submitBtn.disabled = false;
+
+                if (diasFalhos.length === 0) {
+                    showToastModal(`✅ ${ok} lançamento(s) registrado(s) com sucesso!`);
+                    fecharEResetar();
                     await window.loadDataFromCloud();
                 } else {
-                    showToastModal('❌ Erro ao salvar pagamento.', true);
+                    // Mantém na lista somente os dias que falharam, para reenvio, e limpa o formulário
+                    state.diasParaLancar = diasFalhos;
+                    resetCamposDia();
+                    renderDiasLista();
+                    if (submitBtn) submitBtn.innerHTML = btnOriginal;
+                    showToastModal(`⚠️ ${ok} salvo(s), ${diasFalhos.length} falharam. Revise e tente novamente.`, true);
+                    await window.loadDataFromCloud();
                 }
             });
 
@@ -7144,10 +7372,23 @@
                     class="text-gray-500 hover:text-gray-800 text-3xl font-bold transition-colors">&times;</button>
             </div>
 
-            <form id="form-pagamento-monitor" class="space-y-6">
+            <form id="form-pagamento-monitor" class="space-y-6" novalidate>
+                <!-- Tipo de pagamento: Diária (cálculo por jornada) x Avulso (valor livre + descrição) -->
+                <input type="hidden" id="pag-monitor-tipo" value="diaria">
+                <div id="pag-tipo-toggle" class="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                    <button type="button" data-tipo="diaria"
+                        class="pag-tipo-btn flex-1 py-2.5 rounded-lg font-bold text-sm transition-all bg-white shadow text-indigo-700">
+                        <i class="fa-solid fa-calendar-day mr-1"></i> Diária
+                    </button>
+                    <button type="button" data-tipo="avulso"
+                        class="pag-tipo-btn flex-1 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500">
+                        <i class="fa-solid fa-receipt mr-1"></i> Avulso / Outro
+                    </button>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="space-y-1">
-                        <label for="pag-monitor-data" class="block text-sm font-bold text-gray-700">Data do
+                        <label for="pag-monitor-data" id="pag-monitor-data-label" class="block text-sm font-bold text-gray-700">Data do
                             Evento</label>
                         <input type="date" id="pag-monitor-data" required class="form-input w-full">
                     </div>
@@ -7194,14 +7435,23 @@
                         </p>
                     </div>
 
+                    <div id="pag-avulso-desc-container" class="hidden space-y-1 lg:col-span-3">
+                        <label for="pag-monitor-descricao" class="block text-sm font-bold text-gray-700">
+                            <i class="fa-solid fa-tag text-purple-600 mr-1"></i> Descrição do pagamento
+                        </label>
+                        <input type="text" id="pag-monitor-descricao" class="form-input w-full"
+                            placeholder="Ex: Reembolso de transporte, bônus, compra de material, ajuda de custo...">
+                        <p class="text-xs text-gray-500 mt-1">Do que se trata este pagamento? (aparece na lista)</p>
+                    </div>
+
                     <div class="space-y-1">
-                        <label for="pag-monitor-valor" class="block text-sm font-bold text-gray-700">Valor da Diária
+                        <label for="pag-monitor-valor" id="pag-monitor-valor-label" class="block text-sm font-bold text-gray-700">Valor da Diária
                             (R$)</label>
                         <input type="number" id="pag-monitor-valor" step="0.01" value="100.00" class="form-input w-full"
                             required>
                     </div>
 
-                    <div class="space-y-1">
+                    <div class="space-y-1 pag-diaria-only">
                         <label for="pag-monitor-jornada" class="block text-sm font-bold text-gray-700">Horas da Diária
                             (jornada)</label>
                         <input type="number" id="pag-monitor-jornada" step="0.5" min="1" value="11"
@@ -7209,12 +7459,12 @@
                         <span class="text-[10px] text-gray-400">Padrão 11h — ajuste para calcular a hora extra.</span>
                     </div>
 
-                    <div class="space-y-1">
+                    <div class="space-y-1 pag-diaria-only">
                         <label for="pag-monitor-entrada" class="block text-sm font-bold text-gray-700">Entrada</label>
                         <input type="time" id="pag-monitor-entrada" class="form-input w-full">
                     </div>
 
-                    <div class="space-y-1">
+                    <div class="space-y-1 pag-diaria-only">
                         <label for="pag-monitor-saida" class="block text-sm font-bold text-gray-700">Saída</label>
                         <input type="time" id="pag-monitor-saida" class="form-input w-full">
                         <span id="pag-monitor-he-status" class="text-[10px] text-gray-400"></span>
@@ -7231,7 +7481,7 @@
                     </div>
 
                     <!-- Adicional de Motorista -->
-                    <div class="space-y-2 lg:col-span-2 bg-blue-50/50 p-4 rounded-lg border border-blue-200">
+                    <div class="space-y-2 lg:col-span-2 bg-blue-50/50 p-4 rounded-lg border border-blue-200 pag-diaria-only">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" id="pag-monitor-motorista"
                                 class="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
@@ -7253,7 +7503,28 @@
                     </div>
                 </div>
 
-                <div class="bg-gray-50 p-6 rounded-xl border border-gray-100 space-y-4">
+                <!-- Multi-dia: acumular vários dias do mesmo monitor num único lançamento -->
+                <div id="pag-monitor-multidia" class="space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <button type="button" id="pag-monitor-add-dia"
+                            class="inline-flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl border border-indigo-200 transition-all">
+                            <i class="fa-solid fa-calendar-plus"></i> Adicionar outro dia
+                        </button>
+                        <span class="text-xs text-gray-500">
+                            <i class="fa-solid fa-info-circle"></i>
+                            Preencha o dia acima e clique para acumular vários dias do mesmo monitor.
+                        </span>
+                    </div>
+                    <div id="pag-monitor-dias-lista" class="space-y-2"></div>
+                    <div id="pag-monitor-dias-resumo"
+                        class="hidden text-sm font-bold text-gray-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-layer-group text-emerald-600 mr-1"></i>
+                            <span id="pag-monitor-dias-count">0</span> dia(s) na lista</span>
+                        <span>Total: R$ <span id="pag-monitor-dias-total">0,00</span></span>
+                    </div>
+                </div>
+
+                <div id="pag-monitor-avaliacao-section" class="bg-gray-50 p-6 rounded-xl border border-gray-100 space-y-4">
                     <h3 class="font-bold text-gray-800 flex items-center gap-2">
                         <i class="fa-solid fa-star text-yellow-500"></i> Avaliação do Monitor
                     </h3>
@@ -7300,7 +7571,7 @@
                         class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all">
                         Cancelar
                     </button>
-                    <button type="submit" class="flex-[2] shiny-btn font-bold py-3 rounded-xl transition-all">
+                    <button type="submit" id="pag-monitor-submit-btn" class="flex-[2] shiny-btn font-bold py-3 rounded-xl transition-all">
                         <i class="fa-solid fa-check mr-2"></i> Confirmar Lançamento
                     </button>
                 </div>
@@ -7883,6 +8154,11 @@
             getById('pag-monitor-status').value = pagamento.statusPagamento || 'Pendente';
             getById('pag-monitor-obs').value = pagamento.observacoes || '';
 
+            // Tipo do pagamento (diária x avulso) + descrição
+            const tipoPag = pagamento.tipo === 'avulso' ? 'avulso' : 'diaria';
+            if (typeof window.setTipoPagamento === 'function') window.setTipoPagamento(tipoPag);
+            if (getById('pag-monitor-descricao')) getById('pag-monitor-descricao').value = pagamento.descricao || '';
+
             // Motorista fields
             const isMotorista = pagamento.foiMotorista || false;
             getById('pag-monitor-motorista').checked = isMotorista;
@@ -7893,7 +8169,9 @@
                 getById('pag-monitor-eventos-container')?.classList.add('hidden');
             }
 
-            // Evento vinculado (if exists)
+            // Evento vinculado (if exists): repovoa o select de eventos da data ANTES de setar o valor.
+            // Sem isso a <option> do evento não existe no select e o vínculo é perdido ao salvar (eventoId vira null).
+            getById('pag-monitor-data').dispatchEvent(new Event('change'));
             if (pagamento.eventoId) {
                 getById('pag-monitor-evento').value = pagamento.eventoId;
             }
@@ -7913,6 +8191,12 @@
             if (editIdField) {
                 editIdField.value = pagamentoId;
             }
+
+            // Edição é sempre de um único registro: esconde o acumulador multi-dia e ajusta o botão
+            if (typeof window.resetMultiDiaPagamento === 'function') window.resetMultiDiaPagamento();
+            getById('pag-monitor-multidia')?.classList.add('hidden');
+            const submitBtnEdit = getById('pag-monitor-submit-btn');
+            if (submitBtnEdit) submitBtnEdit.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Salvar Alterações';
 
             // Show the modal
             getById('modal-pagamento-monitor')?.classList.remove('hidden');
