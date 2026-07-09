@@ -28,6 +28,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
+    <!-- Minimapa (localização do evento) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+    <!-- Gerador de QR Code (localização na Ordem de Serviço) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+
     <link rel="stylesheet" href="./css/tokens.css">
     <link rel="stylesheet" href="./css/aero.css">
     <style>
@@ -1459,6 +1467,11 @@
         .dark .border-amber-200, .dark .border-amber-300 { border-color: var(--warning); }
         .dark .border-red-200, .dark .border-red-300 { border-color: var(--danger); }
         .dark .border-purple-300, .dark .border-violet-400 { border-color: var(--brand-400); }
+
+        /* Minimapa de localização no form de evento */
+        #admin-event-map { height: 240px; border-radius: 0.5rem; overflow: hidden; border: 1px solid var(--border-strong, #cbd5e1); z-index: 0; }
+        #admin-event-map .leaflet-container { font-family: inherit; }
+        .leaflet-container { background: #e5e7eb; }
     </style>
 </head>
 
@@ -1997,6 +2010,41 @@
                                 <input type="text" id="event-referencia" class="form-input w-full px-3 py-2 rounded-md"
                                     placeholder="Ex: Próximo ao posto Shell, em frente à escola...">
                             </div>
+
+                            <!-- INÍCIO: Localização no mapa (minimapa + QR na OS) -->
+                            <div class="pt-1">
+                                <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        <i class="fas fa-map-location-dot text-indigo-500 mr-1"></i> Localização no mapa
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                                        <input type="checkbox" id="event-location-unknown"
+                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        Localização não informada
+                                    </label>
+                                </div>
+                                <div id="admin-map-wrap">
+                                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                                        <button type="button" id="admin-geocode-btn"
+                                            class="text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-md hover:bg-indigo-100 flex items-center gap-1.5">
+                                            <i class="fas fa-magnifying-glass-location"></i> Localizar pelo endereço
+                                        </button>
+                                        <span id="admin-map-status" class="text-xs text-gray-500"></span>
+                                    </div>
+                                    <div id="admin-event-map"></div>
+                                    <p id="admin-map-helper" class="text-xs text-gray-400 mt-1.5">
+                                        <i class="fas fa-circle-info mr-1"></i> Clique no mapa ou arraste o pino para marcar
+                                        o local exato. Esse ponto vira o QR Code da Ordem de Serviço.
+                                    </p>
+                                </div>
+                                <p id="admin-location-unknown-note"
+                                    class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                    <i class="fas fa-triangle-exclamation mr-1"></i> A Ordem de Serviço vai mostrar
+                                    “Localização não informada” no lugar do QR Code.
+                                </p>
+                            </div>
+                            <!-- FIM: Localização no mapa -->
                         </div>
                         <!-- FIM DA MODIFICAÇÃO -->
 
@@ -2969,8 +3017,134 @@
                     cepSearchBtn.innerHTML = originalBtnHtml;
                     cepSearchBtn.disabled = false;
                 }
+                // Se ainda não há pino marcado, tenta posicionar automaticamente pelo endereço.
+                if (adminEventLat == null && !document.getElementById('event-location-unknown')?.checked) {
+                    adminGeocodeFromAddress({ silent: true });
+                }
             };
             // FIM DA MODIFICAÇÃO
+
+            // ===== Localização do evento: minimapa Leaflet + geocode (Nominatim) =====
+            // O pino marcado aqui (ou herdado do cadastro do cliente) vira o QR Code da OS.
+            const ADMIN_MAP_DEFAULT = { lat: -16.6864, lng: -49.2643, zoom: 11 }; // Goiânia/Aparecida
+            let adminEventLat = null;
+            let adminEventLng = null;
+            let adminMap = null;
+            let adminMapMarker = null;
+
+            function adminSetMapStatus(text, kind) {
+                const el = document.getElementById('admin-map-status');
+                if (!el) return;
+                el.textContent = text || '';
+                el.className = 'text-xs ' + (kind === 'ok' ? 'text-emerald-600' : (kind === 'error' ? 'text-red-500' : 'text-gray-500'));
+            }
+
+            function adminPlaceMarker(lat, lng) {
+                if (!adminMap) return;
+                if (!adminMapMarker) {
+                    adminMapMarker = L.marker([lat, lng], { draggable: true }).addTo(adminMap);
+                    adminMapMarker.on('dragend', (ev) => {
+                        const ll = ev.target.getLatLng();
+                        adminEventLat = ll.lat; adminEventLng = ll.lng;
+                        adminSetMapStatus('Pino ajustado.', 'ok');
+                    });
+                } else {
+                    adminMapMarker.setLatLng([lat, lng]);
+                }
+            }
+
+            // Cria (uma vez) ou reposiciona o minimapa. Chamado quando a etapa 2 fica visível.
+            function adminEnsureMap() {
+                if (typeof L === 'undefined') return; // Leaflet ainda carregando
+                const hasCoords = (adminEventLat != null && adminEventLng != null);
+                const cLat = hasCoords ? adminEventLat : ADMIN_MAP_DEFAULT.lat;
+                const cLng = hasCoords ? adminEventLng : ADMIN_MAP_DEFAULT.lng;
+                const zoom = hasCoords ? 17 : ADMIN_MAP_DEFAULT.zoom;
+                if (!adminMap) {
+                    adminMap = L.map('admin-event-map', { zoomControl: true, attributionControl: false })
+                        .setView([cLat, cLng], zoom);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);
+                    adminMap.on('click', (ev) => {
+                        adminEventLat = ev.latlng.lat; adminEventLng = ev.latlng.lng;
+                        adminPlaceMarker(adminEventLat, adminEventLng);
+                        adminSetMapStatus('Local marcado.', 'ok');
+                    });
+                } else {
+                    adminMap.setView([cLat, cLng], zoom);
+                }
+                if (hasCoords) adminPlaceMarker(cLat, cLng);
+                setTimeout(() => { if (adminMap) adminMap.invalidateSize(); }, 180);
+            }
+
+            function adminUpdateLocationUI() {
+                const unknown = !!document.getElementById('event-location-unknown')?.checked;
+                document.getElementById('admin-map-wrap')?.classList.toggle('hidden', unknown);
+                document.getElementById('admin-location-unknown-note')?.classList.toggle('hidden', !unknown);
+                // Só monta o mapa quando visível (etapa 2 aberta e não "não informada").
+                if (!unknown && currentStep === 2) adminEnsureMap();
+            }
+
+            // Chamado ao abrir o modal: carrega coords do evento (ou limpa, para novo evento).
+            function adminLoadLocationForEvent(ev) {
+                const lat = ev && ev.eventLat != null ? Number(ev.eventLat) : null;
+                const lng = ev && ev.eventLng != null ? Number(ev.eventLng) : null;
+                adminEventLat = Number.isFinite(lat) ? lat : null;
+                adminEventLng = Number.isFinite(lng) ? lng : null;
+                // Remove marcador anterior (evento diferente) — será recriado ao renderizar.
+                if (adminMap && adminMapMarker) { adminMap.removeLayer(adminMapMarker); adminMapMarker = null; }
+                const chk = document.getElementById('event-location-unknown');
+                if (chk) chk.checked = false;
+                adminSetMapStatus(adminEventLat != null ? 'Local marcado no cadastro. Ajuste se necessário.' : '', adminEventLat != null ? 'ok' : '');
+                adminUpdateLocationUI();
+            }
+
+            async function adminNominatim(query) {
+                const url = new URL('https://nominatim.openstreetmap.org/search');
+                url.searchParams.set('format', 'jsonv2');
+                url.searchParams.set('limit', '1');
+                url.searchParams.set('q', query);
+                url.searchParams.set('countrycodes', 'br');
+                const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+                const arr = res.ok ? await res.json() : [];
+                return (Array.isArray(arr) && arr[0]) ? { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) } : null;
+            }
+
+            async function adminGeocodeFromAddress(opts = {}) {
+                const silent = !!opts.silent;
+                const logradouro = document.getElementById('client-address').value.trim();
+                const bairro = document.getElementById('event-bairro').value.trim();
+                const cidade = document.getElementById('event-cidade').value.trim();
+                const uf = document.getElementById('event-uf').value.trim();
+                const cep = document.getElementById('event-cep').value.replace(/\D/g, '');
+                const parts = [logradouro, bairro, cidade, uf].filter(Boolean);
+                if (parts.length < 2 && cep.length !== 8) {
+                    if (!silent) adminSetMapStatus('Preencha o endereço (ou o CEP) primeiro.', 'error');
+                    return;
+                }
+                if (!silent) adminSetMapStatus('Localizando...', '');
+                try {
+                    let geo = parts.length >= 2 ? await adminNominatim(parts.join(', ') + ', Brasil') : null;
+                    if (!geo && cep.length === 8) geo = await adminNominatim(cep + ', Brasil');
+                    if (!geo) {
+                        if (!silent) adminSetMapStatus('Endereço não encontrado. Marque manualmente no mapa.', 'error');
+                        return;
+                    }
+                    adminEventLat = geo.lat; adminEventLng = geo.lng;
+                    const chk = document.getElementById('event-location-unknown');
+                    if (chk && chk.checked) { chk.checked = false; adminUpdateLocationUI(); }
+                    adminEnsureMap();
+                    if (adminMap) adminMap.setView([geo.lat, geo.lng], 17);
+                    adminPlaceMarker(geo.lat, geo.lng);
+                    adminSetMapStatus('Local encontrado! Arraste o pino para ajustar.', 'ok');
+                } catch (e) {
+                    console.warn('Geocode admin falhou:', e);
+                    if (!silent) adminSetMapStatus('Falha ao localizar. Marque manualmente no mapa.', 'error');
+                }
+            }
+
+            document.getElementById('event-location-unknown')?.addEventListener('change', adminUpdateLocationUI);
+            document.getElementById('admin-geocode-btn')?.addEventListener('click', () => adminGeocodeFromAddress());
+            // ===== FIM: Localização do evento =====
 
             // REMOVIDO: Funções duplicadas renderCalendar, renderCompanies e renderAll
             // (As funções originais já existem na linha 1689+)
@@ -3265,6 +3439,9 @@
 
                 // Atualiza o indicador
                 stepIndicator.textContent = `Etapa ${currentStep} de ${totalSteps}`;
+
+                // Minimapa de localização vive na etapa 2 — só recalcula tamanho quando visível.
+                if (currentStep === 2) { try { adminUpdateLocationUI(); } catch (_) { } }
 
                 // Atualiza os botões
                 if (currentStep === 1) {
@@ -7272,6 +7449,10 @@
                     cidade: document.getElementById('event-cidade').value,
                     uf: document.getElementById('event-uf').value,
 
+                    // Localização no mapa (pino). "Não informada" marcada => envia null (limpa).
+                    eventLat: document.getElementById('event-location-unknown')?.checked ? null : (adminEventLat != null ? adminEventLat : null),
+                    eventLng: document.getElementById('event-location-unknown')?.checked ? null : (adminEventLng != null ? adminEventLng : null),
+
                     isBirthday: isBirthdayCheckbox.checked,
                     birthdayPersonName: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-name').value.trim() : '',
                     birthdayPersonDob: isBirthdayCheckbox.checked ? document.getElementById('birthday-person-dob').value : '',
@@ -7719,6 +7900,9 @@
                     auditInfo.classList.add('hidden');
                 }
 
+                // Localização: carrega o pino do evento (ou limpa, para novo evento).
+                adminLoadLocationForEvent(eventToEdit || null);
+
                 // INÍCIO: Resetar e mostrar o wizard
                 currentStep = 1;
                 showStep(1);
@@ -7941,6 +8125,39 @@
                 const monitorHtml = event.monitor ? `<p><strong>Monitor/Equipe:</strong> <b>${event.monitor}</b></p>` : '';
                 // FIM DA MODIFICAÇÃO
 
+                // --- Localização na OS: QR Code (Google Maps) ou "Localização não informada" ---
+                // Sempre presente: se há pino marcado (pelo cliente na reserva ou pelo usuário na
+                // edição), gera o QR; caso contrário, mostra o aviso no lugar do QR Code.
+                const osLat = event.eventLat, osLng = event.eventLng;
+                const osHasGeo = (osLat != null && osLng != null && isFinite(Number(osLat)) && isFinite(Number(osLng)));
+                let osLocationHtml;
+                if (osHasGeo) {
+                    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${osLat},${osLng}`;
+                    let qrMarkup = '';
+                    try {
+                        if (typeof qrcode === 'function') {
+                            const qr = qrcode(0, 'M');
+                            qr.addData(mapsUrl);
+                            qr.make();
+                            qrMarkup = `<img class="os-qr-img" src="${qr.createDataURL(4, 0)}" alt="QR Code da localização">`;
+                        }
+                    } catch (err) { console.warn('Falha ao gerar QR da OS:', err); }
+                    osLocationHtml = qrMarkup
+                        ? `<div class="os-location">
+                            ${qrMarkup}
+                            <div class="os-location-caption">Escaneie para<br>abrir no mapa</div>
+                        </div>`
+                        : `<div class="os-location os-location--text">
+                            <div class="os-location-label">Localização</div>
+                            <div class="os-location-link">${mapsUrl}</div>
+                        </div>`;
+                } else {
+                    osLocationHtml = `<div class="os-location os-location--empty">
+                            <div class="os-location-none">Localização não informada</div>
+                        </div>`;
+                }
+                // --- FIM: Localização na OS ---
+
                 // Retorna apenas o HTML do container da OS
                 return `
             <div class="os-container">
@@ -7957,8 +8174,11 @@
                     </div>
                 </div>
                 <div class="section">
-                     <div class="details-grid">
-                        ${clientDetailsHtml}
+                     <div class="os-client-row">
+                        <div class="details-grid" style="flex:1 1 auto; min-width:0;">
+                            ${clientDetailsHtml}
+                        </div>
+                        ${osLocationHtml}
                     </div>
                 </div>
 
@@ -8101,15 +8321,64 @@
                             gap: 2px 10px; 
                         }
                         .details-grid p { margin: 0; padding: 1px 0; font-weight: bold; } \/* Texto dos detalhes mais forte *\/
-                        .details-grid strong { 
-                            display: block; 
-                            font-size: 0.9em; 
-                            color: #000; 
-                            text-transform: uppercase; 
+                        .details-grid strong {
+                            display: block;
+                            font-size: 0.9em;
+                            color: #000;
+                            text-transform: uppercase;
                             font-weight: 900; \/* Muito forte *\/
                         }
-                        
-                        table { 
+
+                        .os-client-row {
+                            display: flex;
+                            gap: 10px;
+                            align-items: flex-start;
+                            justify-content: space-between;
+                        }
+                        .os-location {
+                            flex: 0 0 auto;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            text-align: center;
+                            border: 1px solid #000;
+                            border-radius: 4px;
+                            padding: 4px 6px;
+                            max-width: 96px;
+                        }
+                        .os-qr-img {
+                            width: 78px;
+                            height: 78px;
+                            display: block;
+                            image-rendering: pixelated;
+                        }
+                        .os-location-caption {
+                            font-size: 7px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                            line-height: 1.1;
+                            margin-top: 2px;
+                        }
+                        .os-location-label {
+                            font-size: 8px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                        }
+                        .os-location-link { font-size: 7px; word-break: break-all; }
+                        .os-location--empty {
+                            justify-content: center;
+                            min-height: 78px;
+                            border-style: dashed;
+                        }
+                        .os-location-none {
+                            font-size: 8.5px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                            color: #000;
+                            line-height: 1.15;
+                        }
+
+                        table {
                             width: 100%; 
                             border-collapse: collapse; 
                             margin-top: 5px; 

@@ -118,6 +118,12 @@ function buildEventFields(evt, userId) {
         cidade: evt.cidade,
         uf: evt.uf,
 
+        // Geolocalização do evento (pin no minimapa). Só grava quando o campo vem no
+        // payload, para não apagar o pin marcado pelo cliente em salvamentos parciais que
+        // não incluem o campo. Vazio/null => limpa (admin marcou "Localização não informada").
+        ...(evt.eventLat !== undefined ? { eventLat: toFloatOrNull(evt.eventLat) } : {}),
+        ...(evt.eventLng !== undefined ? { eventLng: toFloatOrNull(evt.eventLng) } : {}),
+
         subtotal: toFloatOr(evt.subtotal, 0),
         discountType: evt.discountType,
         discountValue: toFloatOr(evt.discountValue, 0),
