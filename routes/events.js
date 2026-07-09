@@ -14,7 +14,7 @@ const contractUpload = multer({
 
 // ---------------- ADMIN ----------------
 
-adminRouter.get('/events-full', async (req, res, next) => {
+adminRouter.get('/events-full', authenticate, async (req, res, next) => {
     try {
         const events = await EventService.listEventsFull();
         res.json(events);

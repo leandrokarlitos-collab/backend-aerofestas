@@ -73,8 +73,8 @@ async function sendAdminAlert(title, body) {
                 );
                 result.push = true;
             } catch (err) {
-                if (err.statusCode === 410 || err.statusCode === 404) {
-                    // Subscription expirada/inválida — remove do banco
+                if (err.statusCode === 410 || err.statusCode === 404 || err.statusCode === 403) {
+                    // Subscription expirada/inválida ou de chave VAPID antiga — remove do banco
                     try {
                         await prisma.pushSubscription.delete({ where: { id: sub.id } });
                     } catch (e) { /* já removida — noop */ }

@@ -506,7 +506,7 @@ async function notifyAdminsCadastroCompleto(clientName) {
                 payload
             );
         } catch (err) {
-            if (err.statusCode === 410 || err.statusCode === 404) {
+            if (err.statusCode === 410 || err.statusCode === 404 || err.statusCode === 403) {
                 await prisma.pushSubscription.delete({ where: { id: sub.id } });
             }
         }

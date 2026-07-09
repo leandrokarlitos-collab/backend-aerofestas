@@ -249,6 +249,11 @@
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
 
+        // Auto-cadastro desativado (contas são criadas pelo administrador em admin.html)
+        registerForm.querySelectorAll('input, button').forEach(el => el.disabled = true);
+        errorMessage.textContent = 'Cadastro desativado. Solicite seu acesso ao administrador do sistema.';
+        errorMessage.classList.remove('hidden');
+
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 

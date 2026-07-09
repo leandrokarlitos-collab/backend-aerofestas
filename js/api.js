@@ -172,7 +172,10 @@ export const api = {
 
     getEventos: async () => {
         try {
-            const res = await fetch(`${BASE_URL}/admin/events-full`);
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events-full`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             return res.ok ? await res.json() : [];
         } catch (e) { return []; }
     },

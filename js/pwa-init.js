@@ -158,7 +158,7 @@ function showUpdateToast() {
 
     toast.innerHTML = `
         <i class="fas fa-sync fa-spin"></i>
-        <span>Atualizando para a v3.11.8...</span>
+        <span>Atualizando para a v3.12.0...</span>
     `;
 
     const style = document.createElement('style');
@@ -175,7 +175,7 @@ function showUpdateToast() {
 
 // --- Lógica de Notificações Push ---
 
-const VAPID_PUBLIC_KEY = 'BIiU_AzAKYphDuzGTCEy-tvcZGZtEjdaW4JZZ3WVGJYOrDJ4hjpmOmA_yOD_R4O_n1N8RrTm190cLPd10grA4g0';
+const VAPID_PUBLIC_KEY = 'BApXGClmoJhKN4UiaP6-6H0oeDfpcwJoazD02aqm-MbPI8Z8fmPfWqJTLUf6tp06bBOT9510DkX-FVkHkkODVMY';
 
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -194,16 +194,33 @@ function urlBase64ToUint8Array(base64String) {
 
 async function subscribeUserToPush() {
     try {
+        // Só inscreve dispositivos logados — o backend agora exige token
+        // e grava o dono da inscrição (push direcionado)
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+
         const registration = await navigator.serviceWorker.ready;
 
         // Verifica se já existe uma assinatura
         let subscription = await registration.pushManager.getSubscription();
 
+        // Assinatura feita com chave VAPID antiga (rotação) precisa ser refeita
+        const desiredKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        if (subscription && subscription.options && subscription.options.applicationServerKey) {
+            const currentKey = new Uint8Array(subscription.options.applicationServerKey);
+            const sameKey = currentKey.length === desiredKey.length
+                && currentKey.every((b, i) => b === desiredKey[i]);
+            if (!sameKey) {
+                await subscription.unsubscribe();
+                subscription = null;
+            }
+        }
+
         if (!subscription) {
             // Solicita permissão e cria assinatura
             subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                applicationServerKey: desiredKey
             });
         }
 
@@ -213,7 +230,7 @@ async function subscribeUserToPush() {
             body: JSON.stringify(subscription),
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Se estiver logado
+                'Authorization': `Bearer ${token}`
             }
         });
 

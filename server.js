@@ -4,9 +4,16 @@ require('dotenv').config();
 require('dns').setDefaultResultOrder('ipv4first');
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
 const prisma = require('./prisma/client');
+
+// Sem JWT_SECRET qualquer verificação de token cairia em fallback inseguro — aborta já.
+if (!process.env.JWT_SECRET) {
+    console.error('❌ JWT_SECRET não definido nas variáveis de ambiente. Abortando.');
+    process.exit(1);
+}
 
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -35,9 +42,37 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+// Railway fica atrás de proxy reverso — 1 salto, p/ o rate limit enxergar o IP real
+app.set('trust proxy', 1);
+app.use(helmet());
+
+// CORS restrito às origens do sistema. Requisições sem header Origin
+// (curl, webhooks, healthchecks) não são bloqueadas por CORS por definição.
+const ALLOWED_ORIGINS = [
+    'https://agenda-aero-festas.web.app',
+    'https://agenda-aero-festas.firebaseapp.com',
+    'https://sistema-operante-aerofestas.web.app'
+];
+app.use(cors({
+    origin: (origin, cb) => {
+        const ok = !origin
+            || ALLOWED_ORIGINS.includes(origin)
+            || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        cb(null, ok);
+    }
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Limita tentativas de login/recuperação de senha por IP (o escritório compartilha
+// IP — teto folgado o bastante p/ uso legítimo, apertado p/ brute-force)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
+});
 
 // --- CONFIGURAÇÃO DO GMAIL (NODEMAILER) ---
 const transporter = nodemailer.createTransport({
@@ -299,21 +334,9 @@ app.post('/api/migrar-completo', isAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/finance/accounts', async (req, res) => {
-    try {
-        const accounts = await prisma.bankAccount.findMany({ orderBy: { name: 'asc' } });
-        res.json(accounts);
-    } catch (e) { res.status(500).json({ error: "Erro ao buscar contas" }); }
-});
-app.get('/api/finance/fixed-expenses', async (req, res) => {
-    try {
-        const fixed = await prisma.fixedExpense.findMany({ orderBy: { dueDay: 'asc' } });
-        res.json(fixed);
-    } catch (e) { res.status(500).json({ error: "Erro ao buscar contas fixas" }); }
-});
-
 // --- ROTAS FINAIS ---
-app.use('/api/auth', authRoutes);
+// (GET /api/finance/accounts e /fixed-expenses vivem em routes/finance.js, COM autenticação)
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', eventsAdminRouter);
 app.use('/api/admin', propostasAdminRouter);
@@ -336,8 +359,9 @@ app.use('/api/backup', backupRoutes);
 
 // --- NOTIFICAÇÕES PUSH ---
 
-// Rota de Inscrição
-app.post('/api/notifications/subscribe', async (req, res) => {
+// Rota de Inscrição — só dispositivos logados; guarda o dono da inscrição
+// para permitir push direcionado (app do monitor, F3)
+app.post('/api/notifications/subscribe', authenticate, async (req, res) => {
     const subscription = req.body;
 
     try {
@@ -345,12 +369,14 @@ app.post('/api/notifications/subscribe', async (req, res) => {
             where: { endpoint: subscription.endpoint },
             update: {
                 p256dh: subscription.keys.p256dh,
-                auth: subscription.keys.auth
+                auth: subscription.keys.auth,
+                userId: req.user.id
             },
             create: {
                 endpoint: subscription.endpoint,
                 p256dh: subscription.keys.p256dh,
-                auth: subscription.keys.auth
+                auth: subscription.keys.auth,
+                userId: req.user.id
             }
         });
         res.status(201).json({ message: 'Inscrito com sucesso!' });
@@ -403,8 +429,8 @@ async function checkDueDatesAndNotify() {
                         }
                     }, payload);
                 } catch (err) {
-                    if (err.statusCode === 410 || err.statusCode === 404) {
-                        // Inscrição expirada ou inválida
+                    // 410/404: inscrição expirada; 403: chave VAPID antiga (rotação)
+                    if (err.statusCode === 410 || err.statusCode === 404 || err.statusCode === 403) {
                         await prisma.pushSubscription.delete({ where: { id: sub.id } });
                     }
                 }
@@ -437,8 +463,9 @@ cron.schedule('0 12 * * *', async () => {
     await checkBackupWatchdog();
 });
 
-app.use(express.static(path.join(__dirname)));
-app.get('/', (req, res) => res.redirect('/login.html'));
+// O frontend é servido pelo Firebase Hosting — este backend expõe SOMENTE /api.
+// (express.static aqui servia o repositório inteiro, incluindo segredos.)
+app.get('/', (req, res) => res.json({ ok: true, service: 'backend-aerofestas' }));
 
 // === [DESATIVADO] WhatsApp AutoSync, Purge e Cleanup ===
 // Módulo WhatsApp desconectado - será desenvolvido em sistema paralelo

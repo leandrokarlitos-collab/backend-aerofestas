@@ -11,3 +11,12 @@ dev.db-journal
 
 # Backups locais (dados sensiveis - nunca commitar)
 backups/
+
+# Segredos e dados legados — nunca versionar
+vapid.env
+vapid*.env
+keys.txt
+result_keys.txt
+data/users.json
+data/tokens.json
+data/user_history.json

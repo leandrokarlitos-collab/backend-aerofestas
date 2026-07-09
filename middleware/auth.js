@@ -16,7 +16,7 @@ async function authenticate(req, res, next) {
         const token = authHeader.substring(7);
         
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.user = decoded;
             next();
         } catch (error) {
@@ -37,7 +37,7 @@ function isAuthenticated(req) {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
         const token = authHeader.substring(7);
-        jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        jwt.verify(token, process.env.JWT_SECRET);
         return true;
     } catch (error) {
         return false;
