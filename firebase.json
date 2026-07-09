@@ -61,6 +61,10 @@
                 "destination": "/propostas/disponiveis-20-06-2026/index.html"
             },
             {
+                "source": "/p/jardins-florenca",
+                "destination": "/propostas/jardins-florenca/index.html"
+            },
+            {
                 "source": "/p/**",
                 "destination": "/propostas/view.html"
             }
