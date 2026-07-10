@@ -414,6 +414,16 @@ model Monitor {
   facebook          String?
   linkedin          String?
   tiktok            String?
+
+  // --- Acesso ao app do monitor (F1) ---
+  senhaHash         String?             // bcrypt; null = ainda não definiu senha
+  acessoStatus      String              @default("sem_acesso") // sem_acesso | pendente | ativo | bloqueado
+  acessoAprovadoPor String?             // id do User (gestor) que aprovou
+  acessoAprovadoEm  DateTime?
+  ultimoLoginApp    DateTime?
+  resetSenhaToken   String?
+  resetSenhaExpira  DateTime?
+
   desempenho        Desempenho[]
   pagamentos        PagamentoMonitor[]
   manutencoes       ToyMaintenance[]

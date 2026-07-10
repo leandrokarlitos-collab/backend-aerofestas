@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <title>App do Monitor — Aero Festas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 45%, #e0e7ff 100%);
+            color: #0f172a;
+        }
+        .card {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, .85);
+            border: 1px solid rgba(255, 255, 255, .6);
+            border-radius: 28px;
+            padding: 36px 28px;
+            box-shadow: 0 20px 50px rgba(79, 70, 229, .12);
+        }
+        .logo {
+            width: 64px; height: 64px;
+            border-radius: 20px;
+            background: #4f46e5;
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 18px;
+            box-shadow: 0 10px 24px rgba(79, 70, 229, .35);
+        }
+        h1 { font-size: 22px; font-weight: 800; text-align: center; }
+        .sub { font-size: 14px; color: #64748b; text-align: center; margin: 6px 0 26px; }
+        label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #475569; margin: 16px 0 6px; }
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            font-family: inherit;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #fff;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, .15); }
+        button {
+            width: 100%;
+            margin-top: 24px;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            color: #fff;
+            background: #4f46e5;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+        button:hover { background: #4338ca; }
+        button:active { transform: scale(.98); }
+        button:disabled { opacity: .6; cursor: wait; }
+        .msg {
+            display: none;
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        .msg.erro { display: block; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .msg.aviso { display: block; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        .rodape { margin-top: 22px; text-align: center; font-size: 12px; color: #94a3b8; }
+    </style>
+</head>
+
+<body>
+    <main class="card">
+        <div class="logo">🎈</div>
+        <h1>App do Monitor</h1>
+        <p class="sub">Aero Festas — entre com seu CPF e senha</p>
+
+        <form id="form-login">
+            <label for="cpf">CPF</label>
+            <input type="text" id="cpf" inputmode="numeric" autocomplete="username"
+                placeholder="000.000.000-00" required>
+
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" autocomplete="current-password"
+                placeholder="Sua senha" required>
+
+            <div id="mensagem" class="msg"></div>
+
+            <button type="submit" id="btn-entrar">Entrar</button>
+        </form>
+
+        <p class="rodape">Sem acesso? Fale com o gestor da Aero Festas.</p>
+    </main>
+
+    <script>
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? 'http://localhost:3000/api'
+            : 'https://backend-aerofestas-production.up.railway.app/api';
+
+        // Já logado? Vai direto para a home (o guard de lá revalida o token)
+        if (localStorage.getItem('monitorToken')) {
+            window.location.replace('home.html');
+        }
+
+        // Máscara simples de CPF (000.000.000-00)
+        const cpfInput = document.getElementById('cpf');
+        cpfInput.addEventListener('input', () => {
+            let v = cpfInput.value.replace(/\D/g, '').slice(0, 11);
+            v = v.replace(/(\d{3})(\d)/, '$1.$2')
+                 .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+                 .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+            cpfInput.value = v;
+        });
+
+        const mensagem = document.getElementById('mensagem');
+        function mostrarMsg(texto, tipo) {
+            mensagem.textContent = texto;
+            mensagem.className = 'msg ' + tipo;
+        }
+
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            mensagem.className = 'msg';
+
+            const cpf = cpfInput.value.replace(/\D/g, '');
+            const senha = document.getElementById('senha').value;
+            if (cpf.length !== 11) { mostrarMsg('Informe um CPF válido.', 'erro'); return; }
+
+            const btn = document.getElementById('btn-entrar');
+            btn.disabled = true;
+            btn.textContent = 'Entrando…';
+
+            try {
+                const res = await fetch(`${API_BASE}/monitor/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cpf, senha })
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && data.token) {
+                    localStorage.setItem('monitorToken', data.token);
+                    localStorage.setItem('monitorNome', (data.monitor && data.monitor.nome) || '');
+                    window.location.replace('home.html');
+                    return;
+                }
+
+                if (data.code === 'PENDENTE') {
+                    mostrarMsg('Seu acesso ainda não foi liberado pelo gestor. Assim que for aprovado, você poderá entrar.', 'aviso');
+                } else if (res.status === 429) {
+                    mostrarMsg('Muitas tentativas. Aguarde alguns minutos e tente novamente.', 'erro');
+                } else {
+                    mostrarMsg(data.error || 'CPF ou senha inválidos, ou acesso não liberado.', 'erro');
+                }
+            } catch {
+                mostrarMsg('Erro de conexão. Verifique sua internet e tente novamente.', 'erro');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        });
+    </script>
+</body>
+
+</html>

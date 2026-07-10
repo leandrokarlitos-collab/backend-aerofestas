@@ -16,6 +16,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const authRoutes = require('./routes/auth');
+const monitorAuthRoutes = require('./routes/monitorAuth');
 const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
 const historyRoutes = require('./routes/history');
@@ -337,6 +338,8 @@ app.post('/api/migrar-completo', isAdmin, async (req, res) => {
 // --- ROTAS FINAIS ---
 // (GET /api/finance/accounts e /fixed-expenses vivem em routes/finance.js, COM autenticação)
 app.use('/api/auth', authLimiter, authRoutes);
+// Login do monitor compartilha o rate limit de auth (contém brute-force de CPF)
+app.use('/api/monitor/auth', authLimiter, monitorAuthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', eventsAdminRouter);
 app.use('/api/admin', propostasAdminRouter);

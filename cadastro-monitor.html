@@ -729,6 +729,27 @@
             </div>
         </section>
 
+        <!-- Seção: Acesso ao app do monitor (F1) -->
+        <section id="senha-section" class="space-y-8">
+            <h3 class="section-title text-2xl"><i class="fa-solid fa-lock text-primary-500"></i> Crie seu acesso</h3>
+            <p class="text-slate-500 text-base">Defina uma senha para entrar no <b>app do monitor</b> com o seu CPF.
+                Seu acesso será liberado depois que o gestor aprovar o cadastro.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <label for="senha" class="form-label">Senha (mínimo 6 caracteres)</label>
+                    <input type="password" id="senha" name="senha" minlength="6" required
+                        autocomplete="new-password" placeholder="••••••••"
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                </div>
+                <div>
+                    <label for="senha-confirmar" class="form-label">Confirmar senha</label>
+                    <input type="password" id="senha-confirmar" minlength="6" required
+                        autocomplete="new-password" placeholder="••••••••"
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-white/50 input-focus outline-none text-slate-700 shadow-sm">
+                </div>
+            </div>
+        </section>
+
         <div class="pt-10">
             <button type="submit" id="submit-btn"
                 class="w-full py-6 bg-primary-600 hover:bg-primary-700 text-white font-bold text-2xl rounded-3xl shadow-2xl shadow-primary-500/40 transition-all transform hover:-translate-y-2 active:scale-95 flex items-center justify-center gap-4">
@@ -1070,7 +1091,9 @@
                 return;
             }
 
-            // Se o wrapper de CPF está visível, tentamos validar o CPF
+            // Se o wrapper de CPF está visível, confirmamos o CPF no SERVIDOR:
+            // só com o CPF certo a ficha completa (saúde, contatos etc.) é liberada
+            // para pré-preencher o formulário de atualização.
             if (!cpfVerifyWrapper.classList.contains('hidden')) {
                 const cpfValue = cpfInput.value.replace(/\D/g, '');
                 if (cpfValue.length !== 11) {
@@ -1078,19 +1101,45 @@
                     return;
                 }
 
-                // Verifica se o CPF bate com o do monitor encontrado (se ele já tiver CPF)
-                if (monitorEncontrado && monitorEncontrado.cpf) {
-                    if (monitorEncontrado.cpf.replace(/\D/g, '') !== cpfValue) {
+                const btnConf = this;
+                const originalConf = btnConf.innerHTML;
+                btnConf.disabled = true;
+                btnConf.innerHTML = '<div class="loader"></div> Confirmando...';
+
+                try {
+                    const res = await fetch(`${API_BASE}/finance/monitores/${encodeURIComponent(monitorEncontrado.id)}/confirmar-cpf`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(true),
+                        body: JSON.stringify({ cpf: cpfValue })
+                    });
+
+                    if (res.ok) {
+                        monitorEncontrado = await res.json();
+                    } else if (res.status === 403) {
                         alert('CPF não confere com o cadastro original.');
                         return;
+                    } else if (res.status === 429) {
+                        alert('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+                        return;
+                    } else if (res.status === 404 && monitorEncontrado && ('cpf' in monitorEncontrado)) {
+                        // Backend antigo (rota ainda não existe): comparação local como antes
+                        if (monitorEncontrado.cpf && monitorEncontrado.cpf.replace(/\D/g, '') !== cpfValue) {
+                            alert('CPF não confere com o cadastro original.');
+                            return;
+                        }
+                    } else {
+                        alert('Não foi possível confirmar sua identidade. Tente novamente.');
+                        return;
                     }
-                } else if (modoLinkPersonalizado) {
-                    // Link personalizado, mas monitor ainda não tem CPF salvo (cadastro antigo).
-                    // Aceita o CPF informado e salva no próximo update.
-                    console.info('Monitor sem CPF prévio; aceitando o CPF informado como definitivo.');
+                } catch (error) {
+                    alert('Erro na conexão. Tente novamente.');
+                    return;
+                } finally {
+                    btnConf.disabled = false;
+                    btnConf.innerHTML = originalConf;
                 }
 
-                // Se chegou aqui, CPF bate ou monitor não tinha CPF. Procedemos para o formulário.
+                // CPF confirmado (ou cadastro antigo sem CPF: aceita e salva no update).
                 // Preenchemos o CPF no formulário com o que foi usado na verificação
                 abrirFormulario(monitorEncontrado);
                 document.getElementById('cpf').value = cpfInput.value;
@@ -1134,6 +1183,11 @@
 
         function abrirFormulario(m) {
             if (m) {
+                // Atualização de cadastro: a senha não muda por aqui (reset é com o gestor)
+                document.getElementById('senha-section').classList.add('hidden');
+                document.getElementById('senha').required = false;
+                document.getElementById('senha-confirmar').required = false;
+
                 document.getElementById('monitor-id').value = m.id;
                 document.getElementById('nome').value = m.nome;
                 document.getElementById('nascimento').value = m.nascimento;
@@ -1280,6 +1334,15 @@
             if (!turnosSel.length) { erroValidacao('Selecione ao menos um turno disponível.', 'turnos-disponiveis'); return; }
             if (!temFoto) { erroValidacao('A foto de rosto é obrigatória.', 'fotoPerfilInput'); return; }
 
+            // Senha do app do monitor (só no cadastro novo; na atualização a seção fica oculta)
+            let senhaApp = '';
+            if (!id && !document.getElementById('senha-section').classList.contains('hidden')) {
+                senhaApp = document.getElementById('senha').value;
+                const senhaConf = document.getElementById('senha-confirmar').value;
+                if (senhaApp.length < 6) { erroValidacao('A senha deve ter pelo menos 6 caracteres.', 'senha'); return; }
+                if (senhaApp !== senhaConf) { erroValidacao('As senhas não coincidem. Digite a mesma senha nos dois campos.', 'senha-confirmar'); return; }
+            }
+
             // Collect Idiomas
             const idiomasList = [];
             document.querySelectorAll('#idiomas-container > div').forEach(row => {
@@ -1337,7 +1400,9 @@
                 // fotoPerfil: document.getElementById('foto-perfil-base64').value, // Carregado abaixo
                 // fotoDocumento: document.getElementById('foto-doc-base64').value, // Carregado abaixo
                 observacoes: document.getElementById('observacoes').value,
-                habilidades: id ? undefined : { forca: 5, agilidade: 5, proatividade: 5, comunicacao: 5, disponibilidade: 5, respeito: 5 }
+                habilidades: id ? undefined : { forca: 5, agilidade: 5, proatividade: 5, comunicacao: 5, disponibilidade: 5, respeito: 5 },
+                // Acesso ao app (F1): a conta nasce 'pendente' até o gestor aprovar
+                senha: (!id && senhaApp) ? senhaApp : undefined
             };
 
             // --- UPLOAD PARA CLOUDINARY ANTES DE SALVAR ---
@@ -1365,6 +1430,12 @@
                 });
 
                 if (res.ok) {
+                    if (!id && senhaApp) {
+                        // Cadastro novo com senha: conta pendente de aprovação do gestor
+                        document.querySelector('#success-state h2').textContent = 'Cadastro enviado!';
+                        document.querySelector('#success-state p').textContent =
+                            'Seu acesso será liberado pelo gestor. Você receberá o link do app quando aprovado.';
+                    }
                     document.getElementById('monitor-form').classList.add('hidden');
                     document.getElementById('success-state').classList.remove('hidden');
                     document.getElementById('page-title').classList.add('hidden');
@@ -1373,6 +1444,10 @@
                 } else {
                     if (res.status === 401) {
                         alert('Sua sessão expirou ou este cadastro exige autenticação. Faça login e tente novamente.');
+                    } else if (res.status === 400) {
+                        let msg = 'Erro ao salvar. Verifique os dados informados.';
+                        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch { }
+                        alert(msg);
                     } else {
                         alert('Erro ao salvar. Verifique sua conexão.');
                     }

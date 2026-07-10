@@ -987,6 +987,42 @@ export const api = {
         }
     },
 
+    // Acesso ao app do monitor (F1): aprovar | bloquear | reativar.
+    // Devolve { monitor, appLink, emailEnviado } ou null em erro.
+    alterarAcessoMonitor: async (id, action) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores/${id}/acesso`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ action })
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao alterar acesso do monitor:", e);
+            return null;
+        }
+    },
+
+    // Gera senha temporária para o monitor (devolvida uma única vez).
+    // Devolve { senhaTemporaria, acessoStatus, appLink } ou null em erro.
+    resetarSenhaMonitor: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/monitores/${id}/reset-senha`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao resetar senha do monitor:", e);
+            return null;
+        }
+    },
+
     // --- DESEMPENHO ---
 
     salvarDesempenho: async (dados) => {

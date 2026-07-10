@@ -1206,6 +1206,24 @@ function statusBadgeHtml(m) {
     const meta = STATUS_META[statusDe(m)];
     return `<span class="badge ${meta.badge}"><i class="fas ${meta.icon}"></i> ${meta.label}</span>`;
 }
+
+/* ---------- Acesso ao app do monitor (F1) ---------- */
+const MONITOR_APP_LINK = 'https://agenda-aero-festas.web.app/app-monitor/login.html';
+const ACESSO_META = {
+    sem_acesso: { label: 'Sem acesso ao app', badge: '',              icon: 'fa-user-slash' },
+    pendente:   { label: 'Acesso pendente',   badge: 'badge-warning', icon: 'fa-hourglass-half' },
+    ativo:      { label: 'App ativo',         badge: 'badge-success', icon: 'fa-mobile-screen-button' },
+    bloqueado:  { label: 'App bloqueado',     badge: 'badge-danger',  icon: 'fa-lock' }
+};
+function acessoDe(m) {
+    return ACESSO_META[m && m.acessoStatus] ? m.acessoStatus : 'sem_acesso';
+}
+function acessoChipHtml(m) {
+    const a = acessoDe(m);
+    if (a === 'sem_acesso') return '';
+    const meta = ACESSO_META[a];
+    return `<span class="badge ${meta.badge}" title="Acesso ao app do monitor"><i class="fas ${meta.icon}"></i> ${meta.label}</span>`;
+}
 function parseOcorrencias(m) {
     const raw = m && m.ocorrencias;
     if (!raw) return [];
@@ -1316,7 +1334,7 @@ function renderMonitores() {
             ${avatar}
             <div class="min-w-0" style="flex:1;">
                 <h3 class="m-nome">${escapeHtml(m.nome)}</h3>
-                <div class="m-badges">${statusBadge}${cnhChip}${psChip}${indChip}${dispChip}</div>
+                <div class="m-badges">${statusBadge}${acessoChipHtml(m)}${cnhChip}${psChip}${indChip}${dispChip}</div>
                 <p class="m-tel"><i class="fas fa-phone"></i> ${escapeHtml(m.telefone || 'Sem telefone')}</p>
                 ${alertStrip}
                 ${occRow}
@@ -1494,6 +1512,32 @@ function renderDetalheMonitor(m) {
         ? `<p style="font-size:14px;color:var(--text);white-space:pre-wrap;">${escapeHtml(m.observacoes)}</p>`
         : '<p class="hint-text">Sem observações.</p>';
 
+    /* Acesso ao app do monitor (F1) */
+    const ac = acessoDe(m);
+    const acMeta = ACESSO_META[ac];
+    const ACESSO_HINT = {
+        sem_acesso: 'Este monitor ainda não tem login no app. Gere uma senha temporária para liberar, ou peça que ele refaça o cadastro definindo uma senha.',
+        pendente:   'O monitor definiu a senha no cadastro e aguarda sua aprovação para entrar no app.',
+        ativo:      'O monitor entra no app com CPF + senha.',
+        bloqueado:  'Acesso revogado — o monitor não consegue entrar no app.'
+    };
+    const ultimoLogin = m.ultimoLoginApp
+        ? `<span class="chip chip-sm" title="Último login no app"><i class="fas fa-clock"></i> Último login: ${new Date(m.ultimoLoginApp).toLocaleString('pt-BR')}</span>`
+        : '';
+    const acessoBtns = [];
+    if (ac === 'pendente') acessoBtns.push(`<button type="button" class="btn btn-primary" data-acesso-action="aprovar"><i class="fas fa-user-check"></i> Aprovar acesso</button>`);
+    if (ac === 'ativo') acessoBtns.push(`<button type="button" class="btn btn-danger-soft" data-acesso-action="bloquear"><i class="fas fa-lock"></i> Bloquear acesso</button>`);
+    if (ac === 'bloqueado') acessoBtns.push(`<button type="button" class="btn btn-secondary" data-acesso-action="reativar"><i class="fas fa-lock-open"></i> Reativar acesso</button>`);
+    acessoBtns.push(`<button type="button" class="btn btn-secondary" data-acesso-action="reset-senha"><i class="fas fa-key"></i> ${ac === 'sem_acesso' ? 'Gerar acesso (senha temporária)' : 'Resetar senha'}</button>`);
+    if (ac !== 'sem_acesso') acessoBtns.push(`<button type="button" class="btn btn-ghost" data-acesso-action="copiar-link"><i class="fas fa-link"></i> Copiar link do app</button>`);
+    const acessoHtml = `
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+            <span class="badge ${acMeta.badge}"><i class="fas ${acMeta.icon}"></i> ${acMeta.label}</span>
+            ${ultimoLogin}
+        </div>
+        <p class="hint-text" style="margin-top:6px;">${ACESSO_HINT[ac]}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">${acessoBtns.join('')}</div>`;
+
     /* Origem do cadastro (como chegou / indicação) */
     const origemTxt = m.comoChegou === 'indicacao'
         ? `<i class="fas fa-user-plus" style="color:var(--brand-600);"></i> Indicação${m.indicadoPor ? ' — <b>' + escapeHtml(m.indicadoPor) + '</b>' : ''}`
@@ -1524,6 +1568,7 @@ function renderDetalheMonitor(m) {
             ${ddItem('Como chegou', origemTxt)}
             ${ddItem('Disponibilidade', dispTxt)}
         </div>
+        ${secao('fa-mobile-screen-button', 'Acesso ao app', acessoHtml)}
         ${secao('fa-heart-pulse', 'Saúde', saudeHtml)}
         ${secao('fa-bolt', 'Habilidades', habilidadesHtml)}
         ${secao('fa-file-image', 'Documentos', docsHtml)}
@@ -1543,6 +1588,11 @@ function renderDetalheMonitor(m) {
                 html: `<img src="${escapeHtml(d.src)}" alt="${escapeHtml(d.label)}" style="width:100%;border-radius:var(--radius);">`
             });
         });
+    });
+
+    /* Ações de acesso ao app (F1) */
+    body.querySelectorAll('[data-acesso-action]').forEach(btn => {
+        btn.addEventListener('click', () => acaoAcessoMonitor(m, btn.dataset.acessoAction, btn));
     });
 
     /* Footer */
@@ -1626,6 +1676,116 @@ $('form-classificar').addEventListener('submit', async (e) => {
     if (state.detalhe && state.detalhe.id === id) renderDetalheMonitor(state.detalhe);
     UI.toast('Classificação atualizada');
 });
+
+/* ---------- Acesso ao app do monitor: ações (F1) ---------- */
+async function copiarParaClipboard(texto) {
+    try { await navigator.clipboard.writeText(texto); return true; }
+    catch {
+        const ta = document.createElement('textarea');
+        ta.value = texto; document.body.appendChild(ta); ta.select();
+        try { return document.execCommand('copy'); }
+        catch { return false; }
+        finally { ta.remove(); }
+    }
+}
+
+function aplicarPatchAcesso(id, patch) {
+    const naLista = state.monitores.find(x => x.id === id);
+    if (naLista) Object.assign(naLista, patch);
+    if (state.detalhe && state.detalhe.id === id) Object.assign(state.detalhe, patch);
+    renderMonitores();
+    if (state.detalhe && state.detalhe.id === id) renderDetalheMonitor(state.detalhe);
+}
+
+function modalLinkApp(titulo, introHtml) {
+    const md = UI.modal({
+        title: titulo,
+        html: `
+            ${introHtml || ''}
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+                <input type="text" readonly value="${MONITOR_APP_LINK}"
+                    style="flex:1;min-width:0;padding:8px 10px;border:1px solid rgba(100,116,139,.35);border-radius:10px;font-size:12px;color:var(--text);background:transparent;">
+                <button type="button" class="btn btn-secondary" data-copy-link><i class="fas fa-copy"></i> Copiar</button>
+            </div>`
+    });
+    md.box.querySelector('[data-copy-link]').addEventListener('click', async () => {
+        const ok = await copiarParaClipboard(MONITOR_APP_LINK);
+        UI.toast(ok ? 'Link copiado' : 'Não foi possível copiar', ok ? 'success' : 'error');
+    });
+    return md;
+}
+
+async function acaoAcessoMonitor(m, action, btn) {
+    if (action === 'copiar-link') {
+        const ok = await copiarParaClipboard(MONITOR_APP_LINK);
+        UI.toast(ok ? 'Link do app copiado' : 'Não foi possível copiar', ok ? 'success' : 'error');
+        return;
+    }
+
+    const original = btn.innerHTML;
+    const travar = () => { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; };
+    const soltar = () => { btn.disabled = false; btn.innerHTML = original; };
+
+    if (action === 'reset-senha') {
+        const semAcesso = acessoDe(m) === 'sem_acesso';
+        const confirmado = await UI.confirm({
+            title: 'Gerar senha temporária',
+            message: `Gerar uma nova senha temporária para "${m.nome}"? ${semAcesso
+                ? 'O acesso ao app será liberado com esta senha.'
+                : 'A senha atual deixará de funcionar.'}`,
+            confirmText: 'Gerar senha'
+        });
+        if (!confirmado) return;
+        travar();
+        const r = await api.resetarSenhaMonitor(m.id);
+        soltar();
+        if (!r || !r.senhaTemporaria) { UI.toast('Erro ao gerar a senha temporária', 'error'); return; }
+        aplicarPatchAcesso(m.id, { acessoStatus: r.acessoStatus });
+        const md = UI.modal({
+            title: 'Senha temporária gerada',
+            html: `
+                <p style="font-size:14px;color:var(--text);">Repasse esta senha para <b>${escapeHtml(m.nome)}</b>. Ela é exibida <b>uma única vez</b>.</p>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+                    <code style="flex:1;font-size:22px;font-weight:700;letter-spacing:2px;text-align:center;padding:10px;border-radius:10px;background:rgba(100,116,139,.12);color:var(--text);">${escapeHtml(r.senhaTemporaria)}</code>
+                    <button type="button" class="btn btn-secondary" data-copy-senha><i class="fas fa-copy"></i></button>
+                </div>
+                <p class="hint-text" style="margin-top:8px;">O monitor entra com CPF + esta senha em:<br>${MONITOR_APP_LINK}</p>`
+        });
+        md.box.querySelector('[data-copy-senha]').addEventListener('click', async () => {
+            const ok = await copiarParaClipboard(r.senhaTemporaria);
+            UI.toast(ok ? 'Senha copiada' : 'Não foi possível copiar', ok ? 'success' : 'error');
+        });
+        return;
+    }
+
+    if (action === 'bloquear') {
+        const confirmado = await UI.confirm({
+            title: 'Bloquear acesso',
+            message: `Bloquear o acesso de "${m.nome}" ao app? Ele será desconectado no próximo uso.`,
+            confirmText: 'Bloquear',
+            danger: true
+        });
+        if (!confirmado) return;
+    }
+
+    travar();
+    const r = await api.alterarAcessoMonitor(m.id, action);
+    soltar();
+    if (!r || !r.monitor) { UI.toast('Erro ao alterar o acesso', 'error'); return; }
+    aplicarPatchAcesso(m.id, {
+        acessoStatus: r.monitor.acessoStatus,
+        acessoAprovadoPor: r.monitor.acessoAprovadoPor,
+        acessoAprovadoEm: r.monitor.acessoAprovadoEm
+    });
+
+    if (action === 'aprovar') {
+        modalLinkApp('Acesso aprovado 🎉', r.emailEnviado
+            ? '<p style="font-size:14px;color:var(--text);">O monitor recebeu um e-mail com o link do app. Se preferir, copie e envie você mesmo:</p>'
+            : '<p style="font-size:14px;color:var(--text);">O monitor <b>não tem e-mail cadastrado</b> — copie o link abaixo e envie por WhatsApp:</p>');
+    } else {
+        UI.toast(action === 'bloquear' ? 'Acesso bloqueado' : 'Acesso reativado');
+    }
+}
 
 $('btn-det-excluir').addEventListener('click', async () => {
     const m = state.detalhe;

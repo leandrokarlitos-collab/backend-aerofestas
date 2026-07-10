@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
 const { authenticate, isAuthenticated } = require('../middleware/auth');
+const { logAudit } = require('../services/audit');
 
 // --- Rateio proporcional de eventos multi-dia entre meses ---
 // Um evento que cruza a virada de mês contribui em cada mês na proporção de dias
@@ -104,6 +109,7 @@ function parseInstallmentDatesFE(fe) {
 const FINANCE_ROTAS_PUBLICAS = [
     { method: 'POST', re: /^\/monitores\/?$/ },
     { method: 'POST', re: /^\/monitores\/verificar\/?$/ },
+    { method: 'POST', re: /^\/monitores\/[^/]+\/confirmar-cpf\/?$/ },
     { method: 'GET',  re: /^\/monitores\/[^/]+\/?$/ },
     { method: 'PUT',  re: /^\/monitores\/[^/]+\/?$/ },
 ];
@@ -546,6 +552,51 @@ router.post('/seed-categories', async (req, res) => {
 // Status de classificação permitidos para o monitor
 const MONITOR_STATUS_VALIDOS = ['ativo', 'reserva', 'alerta', 'desqualificado'];
 
+// --- Acesso ao app do monitor (F1) ---
+
+const MONITOR_APP_LINK = 'https://agenda-aero-festas.web.app/app-monitor/login.html';
+
+// E-mail de aprovação (mesmo padrão Gmail de routes/auth.js)
+const monitorMailer = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
+// Placeholder usado pelo formulário quando o candidato não tem e-mail
+const EMAIL_PLACEHOLDER = 'naopossui@aerofestas.com.br';
+
+const soDigitosCpf = (v) => String(v || '').replace(/\D/g, '');
+
+// Remove credenciais de qualquer resposta que devolva um Monitor.
+function semCredenciais(monitor) {
+    if (!monitor) return monitor;
+    const { senhaHash, resetSenhaToken, resetSenhaExpira, ...limpo } = monitor;
+    return limpo;
+}
+
+// Visão pública mínima do monitor: só o necessário para a etapa de
+// identificação do formulário (a ficha completa exige confirmar o CPF).
+function perfilPublicoMinimo(monitor) {
+    return {
+        id: monitor.id,
+        nome: monitor.nome,
+        nascimento: monitor.nascimento,
+        temCpf: soDigitosCpf(monitor.cpf).length > 0
+    };
+}
+
+// Contém tentativa e erro de CPF no link público de atualização
+const limiterConfirmarCpf = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
+});
+
 // Normaliza ocorrências para string JSON (aceita array do front ou string já serializada)
 function normalizeOcorrencias(v) {
     if (v == null) return undefined; // undefined = não mexe no campo
@@ -603,6 +654,8 @@ router.get('/monitores', async (req, res) => {
                 fotoPerfil: true, // Traz URL (leve) para mostrar nos cards
                 fotoDocumento: false, // Documento não precisa na listagem
                 fotoCertificadoPS: false, // PS não precisa na listagem
+                acessoStatus: true,   // Badge de acesso ao app (F1)
+                ultimoLoginApp: true, // Último login no app do monitor
                 // Relacionamentos básicos se necessário
                 desempenho: { take: 1, orderBy: { data: 'desc' } },
                 // Nº de convocações = diárias/pagamentos registrados (mostrado no card)
@@ -620,6 +673,9 @@ router.get('/monitores', async (req, res) => {
 });
 
 // GET /api/finance/monitores/:id
+// Rota pública (link de atualização ?id=). Sem token de gestor devolve SÓ a visão
+// mínima de identificação — a ficha completa (saúde, documentos, CPF) exige
+// confirmar o CPF em POST /monitores/:id/confirmar-cpf. Nunca devolve senhaHash.
 router.get('/monitores/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -631,10 +687,41 @@ router.get('/monitores/:id', async (req, res) => {
             }
         });
         if (!monitor) return res.status(404).json({ error: "Monitor não encontrado" });
-        res.json(monitor);
+        if (!isAuthenticated(req)) {
+            return res.json(perfilPublicoMinimo(monitor));
+        }
+        res.json(semCredenciais(monitor));
     } catch (e) {
         console.error("Erro ao buscar monitor:", e);
         res.status(500).json({ error: "Erro ao buscar monitor" });
+    }
+});
+
+// POST /api/finance/monitores/:id/confirmar-cpf
+// Etapa 2 do link público: o candidato prova a identidade informando o CPF.
+// Só então recebe a ficha completa para pré-preencher o formulário de
+// atualização (sem isso, o PUT em branco apagaria os dados existentes).
+router.post('/monitores/:id/confirmar-cpf', limiterConfirmarCpf, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cpfDigitos = soDigitosCpf(req.body && req.body.cpf);
+        if (cpfDigitos.length !== 11) {
+            return res.status(400).json({ error: 'Informe um CPF válido.' });
+        }
+
+        const monitor = await prisma.monitor.findUnique({ where: { id } });
+        if (!monitor) return res.status(404).json({ error: 'Monitor não encontrado' });
+
+        // Cadastro antigo sem CPF: aceita o CPF informado (é gravado no update).
+        const cpfSalvo = soDigitosCpf(monitor.cpf);
+        if (cpfSalvo && cpfSalvo !== cpfDigitos) {
+            return res.status(403).json({ error: 'CPF não confere com o cadastro original.' });
+        }
+
+        res.json(semCredenciais(monitor));
+    } catch (e) {
+        console.error("Erro ao confirmar CPF do monitor:", e);
+        res.status(500).json({ error: "Erro ao confirmar CPF" });
     }
 });
 
@@ -654,7 +741,10 @@ router.post('/monitores/verificar', async (req, res) => {
         });
 
         if (monitor) {
-            return res.json({ found: true, monitor });
+            // Visão mínima: a ficha completa só sai após confirmar o CPF
+            // (POST /monitores/:id/confirmar-cpf) — evita vazar saúde/CPF/fotos
+            // para quem só conhece nome + nascimento.
+            return res.json({ found: true, monitor: perfilPublicoMinimo(monitor) });
         } else {
             return res.json({ found: false });
         }
@@ -713,8 +803,18 @@ router.post('/monitores', async (req, res) => {
         // schema ("reserva") e motivo/ocorrências ficam nulos — impossível um candidato
         // (ou terceiro sem token) se auto-classificar via o link público.
         aplicarClassificacaoSePermitido(dadosMonitor, m, req);
+        // Acesso ao app (F1): o candidato define a senha no cadastro público e a
+        // conta nasce 'pendente' — inócua até o gestor aprovar em equipe.html.
+        if (m.senha != null && String(m.senha) !== '') {
+            const senha = String(m.senha);
+            if (senha.length < 6) {
+                return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
+            }
+            dadosMonitor.senhaHash = await bcrypt.hash(senha, 10);
+            dadosMonitor.acessoStatus = 'pendente';
+        }
         const novoMonitor = await prisma.monitor.create({ data: dadosMonitor });
-        res.json(novoMonitor);
+        res.json(semCredenciais(novoMonitor));
     } catch (e) {
         console.error("Erro ao criar monitor:", e);
         if (e.code === 'P2002' && Array.isArray(e.meta?.target) && e.meta.target.includes('cpf')) {
@@ -772,9 +872,11 @@ router.put('/monitores/:id', async (req, res) => {
         // formulário PÚBLICO de atualização do candidato (cadastro-monitor.html, que
         // envia status:'reserva' fixo) NÃO pode rebaixar/limpar a classificação de um
         // monitor já marcado como alerta/desqualificado — os campos são ignorados aqui.
+        // dadosMonitor é uma whitelist explícita: senhaHash/acessoStatus e demais
+        // campos de acesso (F1) NUNCA entram por esta rota pública.
         aplicarClassificacaoSePermitido(dadosMonitor, m, req);
         const updated = await prisma.monitor.update({ where: { id }, data: dadosMonitor });
-        res.json(updated);
+        res.json(semCredenciais(updated));
     } catch (e) {
         console.error("Erro ao atualizar monitor:", e);
         if (e.code === 'P2002' && Array.isArray(e.meta?.target) && e.meta.target.includes('cpf')) {
@@ -802,7 +904,7 @@ router.patch('/monitores/:id/status', async (req, res) => {
         const ocorr = normalizeOcorrencias(ocorrencias);
         if (ocorr !== undefined) data.ocorrencias = ocorr;
         const updated = await prisma.monitor.update({ where: { id }, data });
-        res.json(updated);
+        res.json(semCredenciais(updated));
     } catch (e) {
         console.error("Erro ao alterar status do monitor:", e);
         res.status(500).json({ error: "Erro ao alterar status" });
@@ -818,6 +920,110 @@ router.delete('/monitores/:id', authenticate, async (req, res) => {
     } catch (e) {
         console.error("Erro ao deletar monitor:", e);
         res.status(500).json({ error: "Erro ao deletar monitor" });
+    }
+});
+
+// PATCH /api/finance/monitores/:id/acesso
+// Ciclo de acesso ao app do monitor (F1), só gestor: aprovar | bloquear | reativar.
+// (Rota autenticada pelo router.use — não está em FINANCE_ROTAS_PUBLICAS.)
+router.patch('/monitores/:id/acesso', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body || {};
+        const ACOES = { aprovar: 'ativo', bloquear: 'bloqueado', reativar: 'ativo' };
+        if (!ACOES[action]) {
+            return res.status(400).json({ error: "Ação inválida. Use 'aprovar', 'bloquear' ou 'reativar'." });
+        }
+
+        const monitor = await prisma.monitor.findUnique({ where: { id } });
+        if (!monitor) return res.status(404).json({ error: 'Monitor não encontrado' });
+
+        if (action === 'aprovar' && monitor.acessoStatus !== 'pendente') {
+            return res.status(400).json({ error: 'Só é possível aprovar contas pendentes.' });
+        }
+        if (action === 'reativar' && monitor.acessoStatus !== 'bloqueado') {
+            return res.status(400).json({ error: 'Só é possível reativar contas bloqueadas.' });
+        }
+
+        const data = { acessoStatus: ACOES[action] };
+        if (action === 'aprovar') {
+            data.acessoAprovadoPor = req.user.id;
+            data.acessoAprovadoEm = new Date();
+        }
+        const updated = await prisma.monitor.update({ where: { id }, data });
+
+        logAudit({
+            entityType: 'MonitorAcesso',
+            entityId: id,
+            action: action.toUpperCase(),
+            user: req.user,
+            changes: { acessoStatus: { old: monitor.acessoStatus, new: updated.acessoStatus } }
+        });
+
+        // E-mail com o link do app (melhor esforço; se falhar, o gestor copia o link)
+        let emailEnviado = false;
+        if (action === 'aprovar' && monitor.email && monitor.email !== EMAIL_PLACEHOLDER) {
+            emailEnviado = true;
+            monitorMailer.sendMail({
+                from: `"Aero Festas" <${process.env.GMAIL_USER}>`,
+                to: monitor.email,
+                subject: 'Seu acesso ao app da Aero Festas foi liberado! 🎉',
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h2>Olá, ${monitor.nome ? monitor.nome.split(' ')[0] : 'monitor'}!</h2>
+                        <p>Seu acesso ao app do monitor da <b>Aero Festas</b> foi aprovado.</p>
+                        <p>Entre com o seu <b>CPF</b> e a <b>senha que você definiu no cadastro</b>:</p>
+                        <a href="${MONITOR_APP_LINK}" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Abrir o app do monitor</a>
+                        <p style="margin-top: 16px; font-size: 12px; color: #64748b;">Se o botão não funcionar, copie e cole este link: ${MONITOR_APP_LINK}</p>
+                    </div>
+                `
+            }).catch(err => {
+                console.error('Erro e-mail aprovação monitor:', err);
+            });
+        }
+
+        res.json({ monitor: semCredenciais(updated), appLink: MONITOR_APP_LINK, emailEnviado });
+    } catch (e) {
+        console.error("Erro ao alterar acesso do monitor:", e);
+        res.status(500).json({ error: "Erro ao alterar acesso" });
+    }
+});
+
+// POST /api/finance/monitores/:id/reset-senha
+// Gestor gera senha temporária ("monitores são seres com amnésia"). A senha é
+// devolvida UMA única vez para o gestor repassar ao monitor.
+router.post('/monitores/:id/reset-senha', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const monitor = await prisma.monitor.findUnique({ where: { id } });
+        if (!monitor) return res.status(404).json({ error: 'Monitor não encontrado' });
+
+        const senhaTemporaria = crypto.randomBytes(4).toString('hex'); // 8 caracteres
+        const data = { senhaHash: await bcrypt.hash(senhaTemporaria, 10) };
+        // Monitor que nunca teve acesso: gestor definir a senha = provisionamento
+        // direto (já sai ativo). 'pendente' e 'bloqueado' NÃO mudam — aprovação e
+        // reativação continuam sendo decisões explícitas.
+        if (monitor.acessoStatus === 'sem_acesso') {
+            data.acessoStatus = 'ativo';
+            data.acessoAprovadoPor = req.user.id;
+            data.acessoAprovadoEm = new Date();
+        }
+        const updated = await prisma.monitor.update({ where: { id }, data });
+
+        logAudit({
+            entityType: 'MonitorAcesso',
+            entityId: id,
+            action: 'RESET_SENHA',
+            user: req.user,
+            changes: monitor.acessoStatus !== updated.acessoStatus
+                ? { acessoStatus: { old: monitor.acessoStatus, new: updated.acessoStatus } }
+                : null
+        });
+
+        res.json({ senhaTemporaria, acessoStatus: updated.acessoStatus, appLink: MONITOR_APP_LINK });
+    } catch (e) {
+        console.error("Erro ao resetar senha do monitor:", e);
+        res.status(500).json({ error: "Erro ao resetar senha" });
     }
 });
 
