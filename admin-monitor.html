@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <title>Admin — App do Monitor · Aero Festas</title>
+    <link rel="icon" href="Logo_aviao.ico">
+    <link rel="manifest" href="manifest.json">
+    <script src="./js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/aero.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg, #f1f5f9); color: var(--text, #0f172a); margin: 0; padding: 0 0 60px; }
+        .wrap { max-width: 900px; margin: 0 auto; padding: 22px 16px; }
+        .page-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+        .page-head .ico { width: 46px; height: 46px; border-radius: 13px; background: #4f46e5; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 8px 20px rgba(79,70,229,.3); }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; margin: 0; line-height: 1.15; }
+        .sub { font-size: 13px; color: #64748b; }
+        .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; }
+        .tab { padding: 9px 14px; font-size: 14px; font-weight: 600; color: #64748b; background: none; border: none; border-radius: 10px 10px 0 0; cursor: pointer; position: relative; }
+        .tab.active { color: #4338ca; }
+        .tab.active::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -3px; height: 3px; background: #4f46e5; border-radius: 3px; }
+        .tab .soon { font-size: 10px; background: #fef3c7; color: #b45309; border-radius: 999px; padding: 1px 6px; margin-left: 4px; vertical-align: middle; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 6px 18px rgba(15,23,42,.04); }
+        label.lbl { display: block; font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+        select, input[type="time"] { font-family: inherit; font-size: 14px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #0f172a; }
+        select.full { width: 100%; }
+        .btn { font-family: inherit; font-size: 14px; font-weight: 700; padding: 9px 15px; border-radius: 11px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+        .btn-primary { background: #4f46e5; color: #fff; }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-primary:disabled { opacity: .55; cursor: default; }
+        .btn-ghost { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+        .btn-sm { font-size: 13px; padding: 6px 11px; }
+        .escala-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid #e2e8f0; border-radius: 13px; margin-bottom: 9px; background: #fafafa; flex-wrap: wrap; }
+        .escala-row .nome { font-weight: 700; font-size: 14.5px; flex: 1; min-width: 130px; }
+        .escala-row .campo { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #475569; }
+        .mot-btn { background: #fff; border: 1px solid #e2e8f0; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: #94a3b8; }
+        .mot-btn.on { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+        .rm-btn { background: none; border: none; color: #b91c1c; font-weight: 800; cursor: pointer; font-size: 15px; padding: 4px 6px; }
+        .add-line { display: flex; gap: 9px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+        .hint { font-size: 12.5px; color: #94a3b8; margin-top: 4px; }
+        .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .2s; pointer-events: none; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+        .toast.show { opacity: 1; }
+        .toast.err { background: #b91c1c; }
+        .disp-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border: 1px solid #e2e8f0; border-radius: 13px; margin-bottom: 8px; }
+        .disp-item .n { font-weight: 700; font-size: 14.5px; }
+        .badge-on { font-size: 12px; font-weight: 700; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; padding: 4px 11px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .badge-on::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+        .badge-off { font-size: 12px; font-weight: 600; color: #94a3b8; background: #f1f5f9; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
+        .soon-card { text-align: center; color: #94a3b8; padding: 34px 16px; }
+        .soon-card .fa { font-size: 30px; margin-bottom: 12px; color: #c7d2fe; }
+        .empty { text-align: center; color: #94a3b8; padding: 22px; font-size: 14px; }
+        .voltar { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #4f46e5; text-decoration: none; font-weight: 600; margin-bottom: 12px; }
+    </style>
+</head>
+
+<body>
+    <main class="wrap">
+        <a href="equipe.html" class="voltar"><i class="fas fa-arrow-left"></i> Voltar para Equipe</a>
+        <div class="page-head">
+            <div class="ico">🛠️</div>
+            <div>
+                <h1>Admin — App do Monitor</h1>
+                <div class="sub">Escala, disponibilidade e (em breve) rota, ponto e localização</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="escala"><i class="fas fa-users-line"></i> Escala</button>
+            <button class="tab" data-tab="disp"><i class="fas fa-circle-check"></i> Disponibilidade</button>
+            <button class="tab" data-tab="rota"><i class="fas fa-route"></i> Rota<span class="soon">em breve</span></button>
+            <button class="tab" data-tab="ponto"><i class="fas fa-clock"></i> Ponto<span class="soon">em breve</span></button>
+            <button class="tab" data-tab="local"><i class="fas fa-location-dot"></i> Localização<span class="soon">em breve</span></button>
+        </div>
+
+        <!-- ESCALA -->
+        <section class="panel active" id="panel-escala">
+            <div class="card">
+                <label class="lbl" for="evt-select">Evento</label>
+                <select id="evt-select" class="full"><option value="">Carregando eventos…</option></select>
+                <div class="hint">Mostrando eventos de hoje em diante. Escale a equipe e marque quem é o motorista.</div>
+            </div>
+            <div id="escala-area" style="display:none;">
+                <div class="card">
+                    <div id="escala-rows"></div>
+                    <div class="add-line">
+                        <select id="add-monitor" class="full" style="flex:1;min-width:180px;"></select>
+                        <button class="btn btn-ghost btn-sm" id="add-btn"><i class="fas fa-plus"></i> Adicionar</button>
+                    </div>
+                    <div class="hint">🚗 = motorista do dia. O horário é o de chegada no <b>galpão</b> (individual) — é o que o monitor vê.</div>
+                </div>
+                <button class="btn btn-primary" id="save-btn"><i class="fas fa-floppy-disk"></i> Salvar escala</button>
+            </div>
+        </section>
+
+        <!-- DISPONIBILIDADE -->
+        <section class="panel" id="panel-disp">
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="font-weight:700;">Disponíveis agora <span id="disp-count" style="color:#64748b;font-weight:600;"></span></div>
+                    <button class="btn btn-ghost btn-sm" id="disp-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
+                </div>
+                <div id="disp-list"><div class="empty">Carregando…</div></div>
+            </div>
+        </section>
+
+        <!-- PLACEHOLDERS -->
+        <section class="panel" id="panel-rota"><div class="card soon-card"><i class="fas fa-route fa"></i><div>A <b>rota do motorista</b> (quem deixar em cada evento) chega junto com o ponto eletrônico (F3).</div></div></section>
+        <section class="panel" id="panel-ponto"><div class="card soon-card"><i class="fas fa-clock fa"></i><div>A <b>confirmação de entrada/saída</b> aparece aqui quando os monitores baterem ponto (F3).</div></div></section>
+        <section class="panel" id="panel-local"><div class="card soon-card"><i class="fas fa-location-dot fa"></i><div>O <b>mapa com a localização</b> em tempo real / última conhecida de cada monitor entra na F3/F6.</div></div></section>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module">
+        import { api } from './js/api.js';
+
+        let eventos = [];      // eventos futuros
+        let monitores = [];    // roster [{id, nome, cnh, disponivelAgora, disponivelDesde, status}]
+        let escala = [];       // linhas do evento selecionado: [{monitorId, nome, papel, horaChegadaGalpao}]
+        let eventoAtual = null;
+
+        const $ = id => document.getElementById(id);
+        function toast(msg, err = false) {
+            const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+            setTimeout(() => t.classList.remove('show'), 2600);
+        }
+        function hojeISO() { return new Date().toLocaleDateString('en-CA'); }
+        function fmtDataBR(iso) { if (!iso) return ''; const [a, m, d] = iso.split('-'); return d ? `${d}/${m}/${a}` : iso; }
+
+        // ---- Abas ----
+        document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            $('panel-' + btn.dataset.tab).classList.add('active');
+            if (btn.dataset.tab === 'disp') carregarDisponibilidade();
+        }));
+
+        // ---- Carga inicial ----
+        async function init() {
+            const [evs, mons] = await Promise.all([api.getEventos(), api.getMonitores(1, 300)]);
+            const hoje = hojeISO();
+            eventos = (Array.isArray(evs) ? evs : [])
+                .filter(e => (e.eventType || 'event') !== 'meeting')
+                .filter(e => (e.endDate || e.date || '') >= hoje)
+                .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+            const mlist = Array.isArray(mons) ? mons : (mons?.data || []);
+            monitores = mlist
+                .filter(m => (m.status || '').toLowerCase() !== 'desqualificado')
+                .map(m => ({ id: String(m.id), nome: m.nome || m.name || 'Sem nome', cnh: !!m.cnh, disponivelAgora: !!m.disponivelAgora, disponivelDesde: m.disponivelDesde, status: m.status }));
+
+            const sel = $('evt-select');
+            sel.innerHTML = '<option value="">Selecione um evento…</option>' + eventos.map(e =>
+                `<option value="${e.id}">${fmtDataBR(e.date)} — ${(e.clientName || 'Evento').replace(/"/g, '&quot;')}</option>`
+            ).join('');
+            if (!eventos.length) sel.innerHTML = '<option value="">Nenhum evento futuro</option>';
+        }
+
+        $('evt-select').addEventListener('change', (e) => {
+            const id = e.target.value;
+            eventoAtual = eventos.find(ev => String(ev.id) === String(id)) || null;
+            if (!eventoAtual) { $('escala-area').style.display = 'none'; return; }
+            escala = (eventoAtual.assignments || []).map(a => ({
+                monitorId: String(a.monitorId != null ? a.monitorId : (a.monitor && a.monitor.id)),
+                nome: (a.monitor && a.monitor.nome) || 'Monitor',
+                papel: a.papel === 'motorista' ? 'motorista' : 'monitor',
+                horaChegadaGalpao: a.horaChegadaGalpao || ''
+            }));
+            $('escala-area').style.display = 'block';
+            renderEscala();
+            renderAddSelect();
+        });
+
+        function renderEscala() {
+            const box = $('escala-rows');
+            if (!escala.length) { box.innerHTML = '<div class="empty">Ninguém escalado ainda. Adicione monitores abaixo.</div>'; return; }
+            box.innerHTML = escala.map((r, i) => `
+                <div class="escala-row">
+                    <span class="nome">${r.nome}</span>
+                    <button class="mot-btn ${r.papel === 'motorista' ? 'on' : ''}" data-i="${i}" data-act="mot">🚗 Motorista</button>
+                    <span class="campo">🏭 Galpão: <input type="time" data-i="${i}" data-act="hora" value="${r.horaChegadaGalpao || ''}"></span>
+                    <button class="rm-btn" data-i="${i}" data-act="rm" title="Remover">✕</button>
+                </div>`).join('');
+        }
+
+        function renderAddSelect() {
+            const usados = new Set(escala.map(r => r.monitorId));
+            const livres = monitores.filter(m => !usados.has(m.id));
+            $('add-monitor').innerHTML = '<option value="">Adicionar monitor à escala…</option>' +
+                livres.map(m => `<option value="${m.id}">${m.disponivelAgora ? '🟢 ' : ''}${m.nome}${m.cnh ? ' • CNH' : ''}</option>`).join('');
+        }
+
+        // Delegação nos controles da escala
+        $('escala-rows').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-act]'); if (!b) return;
+            const i = +b.dataset.i;
+            if (b.dataset.act === 'mot') { escala[i].papel = escala[i].papel === 'motorista' ? 'monitor' : 'motorista'; renderEscala(); }
+            if (b.dataset.act === 'rm') { escala.splice(i, 1); renderEscala(); renderAddSelect(); }
+        });
+        $('escala-rows').addEventListener('input', (e) => {
+            const b = e.target.closest('[data-act="hora"]'); if (!b) return;
+            escala[+b.dataset.i].horaChegadaGalpao = b.value;
+        });
+
+        $('add-btn').addEventListener('click', () => {
+            const id = $('add-monitor').value; if (!id) return;
+            const m = monitores.find(x => x.id === id); if (!m) return;
+            escala.push({ monitorId: m.id, nome: m.nome, papel: 'monitor', horaChegadaGalpao: '' });
+            renderEscala(); renderAddSelect();
+        });
+
+        $('save-btn').addEventListener('click', async () => {
+            if (!eventoAtual) return;
+            const btn = $('save-btn'); btn.disabled = true; const orig = btn.innerHTML; btn.innerHTML = 'Salvando…';
+            const payload = escala.map(r => ({ monitorId: r.monitorId, papel: r.papel, horaChegadaGalpao: r.horaChegadaGalpao || null }));
+            const res = await api.salvarEscala(eventoAtual.id, payload);
+            btn.disabled = false; btn.innerHTML = orig;
+            if (res === null) { toast('Erro ao salvar a escala. Tente de novo.', true); return; }
+            // Atualiza o estado local do evento
+            eventoAtual.assignments = res;
+            escala = res.map(a => ({ monitorId: String(a.monitorId), nome: (a.monitor && a.monitor.nome) || 'Monitor', papel: a.papel, horaChegadaGalpao: a.horaChegadaGalpao || '' }));
+            renderEscala(); renderAddSelect();
+            toast(`Escala salva: ${res.length} monitor(es).`);
+        });
+
+        // ---- Disponibilidade ----
+        async function carregarDisponibilidade() {
+            const box = $('disp-list');
+            const mons = await api.getMonitores(1, 300);
+            const list = (Array.isArray(mons) ? mons : (mons?.data || []))
+                .filter(m => (m.status || '').toLowerCase() !== 'desqualificado')
+                .map(m => ({ nome: m.nome || m.name, on: !!m.disponivelAgora, desde: m.disponivelDesde }))
+                .sort((a, b) => (b.on - a.on) || String(a.nome).localeCompare(b.nome));
+            const nOn = list.filter(m => m.on).length;
+            $('disp-count').textContent = `(${nOn})`;
+            if (!list.length) { box.innerHTML = '<div class="empty">Sem monitores.</div>'; return; }
+            box.innerHTML = list.map(m => `
+                <div class="disp-item">
+                    <span class="n">${m.nome}</span>
+                    ${m.on
+                        ? `<span class="badge-on">Disponível${m.desde ? ' · desde ' + new Date(m.desde).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>`
+                        : `<span class="badge-off">Indisponível</span>`}
+                </div>`).join('');
+        }
+        $('disp-refresh').addEventListener('click', carregarDisponibilidade);
+
+        init();
+    </script>
+    <script src="js/protect.js"></script>
+</body>
+
+</html>

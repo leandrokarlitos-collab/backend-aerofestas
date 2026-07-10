@@ -258,6 +258,7 @@ model EventAssignment {
   monitor   Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   papel     String   @default("monitor") // monitor | motorista
   dia       String? // YYYY-MM-DD para eventos multi-dia; null = vale para o evento todo
+  horaChegadaGalpao String? // HH:MM — horário INDIVIDUAL de apresentação no galpão (o que o monitor vê)
   createdAt DateTime @default(now())
 
   @@index([eventId])

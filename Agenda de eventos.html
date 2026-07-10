@@ -1940,26 +1940,15 @@
                                 <select id="your-company-select" required
                                     class="form-input w-full px-3 py-2 rounded-md"></select>
                             </div>
-                            <!-- INÍCIO F2: Escala estruturada de monitores -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Escala de Monitores</label>
-                                <div class="flex gap-2">
-                                    <select id="escala-picker" class="form-input flex-1 px-3 py-2 rounded-md">
-                                        <option value="">Carregando monitores…</option>
-                                    </select>
-                                    <button type="button" id="escala-add-btn"
-                                        class="px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold whitespace-nowrap">Escalar</button>
-                                </div>
-                                <div id="escala-chips" class="flex flex-wrap gap-2 mt-2"></div>
-                                <p class="text-xs text-gray-400 mt-1">🚗 marca o motorista do dia. A escala aparece na
-                                    Ordem de Serviço e no app do monitor.</p>
                                 <label for="event-monitor"
-                                    class="block text-xs font-medium text-gray-500 mt-3 mb-1">Monitor/Equipe em texto
-                                    livre (opcional — usado só se ninguém for escalado acima)</label>
+                                    class="block text-sm font-medium text-gray-700 mb-1">Monitor/Equipe Designada</label>
                                 <input type="text" id="event-monitor" class="form-input w-full px-3 py-2 rounded-md"
-                                    placeholder="Ex: Equipe A">
+                                    placeholder="Ex: João, Equipe A">
+                                <p class="text-xs text-gray-400 mt-1">Texto livre. Para escalar monitores cadastrados (com
+                                    motorista e horário de galpão), use <a href="admin-monitor.html"
+                                        class="text-indigo-600 underline">Admin — App do Monitor</a>.</p>
                             </div>
-                            <!-- FIM F2 -->
                         </div>
 
                         <!-- INÍCIO DA MODIFICAÇÃO: Campos de Endereço com CEP -->
@@ -2765,92 +2754,8 @@
     <script type="module">
         import { api } from './js/api.js';
 
-        // ===== Escala de monitores (F2) =====
-        // Estado no escopo do módulo (acessível pelos handlers de save/edição da agenda).
-        let escalaMonitores = [];      // roster: [{id, nome, cnh, disponivelAgora}]
-        let escalaSelecionados = [];   // [{monitorId, papel}]
-
-        async function carregarMonitoresEscala() {
-            try {
-                const res = await api.getMonitores(1, 300);
-                const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-                escalaMonitores = list
-                    .filter(m => (m.status || '').toLowerCase() !== 'desqualificado')
-                    .map(m => ({
-                        id: String(m.id),
-                        nome: m.nome || m.name || 'Sem nome',
-                        cnh: !!m.cnh,
-                        disponivelAgora: !!m.disponivelAgora
-                    }));
-                preencherPickerEscala();
-                renderEscalaChips();
-            } catch (e) { console.warn('Escala: falha ao carregar monitores', e); }
-        }
-
-        function preencherPickerEscala() {
-            const sel = document.getElementById('escala-picker');
-            if (!sel) return;
-            const jaEscalados = new Set(escalaSelecionados.map(s => s.monitorId));
-            const disponiveis = escalaMonitores.filter(m => !jaEscalados.has(m.id));
-            sel.innerHTML = '<option value="">Selecione um monitor…</option>' +
-                disponiveis.map(m => `<option value="${m.id}">${m.disponivelAgora ? '🟢 ' : ''}${m.nome}${m.cnh ? ' • CNH' : ''}</option>`).join('');
-        }
-
-        function renderEscalaChips() {
-            const box = document.getElementById('escala-chips');
-            if (!box) return;
-            box.innerHTML = escalaSelecionados.map(s => {
-                const m = escalaMonitores.find(x => x.id === s.monitorId);
-                const nome = m ? m.nome : ('Monitor ' + s.monitorId);
-                const motorista = s.papel === 'motorista';
-                return `<span class="escala-chip" data-id="${s.monitorId}" style="display:inline-flex;align-items:center;gap:6px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:4px 10px;font-size:13px;color:#3730a3;">
-                    <span>${nome}</span>
-                    <button type="button" class="escala-motorista" data-id="${s.monitorId}" title="Motorista do dia" style="background:none;border:none;cursor:pointer;font-size:14px;line-height:1;opacity:${motorista ? '1' : '0.3'};">🚗</button>
-                    <button type="button" class="escala-remove" data-id="${s.monitorId}" title="Remover da escala" style="background:none;border:none;cursor:pointer;color:#b91c1c;font-weight:700;line-height:1;">✕</button>
-                </span>`;
-            }).join('');
-        }
-
-        function escalaAdd(monitorId) {
-            if (!monitorId) return;
-            if (escalaSelecionados.some(s => s.monitorId === String(monitorId))) return;
-            escalaSelecionados.push({ monitorId: String(monitorId), papel: 'monitor' });
-            preencherPickerEscala();
-            renderEscalaChips();
-        }
-
-        // Usadas pelos handlers de save/edição do evento (mais abaixo no módulo):
-        function setEscala(assignments) {
-            escalaSelecionados = (assignments || [])
-                .map(a => ({
-                    monitorId: String(a.monitorId != null ? a.monitorId : (a.monitor && a.monitor.id)),
-                    papel: a.papel === 'motorista' ? 'motorista' : 'monitor'
-                }))
-                .filter(s => s.monitorId && s.monitorId !== 'undefined' && s.monitorId !== 'null');
-            preencherPickerEscala();
-            renderEscalaChips();
-        }
-        function getEscala() { return escalaSelecionados.map(s => ({ monitorId: s.monitorId, papel: s.papel })); }
-        function getEscalaNomes() {
-            return escalaSelecionados.map(s => {
-                const m = escalaMonitores.find(x => x.id === s.monitorId);
-                const nome = m ? m.nome : s.monitorId;
-                return s.papel === 'motorista' ? (nome + ' (motorista)') : nome;
-            });
-        }
-
-        // Delegação de eventos (robusto a re-render dos chips)
-        document.addEventListener('click', (e) => {
-            const addBtn = e.target.closest('#escala-add-btn');
-            if (addBtn) { e.preventDefault(); const sel = document.getElementById('escala-picker'); escalaAdd(sel && sel.value); return; }
-            const rm = e.target.closest('.escala-remove');
-            if (rm) { e.preventDefault(); escalaSelecionados = escalaSelecionados.filter(s => s.monitorId !== rm.dataset.id); preencherPickerEscala(); renderEscalaChips(); return; }
-            const mot = e.target.closest('.escala-motorista');
-            if (mot) { e.preventDefault(); const s = escalaSelecionados.find(x => x.monitorId === mot.dataset.id); if (s) { s.papel = s.papel === 'motorista' ? 'monitor' : 'motorista'; renderEscalaChips(); } return; }
-        });
-
-        carregarMonitoresEscala();
-        // ===== Fim escala (F2) =====
+        // Escala de monitores: gerida no painel "Admin — App do Monitor" (admin-monitor.html),
+        // não mais dentro deste modal. A OS abaixo apenas LÊ event.assignments para exibir a equipe.
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Tema (dark mode): aplicado por js/theme.js; toggle vem do nav (js/nav.js).
@@ -7422,15 +7327,6 @@
                     const response = await api.salvarEvento(payload);
                     if (!response || !response.success) throw new Error('Falha ao salvar');
                     const saved = response.data;
-                    // F2: grava a escala também na edição "somente este dia".
-                    const escalaDia = getEscala();
-                    let escalaDiaSalva = null;
-                    try {
-                        escalaDiaSalva = await api.salvarEscala(saved.id, escalaDia);
-                        if (escalaDiaSalva) saved.assignments = escalaDiaSalva;
-                    } catch (e) { console.warn('Falha ao salvar escala (dia):', e); }
-                    alert('DIAGNÓSTICO ESCALA (via edição SÓ ESTE DIA)\n\nSelecionados: ' + escalaDia.length
-                        + '\nSalvos: ' + (escalaDiaSalva === null ? 'FALHOU' : escalaDiaSalva.length));
                     const idx = events.findIndex(ev => ev.id === saved.id);
                     if (idx !== -1) events[idx] = saved; else events.push(saved);
                     hideModal(eventModal);
@@ -7544,11 +7440,7 @@
                     discountValue: parseFloat(discountValueEl.value) || 0,
                     deliveryFee: parseFloat(deliveryFeeEl.value) || 0,
 
-                    // F2: escala estruturada. O campo legado `monitor` (string) passa a ser
-                    // derivado dos nomes escalados (mantém cards/OS legados funcionando);
-                    // sem escala, usa o texto livre como antes.
-                    monitor: (getEscalaNomes().length ? getEscalaNomes().join(', ') : document.getElementById('event-monitor').value.trim()),
-                    assignments: getEscala(),
+                    monitor: document.getElementById('event-monitor').value.trim(),
                     paymentStatus: document.getElementById('payment-status').value,
                     signalAmount: parseFloat(document.getElementById('signal-amount').value) || 0,
                     signalReceived: document.getElementById('signal-received').checked,
@@ -7669,18 +7561,6 @@
                     // Atualiza a lista local com o que voltou do servidor (importante para ter o ID real)
                     const savedEvent = response.data;
 
-                    // F2: grava a ESCALA por chamada dedicada (independente do payload do evento).
-                    const escalaEnviada = getEscala();
-                    let escalaSalva = null;
-                    try {
-                        escalaSalva = await api.salvarEscala(savedEvent.id, escalaEnviada);
-                        if (escalaSalva) savedEvent.assignments = escalaSalva;
-                    } catch (e) { console.warn('Falha ao salvar escala:', e); }
-                    // [DIAGNÓSTICO TEMPORÁRIO] mostra o que foi capturado/salvo
-                    alert('DIAGNÓSTICO ESCALA\n\nMonitores selecionados no app: ' + escalaEnviada.length
-                        + '\nMonitores salvos no servidor: ' + (escalaSalva === null ? 'FALHOU a chamada' : escalaSalva.length)
-                        + '\n\ndetalhe: ' + JSON.stringify(escalaEnviada));
-
                     // CORRIGIDO: Usar os dados da API como estão, sem sobrescrever items
                     // A API já retorna items com a estrutura correta (item.toy.id)
                     const eventForUI = {
@@ -7729,7 +7609,6 @@
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
                 externalRentalsForCurrentEvent = [];
-                setEscala([]); // F2: limpa a escala (edição repopula abaixo via setEscala)
 
                 // Modo "somente este dia": só quando editando um evento multi-dia existente com data.
                 dayEditContext = (eventToEdit && eventToEdit.id && dayEditDate)
@@ -7843,7 +7722,6 @@
                     // INÍCIO DA MODIFICAÇÃO: Carregar novos campos
                     deliveryFeeEl.value = eventToEdit.deliveryFee || 0;
                     document.getElementById('event-monitor').value = eventToEdit.monitor || '';
-                    setEscala(eventToEdit.assignments); // F2: reconstrói os chips da escala estruturada
                     document.getElementById('payment-status').value = eventToEdit.paymentStatus || 'Aguardando Sinal';
                     document.getElementById('signal-amount').value = eventToEdit.signalAmount || 0;
                     document.getElementById('signal-received').checked = eventToEdit.signalReceived || false;

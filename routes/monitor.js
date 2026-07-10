@@ -42,6 +42,9 @@ router.get('/events', async (req, res) => {
                 const ev = a.event;
                 const souMotorista = a.papel === 'motorista';
                 const temGeo = ev.eventLat != null && ev.eventLng != null;
+                // Regra: o DESTINO (endereço/mapa/horário do evento) só é exposto ao MOTORISTA.
+                // O monitor comum vê apenas o horário de chegada no galpão — não precisa saber
+                // o local (evita cálculo errado de antecedência); o local fica p/ controle interno.
                 return {
                     assignmentId: a.id,
                     eventId: ev.id,
@@ -50,13 +53,15 @@ router.get('/events', async (req, res) => {
                     dia: a.dia,
                     date: ev.date,
                     endDate: ev.endDate,
-                    startTime: ev.startTime,
-                    endTime: ev.endTime,
-                    titulo: ev.clientName || 'Evento',
-                    endereco: montarEndereco(ev),
-                    eventLat: ev.eventLat,
-                    eventLng: ev.eventLng,
-                    mapsUrl: temGeo ? `https://www.google.com/maps/search/?api=1&query=${ev.eventLat},${ev.eventLng}` : null
+                    horaChegadaGalpao: a.horaChegadaGalpao || null,
+                    // Campos do destino: só para o motorista
+                    startTime: souMotorista ? ev.startTime : null,
+                    endTime: souMotorista ? ev.endTime : null,
+                    titulo: souMotorista ? (ev.clientName || 'Evento') : null,
+                    endereco: souMotorista ? montarEndereco(ev) : null,
+                    eventLat: souMotorista ? ev.eventLat : null,
+                    eventLng: souMotorista ? ev.eventLng : null,
+                    mapsUrl: (souMotorista && temGeo) ? `https://www.google.com/maps/search/?api=1&query=${ev.eventLat},${ev.eventLng}` : null
                 };
             })
             .sort((x, y) => (x.date || '').localeCompare(y.date || ''));

@@ -168,10 +168,12 @@ async function replaceAssignments(eventId, rawList) {
         const monitorId = a && a.monitorId != null ? String(a.monitorId) : null;
         if (!monitorId || seen.has(monitorId)) continue;
         seen.add(monitorId);
+        const hg = (a.horaChegadaGalpao || '').toString().trim();
         wanted.push({
             monitorId,
             papel: a.papel === 'motorista' ? 'motorista' : 'monitor',
-            dia: a.dia || null
+            dia: a.dia || null,
+            horaChegadaGalpao: /^\d{1,2}:\d{2}$/.test(hg) ? hg : null
         });
     }
 
@@ -188,7 +190,7 @@ async function replaceAssignments(eventId, rawList) {
     await prisma.eventAssignment.deleteMany({ where: { eventId } });
     if (validos.length) {
         await prisma.eventAssignment.createMany({
-            data: validos.map(w => ({ eventId, monitorId: w.monitorId, papel: w.papel, dia: w.dia }))
+            data: validos.map(w => ({ eventId, monitorId: w.monitorId, papel: w.papel, dia: w.dia, horaChegadaGalpao: w.horaChegadaGalpao }))
         });
     }
 }
