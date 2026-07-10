@@ -656,6 +656,7 @@ router.get('/monitores', async (req, res) => {
                 fotoCertificadoPS: false, // PS não precisa na listagem
                 acessoStatus: true,   // Badge de acesso ao app (F1)
                 ultimoLoginApp: true, // Último login no app do monitor
+                disponivelAgora: true, // Toggle "disponível para diária" (F2) — bolinha verde no seletor de escala
                 // Relacionamentos básicos se necessário
                 desempenho: { take: 1, orderBy: { data: 'desc' } },
                 // Nº de convocações = diárias/pagamentos registrados (mostrado no card)

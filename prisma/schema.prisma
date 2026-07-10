@@ -15,7 +15,7 @@ model Toy {
   name          String
   quantity      Int
   imageUrl      String?
-  defaultPrice  Float?           // Preço sugerido para gerar propostas (opcional)
+  defaultPrice  Float? // Preço sugerido para gerar propostas (opcional)
   eventItems    EventItem[]
   units         ToyUnit[]
   photos        ToyPhoto[]
@@ -24,17 +24,17 @@ model Toy {
 }
 
 model ToyMaintenance {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   toyId       Float
-  toy         Toy       @relation(fields: [toyId], references: [id], onDelete: Cascade)
-  unitNumber  Int?      // null = manutenção geral; senão refere a uma unidade específica
-  date        String    // YYYY-MM-DD - quando a manutenção foi feita
-  description String    // o que foi feito
-  cost        Float?    // opcional - custo da manutenção
+  toy         Toy      @relation(fields: [toyId], references: [id], onDelete: Cascade)
+  unitNumber  Int? // null = manutenção geral; senão refere a uma unidade específica
+  date        String // YYYY-MM-DD - quando a manutenção foi feita
+  description String // o que foi feito
+  cost        Float? // opcional - custo da manutenção
   monitorId   String?
-  monitor     Monitor?  @relation(fields: [monitorId], references: [id], onDelete: SetNull)
-  monitorName String?   // denormalizado pra preservar nome caso o Monitor seja excluído
-  createdAt   DateTime  @default(now())
+  monitor     Monitor? @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+  monitorName String? // denormalizado pra preservar nome caso o Monitor seja excluído
+  createdAt   DateTime @default(now())
   createdBy   String?
 
   @@index([toyId])
@@ -67,8 +67,8 @@ model ToyPhoto {
 
   // Foto vinculada a um evento específico (opcional). Se o evento for apagado,
   // a foto continua viva mas perde a referência (SetNull).
-  eventId   Float?
-  event     Event?   @relation("EventPhotos", fields: [eventId], references: [id], onDelete: SetNull)
+  eventId Float?
+  event   Event? @relation("EventPhotos", fields: [eventId], references: [id], onDelete: SetNull)
 
   @@index([toyId])
   @@index([eventId])
@@ -84,10 +84,10 @@ model Client {
   // --- CRM v3 (F5): dados ricos que antes viviam só no localStorage ---
   email         String?
   instagram     String?
-  birthday      String?   // YYYY-MM-DD
+  birthday      String? // YYYY-MM-DD
   stage         String?   @default("novo") // novo|contato|proposta|negociacao|fechado|pos_venda|perdido
-  source        String?   // indicação, instagram, google...
-  tags          String?   // JSON array
+  source        String? // indicação, instagram, google...
+  tags          String? // JSON array
   lastContactAt DateTime?
 
   notes     ClientNote[]
@@ -112,7 +112,7 @@ model ClientFollowUp {
   id        String    @id @default(uuid())
   clientId  Float
   client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  dueDate   String    // YYYY-MM-DD
+  dueDate   String // YYYY-MM-DD
   note      String?
   done      Boolean   @default(false)
   doneAt    DateTime?
@@ -135,36 +135,36 @@ model Company {
   paymentInfo String?
   repName     String?
   repDoc      String?
-  
-  events      Event[] // Uma empresa tem vários eventos
+
+  events Event[] // Uma empresa tem vários eventos
 }
 
 model Event {
-  id           Float    @id
-  date         String   // Data de início
-  endDate      String?  // Data de término (para eventos multi-dia)
-  excludedDates  String?  // JSON: ["YYYY-MM-DD", ...] — dias removidos de um evento multi-dia
-  dateOverrides  String?  // JSON: { "YYYY-MM-DD": { startTime, endTime } } — horários custom por dia
-  revenueMode    String?  // 'perDay' (rateio por dia entre os meses, padrão) | 'upfront' (valor inteiro no mês de início) — só afeta multi-dia que cruza meses
-  clientName   String?
-  
+  id            Float   @id
+  date          String // Data de início
+  endDate       String? // Data de término (para eventos multi-dia)
+  excludedDates String? // JSON: ["YYYY-MM-DD", ...] — dias removidos de um evento multi-dia
+  dateOverrides String? // JSON: { "YYYY-MM-DD": { startTime, endTime } } — horários custom por dia
+  revenueMode   String? // 'perDay' (rateio por dia entre os meses, padrão) | 'upfront' (valor inteiro no mês de início) — só afeta multi-dia que cruza meses
+  clientName    String?
+
   // Ligação com a Empresa
   yourCompanyId Float?
   company       Company? @relation(fields: [yourCompanyId], references: [id])
 
   // Relação com itens
-  items        EventItem[]
-  
+  items EventItem[]
+
   // Horários
-  startTime    String?
-  endTime      String?
-  
+  startTime String?
+  endTime   String?
+
   // Dados do Cliente PF
-  clientType   String?
-  clientCpf    String?
-  clientRg     String?
-  clientDob    String?
-  clientPhone  String?
+  clientType        String?
+  clientCpf         String?
+  clientRg          String?
+  clientDob         String?
+  clientPhone       String?
   clientPhoneBackup String?
 
   // Redes sociais do cliente (PF ou PJ) + conferência
@@ -172,132 +172,152 @@ model Event {
   clientSocialChecked Boolean?
 
   // Dados do Cliente PJ
-  cnpj         String?
+  cnpj           String?
   companyAddress String?
-  repName      String?
-  repCpf       String?
-  repPhone     String?
+  repName        String?
+  repCpf         String?
+  repPhone       String?
   repPhoneBackup String?
-  
+
   // Endereço do Evento
-  clientAddress    String?
-  contractAddress  String?
-  cep              String?
-  complemento      String?
-  referencia       String?
-  bairro           String?
-  cidade           String?
-  uf               String?
-  eventLat         Float?    // Latitude do pin marcado pelo cliente no minimapa
-  eventLng         Float?    // Longitude do pin marcado pelo cliente no minimapa
+  clientAddress   String?
+  contractAddress String?
+  cep             String?
+  complemento     String?
+  referencia      String?
+  bairro          String?
+  cidade          String?
+  uf              String?
+  eventLat        Float? // Latitude do pin marcado pelo cliente no minimapa
+  eventLng        Float? // Longitude do pin marcado pelo cliente no minimapa
 
   // Assinatura simples do cliente (evidências de aceite)
-  signedAt         DateTime? // Carimbo do tempo quando o cliente clicou "Assinar"
-  signedName       String?   // Nome informado no momento da assinatura
-  signedIp         String?   // IP do cliente (capturado pelo backend)
-  signedUserAgent  String?   // User-Agent do navegador
-  
+  signedAt        DateTime? // Carimbo do tempo quando o cliente clicou "Assinar"
+  signedName      String? // Nome informado no momento da assinatura
+  signedIp        String? // IP do cliente (capturado pelo backend)
+  signedUserAgent String? // User-Agent do navegador
+
   // Financeiro
-  price            Float?
-  subtotal         Float?
-  discountType     String?
-  discountValue    Float?
-  deliveryFee      Float?
-  paymentStatus    String?
-  signalAmount     Float?     // Entrada (R$) para confirmar a reserva — mostrada ao cliente no link
-  signalReceived   Boolean?
-  pixKey           String?    // Chave PIX exibida ao cliente na etapa de pagamento do link
-  paymentDetails   String?
+  price          Float?
+  subtotal       Float?
+  discountType   String?
+  discountValue  Float?
+  deliveryFee    Float?
+  paymentStatus  String?
+  signalAmount   Float? // Entrada (R$) para confirmar a reserva — mostrada ao cliente no link
+  signalReceived Boolean?
+  pixKey         String? // Chave PIX exibida ao cliente na etapa de pagamento do link
+  paymentDetails String?
 
   // Evento vendido por ingresso (sem locação fixa) — apenas projeção
-  isTicketSale     Boolean?
-  estimatedValue   Float?
+  isTicketSale        Boolean?
+  estimatedValue      Float?
   // Resultado pós-evento da venda por ficha/ingresso (todos opcionais; líquido é o que importa)
-  ticketGrossSold     Float?  // valor bruto vendido (saldo de fichas)
-  ticketSchoolPercent Float?  // % repassada à escola (0–100)
-  ticketNetTotal      Float?  // líquido total que fica para a empresa
+  ticketGrossSold     Float? // valor bruto vendido (saldo de fichas)
+  ticketSchoolPercent Float? // % repassada à escola (0–100)
+  ticketNetTotal      Float? // líquido total que fica para a empresa
   ticketItems         String? // JSON: itens lançados da venda por ingresso [{description, unitPrice, quantity}]
 
   // Contrato anexado (arquivo enviado — PDF/imagem/doc — armazenado no Firebase Storage)
-  contractFileUrl      String?
-  contractFileName     String?
+  contractFileUrl  String?
+  contractFileName String?
 
   // Outros
-  monitor              String?
-  eventObservations    String?
-  isBirthday           Boolean?
-  birthdayPersonName   String?
-  birthdayPersonDob    String?
-  status               String?
+  monitor            String?
+  eventObservations  String?
+  isBirthday         Boolean?
+  birthdayPersonName String?
+  birthdayPersonDob  String?
+  status             String?
 
   // Tipo de agendamento: "event" (default) ou "meeting" (reunião — sem cliente/equipamentos/financeiro)
-  eventType            String?  @default("event")
+  eventType String? @default("event")
 
   // Auditoria
-  createdBy            String?
-  updatedBy            String?
+  createdBy String?
+  updatedBy String?
 
   // Fotos vinculadas a este evento (registradas durante "Concluir evento")
-  toyPhotos            ToyPhoto[] @relation("EventPhotos")
+  toyPhotos ToyPhoto[] @relation("EventPhotos")
 
   // Locações de equipamentos de terceiros (custo extra repassado no preço do evento)
-  externalRentals      EventExternalRental[]
+  externalRentals EventExternalRental[]
+
+  // Escala estruturada de monitores (F2) — em tabela própria, não tocada por saves parciais
+  assignments EventAssignment[]
+}
+
+// Escala estruturada: quais monitores estão alocados a um evento e em que papel (F2).
+// Fica numa tabela própria (não é campo do Event) para NÃO ser afetada por saves
+// parciais do evento — diferente do campo texto-livre legado Event.monitor.
+model EventAssignment {
+  id        Int      @id @default(autoincrement())
+  eventId   Float
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  monitorId String
+  monitor   Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  papel     String   @default("monitor") // monitor | motorista
+  dia       String? // YYYY-MM-DD para eventos multi-dia; null = vale para o evento todo
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([monitorId])
 }
 
 model EventExternalRental {
   id          Int      @id @default(autoincrement())
   eventId     Float
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  description String   // ex.: "Cama elástica grande", "Touro mecânico"
-  supplier    String?  // fornecedor (opcional)
+  description String // ex.: "Cama elástica grande", "Touro mecânico"
+  supplier    String? // fornecedor (opcional)
   quantity    Int      @default(1)
-  cost        Float    // custo TOTAL pago ao terceiro (não unitário)
+  cost        Float // custo TOTAL pago ao terceiro (não unitário)
   createdAt   DateTime @default(now())
 
   @@index([eventId])
 }
 
 model EventItem {
-  id       Int   @id @default(autoincrement())
+  id       Int    @id @default(autoincrement())
   quantity Int
   price    Float? // Preço específico desta locação
 
-  eventId  Float
-  event    Event @relation(fields: [eventId], references: [id])
+  eventId Float
+  event   Event @relation(fields: [eventId], references: [id])
 
-  toyId    Float?
-  toy      Toy?   @relation(fields: [toyId], references: [id])
+  toyId Float?
+  toy   Toy?   @relation(fields: [toyId], references: [id])
 }
 
 // --- SEÇÃO DE PROPOSTAS ---
 
 model Proposta {
-  id              Float    @id        // Date.now()
-  slug            String   @unique    // ex.: "festa-joao-7f3a"
-  status          String?  @default("draft") // "draft" | "sent" | "viewed"
+  id     Float   @id // Date.now()
+  slug   String  @unique // ex.: "festa-joao-7f3a"
+  status String? @default("draft") // "draft" | "sent" | "viewed"
 
   // Cliente (snapshot — FK opcional pro Client cadastrado)
-  clientName      String
-  clientId        Float?
-  client          Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  clientPhone     String?
+  clientName  String
+  clientId    Float?
+  client      Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientPhone String?
 
   // Detalhes do evento (opcionais — exibidos em bloco "Sobre o evento" na view pública)
-  eventTitle      String?  // ex.: "Arraiá da Maple Bear"
-  eventDate       String?  // YYYY-MM-DD
-  eventTime       String?  // ex.: "Das 14h às 18h"
-  eventLocation   String?  // ex.: "Escola Maple Bear, Belo Horizonte"
-  eventDetails    String?  // texto livre
+  eventTitle    String? // ex.: "Arraiá da Maple Bear"
+  eventDate     String? // YYYY-MM-DD
+  eventTime     String? // ex.: "Das 14h às 18h"
+  eventLocation String? // ex.: "Escola Maple Bear, Belo Horizonte"
+  eventDetails  String? // texto livre
 
   // Toggle de valores
-  showPrices      Boolean  @default(false)
+  showPrices Boolean @default(false)
 
   // Financeiro (mesmo padrão de Event)
-  discountType    String?  // "percent" | "value"
-  discountValue   Float?
-  subtotal        Float?
-  total           Float?
-  observacoes     String?
+  discountType  String? // "percent" | "value"
+  discountValue Float?
+  subtotal      Float?
+  total         Float?
+  observacoes   String?
 
   // Template + overrides (campos espelhados, todos opcionais — coalescência no getPublic)
   templateId      String?
@@ -308,20 +328,20 @@ model Proposta {
   whatsappNumber  String?
   whatsappMessage String?
   brandPillText   String?
-  whyCards        String?  // JSON serializado
-  faq             String?  // JSON serializado
-  howItWorks      String?  // JSON serializado
+  whyCards        String? // JSON serializado
+  faq             String? // JSON serializado
+  howItWorks      String? // JSON serializado
   ogImageUrl      String?
 
-  items           PropostaItem[]
+  items PropostaItem[]
 
   // Auditoria + telemetria leve
-  createdBy       String?
-  createdAt       DateTime @default(now())
-  updatedBy       String?
-  updatedAt       DateTime @updatedAt
-  viewedAt        DateTime?
-  viewCount       Int      @default(0)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  viewedAt  DateTime?
+  viewCount Int       @default(0)
 
   @@index([slug])
   @@index([createdAt])
@@ -329,14 +349,14 @@ model Proposta {
 }
 
 model PropostaItem {
-  id               Int      @id @default(autoincrement())
-  propostaId       Float
-  proposta         Proposta @relation(fields: [propostaId], references: [id], onDelete: Cascade)
-  toyId            Float?
-  toy              Toy?     @relation(fields: [toyId], references: [id], onDelete: SetNull)
-  quantity         Int      @default(1)
-  unitPrice        Float?   // null quando showPrices=false
-  order            Int      @default(0)
+  id         Int      @id @default(autoincrement())
+  propostaId Float
+  proposta   Proposta @relation(fields: [propostaId], references: [id], onDelete: Cascade)
+  toyId      Float?
+  toy        Toy?     @relation(fields: [toyId], references: [id], onDelete: SetNull)
+  quantity   Int      @default(1)
+  unitPrice  Float? // null quando showPrices=false
+  order      Int      @default(0)
 
   // Snapshot anti-deleção: se o Toy for renomeado/excluído, a proposta antiga preserva o nome/foto
   toyNameSnapshot  String?
@@ -346,27 +366,27 @@ model PropostaItem {
 }
 
 model PropostaTemplate {
-  id              String   @id @default(uuid())
-  nome            String
-  isDefault       Boolean  @default(false)
+  id        String  @id @default(uuid())
+  nome      String
+  isDefault Boolean @default(false)
 
   heroEyebrow     String
   heroTitle       String
   heroSubtitle    String
   brandPillText   String?
-  whyCards        String   // JSON array
-  faq             String?  // JSON array
-  howItWorks      String   // JSON array (timeline)
+  whyCards        String // JSON array
+  faq             String? // JSON array
+  howItWorks      String // JSON array (timeline)
   whatsappNumber  String
-  whatsappMessage String   // suporta {{clientName}}, {{propostaUrl}}, {{eventDate}}, {{eventTitle}}
+  whatsappMessage String // suporta {{clientName}}, {{propostaUrl}}, {{eventDate}}, {{eventTitle}}
   ogImageUrl      String?
 
-  propostas       Proposta[]
+  propostas Proposta[]
 
-  createdBy       String?
-  createdAt       DateTime @default(now())
-  updatedBy       String?
-  updatedAt       DateTime @updatedAt
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedBy String?
+  updatedAt DateTime @updatedAt
 
   @@index([isDefault])
 }
@@ -374,130 +394,136 @@ model PropostaTemplate {
 // --- SEÇÃO FINANCEIRA E RH ---
 
 model Monitor {
-  id                String              @id
-  nome              String
-  cpf               String?             @unique
-  nascimento        String?
-  telefone          String?
-  email             String?
-  endereco          String?
-  observacoes       String?
-  comoChegou        String?             // Como chegou até nós: "indicacao" | "outro"
-  indicadoPor       String?             // Nome de quem indicou (preenchido quando comoChegou = "indicacao")
-  disponibilidade   String?             // JSON: { dias: [...], turnos: [...] } — dias/turnos disponíveis p/ trabalhar
-  status            String?             @default("reserva") // ativo | reserva | alerta | desqualificado
-  statusMotivo      String?             // Observação da classificação (evidenciada no card p/ alerta/desqualificado)
-  ocorrencias       String?             // JSON array de tags de ocorrência (atraso, celular, proatividade, etc.)
-  cnh               Boolean?            @default(false)
-  cnhCategoria      String?
-  fotoPerfil        String?             // Base64 ou URL
-  fotoDocumento     String?             // Base64 ou URL
-  habilidades       String?             // JSON: {forca, agilidade, proatividade, comunicacao, disponibilidade, respeito}
-  tipoSanguineo     String?
-  medicamentos      String?
-  restricoesAlimentares String?
-  alergias          String?
-  planoSaude        String?
-  condicaoMedica    String?
-  tamanhoCamiseta   String?
-  escolaridade      String?
-  possuiCursoPS     Boolean?            @default(false)
-  fotoCertificadoPS String?             // Base64
-  habilidadesEspecificas String?
-  idiomas           String?             // JSON
-  experiencias      String?
-  fobias            String?
-  contatoEmergenciaNome      String?
+  id                          String   @id
+  nome                        String
+  cpf                         String?  @unique
+  nascimento                  String?
+  telefone                    String?
+  email                       String?
+  endereco                    String?
+  observacoes                 String?
+  comoChegou                  String? // Como chegou até nós: "indicacao" | "outro"
+  indicadoPor                 String? // Nome de quem indicou (preenchido quando comoChegou = "indicacao")
+  disponibilidade             String? // JSON: { dias: [...], turnos: [...] } — dias/turnos disponíveis p/ trabalhar
+  status                      String?  @default("reserva") // ativo | reserva | alerta | desqualificado
+  statusMotivo                String? // Observação da classificação (evidenciada no card p/ alerta/desqualificado)
+  ocorrencias                 String? // JSON array de tags de ocorrência (atraso, celular, proatividade, etc.)
+  cnh                         Boolean? @default(false)
+  cnhCategoria                String?
+  fotoPerfil                  String? // Base64 ou URL
+  fotoDocumento               String? // Base64 ou URL
+  habilidades                 String? // JSON: {forca, agilidade, proatividade, comunicacao, disponibilidade, respeito}
+  tipoSanguineo               String?
+  medicamentos                String?
+  restricoesAlimentares       String?
+  alergias                    String?
+  planoSaude                  String?
+  condicaoMedica              String?
+  tamanhoCamiseta             String?
+  escolaridade                String?
+  possuiCursoPS               Boolean? @default(false)
+  fotoCertificadoPS           String? // Base64
+  habilidadesEspecificas      String?
+  idiomas                     String? // JSON
+  experiencias                String?
+  fobias                      String?
+  contatoEmergenciaNome       String?
   contatoEmergenciaParentesco String?
-  contatoEmergenciaTelefone  String?
-  instagram         String?
-  facebook          String?
-  linkedin          String?
-  tiktok            String?
+  contatoEmergenciaTelefone   String?
+  instagram                   String?
+  facebook                    String?
+  linkedin                    String?
+  tiktok                      String?
 
   // --- Acesso ao app do monitor (F1) ---
-  senhaHash         String?             // bcrypt; null = ainda não definiu senha
-  acessoStatus      String              @default("sem_acesso") // sem_acesso | pendente | ativo | bloqueado
-  acessoAprovadoPor String?             // id do User (gestor) que aprovou
+  senhaHash         String? // bcrypt; null = ainda não definiu senha
+  acessoStatus      String    @default("sem_acesso") // sem_acesso | pendente | ativo | bloqueado
+  acessoAprovadoPor String? // id do User (gestor) que aprovou
   acessoAprovadoEm  DateTime?
   ultimoLoginApp    DateTime?
   resetSenhaToken   String?
   resetSenhaExpira  DateTime?
 
-  desempenho        Desempenho[]
-  pagamentos        PagamentoMonitor[]
-  manutencoes       ToyMaintenance[]
+  // --- Disponibilidade em tempo real (estilo Uber, F2) ---
+  // NÃO confundir com o campo `disponibilidade` acima (JSON estático de dias/turnos preferidos).
+  disponivelAgora Boolean   @default(false)
+  disponivelDesde DateTime? // quando marcou "disponível" (para ordenar/exibir)
+
+  desempenho  Desempenho[]
+  pagamentos  PagamentoMonitor[]
+  manutencoes ToyMaintenance[]
+  escalas     EventAssignment[]
 }
 
 model Desempenho {
-  id              String   @id
-  data            String
-  descricao       String?
-  nota            String?  // Nota de 0-10
-  obs             String?
-  detalhes        String?  // JSON com checklist
-  pagamentoId     String?  // Liga ao pagamento específico
-  monitorId       String
-  monitor         Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  id          String  @id
+  data        String
+  descricao   String?
+  nota        String? // Nota de 0-10
+  obs         String?
+  detalhes    String? // JSON com checklist
+  pagamentoId String? // Liga ao pagamento específico
+  monitorId   String
+  monitor     Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
 }
 
 model PagamentoMonitor {
   id              String   @id
-  data            String   // YYYY-MM-DD (Data do Evento)
-  dataPagamento   String?  // YYYY-MM-DD
-  eventoId        String?  // ID do evento vinculado (opcional)
-  monitorId       String?  // null = monitor avulso/não-cadastrado (usa apenas o campo nome)
+  data            String // YYYY-MM-DD (Data do Evento)
+  dataPagamento   String? // YYYY-MM-DD
+  eventoId        String? // ID do evento vinculado (opcional)
+  monitorId       String? // null = monitor avulso/não-cadastrado (usa apenas o campo nome)
   monitor         Monitor? @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  nome            String   // Nome do monitor (denormalizado; para avulsos é a única referência)
-  valorBase       Float    // Valor da diária base
-  adicional       Float    // Adicional de motorista (R$ 20,00 por evento entregue)
-  horasExtras     Float    // Valor de horas extras
+  nome            String // Nome do monitor (denormalizado; para avulsos é a única referência)
+  valorBase       Float // Valor da diária base
+  adicional       Float // Adicional de motorista (R$ 20,00 por evento entregue)
+  horasExtras     Float // Valor de horas extras
   horasDiaria     Float?   @default(11) // Tamanho da jornada (h) coberta pela diária, usado no cálculo de hora extra
-  pagamento       Float    // Total = valorBase + adicional + horasExtras
+  pagamento       Float // Total = valorBase + adicional + horasExtras
   statusPagamento String   @default("Executado") // "Executado" ou "Pendente"
-  horaEntrada     String?  // HH:MM
-  horaSaida       String?  // HH:MM
+  horaEntrada     String? // HH:MM
+  horaSaida       String? // HH:MM
   foiMotorista    Boolean  @default(false) // Se trabalhou como motorista
-  numEventos      Float?   // Número de eventos entregues (para cálculo de adicional de motorista)
-  observacoes     String?  // Observações do evento (texto livre)
+  numEventos      Float? // Número de eventos entregues (para cálculo de adicional de motorista)
+  observacoes     String? // Observações do evento (texto livre)
   tipo            String   @default("diaria") // "diaria" ou "diverso" (pagamento que não corresponde a uma diária)
-  descricao       String?  // Descrição livre do pagamento (usada em pagamentos "diverso")
+  descricao       String? // Descrição livre do pagamento (usada em pagamentos "diverso")
   indicacoes      Int      @default(0) // Nº de indicações pagas neste lançamento (R$ 20,00 cada, somado ao total)
 }
 
 model Funcionario {
-  id           String  @id
-  nome         String
-  salarioFixo  Float
-  va           Float   // Vale Alimentação
-  vt           Float   // Vale Transporte
+  id          String @id
+  nome        String
+  salarioFixo Float
+  va          Float // Vale Alimentação
+  vt          Float // Vale Transporte
 }
 
 model FaixaComissao {
-  id         String  @id
-  ateValor   Float   // Faturamento até esse valor
-  percentual Float   // Percentual de comissão (ex: 0.02 = 2%)
+  id         String @id
+  ateValor   Float // Faturamento até esse valor
+  percentual Float // Percentual de comissão (ex: 0.02 = 2%)
 }
 
 model User {
-  id                String    @id @default(uuid())
+  id                String  @id @default(uuid())
   name              String
-  email             String    @unique
+  email             String  @unique
   password          String
-  phone             String?   // Telefone do usuário
-  photoUrl          String?   // URL ou base64 da foto de perfil
-  isAdmin           Boolean   @default(false)
-  emailConfirmed    Boolean   @default(false)
+  phone             String? // Telefone do usuário
+  photoUrl          String? // URL ou base64 da foto de perfil
+  isAdmin           Boolean @default(false)
+  emailConfirmed    Boolean @default(false)
   verificationToken String?
-  
+
   // --- NOVOS CAMPOS PARA RECUPERAÇÃO DE SENHA ---
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
 
-  tasks             Task[]   // Relacionamento com tarefas
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks             Task[] // Relacionamento com tarefas
   dailyPlans        DailyPlan[] // Relacionamento com planos diários
   pushSubscriptions PushSubscription[]
 }
@@ -506,7 +532,7 @@ model Task {
   id        String   @id @default(uuid())
   text      String
   completed Boolean  @default(false)
-  dueDate   String?  // YYYY-MM-DD
+  dueDate   String? // YYYY-MM-DD
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -515,8 +541,8 @@ model Task {
 
 model DailyPlan {
   id        String   @id @default(uuid())
-  date      String   // YYYY-MM-DD
-  content   String   // JSON string of the plan
+  date      String // YYYY-MM-DD
+  content   String // JSON string of the plan
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -528,50 +554,50 @@ model DailyPlan {
 // --- FINANÇAS ---
 
 model Transaction {
-  id            String   @id // Usaremos String para manter os IDs do JSON ("176217...")
+  id            String  @id // Usaremos String para manter os IDs do JSON ("176217...")
   description   String
   amount        Float
-  type          String   // "EXPENSE" (Gasto) ou "REVENUE" (Receita - opcional se usar Events)
-  date          String   // YYYY-MM-DD
-  category      String?  // Ex: "Combustível", "Alimentação"
-  paymentMethod String?  // PIX, Boleto, etc.
-  eventId       Float?   // Vincula receita a evento (NULL para entradas avulsas)
-  accountId     String?  // Vincula a transação a uma conta bancária
-  declaredBy    String?  // Quem declarou o gasto (quando a conta é "Não Declarada")
-  expenseDetail String?  // Detalhe do gasto: combustível (Diesel/Gasolina/Etanol), alimentação (Marmitex/Lanche/Outros)
+  type          String // "EXPENSE" (Gasto) ou "REVENUE" (Receita - opcional se usar Events)
+  date          String // YYYY-MM-DD
+  category      String? // Ex: "Combustível", "Alimentação"
+  paymentMethod String? // PIX, Boleto, etc.
+  eventId       Float? // Vincula receita a evento (NULL para entradas avulsas)
+  accountId     String? // Vincula a transação a uma conta bancária
+  declaredBy    String? // Quem declarou o gasto (quando a conta é "Não Declarada")
+  expenseDetail String? // Detalhe do gasto: combustível (Diesel/Gasolina/Etanol), alimentação (Marmitex/Lanche/Outros)
 
   // Auditoria
-  createdBy     String?
-  updatedBy     String?
+  createdBy String?
+  updatedBy String?
 
   // Relacionamento opcional
-  account       BankAccount? @relation(fields: [accountId], references: [id])
+  account BankAccount? @relation(fields: [accountId], references: [id])
 }
 
 // --- CADASTROS FINANCEIROS ---
 
 model BankAccount {
-  id      String  @id
-  name    String
-  bank    String
-  type    String
-  agency  String?
-  number  String?
-  
+  id     String  @id
+  name   String
+  bank   String
+  type   String
+  agency String?
+  number String?
+
   transactions Transaction[]
 }
 
 model FixedExpense {
-  id             String  @id
-  description    String
-  amount         Float
-  dueDay         Int
-  category       String
-  recurrenceType String  @default("permanente") // "permanente" ou "parcelada"
-  startDate      String? // "YYYY-MM"
-  installments   Int?
+  id               String  @id
+  description      String
+  amount           Float
+  dueDay           Int
+  category         String
+  recurrenceType   String  @default("permanente") // "permanente" ou "parcelada"
+  startDate        String? // "YYYY-MM"
+  installments     Int?
   installmentDates String? // JSON: ["YYYY-MM-DD", ...] — vencimento de cada parcela (quando não é o mesmo dia todo mês)
-  attachments    String? // Guardaremos como JSON string se houver
+  attachments      String? // Guardaremos como JSON string se houver
 }
 
 // --- CATEGORIAS FINANCEIRAS ---
@@ -585,6 +611,7 @@ model FixedExpenseCategory {
   id   String @id
   name String
 }
+
 model PushSubscription {
   id        String   @id @default(uuid())
   endpoint  String   @unique
@@ -598,16 +625,16 @@ model PushSubscription {
 // --- AUDITORIA ---
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  entityType  String   // "Event", "Transaction", "User", "Monitor", etc.
-  entityId    String   // ID da entidade afetada
-  action      String   // "CREATE", "UPDATE", "DELETE"
-  userId      String   // Quem realizou a ação
-  userName    String   // Nome desnormalizado para exibição
-  userEmail   String   // Email desnormalizado
-  changes     String?  // JSON: {campo: {old: X, new: Y}}
-  snapshot    String?  // JSON: estado completo da entidade no momento
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  entityType String // "Event", "Transaction", "User", "Monitor", etc.
+  entityId   String // ID da entidade afetada
+  action     String // "CREATE", "UPDATE", "DELETE"
+  userId     String // Quem realizou a ação
+  userName   String // Nome desnormalizado para exibição
+  userEmail  String // Email desnormalizado
+  changes    String? // JSON: {campo: {old: X, new: Y}}
+  snapshot   String? // JSON: estado completo da entidade no momento
+  createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -619,14 +646,14 @@ model AuditLog {
 model BackupRun {
   id           String   @id @default(uuid())
   type         String   @default("backup") // "backup" | "restore" | "drill"
-  source       String   // "cron-diario" | "startup" | "manual" | "cli"
+  source       String // "cron-diario" | "startup" | "manual" | "cli"
   success      Boolean
   message      String?
   totalRecords Int      @default(0)
-  counts       String?  // JSON: registros por tabela
+  counts       String? // JSON: registros por tabela
   sizeBytes    Int      @default(0)
-  checksum     String?  // sha256 do JSON canônico de tables
-  storagePath  String?  // caminho no bucket (null = só local/degradado)
+  checksum     String? // sha256 do JSON canônico de tables
+  storagePath  String? // caminho no bucket (null = só local/degradado)
   durable      Boolean  @default(false) // true = persistido no Firebase Storage
   verified     Boolean  @default(false) // integridade pós-upload confirmada
   durationMs   Int      @default(0)
@@ -639,43 +666,43 @@ model BackupRun {
 // --- WHATSAPP INTEGRATION ---
 
 model WhatsAppInstance {
-  id            String   @id @default(uuid())
-  instanceName  String   @unique
-  displayName   String
-  phoneNumber   String?
-  status        String   @default("disconnected")
-  companyName   String
-  evolutionUrl  String
-  apiKey        String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(uuid())
+  instanceName String   @unique
+  displayName  String
+  phoneNumber  String?
+  status       String   @default("disconnected")
+  companyName  String
+  evolutionUrl String
+  apiKey       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   conversations WhatsAppConversation[]
   shortcuts     WhatsAppShortcut[]
 }
 
 model WhatsAppConversation {
-  id                 String   @id @default(uuid())
+  id                 String           @id @default(uuid())
   remoteJid          String
   phoneNumber        String
   contactName        String?
   profilePicUrl      String?
   clientId           Float?
-  client             Client?  @relation(fields: [clientId], references: [id])
+  client             Client?          @relation(fields: [clientId], references: [id])
   instanceId         String
   instance           WhatsAppInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   lastMessageAt      DateTime?
   lastMessagePreview String?
-  unreadCount        Int      @default(0)
-  isArchived         Boolean  @default(false)
-  isMuted            Boolean  @default(false)
+  unreadCount        Int              @default(0)
+  isArchived         Boolean          @default(false)
+  isMuted            Boolean          @default(false)
   mutedUntil         DateTime?
-  isGroup            Boolean  @default(false)
+  isGroup            Boolean          @default(false)
   groupMetadata      String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
-  messages           WhatsAppMessage[]
+  messages WhatsAppMessage[]
 
   @@unique([remoteJid, instanceId])
   @@index([instanceId, lastMessageAt])
@@ -684,34 +711,34 @@ model WhatsAppConversation {
 }
 
 model WhatsAppMessage {
-  id              String   @id
-  conversationId  String
-  conversation    WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  fromMe          Boolean
-  pushName        String?
-  content         String
-  messageType     String   @default("text")
-  mediaUrl        String?
-  mediaName       String?
-  mediaMimetype   String?
-  timestamp       DateTime
-  status          String   @default("sent")
-  createdAt       DateTime @default(now())
+  id             String               @id
+  conversationId String
+  conversation   WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fromMe         Boolean
+  pushName       String?
+  content        String
+  messageType    String               @default("text")
+  mediaUrl       String?
+  mediaName      String?
+  mediaMimetype  String?
+  timestamp      DateTime
+  status         String               @default("sent")
+  createdAt      DateTime             @default(now())
 
   @@index([conversationId, timestamp])
 }
 
 model WhatsAppShortcut {
-  id          String   @id @default(uuid())
-  command     String   @unique
-  title       String
-  content     String
-  mediaUrl    String?
-  mediaType   String?
-  instanceId  String?
-  instance    WhatsAppInstance? @relation(fields: [instanceId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String            @id @default(uuid())
+  command    String            @unique
+  title      String
+  content    String
+  mediaUrl   String?
+  mediaType  String?
+  instanceId String?
+  instance   WhatsAppInstance? @relation(fields: [instanceId], references: [id])
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 }
 
 model WhatsAppStatus {
@@ -732,13 +759,13 @@ model WhatsAppStatus {
 // Eventos anônimos por sessão: abertura, profundidade de rolagem/seções e cliques.
 model PropostaTrack {
   id         Int      @id @default(autoincrement())
-  slug       String   // ex.: "jardins-florenca"
-  sessionId  String   // id aleatório persistido no navegador do visitante
-  visitor    String?  // parâmetro ?c= (destinatário do link), opcional
-  type       String   // "view" | "scroll" | "click" | "end"
-  label      String?  // seção (ex.: "resumo") ou botão (ex.: "whatsapp")
-  scrollPct  Int?     // 0..100
-  durationMs Int?     // tempo na página (evento "end")
+  slug       String // ex.: "jardins-florenca"
+  sessionId  String // id aleatório persistido no navegador do visitante
+  visitor    String? // parâmetro ?c= (destinatário do link), opcional
+  type       String // "view" | "scroll" | "click" | "end"
+  label      String? // seção (ex.: "resumo") ou botão (ex.: "whatsapp")
+  scrollPct  Int? // 0..100
+  durationMs Int? // tempo na página (evento "end")
   referrer   String?
   userAgent  String?
   ip         String?

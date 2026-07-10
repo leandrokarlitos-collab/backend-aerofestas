@@ -17,6 +17,7 @@ if (!process.env.JWT_SECRET) {
 
 const authRoutes = require('./routes/auth');
 const monitorAuthRoutes = require('./routes/monitorAuth');
+const monitorRoutes = require('./routes/monitor');
 const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
 const historyRoutes = require('./routes/history');
@@ -340,6 +341,8 @@ app.post('/api/migrar-completo', isAdmin, async (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 // Login do monitor compartilha o rate limit de auth (contém brute-force de CPF)
 app.use('/api/monitor/auth', authLimiter, monitorAuthRoutes);
+// App do monitor (escala "meus eventos" + disponibilidade) — guard authenticateMonitor interno
+app.use('/api/monitor', monitorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', eventsAdminRouter);
 app.use('/api/admin', propostasAdminRouter);

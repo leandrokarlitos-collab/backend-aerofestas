@@ -157,6 +157,42 @@ function buildEventFields(evt, userId) {
     };
 }
 
+// Substitui a escala de um evento pela lista informada. Dedupe por monitor,
+// normaliza o papel e descarta monitorIds inexistentes (evita erro de FK e
+// escala fantasma). Uma linha por monitor; `dia` fica null (escala vale para
+// o evento todo) — granularidade por-dia é evolução futura.
+async function replaceAssignments(eventId, rawList) {
+    const seen = new Set();
+    const wanted = [];
+    for (const a of (rawList || [])) {
+        const monitorId = a && a.monitorId != null ? String(a.monitorId) : null;
+        if (!monitorId || seen.has(monitorId)) continue;
+        seen.add(monitorId);
+        wanted.push({
+            monitorId,
+            papel: a.papel === 'motorista' ? 'motorista' : 'monitor',
+            dia: a.dia || null
+        });
+    }
+
+    let validos = wanted;
+    if (wanted.length) {
+        const existentes = await prisma.monitor.findMany({
+            where: { id: { in: wanted.map(w => w.monitorId) } },
+            select: { id: true }
+        });
+        const okIds = new Set(existentes.map(m => m.id));
+        validos = wanted.filter(w => okIds.has(w.monitorId));
+    }
+
+    await prisma.eventAssignment.deleteMany({ where: { eventId } });
+    if (validos.length) {
+        await prisma.eventAssignment.createMany({
+            data: validos.map(w => ({ eventId, monitorId: w.monitorId, papel: w.papel, dia: w.dia }))
+        });
+    }
+}
+
 async function upsertEvent(evt, user) {
     const eventId = evt.id ? parseFloat(evt.id) : Date.now();
     const isUpdate = !!evt.id;
@@ -190,9 +226,21 @@ async function upsertEvent(evt, user) {
         },
         include: {
             items: { include: { toy: true } },
-            externalRentals: true
+            externalRentals: true,
+            assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
         }
     });
+
+    // Escala estruturada (F2): SÓ mexe quando o payload traz o array `assignments`.
+    // Saves parciais (assinatura, rascunho) que não incluem o campo NÃO apagam a
+    // escala — mesmo guard usado para eventLat/eventLng em buildEventFields.
+    if (Array.isArray(evt.assignments)) {
+        await replaceAssignments(eventId, evt.assignments);
+        saved.assignments = await prisma.eventAssignment.findMany({
+            where: { eventId },
+            include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } }
+        });
+    }
 
     const snapshot = { clientName: saved.clientName, date: saved.date, price: saved.price };
     if (isUpdate && existingEvent) {
@@ -238,7 +286,8 @@ async function listEventsFull() {
         include: {
             items: { include: { toy: true } },
             company: true,
-            externalRentals: true
+            externalRentals: true,
+            assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
         },
         orderBy: { date: 'desc' }
     });

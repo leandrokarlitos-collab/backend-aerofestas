@@ -1,7 +1,7 @@
 /**
  * BackupService — Sistema de Segurança de Dados v3 (Aero Festas)
  *
- * Backup lógico completo do banco (31 de 32 modelos; só WhatsAppStatus fica
+ * Backup lógico completo do banco (32 de 33 modelos; só WhatsAppStatus fica
  * de fora — conteúdo efêmero de 24h) em formato FLAT v2:
  *   { metadata: { schemaVersion, timestamp, counts, checksum, ... },
  *     tables: { Toy: [...], Client: [...], ... } }
@@ -68,6 +68,7 @@ const TABLES = [
     // --- Nível 2 ---
     { model: 'EventItem', delegate: 'eventItem' },            // → Event, Toy
     { model: 'EventExternalRental', delegate: 'eventExternalRental' }, // → Event
+    { model: 'EventAssignment', delegate: 'eventAssignment' }, // → Event, Monitor (escala F2)
     { model: 'ToyPhoto', delegate: 'toyPhoto' },              // → Toy, Event
     { model: 'PropostaItem', delegate: 'propostaItem' },      // → Proposta, Toy
     { model: 'WhatsAppMessage', delegate: 'whatsAppMessage' },// → Conversation
@@ -78,6 +79,7 @@ const TABLES = [
 /** Tabelas com id Int autoincrement — sequences precisam de setval() pós-restore. */
 const AUTOINCREMENT_TABLES = [
     'ToyMaintenance', 'ToyUnit', 'ToyPhoto', 'EventExternalRental', 'EventItem', 'PropostaItem',
+    'EventAssignment',
 ];
 
 const SCHEMA_VERSION = '2.0';
