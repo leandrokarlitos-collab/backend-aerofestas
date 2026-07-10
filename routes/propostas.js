@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
 const PropostaService = require('../services/PropostaService');
+const PropostaTrackService = require('../services/PropostaTrackService');
 const { uploadPropostaCover } = require('../services/PropostaUploadService');
 
 const adminRouter = express.Router();
@@ -22,6 +23,15 @@ adminRouter.get('/propostas', authenticate, async (req, res, next) => {
     try {
         const list = await PropostaService.listPropostas();
         res.json(list);
+    } catch (err) { next(err); }
+});
+
+// Analytics de rastreamento (páginas estáticas /p/<slug>). Rota mais específica
+// que /propostas/:id (3 segmentos), então não há colisão de match.
+adminRouter.get('/propostas/:slug/analytics', authenticate, async (req, res, next) => {
+    try {
+        const data = await PropostaTrackService.summary(req.params.slug);
+        res.json(data);
     } catch (err) { next(err); }
 });
 
@@ -108,6 +118,24 @@ publicRouter.get('/propostas/:slug', async (req, res, next) => {
         res.set('Cache-Control', 'public, max-age=60, must-revalidate');
         res.json(data);
     } catch (err) { next(err); }
+});
+
+// Rastreamento (beacon) — recebe eventos das páginas estáticas /p/<slug>.
+// Sem auth (público). Corpo enviado como text/plain (evita preflight de CORS
+// no navigator.sendBeacon). Responde 204 imediatamente e grava em background.
+publicRouter.post('/track', express.text({ type: '*/*', limit: '32kb' }), async (req, res) => {
+    res.status(204).end();
+    try {
+        let data = req.body;
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data || '{}'); } catch (_) { data = null; }
+        }
+        if (data && typeof data === 'object') {
+            await PropostaTrackService.record(data, req);
+        }
+    } catch (_) {
+        // Telemetria é fire-and-forget: nunca propaga erro.
+    }
 });
 
 module.exports = { adminRouter, publicRouter };

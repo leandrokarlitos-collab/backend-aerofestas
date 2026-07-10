@@ -717,3 +717,25 @@ model WhatsAppStatus {
 
   @@index([instanceId, timestamp])
 }
+
+// --- RASTREAMENTO DE PROPOSTAS (analytics das páginas /p/<slug>) ---
+// Eventos anônimos por sessão: abertura, profundidade de rolagem/seções e cliques.
+model PropostaTrack {
+  id         Int      @id @default(autoincrement())
+  slug       String   // ex.: "jardins-florenca"
+  sessionId  String   // id aleatório persistido no navegador do visitante
+  visitor    String?  // parâmetro ?c= (destinatário do link), opcional
+  type       String   // "view" | "scroll" | "click" | "end"
+  label      String?  // seção (ex.: "resumo") ou botão (ex.: "whatsapp")
+  scrollPct  Int?     // 0..100
+  durationMs Int?     // tempo na página (evento "end")
+  referrer   String?
+  userAgent  String?
+  ip         String?
+  city       String?
+  country    String?
+  createdAt  DateTime @default(now())
+
+  @@index([slug, createdAt])
+  @@index([slug, sessionId])
+}

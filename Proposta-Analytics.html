@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rastreamento de Propostas · Aero Festas</title>
+<link rel="icon" href="/icons/Logo_Aero_Festas.png" type="image/png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap">
+<style>
+  :root{
+    --red:#E31837; --red-deep:#B81026; --navy:#0F1B2D; --bg:#F0F6FB; --surface:#fff;
+    --line:rgba(15,27,45,.10); --line-2:rgba(15,27,45,.16); --text:#0F1B2D; --text-2:#4B5563; --text-3:#6B7280;
+    --ok:#16A34A; --shadow:0 8px 28px rgba(15,27,45,.08),0 2px 6px rgba(15,27,45,.04); --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;color:var(--text);background:var(--bg);
+    background-image:radial-gradient(1000px 500px at 90% -120px,rgba(227,24,55,.06),transparent 60%);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:clamp(18px,3vw,36px)}
+  h1{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(22px,3vw,30px);margin:0;letter-spacing:-.01em}
+  a{color:inherit}
+  .top{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;margin-bottom:6px}
+  .sub{color:var(--text-3);font-size:14px;margin:2px 0 22px}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;box-shadow:var(--shadow)}
+  .pill.red{background:var(--red);color:#fff;border-color:transparent}
+  .btn{cursor:pointer;border:1px solid var(--line-2);background:var(--surface);border-radius:10px;
+    padding:9px 14px;font-weight:600;font-size:14px;display:inline-flex;gap:8px;align-items:center;transition:.15s}
+  .btn:hover{border-color:var(--red);color:var(--red)}
+  .btn.primary{background:var(--red);color:#fff;border-color:transparent}
+  .btn.primary:hover{background:var(--red-deep);color:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:8px 0 22px}
+  @media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .kpi .n{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(24px,3vw,32px);color:var(--navy);line-height:1}
+  .kpi .l{color:var(--text-2);font-size:12.5px;margin-top:6px;font-weight:500}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:20px}
+  .card h2{font-family:'Outfit',sans-serif;font-size:17px;margin:0 0 14px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:rgba(227,24,55,.08);color:var(--red-deep);
+    border:1px solid rgba(227,24,55,.16);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+  .chip b{font-family:'Outfit',sans-serif}
+  .muted{color:var(--text-3);font-size:13.5px}
+  .genrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  input[type=text]{border:1px solid var(--line-2);border-radius:10px;padding:9px 12px;font:inherit;min-width:200px}
+  .genout{margin-top:12px;display:none;align-items:center;gap:10px;flex-wrap:wrap}
+  .genlink{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--bg);border:1px dashed var(--line-2);
+    border-radius:8px;padding:8px 12px;word-break:break-all}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+  th,td{text-align:left;padding:12px 12px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);font-weight:700}
+  tbody tr:hover{background:rgba(15,27,45,.02)}
+  .dev{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;width:88px;display:inline-block;vertical-align:middle}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red-deep))}
+  .tag{display:inline-block;background:rgba(15,27,45,.06);border-radius:6px;padding:2px 8px;font-size:12px;margin:2px 3px 2px 0}
+  .tag.click{background:rgba(227,24,55,.10);color:var(--red-deep)}
+  .visitor{font-weight:700}
+  .empty{text-align:center;color:var(--text-3);padding:40px 10px}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line-2);border-top-color:var(--red);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:10px;padding:12px 14px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Rastreamento de propostas</h1>
+      <div class="sub">Quem abriu, até onde rolou e o que clicou — <span id="slugLabel" style="font-weight:600;color:var(--text-2)"></span></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" id="openProposta" target="_blank" rel="noopener">Abrir proposta ↗</a>
+      <button class="btn primary" id="refreshBtn">Atualizar</button>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="empty"><span class="spin"></span> Carregando…</div>
+  </div>
+</div>
+
+<script type="module">
+  import { getToken } from './js/auth.js';
+  import { API_BASE_URL } from './js/api.js';
+
+  const slug = new URLSearchParams(location.search).get('slug') || 'jardins-florenca';
+  const PUBLIC_BASE = 'https://agenda-aero-festas.web.app';
+  document.getElementById('slugLabel').textContent = slug;
+  document.getElementById('openProposta').href = `${PUBLIC_BASE}/p/${slug}`;
+
+  const content = document.getElementById('content');
+  const fmtDate = (d) => d ? new Date(d).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+  const fmtDur = (ms) => {
+    if (!ms) return '—';
+    const s = Math.round(ms/1000); const m = Math.floor(s/60); const r = s%60;
+    return m ? `${m}m ${r}s` : `${r}s`;
+  };
+  const esc = (s) => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const CLICK_LABELS = { whatsapp:'WhatsApp', telefone:'Telefone', email:'E-mail', 'ampliar-foto':'Ampliar foto', botao:'Botão' };
+  const SECTION_LABELS = { hero:'Início', brinquedos:'Brinquedos', 'resumo-precos':'Resumo de preços', 'por-que-aero':'Por que a Aero', 'como-funciona':'Como funciona', 'cta-final':'Chamada final' };
+
+  async function load() {
+    content.innerHTML = '<div class="empty"><span class="spin"></span> Carregando…</div>';
+    let data;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/propostas/${encodeURIComponent(slug)}/analytics`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      data = await res.json();
+    } catch (e) {
+      content.innerHTML = `<div class="err">Não foi possível carregar os dados (${esc(e.message)}). Confira se você está logado e se o backend já foi atualizado.</div>`;
+      return;
+    }
+    render(data);
+  }
+
+  function render(data) {
+    const t = data.totals || {};
+    const sessions = data.sessions || [];
+    const clicks = t.clicksByLabel || {};
+    const clickChips = Object.keys(clicks).length
+      ? Object.entries(clicks).map(([k,v]) => `<span class="chip">${esc(CLICK_LABELS[k]||k)} <b>${v}</b></span>`).join('')
+      : '<span class="muted">Nenhum clique registrado ainda.</span>';
+
+    const visitors = (t.identifiedVisitors||[]).length
+      ? (t.identifiedVisitors||[]).map(v=>`<span class="tag">${esc(v)}</span>`).join('')
+      : '<span class="muted">Nenhum destinatário identificado (links sem <code>?c=</code>).</span>';
+
+    const rows = sessions.length ? sessions.map(s => {
+      const secs = (s.sections||[]).map(x=>`<span class="tag">${esc(SECTION_LABELS[x]||x)}</span>`).join('') || '<span class="muted">—</span>';
+      const cl = (s.clicks||[]).length
+        ? [...new Set(s.clicks.map(c=>c.label))].map(l=>`<span class="tag click">${esc(CLICK_LABELS[l]||l)}</span>`).join('')
+        : '<span class="muted">—</span>';
+      return `<tr>
+        <td>${fmtDate(s.lastSeen)}</td>
+        <td>${s.visitor?`<span class="visitor">${esc(s.visitor)}</span>`:'<span class="muted">anônimo</span>'}</td>
+        <td><span class="dev">${s.device==='mobile'?'📱':'💻'} ${s.device==='mobile'?'Celular':'Computador'}</span></td>
+        <td><span class="bar"><i style="width:${Math.max(3,s.maxScroll)}%"></i></span> ${s.maxScroll}%</td>
+        <td>${secs}</td>
+        <td>${cl}</td>
+        <td>${fmtDur(s.durationMs)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="7" class="empty">Ninguém abriu esta proposta ainda.</td></tr>`;
+
+    content.innerHTML = `
+      <div class="kpis">
+        <div class="kpi"><div class="n">${t.totalOpens||0}</div><div class="l">Aberturas</div></div>
+        <div class="kpi"><div class="n">${t.uniqueSessions||0}</div><div class="l">Visitantes únicos</div></div>
+        <div class="kpi"><div class="n">${t.avgMaxScroll||0}%</div><div class="l">Rolagem média</div></div>
+        <div class="kpi"><div class="n">${t.reached100||0}</div><div class="l">Viram até o fim</div></div>
+        <div class="kpi"><div class="n" style="font-size:16px;padding-top:6px">${fmtDate(t.lastOpenedAt)}</div><div class="l">Última abertura</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Cliques por botão</h2>
+        <div class="chips">${clickChips}</div>
+      </div>
+
+      <div class="card">
+        <h2>Destinatários identificados</h2>
+        <div class="chips">${visitors}</div>
+      </div>
+
+      <div class="card">
+        <h2>Gerar link rastreável por destinatário</h2>
+        <div class="genrow">
+          <input type="text" id="recipient" placeholder="Nome do destinatário (ex.: Síndico João)">
+          <button class="btn primary" id="genBtn">Gerar link</button>
+        </div>
+        <div class="genout" id="genOut">
+          <span class="genlink" id="genLink"></span>
+          <button class="btn" id="copyBtn">Copiar</button>
+        </div>
+        <p class="muted" style="margin:12px 0 0">Envie um link diferente para cada pessoa — cada abertura fica identificada na tabela abaixo.</p>
+      </div>
+
+      <div class="card">
+        <h2>Sessões (${sessions.length})</h2>
+        <div class="tablewrap">
+          <table>
+            <thead><tr>
+              <th>Quando</th><th>Destinatário</th><th>Dispositivo</th><th>Rolou até</th><th>Seções vistas</th><th>Cliques</th><th>Tempo</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Gerador de link
+    const slugify = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+    const genBtn = document.getElementById('genBtn');
+    genBtn.addEventListener('click', () => {
+      const name = document.getElementById('recipient').value.trim();
+      if (!name) return;
+      const c = slugify(name) || 'destinatario';
+      const link = `${PUBLIC_BASE}/p/${slug}?c=${encodeURIComponent(c)}`;
+      document.getElementById('genLink').textContent = link;
+      document.getElementById('genOut').style.display = 'flex';
+      document.getElementById('copyBtn').onclick = async () => {
+        try { await navigator.clipboard.writeText(link); document.getElementById('copyBtn').textContent = 'Copiado!'; }
+        catch { /* noop */ }
+      };
+    });
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  load();
+</script>
+
+<!-- Guarda de autenticação (redireciona para login se não autenticado) -->
+<script src="js/protect.js"></script>
+</body>
+</html>
