@@ -35,6 +35,14 @@ adminRouter.delete('/events/:id', authenticate, async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+// Grava a ESCALA de um evento de forma dedicada (independente do save do evento).
+adminRouter.put('/events/:id/assignments', authenticate, async (req, res, next) => {
+    try {
+        const data = await EventService.setEventAssignments(req.params.id, req.body.assignments, req.user);
+        res.json({ success: true, data });
+    } catch (err) { next(err); }
+});
+
 // Anexar / substituir o contrato do evento (arquivo: PDF, imagem ou Word).
 adminRouter.post('/events/:id/contract', authenticate, contractUpload.single('file'), async (req, res, next) => {
     try {

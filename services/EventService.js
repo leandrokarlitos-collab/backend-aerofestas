@@ -281,6 +281,25 @@ async function deleteEvent(id, user) {
     }
 }
 
+// Grava a escala de um evento de forma DEDICADA (independente do save do evento).
+// Usado pela rota PUT /events/:id/assignments — garante que a escala persista sem
+// depender de qual caminho de save do evento (normal, dia-único, etc.) foi usado.
+async function setEventAssignments(id, list, user) {
+    const eventId = parseFloat(id);
+    if (isNaN(eventId)) {
+        const err = new Error('ID inválido');
+        err.status = 400;
+        throw err;
+    }
+    await replaceAssignments(eventId, Array.isArray(list) ? list : []);
+    const assignments = await prisma.eventAssignment.findMany({
+        where: { eventId },
+        include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } }
+    });
+    safeAudit({ entityType: 'Event', entityId: eventId, action: 'ESCALA', user, snapshot: { monitores: assignments.length } });
+    return assignments;
+}
+
 async function listEventsFull() {
     return prisma.event.findMany({
         include: {
@@ -660,6 +679,7 @@ async function removeContract(eventId, user) {
 
 module.exports = {
     upsertEvent,
+    setEventAssignments,
     deleteEvent,
     listEventsFull,
     getPublicEvent,

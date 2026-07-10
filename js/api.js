@@ -534,6 +534,22 @@ export const api = {
         }
     },
 
+    // Salvar a ESCALA de um evento (chamada dedicada, independente do save do evento).
+    // Retorna a lista de alocações gravadas (com nome do monitor) ou null em erro.
+    salvarEscala: async (eventoId, assignments) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events/${eventoId}/assignments`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ assignments: assignments || [] })
+            });
+            if (!res.ok) { console.error('Erro ao salvar escala:', res.status); return null; }
+            const json = await res.json();
+            return json.data || [];
+        } catch (e) { console.error('Erro de rede ao salvar escala:', e); return null; }
+    },
+
     // Deletar Evento
     deletarEvento: async (eventoId) => {
         try {

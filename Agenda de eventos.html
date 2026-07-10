@@ -7422,6 +7422,11 @@
                     const response = await api.salvarEvento(payload);
                     if (!response || !response.success) throw new Error('Falha ao salvar');
                     const saved = response.data;
+                    // F2: grava a escala também na edição "somente este dia".
+                    try {
+                        const escalaSalva = await api.salvarEscala(saved.id, getEscala());
+                        if (escalaSalva) saved.assignments = escalaSalva;
+                    } catch (e) { console.warn('Falha ao salvar escala (dia):', e); }
                     const idx = events.findIndex(ev => ev.id === saved.id);
                     if (idx !== -1) events[idx] = saved; else events.push(saved);
                     hideModal(eventModal);
@@ -7659,6 +7664,14 @@
 
                     // Atualiza a lista local com o que voltou do servidor (importante para ter o ID real)
                     const savedEvent = response.data;
+
+                    // F2: grava a ESCALA por chamada dedicada (independente do payload do evento).
+                    // Garante a persistência mesmo que o campo `assignments` do evento se perca,
+                    // e atualiza o estado local para o evento reabrir com os monitores certos.
+                    try {
+                        const escalaSalva = await api.salvarEscala(savedEvent.id, getEscala());
+                        if (escalaSalva) savedEvent.assignments = escalaSalva;
+                    } catch (e) { console.warn('Falha ao salvar escala:', e); }
 
                     // CORRIGIDO: Usar os dados da API como estão, sem sobrescrever items
                     // A API já retorna items com a estrutura correta (item.toy.id)
