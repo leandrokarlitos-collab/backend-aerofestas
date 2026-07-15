@@ -307,19 +307,28 @@ router.get('/fixed-expenses', async (req, res) => {
 router.post('/transactions', async (req, res) => {
     try {
         const t = req.body;
-        const newTransaction = await prisma.transaction.create({
-            data: {
-                id: t.id || Date.now().toString(), // Garante um ID
-                description: t.description,
-                amount: parseFloat(t.amount),
-                type: t.type || 'EXPENSE',
-                date: t.date,
-                category: t.category,
-                paymentMethod: t.paymentMethod,
-                accountId: t.accountId,
-                declaredBy: t.declaredBy || null,
-                expenseDetail: t.expenseDetail || null
-            }
+        const id = t.id || Date.now().toString(); // Garante um ID
+        const data = {
+            description: t.description,
+            amount: parseFloat(t.amount),
+            type: t.type || 'EXPENSE',
+            date: t.date,
+            category: t.category,
+            paymentMethod: t.paymentMethod,
+            accountId: t.accountId,
+            declaredBy: t.declaredBy || null,
+            expenseDetail: t.expenseDetail || null,
+            eventId: (t.eventId !== undefined && t.eventId !== null && t.eventId !== '') ? parseFloat(t.eventId) : null
+        };
+        // Upsert (não create) para tornar o POST idempotente: quando um lançamento é
+        // reenviado com o mesmo id (UUID gerado no cliente, ex.: fechamento do evento),
+        // reaproveita o registro em vez de estourar violação de PK. Mesma estratégia do
+        // POST /pagamentos-monitores. Gastos novos do formulário (sem id) recebem um id
+        // por timestamp e caem no create.
+        const newTransaction = await prisma.transaction.upsert({
+            where: { id },
+            create: { id, ...data },
+            update: data
         });
         res.json(newTransaction);
     } catch (error) {
@@ -344,7 +353,12 @@ router.put('/transactions/:id', async (req, res) => {
                 paymentMethod: t.paymentMethod,
                 accountId: t.accountId,
                 declaredBy: t.declaredBy || null,
-                expenseDetail: t.expenseDetail || null
+                expenseDetail: t.expenseDetail || null,
+                // Só mexe no vínculo com evento se a chave vier no corpo — um frontend
+                // antigo (em cache, sem o campo) que edita um gasto não pode apagar o vínculo.
+                ...(Object.prototype.hasOwnProperty.call(t, 'eventId')
+                    ? { eventId: (t.eventId === null || t.eventId === '') ? null : parseFloat(t.eventId) }
+                    : {})
             }
         });
         res.json(updated);
@@ -1050,6 +1064,37 @@ router.post('/desempenho', async (req, res) => {
     } catch (e) {
         console.error("Erro ao criar desempenho:", e);
         res.status(500).json({ error: "Erro ao criar desempenho" });
+    }
+});
+
+// GET /api/finance/event-costs/:eventId
+// Custos consolidados de um evento (fechamento na Agenda): gastos vinculados
+// (Transaction.eventId), pagamentos de monitores (PagamentoMonitor.eventoId) e
+// locações externas — mais a entrada (receita) do evento. Endpoint dedicado
+// porque GET /transactions traz só os últimos 200 registros.
+router.get('/event-costs/:eventId', async (req, res) => {
+    try {
+        const idNum = parseFloat(req.params.eventId);
+        if (!Number.isFinite(idNum)) return res.status(400).json({ error: "eventId inválido" });
+        const idStr = String(idNum);
+        const [transactions, pagamentosMonitores, event] = await Promise.all([
+            prisma.transaction.findMany({ where: { eventId: idNum, type: 'EXPENSE' }, orderBy: { date: 'asc' } }),
+            prisma.pagamentoMonitor.findMany({ where: { eventoId: idStr }, orderBy: { data: 'asc' } }),
+            prisma.event.findUnique({ where: { id: idNum }, include: { externalRentals: true } })
+        ]);
+        if (!event) return res.status(404).json({ error: "Evento não encontrado" });
+        const entrada = event.isTicketSale
+            ? (event.ticketNetTotal != null ? Number(event.ticketNetTotal) : null)
+            : (Number(event.price) || 0);
+        res.json({
+            transactions,
+            pagamentosMonitores,
+            externalRentals: event.externalRentals || [],
+            entrada
+        });
+    } catch (e) {
+        console.error("Erro ao buscar custos do evento:", e);
+        res.status(500).json({ error: "Erro ao buscar custos do evento" });
     }
 });
 
