@@ -543,6 +543,7 @@
                 <span class="kpi-label"><i class="fas fa-calendar-day" style="color: var(--accent)"></i> Próximo evento</span>
                 <span class="kpi-value" id="kpi-evento"><span class="skeleton" style="display:inline-block;width:90px;height:22px"></span></span>
                 <span class="kpi-sub" id="kpi-evento-sub"></span>
+                <span class="kpi-sub" id="kpi-evento-mes"></span>
             </div>
         </section>
 
@@ -1174,6 +1175,22 @@
                     .slice(0, 5);
 
                 setEventKpi(upcomingEvents[0] || null);
+
+                // Quantitativo do mês corrente: executados vs. a executar (teste de mês
+                // simples por intervalo date/endDate; reuniões e cancelados ficam de fora)
+                const kpiEventoMes = document.getElementById('kpi-evento-mes');
+                if (kpiEventoMes) {
+                    const now = new Date();
+                    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    const primeiroDia = `${ym}-01`;
+                    const ultimoDia = `${ym}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+                    const doMes = events.filter(e =>
+                        e.eventType !== 'meeting' &&
+                        e.status !== 'cancelado' && e.paymentStatus !== 'Cancelado' &&
+                        (e.date || '') <= ultimoDia && (e.endDate || e.date || '') >= primeiroDia);
+                    const executados = doMes.filter(e => e.status === 'concluido').length;
+                    kpiEventoMes.textContent = `${executados} executado${executados === 1 ? '' : 's'} · ${doMes.length - executados} a executar no mês`;
+                }
 
                 if (upcomingEvents.length === 0) {
                     UI.empty(eventsListEl, { icon: 'fa-calendar-xmark', title: 'Sem eventos futuros', text: 'Nenhum evento futuro agendado.' });

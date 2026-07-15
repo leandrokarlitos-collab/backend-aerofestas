@@ -297,6 +297,49 @@
                 });
             };
 
+            // === Fechamento por Evento: rateio de "Custos Gerais" em tempo real ===
+            // Pool = gastos do mês SEM vínculo a evento + contas fixas ativas no mês (valor de
+            // cadastro, paga ou não) + salários fixos (salário+VA+VT, sem comissão), dividido
+            // IGUALMENTE entre os eventos do mês (cancelados e reuniões fora). Visão ANALÍTICA:
+            // não altera os totais mensais do dashboard nem o summary do backend.
+            // Anti-dupla-contagem:
+            //  - locações externas (origem 'evento') são custo direto do evento, nunca pool;
+            //  - pagamentos de conta fixa (Transaction "[Conta Fixa]") ficam fora do pool porque
+            //    o valor de cadastro já entra via getContasFixasDoMes (critério uniforme paga/não-paga);
+            //  - monitores não estão em state.gastos; com eventoId entram como custo direto do
+            //    evento. Sem eventoId ficam fora do pool (evolução possível: incluí-los no rateio).
+            const computeFechamentoPorEvento = (ym) => {
+                const eventosValidos = eventosDoMes(ym).filter(e => !e.cancelado);
+                const idsValidos = new Set(eventosValidos.map(e => String(e.id)));
+                const gastosMes = state.gastos.filter(g => (g.data || '').startsWith(ym));
+                // Pool = gastos sem vínculo + gastos "órfãos" (vinculados a evento cancelado/apagado
+                // ou de outro mês, que não aparecem como custo direto de nenhuma linha) — assim uma
+                // despesa real nunca some do fechamento. Locações externas e "[Conta Fixa]" fora.
+                const gastosGerais = gastosMes.filter(g =>
+                    g.origem !== 'evento' && !(g.descricao || '').includes('[Conta Fixa]') &&
+                    (!g.eventId || !idsValidos.has(String(g.eventId))));
+                const poolGastos = gastosGerais.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+                const poolFixas = getContasFixasDoMes(ym).reduce((s, cf) => s + (parseFloat(cf.valor) || 0), 0);
+                const poolSalarios = (state.funcionarios || []).reduce((s, f) =>
+                    s + (parseFloat(f.salarioFixo) || 0) + (parseFloat(f.va) || 0) + (parseFloat(f.vt) || 0), 0);
+                const pool = poolGastos + poolFixas + poolSalarios;
+                const cota = eventosValidos.length ? pool / eventosValidos.length : 0;
+                const linhas = eventosValidos.map(e => {
+                    const gastosDiretos = state.gastos
+                        .filter(g => g.origem !== 'evento' && g.eventId && String(g.eventId) === String(e.id))
+                        .reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+                    const monitores = (state.pagamentosMonitores || [])
+                        .filter(p => p.eventoId && String(p.eventoId) === String(e.id))
+                        .reduce((s, p) => s + custoPagamentoMonitor(p), 0);
+                    const locacoes = (e.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+                    const custosDiretos = gastosDiretos + monitores + locacoes;
+                    const entrada = e.valorOriginal || 0; // total do evento (ticketNetTotal já embutido)
+                    const multiMes = !!(e.endDate && e.endDate.slice(0, 7) !== (e.data || '').slice(0, 7));
+                    return { evento: e, entrada, custosDiretos, cota, resultado: entrada - custosDiretos - cota, multiMes };
+                });
+                return { linhas, pool, poolGastos, poolFixas, poolSalarios, cota, numEventos: eventosValidos.length };
+            };
+
             // Atribui a função à variável global
             loadDataFromCloud = async function () {
                 try {
@@ -414,6 +457,9 @@
                                 valor: t.amount,
                                 declaredBy: t.declaredBy || '',
                                 detalhe: t.expenseDetail || '',
+                                // Vínculo real gasto↔evento (Transaction.eventId). Não confundir com
+                                // `eventoId`, usado só pelos gastos virtuais de locação externa abaixo.
+                                eventId: t.eventId != null ? String(t.eventId) : null,
                                 comprovantes: []
                             };
                         });
@@ -665,8 +711,9 @@
 
             /* ===== Tabela de gastos: ordenação clicável por coluna ===== */
             let gastosOrdem = { col: 'data', dir: 'asc' };
-            const GASTOS_COL_TIPO = { data: 'date', descricao: 'text', categoria: 'text', conta: 'text', pagamento: 'text', valor: 'num' };
-            const GASTOS_COL_DEFDIR = { data: 'asc', descricao: 'asc', categoria: 'asc', conta: 'asc', pagamento: 'asc', valor: 'desc' };
+            let gastosBusca = '';
+            const GASTOS_COL_TIPO = { data: 'date', descricao: 'text', categoria: 'text', evento: 'text', conta: 'text', pagamento: 'text', valor: 'num' };
+            const GASTOS_COL_DEFDIR = { data: 'asc', descricao: 'asc', categoria: 'asc', evento: 'asc', conta: 'asc', pagamento: 'asc', valor: 'desc' };
             function compararGastos(a, b) {
                 const col = gastosOrdem.col;
                 const dir = gastosOrdem.dir === 'asc' ? 1 : -1;
@@ -678,6 +725,8 @@
                 if (cmp === 0) cmp = String(a.data || '').localeCompare(String(b.data || '')); // desempate estável por data
                 return cmp;
             }
+            // Normalizador local da busca (não reusar normalizarTexto, declarado bem mais abaixo — TDZ)
+            const normBusca = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
             function renderTabelaGastos() {
                 const tabela = getById('tabela-gastos');
                 if (!tabela) return;
@@ -703,16 +752,40 @@
                     if (ind) ind.textContent = ativo ? (gastosOrdem.dir === 'asc' ? '▲' : '▼') : '';
                 });
                 if (!tbody) return;
-                const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
-                if (gastosMes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
+                // Nome do evento vinculado (real via eventId, ou locação externa via eventoId).
+                // state.eventos[].id é string; g.eventoId (locação) pode ser número → String() nos dois.
+                const nomeEventoDoGasto = (g) => {
+                    const id = g.eventoId || g.eventId;
+                    if (!id) return '';
+                    const ev = (state.eventos || []).find(e => String(e.id) === String(id));
+                    return ev ? (ev.contratante || ev.empresa || '') : `Evento #${id}`;
+                };
+                // Enriquece cada gasto com `evento` (nome) para busca e ordenação pela coluna Evento
+                const gastosMes = state.gastos
+                    .filter(g => g.data.startsWith(state.selectedMonth))
+                    .map(g => ({ ...g, evento: nomeEventoDoGasto(g) }));
+                // Busca textual em tempo real (só visual — os totais dos cards seguem usando gastosMes no renderAll)
+                const termo = normBusca(gastosBusca.trim());
+                const gastosVisiveis = termo
+                    ? gastosMes.filter(g => [g.descricao, g.categoria, g.detalhe, g.conta, g.pagamento, g.evento]
+                        .some(v => normBusca(v).includes(termo)))
+                    : gastosMes;
+                const buscaCount = getById('gastos-search-count');
+                if (buscaCount) buscaCount.textContent = termo ? `${gastosVisiveis.length} de ${gastosMes.length} gastos` : '';
+                if (gastosVisiveis.length === 0) {
+                    tbody.innerHTML = termo
+                        ? '<tr><td colspan="8" class="text-center py-4 text-gray-500">Nenhum gasto encontrado para a busca.</td></tr>'
+                        : '<tr><td colspan="8" class="text-center py-4 text-gray-500">Nenhum gasto neste mês.</td></tr>';
                     return;
                 }
-                tbody.innerHTML = [...gastosMes].sort(compararGastos).map(g => {
+                tbody.innerHTML = [...gastosVisiveis].sort(compararGastos).map(g => {
                     const isFromEvent = g.origem === 'evento';
-                    const eventLink = isFromEvent && g.eventoId
-                        ? `<a href="./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(g.eventoId)}" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Abrir evento na Agenda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
-                        : '';
+                    // Locação externa usa `eventoId`; gasto real vinculado usa `eventId` — ambos linkam à Agenda
+                    const linkedEventId = g.eventoId || g.eventId;
+                    // Célula da coluna Evento: nome do evento clicável (ou "—" quando sem vínculo)
+                    const eventoCell = linkedEventId
+                        ? `<a href="./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(linkedEventId)}" class="inline-flex items-center gap-1 text-indigo-700 hover:text-indigo-900 hover:underline transition-colors text-sm" title="Abrir evento na Agenda"><i class="fa-solid ${isFromEvent ? 'fa-truck-arrow-right' : 'fa-calendar-check'} text-[11px]"></i> ${escapeHtml(g.evento || 'Evento')}</a>`
+                        : '<span class="text-gray-300">—</span>';
                     const editBtn = g.bloqueado
                         ? ''
                         : `<button onclick="editarGasto('${g.id}')" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Editar Gasto"><i class="fa-solid fa-edit"></i></button>`;
@@ -737,17 +810,61 @@
                                         <td>${formatarData(g.data)}</td>
                                         <td>${g.descricao}</td>
                                         <td>${catBadge}${detalheChip}</td>
+                                        <td>${eventoCell}</td>
                                         <td>${g.conta}${declaranteIcon}</td>
                                         <td>${g.pagamento}</td>
                                         <td class="font-bold text-red-600">${formatarMoeda(g.valor)}</td>
                                         <td>
                                             <div class="flex space-x-2">
-                                                ${editBtn}${delBtn}${histBtn}${eventLink}
+                                                ${editBtn}${delBtn}${histBtn}
                                             </div>
                                         </td>
                                     </tr>
                                 `;
                 }).join('');
+            }
+
+            // === Fechamento por Evento (rateio de Custos Gerais) — tabela ao vivo do dashboard ===
+            function renderFechamentoPorEvento() {
+                const tbody = getById('tabela-fechamento-eventos')?.querySelector('tbody');
+                const resumoEl = getById('fechamento-pool-resumo');
+                if (!tbody) return;
+                const fx = computeFechamentoPorEvento(state.selectedMonth);
+                if (resumoEl) resumoEl.innerHTML = fx.numEventos
+                    ? `Custos Gerais do mês: <strong>${formatarMoeda(fx.pool)}</strong> (gastos gerais ${formatarMoeda(fx.poolGastos)} + contas fixas ${formatarMoeda(fx.poolFixas)} + salários ${formatarMoeda(fx.poolSalarios)}) ÷ ${fx.numEventos} evento${fx.numEventos === 1 ? '' : 's'} = <strong>${formatarMoeda(fx.cota)}</strong> por evento`
+                    : 'Sem eventos neste mês — custos gerais não rateados.';
+                if (!fx.linhas.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Nenhum evento neste mês.</td></tr>';
+                    return;
+                }
+                const totais = fx.linhas.reduce((a, l) => ({
+                    entrada: a.entrada + l.entrada, diretos: a.diretos + l.custosDiretos,
+                    cota: a.cota + l.cota, resultado: a.resultado + l.resultado
+                }), { entrada: 0, diretos: 0, cota: 0, resultado: 0 });
+                tbody.innerHTML = [...fx.linhas].sort((a, b) => String(a.evento.data).localeCompare(String(b.evento.data))).map(l => {
+                    const e = l.evento;
+                    const multiTag = l.multiMes
+                        ? ' <span class="inline-flex items-center text-[10px] font-bold uppercase text-sky-700 bg-sky-100 px-1.5 py-0.5 rounded" title="Evento em mais de um mês: recebe uma cota de Custos Gerais em cada mês que toca; entrada e custos diretos exibidos pelo total do evento.">multi-mês</span>'
+                        : '';
+                    const concluidoTag = e.status === 'concluido'
+                        ? ' <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded" title="Evento concluído"><i class="fa-solid fa-check"></i></span>'
+                        : '';
+                    return `
+                        <tr class="cursor-pointer hover:bg-indigo-50/40" onclick="window.location.href='./Agenda%20de%20eventos.html?editEvent=${encodeURIComponent(e.id)}'">
+                            <td>${formatarData(e.data)} · ${escapeHtml(e.contratante || 'Sem cliente')}${concluidoTag}${multiTag}</td>
+                            <td class="text-emerald-700 font-semibold">${formatarMoeda(l.entrada)}</td>
+                            <td class="text-red-600">${formatarMoeda(l.custosDiretos)}</td>
+                            <td class="text-amber-700">${formatarMoeda(l.cota)}</td>
+                            <td class="font-bold ${l.resultado >= 0 ? 'text-emerald-700' : 'text-red-600'}">${formatarMoeda(l.resultado)}</td>
+                        </tr>`;
+                }).join('') + `
+                    <tr class="font-bold bg-gray-50/60">
+                        <td>Total (${fx.linhas.length} evento${fx.linhas.length === 1 ? '' : 's'})</td>
+                        <td class="text-emerald-700">${formatarMoeda(totais.entrada)}</td>
+                        <td class="text-red-600">${formatarMoeda(totais.diretos)}</td>
+                        <td class="text-amber-700">${formatarMoeda(totais.cota)}</td>
+                        <td class="${totais.resultado >= 0 ? 'text-emerald-700' : 'text-red-600'}">${formatarMoeda(totais.resultado)}</td>
+                    </tr>`;
             }
 
             function renderAll() {
@@ -843,6 +960,24 @@
                     }
                     elSaldo.className = `kpi-value tabular-nums ${saldoAtual >= 0 ? 'is-success' : 'is-danger'}`;
                     getById('saldo-comparison').innerHTML = getChangeHTML(saldoAtual, saldoAnterior);
+
+                    // Quantitativo de eventos do mês: executados (status 'concluido') vs. a executar
+                    const evtValidos = eventosMes.filter(e => !e.cancelado);
+                    const evtExecutados = evtValidos.filter(e => e.status === 'concluido').length;
+                    const evtAExecutar = evtValidos.length - evtExecutados;
+                    const elQtdEventos = getById('eventos-quantitativo');
+                    if (elQtdEventos) {
+                        elQtdEventos.innerHTML =
+                            `<span style="color:var(--success)">${evtExecutados}</span>` +
+                            `<span style="color:var(--text-faint); font-weight:400"> · </span>` +
+                            `<span style="color:var(--brand-500)">${evtAExecutar}</span>`;
+                    }
+                    const elQtdEventosSub = getById('eventos-quantitativo-sub');
+                    if (elQtdEventosSub) elQtdEventosSub.textContent =
+                        `${evtExecutados} executado${evtExecutados === 1 ? '' : 's'} · ${evtAExecutar} a executar`;
+
+                    // Fechamento por Evento (rateio de Custos Gerais em tempo real)
+                    renderFechamentoPorEvento();
 
                     // --- [AAA] Geração de Insights Inteligentes ---
                     const insightsContainer = getById('quick-insights');
@@ -3162,6 +3297,11 @@
                 const gastosMes = state.gastos.filter(g => g.data.startsWith(state.selectedMonth));
                 const pagMonMes = (state.pagamentosMonitores || []).filter(p => p.data.startsWith(state.selectedMonth));
 
+                // Quantitativo de eventos (cancelados fora)
+                const evtValidosPdf = eventosMes.filter(e => !e.cancelado);
+                const evtExecutadosPdf = evtValidosPdf.filter(e => e.status === 'concluido').length;
+                const evtAExecutarPdf = evtValidosPdf.length - evtExecutadosPdf;
+
                 const entradasEventosVal = eventosMes.reduce((acc, e) => acc + (parseFloat(e.valor) || 0), 0);
                 const entradasAvulsasVal = receitasMes.reduce((acc, r) => acc + (parseFloat(r.valor) || 0), 0);
                 const totalReceitasVal = entradasEventosVal + entradasAvulsasVal;
@@ -3248,7 +3388,7 @@
 
                 // Números-chave
                 let currentY = 66;
-                drawKpiCard({ x: 15, y: currentY, w: 87, h: 23, title: 'RECEITA TOTAL', value: formatarMoeda(totalReceitasVal), tone: successColor, subtitle: `${eventosMes.length} eventos + ${receitasMes.length} avulsas` });
+                drawKpiCard({ x: 15, y: currentY, w: 87, h: 23, title: 'RECEITA TOTAL', value: formatarMoeda(totalReceitasVal), tone: successColor, subtitle: `${evtExecutadosPdf} concl. · ${evtAExecutarPdf} a exec. · ${receitasMes.length} avulsas` });
                 drawKpiCard({ x: 108, y: currentY, w: 87, h: 23, title: 'DESPESA TOTAL', value: formatarMoeda(totalDespesasGeral), tone: dangerColor, subtitle: 'Gastos, monitores e folha' });
                 currentY += 28;
                 drawKpiCard({ x: 15, y: currentY, w: 87, h: 23, title: 'SALDO LÍQUIDO', value: formatarMoeda(saldoLiquidoVal), tone: resultadoPositivo ? successColor : dangerColor, subtitle: resultadoPositivo ? 'Sobrou no mês' : 'Faltou no mês' });
@@ -3365,6 +3505,40 @@
                     alternateRowStyles: { fillColor: [248, 250, 252] },
                     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } }
                 });
+
+                // Fechamento por Evento (rateio de Custos Gerais) — mesma fonte da tabela ao vivo
+                doc.addPage();
+                addPageHeader('Fechamento por Evento — Custos Gerais Rateados');
+                const fx = computeFechamentoPorEvento(state.selectedMonth);
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100, 116, 139);
+                doc.text(
+                    `Custos Gerais: ${formatarMoeda(fx.pool)} (gastos gerais ${formatarMoeda(fx.poolGastos)} + contas fixas ${formatarMoeda(fx.poolFixas)} + salários ${formatarMoeda(fx.poolSalarios)}) ÷ ${fx.numEventos} evento(s) = ${formatarMoeda(fx.cota)} por evento`,
+                    15, 35, { maxWidth: pageWidth - 30 }
+                );
+                const fxRows = [...fx.linhas]
+                    .sort((a, b) => String(a.evento.data).localeCompare(String(b.evento.data)))
+                    .map(l => [
+                        `${formatarData(l.evento.data)} · ${l.evento.contratante || 'Sem cliente'}${l.multiMes ? ' *' : ''}`,
+                        formatarMoeda(l.entrada), formatarMoeda(l.custosDiretos), formatarMoeda(l.cota), formatarMoeda(l.resultado)
+                    ]);
+                const fxTot = fx.linhas.reduce((a, l) => ({ e: a.e + l.entrada, d: a.d + l.custosDiretos, c: a.c + l.cota, r: a.r + l.resultado }), { e: 0, d: 0, c: 0, r: 0 });
+                doc.autoTable({
+                    startY: 44,
+                    head: [['Evento', 'Entrada', 'Custos Diretos', 'Custos Gerais', 'Resultado']],
+                    body: fxRows.length ? fxRows : [['Sem eventos neste mês', '—', '—', '—', '—']],
+                    foot: fxRows.length ? [['Total', formatarMoeda(fxTot.e), formatarMoeda(fxTot.d), formatarMoeda(fxTot.c), formatarMoeda(fxTot.r)]] : undefined,
+                    headStyles: { fillColor: [100, 116, 139], textColor: [255, 255, 255] },
+                    footStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } }
+                });
+                if (fx.linhas.some(l => l.multiMes)) {
+                    doc.setFontSize(8);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text('* evento em mais de um mês: entrada e custos diretos totais; recebe uma cota de Custos Gerais em cada mês que toca.', 15, doc.lastAutoTable.finalY + 6);
+                }
 
                 // Rodapé
                 const totalPages = doc.internal.getNumberOfPages();
@@ -3712,6 +3886,7 @@
                 const inputDeclarante = getById('gasto-declarante');
                 if (inputDeclarante) inputDeclarante.value = gasto.declaredBy || '';
                 window.atualizarDetalheGasto(gasto.detalhe);
+                popularSelectEventoGasto(gasto.data, gasto.eventId);
 
                 const btnSubmit = form.querySelector('button[type="submit"]');
                 if (btnSubmit) btnSubmit.innerHTML = '<i class="fa-solid fa-save mr-2"></i> Atualizar Gasto';
@@ -4382,6 +4557,36 @@
             getById('gasto-conta')?.addEventListener('change', window.atualizarDeclaranteGasto);
             getById('gasto-categoria')?.addEventListener('change', () => window.atualizarDetalheGasto());
 
+            // Busca em tempo real na tabela de gastos
+            getById('gastos-search')?.addEventListener('input', (e) => {
+                gastosBusca = e.target.value;
+                renderTabelaGastos();
+            });
+
+            // Popula o select "Vincular a evento" com os eventos do mês da data do gasto.
+            // Ao editar, o evento já vinculado entra na lista mesmo se for de outro mês.
+            const popularSelectEventoGasto = (dataStr, selectedId) => {
+                const sel = getById('gasto-evento');
+                if (!sel) return;
+                const ym = (dataStr || '').slice(0, 7);
+                const doMes = (state.eventos || [])
+                    .filter(e => !e.cancelado && finCountsInMonth(e, ym) === 1)
+                    .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+                const selecionado = selectedId ? String(selectedId) : '';
+                if (selecionado && !doMes.some(e => e.id === selecionado)) {
+                    const extra = (state.eventos || []).find(e => e.id === selecionado);
+                    if (extra) doMes.push(extra);
+                }
+                sel.innerHTML = '<option value="">Sem vínculo</option>' + doMes.map(e =>
+                    `<option value="${e.id}" ${e.id === selecionado ? 'selected' : ''}>${formatarData(e.data)} — ${escapeHtml(e.contratante || 'Sem cliente')} (${escapeHtml(e.empresa || '')})</option>`
+                ).join('');
+            };
+
+            // Trocar a data do gasto atualiza a lista de eventos do mês (mantendo a seleção, se possível)
+            getById('gasto-data')?.addEventListener('change', (e) => {
+                popularSelectEventoGasto(e.target.value, getById('gasto-evento')?.value || null);
+            });
+
             const formGasto = getById('form-gasto');
             if (formGasto) {
                 formGasto.addEventListener('submit', async (e) => {
@@ -4416,7 +4621,9 @@
                         paymentMethod: metodo,
                         accountId: contaId,
                         declaredBy: declaranteVisivel ? declarante : null,
-                        expenseDetail: detalhes || null
+                        expenseDetail: detalhes || null,
+                        // Chave sempre presente neste form: sem seleção ao editar = desvincular explícito
+                        eventId: getById('gasto-evento')?.value || null
                     };
 
                     let sucesso;
@@ -4460,9 +4667,10 @@
                 const dataInput = getById('gasto-data');
                 if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
 
-                // Reseta os campos condicionais (declarante/detalhe)
+                // Reseta os campos condicionais (declarante/detalhe) e o vínculo a evento
                 window.atualizarDeclaranteGasto();
                 window.atualizarDetalheGasto();
+                popularSelectEventoGasto(dataInput?.value, null);
 
                 showModal('add-gasto-modal');
             });
@@ -5332,6 +5540,12 @@
                             <div id="saldo-comparison" class="kpi-delta"></div>
                         </div>
                         <div class="kpi-card">
+                            <span class="kpi-label"><i class="fa-solid fa-calendar-check"
+                                    style="color:var(--brand-500)"></i> Eventos do Mês</span>
+                            <p id="eventos-quantitativo" class="kpi-value tabular-nums">—</p>
+                            <div id="eventos-quantitativo-sub" class="kpi-delta">executados · a executar</div>
+                        </div>
+                        <div class="kpi-card">
                             <span class="kpi-label"><i class="fa-solid fa-robot"></i> Inteligência Aero</span>
                             <button onclick="openChat('dashboard')" class="gemini-btn w-full mb-2 mt-1 py-2 text-sm">
                                 <i class="fa-solid fa-sparkles"></i> Gerar Insights
@@ -5423,6 +5637,30 @@
                             </div>
                         </div>
                     </section>
+
+                    <section id="fechamento-eventos-section" class="surface p-6">
+                        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                            <h3 class="font-bold text-gray-700 text-lg"><i
+                                    class="fa-solid fa-scale-balanced mr-2 text-indigo-500"></i>Fechamento por Evento</h3>
+                            <span class="text-xs text-gray-400">Entrada vs. custos por evento, com rateio de Custos
+                                Gerais em tempo real</span>
+                        </div>
+                        <p id="fechamento-pool-resumo" class="text-sm text-gray-600 mb-4"></p>
+                        <div class="table-wrapper">
+                            <table id="tabela-fechamento-eventos" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Evento</th>
+                                        <th>Entrada</th>
+                                        <th>Custos Diretos</th>
+                                        <th>Custos Gerais</th>
+                                        <th>Resultado</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
 
                 <div id="page-entradas" class="page">
@@ -5496,6 +5734,15 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="mb-4">
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                <input id="gastos-search" type="search" class="form-input w-full pl-9"
+                                    placeholder="Buscar por descrição, categoria, detalhe, conta ou pagamento…"
+                                    autocomplete="off">
+                            </div>
+                            <p id="gastos-search-count" class="text-xs text-gray-500 mt-1 pl-1"></p>
+                        </div>
                         <div class="table-wrapper">
                             <table id="tabela-gastos" class="table">
                                 <thead>
@@ -5503,6 +5750,7 @@
                                         <th class="th-sort" data-sort="data">Data <span class="sort-ind"></span></th>
                                         <th class="th-sort" data-sort="descricao">Descrição <span class="sort-ind"></span></th>
                                         <th class="th-sort" data-sort="categoria">Categoria <span class="sort-ind"></span></th>
+                                        <th class="th-sort" data-sort="evento">Evento <span class="sort-ind"></span></th>
                                         <th class="th-sort" data-sort="conta">Conta <span class="sort-ind"></span></th>
                                         <th class="th-sort" data-sort="pagamento">Pagamento <span class="sort-ind"></span></th>
                                         <th class="th-sort" data-sort="valor">Valor <span class="sort-ind"></span></th>
@@ -5823,6 +6071,13 @@
                     <label for="gasto-categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
                     <select id="gasto-categoria" required class="form-input w-full mt-1">
                         <option value="">-- Selecione --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="gasto-evento" class="block text-sm font-medium text-gray-700">Vincular a evento
+                        <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <select id="gasto-evento" class="form-input w-full mt-1">
+                        <option value="">Sem vínculo</option>
                     </select>
                 </div>
                 <div><label for="gasto-conta" class="block text-sm font-medium text-gray-700">Conta de

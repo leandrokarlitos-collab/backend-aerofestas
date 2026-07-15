@@ -1061,6 +1061,20 @@ export const api = {
 
     // --- PAGAMENTOS DE MONITORES ---
 
+    // Custos consolidados de um evento (gastos vinculados + monitores + locações + entrada)
+    getCustosEvento: async (eventoId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/finance/event-costs/${encodeURIComponent(eventoId)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) {
+            console.error("Erro ao buscar custos do evento:", e);
+            return null;
+        }
+    },
+
     getPagamentosMonitores: async () => {
         try {
             const token = getToken();

@@ -1526,10 +1526,15 @@
         </header>
 
         <div class="mb-8 fade-in" style="animation-delay: 0.1s;">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
                 <div id="monthly-total-container" class="kpi-card">
                     <span class="kpi-label"><i class="fas fa-sack-dollar"></i> Faturamento do Mês</span>
                     <span id="monthly-total" class="kpi-value is-success">R$ 0,00</span>
+                </div>
+                <div id="monthly-events-count-container" class="kpi-card">
+                    <span class="kpi-label"><i class="fas fa-clipboard-check" style="color: var(--brand-500)"></i> Eventos do Mês</span>
+                    <span id="monthly-events-count" class="kpi-value">—</span>
+                    <span class="kpi-delta" style="color: var(--text-faint)">executados · a executar</span>
                 </div>
                 <div id="monthly-estimated-container" class="kpi-card hidden">
                     <span class="kpi-label"><i class="fas fa-chart-line" style="color: var(--warning)"></i> Valor Estimado do Mês</span>
@@ -3291,6 +3296,19 @@
                 // entra proporcionalmente em cada mês. (Eventos por ingresso têm price = 0.)
                 const total = monthlyEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
                 monthlyTotalEl.textContent = formatCurrency(total);
+
+                // Quantitativo do mês: executados (status 'concluido') vs. a executar.
+                // Cancelados ficam de fora; multi-dia conta 1 em cada mês que toca (eventTouchesMonth).
+                const eventosValidos = monthlyEvents.filter(e => e.status !== 'cancelado' && e.paymentStatus !== 'Cancelado');
+                const executados = eventosValidos.filter(e => e.status === 'concluido').length;
+                const aExecutar = eventosValidos.length - executados;
+                const countEl = document.getElementById('monthly-events-count');
+                if (countEl) {
+                    countEl.innerHTML =
+                        `<span style="color: var(--success)">${executados}</span>` +
+                        `<span style="color: var(--text-faint); font-weight: 400"> · </span>` +
+                        `<span style="color: var(--brand-500)">${aExecutar}</span>`;
+                }
 
                 // Estimado do mês: só eventos por ingresso AINDA não realizados (sem líquido informado).
                 // Quando o líquido é lançado, o evento sai do estimado e passa ao faturamento acima.
@@ -6424,8 +6442,11 @@
 
             // === Concluir evento: modal de fechamento ===
             // - Pagamento (informa total, sinal, restante e permite atualizar status)
+            // - Gastos e monitores do evento (lançados no Financeiro etiquetados com o evento)
+            // - Resumo Entrada vs. Custos em tempo real
             // - Unidades dos brinquedos do evento (mesma UI da seção Equipamentos)
             // - Upload de fotos do evento por brinquedo (vincula com eventId → aparece na galeria do equipamento)
+            let concludeCategoriasCache = null; // categorias de gasto (1 fetch por sessão)
             const handleConcludeEvent = async (eventId) => {
                 const event = events.find(e => e.id === eventId);
                 if (!event) {
@@ -6438,6 +6459,24 @@
                     const fresh = await api.getBrinquedos();
                     if (Array.isArray(fresh)) toys = fresh;
                 } catch (_) { /* tolera offline */ }
+
+                // Custos já lançados deste evento (gastos vinculados, monitores, locações externas)
+                // e categorias de gasto para o select das novas linhas
+                let custosEvento = { transactions: [], pagamentosMonitores: [], externalRentals: [], entrada: null };
+                try {
+                    const ce = await api.getCustosEvento(event.id);
+                    if (ce) custosEvento = Object.assign(custosEvento, ce);
+                } catch (_) { /* tolera falha/offline: seções financeiras abrem vazias */ }
+                // Só cacheia quando veio lista não-vazia — getCategoriasGastos() devolve []
+                // em falha de rede (nunca lança), e [] é truthy; sem esse guard uma primeira
+                // abertura offline envenenaria o cache pela sessão toda (só "Geral" no select).
+                if (!concludeCategoriasCache || !concludeCategoriasCache.length) {
+                    try {
+                        const cats = await api.getCategoriasGastos();
+                        if (Array.isArray(cats) && cats.length) concludeCategoriasCache = cats;
+                    } catch (_) { /* mantém null: tenta de novo na próxima abertura */ }
+                }
+                const categoriasGasto = Array.isArray(concludeCategoriasCache) ? concludeCategoriasCache : [];
 
                 const eventItems = (event.items || event.toys || []);
                 const eventToys = eventItems.map(item => {
@@ -6583,6 +6622,64 @@
                     </section>
                 ` : '';
 
+                // === Fechamento financeiro: seções de gastos/monitores + resumo entrada vs. custos ===
+                const fmtDataConc = (iso) => { const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : (iso || ''); };
+                const gastosExistentesHtml = (custosEvento.transactions || []).map(t => `
+                    <div style="display:flex;justify-content:space-between;gap:8px;font-size:0.85rem;color:#334155;padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <span><i class="fa-solid fa-receipt" style="color:#6366f1;"></i> ${escAttr(t.description || '')} <span style="color:#94a3b8;">· ${fmtDataConc(t.date)}</span></span>
+                        <strong style="white-space:nowrap;">${formatCurrency(Number(t.amount) || 0)}</strong>
+                    </div>`).join('');
+                const locacoesHtml = (custosEvento.externalRentals || []).map(r => `
+                    <div style="display:flex;justify-content:space-between;gap:8px;font-size:0.85rem;color:#92400e;padding:6px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+                        <span><i class="fa-solid fa-truck-arrow-right"></i> ${escAttr(r.description || 'Locação externa')} <span style="color:#b45309;">· Locação externa</span></span>
+                        <strong style="white-space:nowrap;">${formatCurrency(Number(r.cost) || 0)}</strong>
+                    </div>`).join('');
+                const pagamentosExistentesHtml = (custosEvento.pagamentosMonitores || []).map(p => `
+                    <div style="display:flex;justify-content:space-between;gap:8px;font-size:0.85rem;color:#334155;padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <span><i class="fa-solid fa-user-check" style="color:#6366f1;"></i> ${escAttr(p.nome || 'Monitor')} <span style="color:#94a3b8;">· ${p.statusPagamento === 'Executado' ? 'pago' : 'pendente'}</span></span>
+                        <strong style="white-space:nowrap;">${formatCurrency(Number(p.pagamento) || 0)}</strong>
+                    </div>`).join('');
+                const categoriasOptionsHtml = ['Geral', ...categoriasGasto.map(c => c.name).filter(n => n && n !== 'Geral')]
+                    .map(n => `<option value="${escAttr(n)}">${escAttr(n)}</option>`).join('');
+                // Monitores da escala estruturada ainda SEM pagamento neste evento. Dedupe por
+                // monitor (multi-dia tem um assignment por dia) e guard contra pagamento já
+                // existente — o POST é upsert por id e NÃO deduplica por monitor+evento.
+                const escalaPendente = [];
+                (event.assignments || []).forEach(a => {
+                    if (!a.monitorId) return;
+                    const jaNaLista = escalaPendente.find(x => x.monitorId === a.monitorId);
+                    if (jaNaLista) {
+                        if (a.papel === 'motorista') jaNaLista.motorista = true;
+                        return;
+                    }
+                    if ((custosEvento.pagamentosMonitores || []).some(p => p.monitorId === a.monitorId)) return;
+                    escalaPendente.push({ monitorId: a.monitorId, nome: a.monitor?.nome || 'Monitor', motorista: a.papel === 'motorista' });
+                });
+                const financeSectionsHtml = `
+                    <section class="conclude-section" id="conclude-financial-summary"></section>
+                    <section class="conclude-section" id="conclude-costs-section">
+                        <h4><i class="fas fa-file-invoice-dollar"></i> Gastos do evento</h4>
+                        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+                            ${gastosExistentesHtml}${locacoesHtml}
+                            ${(!gastosExistentesHtml && !locacoesHtml) ? '<p style="color:#94a3b8;font-style:italic;font-size:0.82rem;margin:0;">Nenhum gasto lançado para este evento ainda.</p>' : ''}
+                        </div>
+                        <div id="conclude-costs-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+                        <button type="button" id="conclude-add-cost-btn" style="margin-top:8px;border:1px dashed #94a3b8;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#475569;background:#f8fafc;cursor:pointer;">
+                            <i class="fas fa-plus"></i> Lançar gasto do evento
+                        </button>
+                    </section>
+                    <section class="conclude-section" id="conclude-monitors-section">
+                        <h4><i class="fas fa-user-group"></i> Monitores do evento</h4>
+                        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+                            ${pagamentosExistentesHtml || '<p style="color:#94a3b8;font-style:italic;font-size:0.82rem;margin:0;">Nenhum pagamento de monitor lançado para este evento ainda.</p>'}
+                        </div>
+                        <div id="conclude-monitors-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+                        <button type="button" id="conclude-add-monitor-btn" style="margin-top:8px;border:1px dashed #94a3b8;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#475569;background:#f8fafc;cursor:pointer;">
+                            <i class="fas fa-plus"></i> Adicionar monitor avulso
+                        </button>
+                    </section>
+                `;
+
                 overlay.innerHTML = `
                     <div class="conclude-box ${alreadyConcluded ? 'is-review' : ''}" role="document" style="position:relative;">
                         <header class="conclude-header ${alreadyConcluded ? 'is-review' : ''}">
@@ -6608,6 +6705,8 @@
                             </section>
 
                             ${ticketResultHtml}
+
+                            ${financeSectionsHtml}
 
                             <section class="conclude-section">
                                 <h4><i class="fas fa-cubes"></i> Estado dos equipamentos do evento</h4>
@@ -6705,6 +6804,155 @@
                         overlay.querySelector('#conclude-ticket-net')
                     );
                 }
+
+                // === Fechamento financeiro: linhas dinâmicas + resumo entrada vs. custos ===
+                const costsRowsEl = overlay.querySelector('#conclude-costs-rows');
+                const monitorsRowsEl = overlay.querySelector('#conclude-monitors-rows');
+                const summaryEl = overlay.querySelector('#conclude-financial-summary');
+                const concInputStyle = 'border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;font-size:0.86rem;background:#fff;color:#1e293b;width:100%;';
+
+                const addCostRow = () => {
+                    const row = document.createElement('div');
+                    row.className = 'conclude-cost-row';
+                    // UUID fixo da linha = id da Transaction: identifica a linha no reenvio pós-falha
+                    row.dataset.rid = crypto.randomUUID();
+                    row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr;gap:8px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;';
+                    row.innerHTML = `
+                        <input type="text" class="conc-cost-desc" placeholder="Descrição do gasto" style="${concInputStyle}">
+                        <input type="number" class="conc-cost-value" min="0" step="0.01" placeholder="Valor (R$)" style="${concInputStyle}">
+                        <select class="conc-cost-cat" style="${concInputStyle}">${categoriasOptionsHtml}</select>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="date" class="conc-cost-date" value="${event.date}" style="${concInputStyle}">
+                            <button type="button" class="conc-row-remove" title="Remover" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:1rem;"><i class="fas fa-trash-can"></i></button>
+                        </div>`;
+                    row.querySelector('.conc-row-remove').addEventListener('click', () => { row.remove(); updateFinanceSummary(); });
+                    costsRowsEl.appendChild(row);
+                    row.querySelector('.conc-cost-desc').focus();
+                };
+
+                const monitorRowTotal = (row) => {
+                    const base = parseFloat(row.querySelector('.conc-mon-base').value) || 0;
+                    const he = parseFloat(row.querySelector('.conc-mon-he').value) || 0;
+                    const motorista = row.querySelector('.conc-mon-motorista').checked;
+                    const numEventos = motorista ? (parseFloat(row.querySelector('.conc-mon-num-eventos').value) || 0) : 0;
+                    const adicional = numEventos * 20; // R$20 por evento entregue (mesma regra do Financeiro)
+                    return { base, he, motorista, numEventos, adicional, total: base + adicional + he };
+                };
+
+                const addMonitorRow = ({ monitorId = null, nome = '', motorista = false } = {}) => {
+                    const row = document.createElement('div');
+                    row.className = 'conclude-monitor-row';
+                    row.dataset.rid = crypto.randomUUID();
+                    if (monitorId) row.dataset.monitorId = monitorId;
+                    row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;';
+                    row.innerHTML = `
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" class="conc-mon-nome" value="${escAttr(nome)}" ${monitorId ? `readonly style="${concInputStyle}background:#f1f5f9;font-weight:600;"` : `placeholder="Nome do monitor" style="${concInputStyle}"`}>
+                            <button type="button" class="conc-row-remove" title="Remover" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:1rem;"><i class="fas fa-trash-can"></i></button>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                            <input type="number" class="conc-mon-base" min="0" step="0.01" placeholder="Diária (R$)" style="${concInputStyle}">
+                            <input type="number" class="conc-mon-he" min="0" step="0.01" placeholder="H. extra (R$)" style="${concInputStyle}">
+                            <select class="conc-mon-status" style="${concInputStyle}">
+                                <option value="Pendente" selected>⏳ Pendente</option>
+                                <option value="Executado">✅ Pago</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:0.85rem;color:#334155;">
+                            <label style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" class="conc-mon-motorista" ${motorista ? 'checked' : ''}> Foi motorista</label>
+                            <span class="conc-mon-num-wrap" style="display:${motorista ? 'flex' : 'none'};gap:6px;align-items:center;">Eventos entregues:
+                                <input type="number" class="conc-mon-num-eventos" min="0" step="1" value="1" style="${concInputStyle}width:70px;"></span>
+                            <span style="margin-left:auto;">Total: <strong class="conc-mon-total" style="color:#047857;">R$ 0,00</strong></span>
+                        </div>`;
+                    row.querySelector('.conc-row-remove').addEventListener('click', () => { row.remove(); updateFinanceSummary(); });
+                    row.querySelector('.conc-mon-motorista').addEventListener('change', (e) => {
+                        row.querySelector('.conc-mon-num-wrap').style.display = e.target.checked ? 'flex' : 'none';
+                        updateFinanceSummary();
+                    });
+                    monitorsRowsEl.appendChild(row);
+                };
+
+                const computeFinanceTotals = () => {
+                    // Entrada: evento normal = valor total; por ficha = líquido informado (ou estimativa).
+                    // Status "Cancelado" no fechamento zera a entrada (o evento não é faturado).
+                    let entrada; let entradaTag = '';
+                    const statusAtual = overlay.querySelector('#conclude-payment-status')?.value;
+                    if (statusAtual === 'Cancelado') {
+                        entrada = 0; entradaTag = ' (cancelado)';
+                    } else if (event.isTicketSale) {
+                        const netNow = parseFloat(overlay.querySelector('#conclude-ticket-net')?.value);
+                        if (Number.isFinite(netNow)) entrada = netNow;
+                        else if (custosEvento.entrada != null) entrada = Number(custosEvento.entrada) || 0;
+                        else { entrada = Number(event.estimatedValue) || 0; entradaTag = ' (estimado)'; }
+                    } else {
+                        entrada = total;
+                    }
+                    let custos =
+                        (custosEvento.transactions || []).reduce((s, t) => s + (Number(t.amount) || 0), 0) +
+                        (custosEvento.pagamentosMonitores || []).reduce((s, p) => s + (Number(p.pagamento) || 0), 0) +
+                        (custosEvento.externalRentals || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+                    // Só conta o que o confirmar realmente salva (mesmos guards do submit) — evita
+                    // "fantasmas" no resumo, ex.: motorista pré-preenchido (numEventos=1 → +R$20) sem diária.
+                    costsRowsEl.querySelectorAll('.conclude-cost-row').forEach(r => {
+                        const desc = r.querySelector('.conc-cost-desc').value.trim();
+                        const val = parseFloat(r.querySelector('.conc-cost-value').value);
+                        if (desc && Number.isFinite(val) && val > 0) custos += val;
+                    });
+                    monitorsRowsEl.querySelectorAll('.conclude-monitor-row').forEach(r => {
+                        const nome = r.querySelector('.conc-mon-nome').value.trim();
+                        const t = monitorRowTotal(r);
+                        r.querySelector('.conc-mon-total').textContent = formatCurrency(t.total);
+                        if (nome && t.base > 0) custos += t.total;
+                    });
+                    const resultado = entrada - custos;
+                    const margem = entrada > 0 ? (resultado / entrada) * 100 : null;
+                    return { entrada, entradaTag, custos, resultado, margem };
+                };
+
+                const financeCellsHtml = (fin, big) => {
+                    const pos = fin.resultado >= 0;
+                    const vs = big ? '1.5rem' : '1.15rem';
+                    return `
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;">
+                            <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:10px;">
+                                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:#047857;">Entrada${fin.entradaTag}</div>
+                                <div style="font-size:${vs};font-weight:800;color:#047857;">${formatCurrency(fin.entrada)}</div>
+                            </div>
+                            <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:10px;">
+                                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:#b91c1c;">Custos</div>
+                                <div style="font-size:${vs};font-weight:800;color:#b91c1c;">${formatCurrency(fin.custos)}</div>
+                            </div>
+                            <div style="background:${pos ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)'};border:1px solid ${pos ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'};border-radius:12px;padding:10px;">
+                                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:${pos ? '#047857' : '#b91c1c'};">Resultado</div>
+                                <div style="font-size:${vs};font-weight:800;color:${pos ? '#047857' : '#b91c1c'};">${formatCurrency(fin.resultado)}${fin.margem != null ? ` <span style="font-size:0.75rem;font-weight:700;">(${fin.margem.toFixed(0)}%)</span>` : ''}</div>
+                            </div>
+                        </div>`;
+                };
+
+                const updateFinanceSummary = () => {
+                    const fin = computeFinanceTotals();
+                    summaryEl.innerHTML = `<h4><i class="fas fa-scale-balanced"></i> Entrada vs. Custos</h4>${financeCellsHtml(fin, false)}`;
+                };
+
+                overlay.querySelector('#conclude-add-cost-btn').addEventListener('click', addCostRow);
+                overlay.querySelector('#conclude-add-monitor-btn').addEventListener('click', () => addMonitorRow());
+                overlay.querySelector('#conclude-costs-section').addEventListener('input', updateFinanceSummary);
+                overlay.querySelector('#conclude-monitors-section').addEventListener('input', updateFinanceSummary);
+                overlay.querySelector('#conclude-monitors-section').addEventListener('change', updateFinanceSummary);
+                overlay.querySelector('#conclude-ticket-net')?.addEventListener('input', updateFinanceSummary);
+                // Status "Cancelado" muda a entrada → reflete no resumo
+                paymentSelect.addEventListener('change', updateFinanceSummary);
+                // Venda por ficha: bruto/%/detalhamento recalculam o líquido via .value programático
+                // (não dispara 'input'). Recompute no próximo tick, depois do auto-cálculo do líquido.
+                if (event.isTicketSale) {
+                    const deferSummary = () => setTimeout(updateFinanceSummary, 0);
+                    overlay.querySelector('#conclude-ticket-gross')?.addEventListener('input', deferSummary);
+                    overlay.querySelector('#conclude-ticket-percent')?.addEventListener('input', deferSummary);
+                    overlay.querySelector('#conclude-ticket-breakdown-host')?.addEventListener('input', deferSummary);
+                }
+                // Pré-preenche com a escala estruturada ainda sem pagamento neste evento
+                escalaPendente.forEach(m => addMonitorRow(m));
+                updateFinanceSummary();
 
                 // Inputs ocultos (um por toy) pra abrir picker e câmera direta
                 const fileInputs = {};
@@ -6961,8 +7209,85 @@
                         renderAll();
                         // Re-render lista do dia (se modal aberta)
                         if (selectedDate) renderDayEvents(selectedDate);
-                        close();
-                        showToast('Evento concluído!');
+
+                        // Lança gastos e monitores do fechamento, etiquetados com o evento.
+                        // Monitores vão para PagamentoMonitor (nunca Transaction — duplicaria a
+                        // despesa mensal). Linhas já salvas (data-saved) são puladas no reenvio:
+                        // POST /transactions é create (id repetido falharia) e o de pagamentos
+                        // é upsert por id.
+                        const lancamentos = [];
+                        costsRowsEl.querySelectorAll('.conclude-cost-row:not([data-saved])').forEach(r => {
+                            const desc = r.querySelector('.conc-cost-desc').value.trim();
+                            const val = parseFloat(r.querySelector('.conc-cost-value').value);
+                            if (!desc || !Number.isFinite(val) || val <= 0) return;
+                            lancamentos.push({
+                                row: r,
+                                exec: () => api.salvarTransacao({
+                                    id: r.dataset.rid,
+                                    date: r.querySelector('.conc-cost-date').value || event.date,
+                                    description: desc,
+                                    amount: val,
+                                    type: 'EXPENSE',
+                                    category: r.querySelector('.conc-cost-cat').value || 'Geral',
+                                    paymentMethod: null,
+                                    accountId: null,
+                                    eventId: String(event.id)
+                                })
+                            });
+                        });
+                        monitorsRowsEl.querySelectorAll('.conclude-monitor-row:not([data-saved])').forEach(r => {
+                            const nome = r.querySelector('.conc-mon-nome').value.trim();
+                            const t = monitorRowTotal(r);
+                            if (!nome || t.base <= 0) return;
+                            lancamentos.push({
+                                row: r,
+                                exec: () => api.salvarPagamentoMonitor({
+                                    id: r.dataset.rid,
+                                    data: event.date,
+                                    dataPagamento: null,
+                                    eventoId: String(event.id),
+                                    monitorId: r.dataset.monitorId || null,
+                                    nome,
+                                    valorBase: t.base,
+                                    adicional: t.adicional,
+                                    horasExtras: t.he,
+                                    horasDiaria: 11,
+                                    // total autoritativo: as outras telas leem p.pagamento (custoPagamentoMonitor)
+                                    pagamento: t.total,
+                                    statusPagamento: r.querySelector('.conc-mon-status').value,
+                                    foiMotorista: t.motorista,
+                                    numEventos: t.motorista ? t.numEventos : null,
+                                    tipo: 'diaria',
+                                    indicacoes: 0
+                                })
+                            });
+                        });
+                        let falhas = 0;
+                        for (const l of lancamentos) {
+                            let ok = false;
+                            try { ok = await l.exec(); } catch (_) { ok = false; }
+                            if (ok) { l.row.dataset.saved = '1'; l.row.style.opacity = '0.55'; }
+                            else falhas++;
+                        }
+                        if (falhas > 0) {
+                            confirmBtn.disabled = false;
+                            confirmBtn.innerHTML = '<i class="fas fa-rotate-right"></i> Reenviar lançamentos';
+                            showToast(`Evento concluído, mas ${falhas} lançamento(s) falharam. Confira a conexão e clique em "Reenviar lançamentos".`, true);
+                            return;
+                        }
+
+                        // Estado de sucesso: entrada vs. custos em evidência
+                        const fin = computeFinanceTotals();
+                        const box = overlay.querySelector('.conclude-box');
+                        box.innerHTML = `
+                            <div style="padding:28px 24px;text-align:center;display:flex;flex-direction:column;gap:16px;">
+                                <div style="font-size:2.2rem;color:#10b981;"><i class="fas fa-circle-check"></i></div>
+                                <h3 style="margin:0;font-size:1.15rem;color:#1e293b;">Evento concluído!</h3>
+                                ${lancamentos.length ? `<p style="margin:-8px 0 0;font-size:0.85rem;color:#64748b;">${lancamentos.length} lançamento(s) registrados no Financeiro.</p>` : ''}
+                                ${financeCellsHtml(fin, true)}
+                                <button type="button" class="btn-confirm" data-action="close-success" style="align-self:center;min-width:160px;"><i class="fas fa-check"></i> Fechar</button>
+                            </div>`;
+                        box.querySelector('[data-action="close-success"]').addEventListener('click', close);
                     } else {
                         confirmBtn.disabled = false;
                         confirmBtn.innerHTML = '<i class="fas fa-circle-check"></i> Concluir evento';
