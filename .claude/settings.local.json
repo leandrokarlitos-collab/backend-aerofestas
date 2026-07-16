@@ -129,7 +129,8 @@
       "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; \"===== BACKUP VERIFICATION =====\"; $j.backupVerification; \"`n===== VISUAL VERIFICATION =====\"; $j.visualVerification)",
       "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; $j.backupDesign)",
       "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; $j.visualDesign)",
-      "Bash(rm -f \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2.json.gz\" \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2-ruim.json.gz\" /tmp/out.txt /tmp/err.txt)"
+      "Bash(rm -f \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2.json.gz\" \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2-ruim.json.gz\" /tmp/out.txt /tmp/err.txt)",
+      "Workflow(deep-research)"
     ]
   }
 }
