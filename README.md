@@ -1,539 +1,410 @@
-# 🎉 Sistema Operante - Aero Festas
+# 🎉 Sistema Operante — Aero Festas
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.x-black.svg)](https://expressjs.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-5.10-informational.svg)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
+[![PWA](https://img.shields.io/badge/PWA-instalável-purple.svg)](#-pwa--atualização-forçada)
+[![IA](https://img.shields.io/badge/IA-Claude%20Haiku%204.5-orange.svg)](#-inteligência-artificial)
 
-Sistema completo de gestão empresarial para locadoras de brinquedos e equipamentos para festas, desenvolvido para Aero Festas e ABC Festas. Gerencia eventos, clientes, estoque, finanças, CRM e equipe de monitores com interface moderna e intuitiva.
+Plataforma de gestão empresarial para **locadoras de brinquedos infláveis e equipamentos para festas** (Aero Festas / ABC Festas). Cobre a operação de ponta a ponta: agenda de eventos, propostas comerciais públicas, estoque, CRM, financeiro, RH, escala de monitores com app próprio, notificações, auditoria e backup automático.
+
+> ℹ️ **Estado do sistema:** em produção, versão **1.0.2** (service worker `v3.15.0`). Backend API-only. Frontend PWA servido pelo Firebase Hosting.
 
 ---
 
 ## 📋 Índice
 
 - [Visão Geral](#-visão-geral)
-- [Funcionalidades](#-funcionalidades)
+- [Arquitetura](#-arquitetura)
+- [Módulos e Funcionalidades](#-módulos-e-funcionalidades)
 - [Stack Tecnológica](#-stack-tecnológica)
-- [Pré-requisitos](#-pré-requisitos)
-- [Instalação](#-instalação)
-- [Configuração](#-configuração)
-- [Uso](#-uso)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
-- [API Endpoints](#-api-endpoints)
-- [Fluxo de Trabalho](#-fluxo-de-trabalho)
-- [Contribuindo](#-contribuindo)
-- [Licença](#-licença)
+- [Variáveis de Ambiente](#-variáveis-de-ambiente)
+- [Instalação e Execução](#-instalação-e-execução)
+- [Deploy](#-deploy)
+- [Referência da API](#-referência-da-api)
+- [Modelo de Dados](#-modelo-de-dados)
+- [Scripts Utilitários](#-scripts-utilitários)
+- [Segurança](#-segurança)
+- [Roadmap](#-roadmap)
+- [Licença e Autor](#-licença-e-autor)
 
 ---
 
 ## 🎯 Visão Geral
 
-O **Sistema Operante - Aero Festas** é uma plataforma web full-stack desenvolvida para otimizar a operação completa de empresas de locação de brinquedos infláveis e equipamentos para eventos. O sistema oferece:
+O **Sistema Operante** é um ERP vertical, feito sob medida para a rotina de uma locadora de infláveis/eventos. Diferente de um sistema de locação genérico, ele modela o vocabulário e os fluxos reais do negócio: **eventos** com múltiplos brinquedos, **monitores/motoristas** com escala e diária, **propostas** enviadas por link para o cliente, **fechamento financeiro por evento** com rateio de custos, e integração com **WhatsApp** e **IA**.
 
-- 📅 **Gestão de Agenda**: Controle completo de eventos, disponibilidade e conflitos de horários
-- 💰 **Sistema Financeiro**: Dashboard de receitas, despesas, fluxo de caixa e análises gráficas
-- 👥 **CRM Integrado**: Gestão de clientes, histórico de eventos e comunicação
-- 🎪 **Controle de Estoque**: Gerenciamento de brinquedos, status e manutenção
-- 🚛 **Gestão de Monitores**: Pagamentos, avaliações, horas extras e adicional de motorista
-- 📊 **Relatórios e Analytics**: Gráficos interativos e exportação de relatórios em PDF
-- 🤖 **IA Integrada**: Assistente com Google Gemini para insights e automações
+Principais capacidades:
+
+- 📅 **Agenda de eventos** multi-dia com detecção de conflito e link público de confirmação/assinatura
+- 📄 **Propostas comerciais** com página pública (`/p/<slug>`), templates e analytics de visualização
+- 🎪 **Estoque** com unidades individuais, manutenção e galeria de fotos
+- 👥 **CRM** com funil de estágios, notas e follow-ups
+- 💰 **Financeiro** completo: transações, contas bancárias, contas fixas, categorias, custos por evento e venda por ficha/ingresso
+- 🧑‍🤝‍🧑 **Monitores e escala** com **app próprio (PWA)**, login, aprovação e disponibilidade em tempo real (estilo Uber)
+- 🤖 **IA** (Claude Haiku 4.5) para análise de cliente e geração de conteúdo
+- 🔔 **Notificações push** (Web Push/VAPID) para vencimentos e escala
+- 🧾 **Auditoria** de todas as ações e **backup automático diário** com disaster recovery
 
 ---
 
-## ✨ Funcionalidades
+## 🏗️ Arquitetura
 
-### 🗓️ Agenda de Eventos
-- ✅ Calendário visual com visualização diária, semanal e mensal
-- ✅ Cadastro completo de eventos com múltiplos itens
-- ✅ Sistema de cores por empresa (Aero/ABC)
-- ✅ Detecção automática de conflitos de agendamento
-- ✅ Geração de contratos e orçamentos em PDF
-- ✅ Sincronização em tempo real com backend
+```
+┌─────────────────────────────┐        ┌──────────────────────────────┐
+│  Frontend (Firebase Hosting)│        │   Backend API (Railway)       │
+│  PWA — HTML/CSS/JS vanilla   │  HTTPS │   Node 20 + Express 4         │
+│  • Painel administrativo     │ ─────► │   • Somente /api (sem static) │
+│  • App do Monitor (/app)     │        │   • JWT + bcrypt + Helmet     │
+│  • Propostas públicas (/p/*) │        │   • Rate limit no /auth       │
+│  Service Worker + cache      │        │   • node-cron (backup/alertas)│
+└─────────────────────────────┘        └───────────────┬──────────────┘
+                                                        │ Prisma 5
+                                       ┌────────────────▼──────────────┐
+                                       │   PostgreSQL (Railway)         │
+                                       └────────────────────────────────┘
+        Serviços externos: Firebase Storage (contratos/backup/uploads),
+        Anthropic Claude (IA), Gmail/Nodemailer (e-mail), Web Push (VAPID)
+```
 
-### 💰 Sistema Financeiro
-- ✅ Dashboard com 4 KPIs principais: Receitas, Despesas, Saldo e IA
-- ✅ 6 Gráficos interativos (Chart.js):
-  - Receita por Empresa
-  - Distribuição de Despesas (inclui Monitores)
-  - Contas Fixas
-  - Pagamentos de Monitores
-  - Fluxo de Caixa Diário
-- ✅ Gestão de gastos com categorias personalizáveis
-- ✅ Sistema de contas fixas (permanentes e parceladas)
-- ✅ Comparação automática com mês anterior
-- ✅ Exportação de relatórios financeiros em PDF
+- **Backend** expõe **apenas** rotas `/api` — o frontend estático é servido pelo **Firebase Hosting** (projeto `agenda-aero-festas`), não pelo Express. Isso foi endurecido por segurança para não expor arquivos/segredos do repositório.
+- **Frontend**: HTML/CSS/JavaScript vanilla (sem framework), com **Chart.js**, **jsPDF** e **Font Awesome** via CDN. É um **PWA** instalável com service worker e atualização forçada sincronizada com a versão.
+- **App do Monitor**: PWA separada (`app-monitor/`) com autenticação própria, escala "meus eventos" e toggle de disponibilidade.
+- **Propostas públicas**: cada proposta tem página em `/p/<slug>` (rewrites no Firebase), com rastreamento anônimo de visualização.
 
-### 👥 Gestão de Monitores
-- ✅ Cadastro completo com foto de perfil
-- ✅ Sistema de pagamentos com:
-  - Valor base da diária
-  - Cálculo automático de horas extras (base 11h, R$/hora = diária/11)
-  - **Adicional de motorista** (R$ 20,00 por evento entregue)
-  - Aceita valores decimais para eventos parciais
-- ✅ Avaliação por critérios:
-  - Proatividade
-  - Cordialidade
-  - Pontualidade
-  - Liderança
-- ✅ Status de pagamento com toggle Pago/Pendente
-- ✅ Subtotal mensal automático
-- ✅ Histórico completo de pagamentos
+---
 
-### 🎪 Gestão de Brinquedos
-- ✅ Catálogo completo com fotos
-- ✅ Status de disponibilidade em tempo real
-- ✅ Controle de manutenção e reservas
-- ✅ Preços diferenciados por empresa
+## 🧩 Módulos e Funcionalidades
 
-### 👤 CRM
-- ✅ Base de clientes com histórico completo
-- ✅ Registro de preferências e observações
-- ✅ Histórico de eventos por cliente
-- ✅ Busca e filtros avançados
+### 📅 Agenda e Eventos
+- Eventos de dia único ou **multi-dia** com `endDate`, dias excluídos e horários custom por dia
+- Vínculo com **empresa** (Aero/ABC), cliente **PF ou PJ**, endereço com **pin de geolocalização** (lat/lng)
+- **Detecção de conflito** de agendamento e checagem de disponibilidade de estoque
+- **Link público de confirmação** (`/e/**`): o cliente revisa, informa dados e **assina** (carimbo de tempo, IP e user-agent registrados)
+- **Sinal/entrada via PIX** exibido ao cliente; upload de **contrato** (PDF/imagem) para o Firebase Storage
+- Locações de **equipamentos de terceiros** (custo repassado) e **venda por ficha/ingresso** (líquido + % repasse à escola)
+- Registro de **fotos por evento** na conclusão; tipo `event` ou `meeting` (reunião)
+
+### 📄 Propostas Comerciais
+- CRUD de propostas com **itens**, desconto, subtotal/total e toggle de exibição de preços
+- **Templates** reutilizáveis (hero, cards "por quê", FAQ, "como funciona", número/mensagem de WhatsApp com variáveis `{{clientName}}` etc.)
+- Página **pública** por slug com snapshot anti-deleção (nome/foto do brinquedo preservados)
+- **Analytics** (`PropostaTrack`): abertura, profundidade de rolagem, cliques, tempo na página, cidade/país — visíveis no painel *Proposta-Analytics*
+
+### 🎪 Estoque de Brinquedos
+- Catálogo com foto, quantidade e **preço sugerido** para propostas
+- **Unidades individuais** (`ToyUnit`) com condição e histórico
+- **Manutenções** por brinquedo/unidade (data, descrição, custo, responsável)
+- **Galeria de fotos** com foto principal e ordenação
+
+### 👥 CRM
+- Base de clientes com **funil de estágios** (`novo → contato → proposta → negociação → fechado → pós-venda / perdido`)
+- **Notas** e **follow-ups** com data de vencimento e pendências
+- Origem, tags, redes sociais e último contato; importação do localStorage legado
+
+### 💰 Financeiro
+- **Dashboard** com KPIs e gráficos (Chart.js)
+- **Transações** (receita/despesa) com categoria, forma de pagamento, conta bancária e vínculo a evento
+- **Contas bancárias**, **contas fixas** (permanentes ou parceladas) e **categorias** personalizáveis
+- **Custos por evento** (`/event-costs/:eventId`) e **rateio** para fechamento financeiro
+- Detalhamento de gasto (combustível, alimentação) e contas "não declaradas"
+
+### 🧑‍🤝‍🧑 Monitores, Escala e App do Monitor
+- **Cadastro rico** do monitor (dados pessoais, saúde/segurança, habilidades, CNH, contato de emergência, redes)
+- **Pagamentos**: diária base, **horas extras** (jornada configurável, padrão 11h), **adicional de motorista** (R$ 20 por evento), indicações e pagamentos "diversos"
+- **Avaliação de desempenho** e status (`ativo/reserva/alerta/desqualificado`) com ocorrências
+- **Escala estruturada** (`EventAssignment`) por evento e papel (monitor/motorista), com **horário individual de galpão** — em tabela própria, imune a saves parciais do evento
+- **App do Monitor (PWA)**: login por CPF+senha, **aprovação pelo gestor**, "meus eventos" e **disponibilidade em tempo real** (estilo Uber)
+
+### 🧾 RH
+- **Funcionários** (salário fixo, VA, VT) e **faixas de comissão** por faturamento
 
 ### 🤖 Inteligência Artificial
-- ✅ Integração com Google Gemini API
-- ✅ Geração de insights financeiros
-- ✅ Análise de padrões e tendências
-- ✅ Sugestões de otimização
+- Integração com **Anthropic Claude (`claude-haiku-4-5`)** via `@anthropic-ai/sdk`
+- **Análise de cliente** e geração de conteúdo (ex.: posts de Instagram)
+- Requer `ANTHROPIC_API_KEY`; degrada com mensagem clara se ausente
+
+### 🔔 Notificações Push
+- **Web Push (VAPID)** para dispositivos logados, com push direcionado (app do monitor)
+- Job a cada 12h avisa **contas fixas vencendo** hoje/amanhã; limpeza automática de inscrições expiradas
+
+### 🧾 Auditoria
+- `AuditLog` registra CREATE/UPDATE/DELETE com autor, diff de campos e snapshot da entidade
+
+### 💾 Backup e Disaster Recovery
+- **Backup diário automático** (cron 03:00) + backup no startup, persistido no **Firebase Storage** com checksum SHA-256 e verificação de integridade
+- **Watchdog** diário (12:00 UTC): alerta admins por e-mail/push se o último backup tiver +26h
+- **Restore drills** e relatório de restauração (ver `docs/RESTORE-DRILL.md`)
+
+### 💬 WhatsApp — ⚠️ *desativado no momento*
+- O schema e as rotas (`routes/whatsapp.js`) de integração via **Evolution API** existem (instâncias, conversas, mensagens, atalhos, status, catálogo, grupos), **mas o módulo está desconectado no `server.js`** ("será desenvolvido em sistema paralelo"). Requer `EVOLUTION_API_URL`/`EVOLUTION_API_KEY` quando reativado.
+
+### 📱 PWA e Atualização Forçada
+- Manifesto + service worker (`sw.js`, cache `aero-festas-v3.15.0`) com cache offline e atalhos
+- Sistema de **atualização automática** sincronizado com a versão do sistema
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
-### Frontend
-- **HTML5** + **CSS3** (Vanilla, sem frameworks CSS)
-- **JavaScript ES6+** (Vanilla, modular)
-- **Chart.js 4.4.0** - Visualizações interativas
-- **Font Awesome 6.5.1** - Ícones
-- **jsPDF** + **jsPDF-AutoTable** - Geração de PDFs
-
 ### Backend
-- **Node.js** 18+
-- **Express.js** 4.x - Framework web
-- **Prisma ORM** 5.10 - Mapeamento objeto-relacional
-- **PostgreSQL** 15+ - Banco de dados
-- **Railway** - Deploy e hosting
+- **Node.js 20.x** + **Express 4**
+- **Prisma ORM 5.10** + **PostgreSQL 15+**
+- **jsonwebtoken** + **bcryptjs** (auth), **Helmet**, **express-rate-limit**, **CORS** restrito
+- **node-cron** (backup/alertas), **web-push** (VAPID), **firebase-admin** (Storage/serviços)
+- **nodemailer** (Gmail) para e-mail, **multer** (uploads)
+- **@anthropic-ai/sdk** (IA)
 
-### APIs Externas
-- **Google Gemini API** - IA para insights e automações
-- **Railway PostgreSQL** - Banco de dados em nuvem
+### Frontend
+- **HTML5 + CSS3 + JavaScript ES6+** (vanilla, sem framework)
+- **Chart.js** (gráficos), **jsPDF** + AutoTable (PDFs), **Font Awesome**
+- **PWA** (manifest + service worker)
 
-### DevOps
-- **Git** - Controle de versão
-- **Railway** - CI/CD e deploy automático
-- **dotenv** - Gestão de variáveis de ambiente
-
----
-
-## 📦 Pré-requisitos
-
-- **Node.js** >= 18.0.0
-- **PostgreSQL** >= 15.0
-- **npm** ou **yarn**
-- Conta no [Railway](https://railway.app/) (para deploy)
-- Google Gemini API Key (opcional, para IA)
-
----
-
-## 🚀 Instalação
-
-### 1. Clone o repositório
-
-```bash
-git clone https://github.com/seu-usuario/sistema-aero-festas.git
-cd sistema-aero-festas
-```
-
-### 2. Instale as dependências
-
-```bash
-npm install
-```
-
-### 3. Configure o banco de dados
-
-Crie um arquivo `.env` na raiz do projeto:
-
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/aerofestas"
-PORT=3000
-JWT_SECRET="seu-secret-aqui"
-NODE_ENV="development"
-```
-
-### 4. Execute as migrations do Prisma
-
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-### 5. (Opcional) Popule o banco com dados de exemplo
-
-```bash
-npm run seed
-```
-
-### 6. Inicie o servidor
-
-```bash
-npm start
-```
-
-O servidor estará rodando em `http://localhost:3000`
-
----
-
-## ⚙️ Configuração
-
-### Variáveis de Ambiente
-
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `DATABASE_URL` | URL de conexão PostgreSQL | `postgresql://...` |
-| `PORT` | Porta do servidor | `3000` |
-| `JWT_SECRET` | Chave secreta para JWT | `minha-chave-secreta` |
-| `NODE_ENV` | Ambiente de execução | `development` / `production` |
-
-### Configuração do Google Gemini
-
-1. Acesse [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Gere sua API Key
-3. No sistema, acesse **Configurações** (ícone de engrenagem)
-4. Cole sua API Key e salve
-
----
-
-## 💻 Uso
-
-### Acessar o Sistema
-
-1. Abra o navegador em `http://localhost:3000`
-2. Faça login com suas credenciais
-3. Navegue entre os módulos:
-   - 🏠 **Dashboard** - Visão geral da empresa
-   - 💰 **Gestão Financeira** - Controle completo de finanças
-   - 📅 **Agenda de Eventos** - Calendário e agendamentos
-   - 👥 **CRM** - Gestão de clientes
-
-### Fluxo Típico de Uso
-
-#### Registrar um Novo Evento
-1. Acesse **Agenda de Eventos**
-2. Clique em **+ Novo Evento**
-3. Preencha: Data, Cliente, Empresa, Local
-4. Adicione brinquedos à lista
-5. Confirme (sistema calcula total automaticamente)
-6. Evento aparece no calendário e nas finanças
-
-#### Lançar Pagamento de Monitor
-1. Acesse **Gestão Financeira** > **Monitores**
-2. Clique em **Lançar Pagamento & Avaliação**
-3. Selecione data do evento, monitor e valor da diária
-4. Informe horário de entrada e saída (HE calculadas automaticamente)
-5. **Se foi motorista:**
-   - Marque o checkbox ✅
-   - Informe quantos eventos entregou (ex: 3.5)
-   - Sistema calcula: eventos × R$ 20,00
-6. Avalie o monitor nos 4 critérios
-7. Confirme - total incluído nas despesas automaticamente
-
-#### Visualizar Dashboard Financeiro
-1. Acesse **Gestão Financeira** > **Dashboard**
-2. Veja os cards de KPI atualizados em tempo real
-3. Analise os 6 gráficos interativos
-4. Compare com mês anterior (% de variação)
-5. Use o filtro de mês para histórico
+### Infraestrutura
+- **Railway** — backend + PostgreSQL
+- **Firebase Hosting** — frontend/PWA e páginas públicas de proposta
+- **Firebase Storage** — contratos, uploads e backups
 
 ---
 
 ## 📁 Estrutura do Projeto
 
 ```
-sistema-aero-festas/
+backend-aerofestas/
+├── server.js                 # Entry point: middlewares, rotas, cron, push
 ├── prisma/
-│   ├── schema.prisma          # Schema do banco de dados
-│   └── migrations/             # Histórico de migrations
-├── routes/
-│   ├── finance.js             # Rotas financeiras e monitores
-│   ├── admin.js               # Rotas administrativas
-│   └── auth.js                # Autenticação e autorização
-├── js/
-│   ├── api.js                 # Módulo de API (frontend)
-│   ├── auth.js                # Autenticação (frontend)
-│   ├── charts-financeiro.js   # Configuração dos gráficos
-│   ├── charts-init.js         # Inicialização de gráficos
-│   └── protect.js             # Middleware de proteção
-├── public/
-│   └── assets/                # Imagens e recursos estáticos
-├── Dashboard.html             # Página principal
-├── Sistema Gestão Financeira.html  # Módulo financeiro
-├── Agenda de eventos.html     # Calendário de eventos
-├── Sistema de CRM.html        # Gestão de clientes
-├── index.js                   # Entry point do servidor
-├── package.json               # Dependências e scripts
-├── .env                       # Variáveis de ambiente (não versionado)
-└── README.md                  # Este arquivo
+│   ├── schema.prisma         # ~35 modelos (estoque, eventos, propostas, financeiro, RH, WhatsApp…)
+│   └── client.js             # Prisma client compartilhado
+├── routes/                   # 19 routers Express
+│   ├── auth.js  monitorAuth.js  monitor.js
+│   ├── admin.js  events.js  propostas.js  proposta-templates.js
+│   ├── toys.js  clients.js  companies.js
+│   ├── finance.js  profile.js  history.js  tasks.js  dailyPlans.js
+│   ├── ai.js  audit.js  backup.js
+│   └── whatsapp.js           # (desativado no server.js)
+├── services/                 # Regras de negócio (Event, Client, Toy, Proposta, AI, Backup, Alert, Firebase…)
+├── middleware/               # auth.js (authenticate/isAdmin), errorHandler.js
+├── config/                   # webpush.js (VAPID)
+├── utils/                    # crypto.js, email.js
+├── scripts/                  # create-admin, restore, seeds, sanity-checks, update-version
+├── app-monitor/              # PWA do monitor (login.html, home.html)
+├── propostas/                # Páginas públicas de proposta por cliente + view.html
+├── *.html                    # Painel: Dashboard, Agenda, Financeiro, CRM, Equipamentos, Equipe…
+├── sw.js  manifest.json      # PWA
+├── firebase.json  .firebaserc# Hosting + rewrites (/e/**, /p/<slug>)
+└── docs/                     # Notas técnicas, planos e relatórios de bugs
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🔐 Variáveis de Ambiente
 
-### Autenticação
-```
-POST   /api/auth/register      # Registrar novo usuário
-POST   /api/auth/login         # Login
-POST   /api/auth/logout        # Logout
-```
+O servidor **aborta na inicialização** se `JWT_SECRET` não estiver definido.
 
-### Eventos
-```
-GET    /api/admin/events-full  # Listar todos os eventos
-POST   /api/admin/events       # Criar evento
-PUT    /api/admin/events/:id   # Atualizar evento
-DELETE /api/admin/events/:id   # Deletar evento
-```
+| Variável | Obrigatória | Descrição |
+|----------|:-----------:|-----------|
+| `DATABASE_URL` | ✅ | String de conexão PostgreSQL |
+| `JWT_SECRET` | ✅ | Chave de assinatura dos tokens JWT |
+| `PORT` | — | Porta do servidor (padrão `3000`) |
+| `NODE_ENV` | — | `development` / `production` |
+| `ANTHROPIC_API_KEY` | IA | Chave da API Claude (módulo de IA) |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | E-mail | Conta Gmail p/ envio via Nodemailer |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Storage | Credencial de service account (JSON) |
+| `FIREBASE_STORAGE_BUCKET` | Storage | Bucket p/ contratos, uploads e backups |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Push | Chaves Web Push (VAPID) |
+| `BACKUP_ENCRYPTION_KEY` | Backup | Chave de criptografia do backup |
+| `BASE_URL` / `PUBLIC_BASE_URL` / `BACKEND_URL` | — | URLs base p/ links gerados |
+| `FIREBASE_EMAIL_FUNCTION_URL` | — | Endpoint de function p/ e-mail (opcional) |
+| `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` | WhatsApp | Evolution API (módulo desativado) |
 
-### Finanças
-```
-GET    /api/finance/dashboard           # KPIs do dashboard
-GET    /api/finance/transactions        # Listar transações
-POST   /api/finance/transactions        # Criar transação
-DELETE /api/finance/transactions/:id    # Deletar transação
-```
-
-### Monitores
-```
-GET    /api/finance/monitores                  # Listar monitores
-POST   /api/finance/monitores                  # Criar monitor
-PUT    /api/finance/monitores/:id              # Atualizar monitor
-DELETE /api/finance/monitores/:id              # Deletar monitor
-GET    /api/finance/pagamentos-monitores       # Listar pagamentos
-POST   /api/finance/pagamentos-monitores       # Criar pagamento
-PUT    /api/finance/pagamentos-monitores/:id   # Atualizar pagamento (status)
-DELETE /api/finance/pagamentos-monitores/:id   # Deletar pagamento
-```
-
-### Contas Fixas
-```
-GET    /api/finance/contas-fixas        # Listar contas fixas
-POST   /api/finance/contas-fixas        # Criar conta fixa
-PUT    /api/finance/contas-fixas/:id    # Atualizar conta fixa
-DELETE /api/finance/contas-fixas/:id    # Deletar conta fixa
-```
-
-### Brinquedos
-```
-GET    /api/admin/toys                  # Listar brinquedos
-POST   /api/admin/toys                  # Criar brinquedo
-PUT    /api/admin/toys/:id              # Atualizar brinquedo
-DELETE /api/admin/toys/:id              # Deletar brinquedo
-```
-
-### Clientes (CRM)
-```
-GET    /api/admin/clients               # Listar clientes
-POST   /api/admin/clients               # Criar cliente
-PUT    /api/admin/clients/:id           # Atualizar cliente
-DELETE /api/admin/clients/:id           # Deletar cliente
-```
+> O arquivo `.env.example` está desatualizado (menciona SendGrid). Use a tabela acima como referência.
 
 ---
 
-## 🔄 Fluxo de Trabalho
-
-### Deploy no Railway
-
-1. **Conecte o repositório:**
-   ```bash
-   railway link
-   ```
-
-2. **Configure as variáveis de ambiente no Railway:**
-   - `DATABASE_URL` (PostgreSQL provisionado automaticamente)
-   - `JWT_SECRET`
-   - `NODE_ENV=production`
-
-3. **Deploy:**
-   ```bash
-   git push origin main
-   # Railway detecta e faz deploy automaticamente
-   ```
-
-### Desenvolvimento Local
-
-1. **Branch de feature:**
-   ```bash
-   git checkout -b feature/nova-funcionalidade
-   ```
-
-2. **Desenvolva e teste localmente:**
-   ```bash
-   npm run dev
-   ```
-
-3. **Commit e push:**
-   ```bash
-   git add .
-   git commit -m "feat: adicionar nova funcionalidade"
-   git push origin feature/nova-funcionalidade
-   ```
-
-4. **Abra um Pull Request no GitHub**
-
----
-
-## 🎨 Customização
-
-### Adicionar Nova Categoria de Gasto
-
-1. Acesse **Gestão Financeira** > **Gastos** > ⚙️ **Categorias**
-2. Clique em **Adicionar Categoria**
-3. Digite o nome (ex: "Marketing")
-4. A categoria estará disponível imediatamente
-
-### Modificar Valor do Adicional de Motorista
-
-No arquivo `Sistema Gestão Financeira.html`, linha ~1088:
-
-```javascript
-const calcularAdicionalMotorista = () => {
-    const numEventos = parseFloat(eventosInput.value) || 0;
-    const valorPorEvento = 20.00; // ← ALTERE AQUI
-    const adicional = numEventos * valorPorEvento;
-    // ...
-};
-```
-
-### Alterar Base de Horas para Hora Extra
-
-No arquivo `Sistema Gestão Financeira.html`, linha ~1050:
-
-```javascript
-// Diária base cobre 11 horas. Valor da hora = Diária / 11
-const valorHora = valorDiaria / 11; // ← ALTERE AQUI
-const horasExtras = Math.max(0, totalHoras - 11); // ← E AQUI
-```
-
----
-
-## 📊 Schema do Banco de Dados
-
-### Principais Modelos
-
-**Event** - Eventos/Locações
-- `id`, `date`, `clientName`, `local`, `company`, `price`, `items`
-
-**Monitor** - Equipe de Monitores
-- `id`, `nome`, `telefone`, `email`, `cnh`, `fotoPerfil`
-
-**PagamentoMonitor** - Pagamentos de Monitores
-- `id`, `data`, `monitorId`, `valorBase`, `adicional`, `horasExtras`, `pagamento`
-- `foiMotorista`, `numEventos`, `statusPagamento`
-
-**Transaction** - Transações Financeiras
-- `id`, `type` (REVENUE/EXPENSE), `amount`, `date`, `category`
-
-**FixedBill** - Contas Fixas
-- `id`, `description`, `amount`, `dueDay`, `category`, `recurrenceType`
-
-**Toy** - Brinquedos
-- `id`, `name`, `category`, `status`, `price`
-
-**Client** - Clientes
-- `id`, `name`, `phone`, `email`, `address`
-
----
-
-## 🧪 Testes
+## 🚀 Instalação e Execução
 
 ```bash
-# Executar testes
-npm test
+# 1. Clonar e instalar
+git clone <repo>
+cd backend-aerofestas
+npm install
 
-# Testes com coverage
-npm run test:coverage
+# 2. Configurar .env (ver tabela acima) — no mínimo DATABASE_URL e JWT_SECRET
 
-# Testes e2e
-npm run test:e2e
+# 3. Preparar o banco
+npx prisma generate
+npx prisma db push          # ou: npx prisma migrate deploy
+
+# 4. Criar um usuário administrador
+npm run create-admin
+
+# 5. Rodar
+npm run dev                 # desenvolvimento (nodemon)
+npm start                   # produção
+```
+
+Servidor em `http://localhost:3000` (apenas `/api`; o frontend roda via Firebase Hosting ou `npx serve` na raiz).
+
+> ⚠️ **Cadastro público desativado.** `POST /api/auth/register` retorna `403` — novas contas são criadas pelo administrador (`npm run create-admin`).
+
+---
+
+## ☁️ Deploy
+
+- **Backend + PostgreSQL → Railway.** `npm run build` roda `prisma generate` + `migrate deploy`. Configure as variáveis de ambiente no painel do Railway.
+- **Frontend/PWA → Firebase Hosting** (projeto `agenda-aero-festas`): `firebase deploy --only hosting`. Os rewrites servem `/e/**` (link de evento) e `/p/<slug>` (propostas).
+
+---
+
+## 🔌 Referência da API
+
+Todas as rotas usam prefixo `/api`. Salvo indicação, exigem **JWT** (header `Authorization`). Rotas `/api/public/*` e a view de proposta são abertas.
+
+### Autenticação — `/api/auth` *(rate-limited)*
+```
+POST /register        # 403 — cadastro desativado
+POST /login
+POST /forgot-password
+POST /reset-password
+POST /confirm-email
+GET  /me
+```
+
+### App do Monitor — `/api/monitor`
+```
+POST /auth/login              # login por CPF+senha (rate-limited)
+GET  /auth/me
+GET  /events                  # "meus eventos" (escala do monitor)
+PATCH /disponibilidade        # toggle disponível agora
+```
+
+### Eventos — `/api/admin` e `/api/public`
+```
+GET    /admin/events-full
+POST   /admin/events
+GET    /admin/events/:id
+PUT    /admin/events/:id
+DELETE /admin/events/:id
+PUT    /admin/events/:id/assignments      # escala estruturada
+POST   /admin/events/:id/contract         # upload de contrato
+DELETE /admin/events/:id/contract
+GET    /public/events/:id                 # link público do cliente
+PUT    /public/events/:id                 # cliente preenche/assina
+PATCH  /public/events/:id/draft
+GET    /public/toys, /public/availability
+```
+
+### Propostas — `/api/admin` e `/api/public`
+```
+GET/POST/PUT/DELETE /admin/propostas[/:id]
+POST   /admin/propostas/:id/duplicate
+GET    /admin/propostas/:slug/analytics
+GET    /public/propostas/:slug            # view pública
+POST   /public/track                      # telemetria anônima
+GET/POST/PUT/DELETE /admin/proposta-templates[/:id]
+POST   /admin/proposta-templates/:id/set-default
+```
+
+### Estoque, CRM e Empresas — `/api/admin/*`
+```
+/admin/toys        # CRUD + /:toyId/units, /photos, /maintenances
+/admin/clients     # CRUD + /notes, /follow-ups (+ /follow-ups/pending)
+/admin/companies   # CRUD
+/admin/users       # gestão de usuários (admin)
+/admin/ai          # POST /analyze-client, /instagram-posts
+```
+
+### Financeiro — `/api/finance`
+```
+GET  /dashboard
+GET/POST/PUT/DELETE /transactions
+GET/POST/PUT /accounts, /fixed-expenses
+GET/POST/PUT /categories/{expenses,fixed}
+GET/POST/PUT/PATCH/DELETE /monitores        # + /acesso, /status, /reset-senha, /confirmar-cpf
+GET  /event-costs/:eventId
+GET/POST/PUT/DELETE /pagamentos-monitores    # + /transferir
+GET/POST/PUT/DELETE /funcionarios, /faixas-comissao
+POST /desempenho
+```
+
+### Plataforma — auditoria, backup, tarefas, perfil
+```
+GET  /audit/recent, /audit/entity/:type/:id
+GET  /backup/status, /history, /files, /download, /diag   POST /backup/run
+GET/POST/PUT/DELETE /tasks
+GET/POST /daily-plans[/:date]
+GET/PUT  /profile   PUT /profile/password
+POST /notifications/subscribe
+POST /send-email
+POST /migrar-completo    # migração de dados legados (admin)
 ```
 
 ---
 
-## 🤝 Contribuindo
+## 🗄️ Modelo de Dados
 
-Contribuições são bem-vindas! Para contribuir:
+~35 modelos Prisma, agrupados:
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'feat: adicionar AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+- **Estoque & Eventos:** `Toy`, `ToyUnit`, `ToyMaintenance`, `ToyPhoto`, `Event`, `EventItem`, `EventAssignment`, `EventExternalRental`, `Company`
+- **Propostas:** `Proposta`, `PropostaItem`, `PropostaTemplate`, `PropostaTrack`
+- **CRM:** `Client`, `ClientNote`, `ClientFollowUp`
+- **Monitores & RH:** `Monitor`, `Desempenho`, `PagamentoMonitor`, `Funcionario`, `FaixaComissao`
+- **Financeiro:** `Transaction`, `BankAccount`, `FixedExpense`, `ExpenseCategory`, `FixedExpenseCategory`
+- **Usuários & Produtividade:** `User`, `Task`, `DailyPlan`, `PushSubscription`
+- **Plataforma:** `AuditLog`, `BackupRun`
+- **WhatsApp (desativado):** `WhatsAppInstance`, `WhatsAppConversation`, `WhatsAppMessage`, `WhatsAppShortcut`, `WhatsAppStatus`
 
-### Convenção de Commits
-
-Utilizamos [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` Nova funcionalidade
-- `fix:` Correção de bug
-- `docs:` Documentação
-- `style:` Formatação (sem mudança de código)
-- `refactor:` Refatoração
-- `test:` Adição de testes
-- `chore:` Manutenção
+O schema completo está em [`prisma/schema.prisma`](prisma/schema.prisma).
 
 ---
 
-## 📝 Licença
+## 🧰 Scripts Utilitários
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+```bash
+npm run create-admin        # cria usuário administrador
+npm run build               # prisma generate + migrate deploy
+npm run version             # atualiza version.json
 
----
-
-## 👨‍💻 Autores
-
-- **Leandro Karlitos** - *Desenvolvimento Principal* - [@leandrokarlitos](https://github.com/leandrokarlitos-collab)
-
----
-
-## 🙏 Agradecimentos
-
-- Equipe Aero Festas pelo feedback constante
-- Comunidade open source
-- Google Gemini AI pelo suporte de IA
+node scripts/restore.js             # restauração de backup
+node scripts/check-db-counts.js     # contagem de registros por tabela
+node scripts/sanity-check-models.js # sanidade dos modelos
+node scripts/seed-proposta-template.js
+```
 
 ---
 
-## 📞 Suporte
+## 🔒 Segurança
 
-- 📧 Email: suporte@aerofestas.com.br
-- 💬 Issues: [GitHub Issues](https://github.com/seu-usuario/sistema-aero-festas/issues)
-- 📚 Wiki: [Documentação Completa](https://github.com/seu-usuario/sistema-aero-festas/wiki)
+- **Somente `/api`** exposto pelo backend — nada de arquivos estáticos/segredos servidos pelo Express
+- **Helmet** (cabeçalhos), **CORS restrito** às origens do sistema, **rate limit** nas rotas de auth
+- **JWT** com abort na ausência de `JWT_SECRET`; senhas com **bcrypt**
+- **Cadastro público desativado**; autenticação separada para o app do monitor com **aprovação do gestor**
+- **Auditoria** de ações sensíveis e **backup criptografado** com verificação de integridade
+- Rotação de chaves **VAPID** tratada (limpeza de inscrições inválidas)
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] App Mobile (React Native)
-- [ ] Integração com WhatsApp Business API
-- [ ] Sistema de notificações push
-- [ ] Controle de estoque avançado
-- [ ] Assinatura digital de contratos
-- [ ] Dashboard para clientes
-- [ ] Relatórios personalizáveis
-- [ ] Modo offline com sync
+- [x] PWA instalável + atualização forçada
+- [x] Notificações push (vencimentos e escala)
+- [x] Escala de monitores + app do monitor
+- [x] Propostas públicas com analytics
+- [x] Backup automático + disaster recovery
+- [ ] Reativar módulo **WhatsApp** (Evolution API) em produção
+- [ ] Assinatura digital avançada de contratos
+- [ ] App mobile nativo dos monitores
+- [ ] Relatórios financeiros personalizáveis / exportação avançada
 
 ---
 
-## 📈 Estatísticas
+## 📝 Licença e Autor
 
-![GitHub repo size](https://img.shields.io/github/repo-size/seu-usuario/sistema-aero-festas)
-![GitHub contributors](https://img.shields.io/github/contributors/seu-usuario/sistema-aero-festas)
-![GitHub stars](https://img.shields.io/github/stars/seu-usuario/sistema-aero-festas?style=social)
-![GitHub forks](https://img.shields.io/github/forks/seu-usuario/sistema-aero-festas?style=social)
+- **Licença:** `ISC` (declarada em `package.json`). Não há arquivo `LICENSE`; projeto de **uso interno** da Aero Festas / ABC Festas.
+- **Autor:** Leandro Karlitos — [@leandrokarlitos-collab](https://github.com/leandrokarlitos-collab)
 
 ---
 
-**Desenvolvido com ❤️ para Aero Festas**
+**Desenvolvido com ❤️ para a Aero Festas.**
