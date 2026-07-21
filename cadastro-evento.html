@@ -230,20 +230,44 @@
             <!-- Data e horário editáveis -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 <div class="bg-indigo-50/70 p-3 rounded-xl">
-                    <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block mb-1">Data</label>
-                    <div class="flex items-center gap-1">
-                        <input type="date" id="event-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px">
-                        <span class="text-gray-400">–</span>
-                        <input type="date" id="event-end-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px" placeholder="Mesmo dia">
+                    <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block mb-1" for="event-date">Começa em</label>
+                    <input type="date" id="event-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 44px">
+
+                    <label class="flex items-center gap-2 mt-2 cursor-pointer select-none py-1">
+                        <input type="checkbox" id="event-multiday" class="w-4 h-4 accent-indigo-600 shrink-0">
+                        <span class="text-[11px] font-semibold text-indigo-700">Evento de vários dias</span>
+                    </label>
+
+                    <div id="event-enddate-wrap" class="hidden mt-1">
+                        <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block mb-1" for="event-end-date">Termina em</label>
+                        <input type="date" id="event-end-date" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 44px">
                     </div>
-                    <p class="text-[10px] text-gray-500 mt-1">Segunda data só para evento multi-dia (opcional).</p>
+
+                    <p id="event-days-hint" class="text-[10px] text-gray-500 mt-1.5"></p>
                 </div>
                 <div class="bg-indigo-50/70 p-3 rounded-xl">
                     <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block mb-1">Horário</label>
                     <div class="flex items-center gap-1">
-                        <input type="time" id="event-start" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px">
+                        <input type="time" id="event-start" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 44px">
                         <span class="text-gray-400">–</span>
-                        <input type="time" id="event-end" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 40px">
+                        <input type="time" id="event-end" class="form-input w-full px-2 py-1.5 rounded-md bg-white text-sm font-semibold" style="min-height: 44px">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aviso: mudar data/horário precisa da confirmação do vendedor -->
+            <div id="schedule-change-warning" class="hidden mb-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                <div class="flex items-start gap-2.5">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-amber-900">Alteração precisa ser confirmada</p>
+                        <p id="schedule-change-detail" class="text-xs text-amber-800 mt-0.5"></p>
+                        <p class="text-xs text-amber-700 mt-1.5">Você pode enviar assim mesmo — a data só vale depois que o vendedor confirmar a disponibilidade.</p>
+                        <a id="schedule-change-whatsapp" href="#" target="_blank" rel="noopener"
+                            class="hidden mt-2.5 w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm inline-flex items-center justify-center gap-2 transition-all active:scale-95"
+                            style="min-height: 44px">
+                            <i class="fa-brands fa-whatsapp"></i> Falar com o vendedor
+                        </a>
                     </div>
                 </div>
             </div>
@@ -263,7 +287,7 @@
 
             <!-- Resumo financeiro -->
             <div id="event-totals" class="mt-4 pt-3 border-t border-gray-200 space-y-1.5 text-sm hidden">
-                <div class="flex justify-between text-gray-600"><span>Subtotal</span><span id="totals-subtotal" class="font-medium tabular-nums">R$ 0,00</span></div>
+                <div class="flex justify-between text-gray-600"><span id="totals-subtotal-label">Subtotal</span><span id="totals-subtotal" class="font-medium tabular-nums">R$ 0,00</span></div>
                 <div id="totals-discount-row" class="flex justify-between text-emerald-600 hidden"><span id="totals-discount-label">Desconto</span><span id="totals-discount" class="font-medium tabular-nums">- R$ 0,00</span></div>
                 <div id="totals-delivery-row" class="flex justify-between text-gray-600 hidden"><span>Taxa de entrega</span><span id="totals-delivery" class="font-medium tabular-nums">R$ 0,00</span></div>
                 <div class="flex justify-between items-center pt-2 mt-1 border-t border-gray-200"><span class="font-bold text-gray-800">Total</span><span id="totals-total" class="font-extrabold text-lg text-indigo-700 tabular-nums">R$ 0,00</span></div>
@@ -580,8 +604,11 @@
             extraItems: [],      // itens adicionados pelo cliente nesta sessão (sem preço)
             catalogToys: [],     // brinquedos disponíveis para adicionar
             originalDate: null,
+            originalEndDate: null,  // data final combinada pela equipe (null = evento de 1 dia)
+            originalActiveDays: 1,  // nº de dias realmente contratados (já sem os dias excluídos)
             originalStart: null,
             originalEnd: null,
+            excludedDates: [],   // dias que a equipe removeu do intervalo (o cliente não edita)
             subtotal: 0,
             discountType: null,
             discountValue: 0,
@@ -712,6 +739,137 @@
             return parts.length ? parts.join(', ') : NAO_DECLARADO;
         }
 
+        // Hoje em ISO no fuso do NAVEGADOR. Não use toISOString(): às 21h no Brasil ele já
+        // devolve o dia seguinte em UTC e o contrato sairia datado de amanhã.
+        function hojeISO() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // ===== Helpers de evento multi-dia =====
+        // Datas ISO 'YYYY-MM-DD' comparadas como string (mesma convenção do resto do sistema).
+        function formatDateShort(dateStr) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
+            return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+        }
+
+        const MAX_DIAS_PERIODO = 60;
+
+        // Nº de dias entre duas ISO, inclusive. Não desconta exclusões.
+        function spanEmDias(start, end) {
+            if (!start || !end) return 0;
+            return Math.round((new Date(end + 'T00:00:00') - new Date(start + 'T00:00:00')) / 86400000) + 1;
+        }
+
+        // Data final efetiva: só conta se o toggle está ligado, a data é posterior à inicial
+        // e o período cabe no teto. Fora disso devolve '' — nada inválido chega ao contrato,
+        // ao payload ou à checagem de disponibilidade.
+        function currentEndDate() {
+            const start = $('event-date').value;
+            const end = $('event-end-date').value;
+            if (!$('event-multiday').checked || !start || !end || end <= start) return '';
+            if (spanEmDias(start, end) > MAX_DIAS_PERIODO) return '';
+            return end;
+        }
+
+        // Motivo pelo qual a data final digitada foi recusada (null = está tudo certo).
+        function motivoPeriodoInvalido() {
+            if (!$('event-multiday').checked) return null;
+            const start = $('event-date').value;
+            const end = $('event-end-date').value;
+            if (!end) return 'Escolha o último dia do evento.';
+            if (!start || end <= start) return 'A data de término precisa ser depois da data de início.';
+            if (spanEmDias(start, end) > MAX_DIAS_PERIODO) return `Período muito longo (máximo de ${MAX_DIAS_PERIODO} dias). Confira o ano digitado.`;
+            return null;
+        }
+
+        // Dias em que o evento acontece. Enquanto o cliente não mexe no período, respeita os dias
+        // que a equipe removeu do intervalo (excludedDates); se ele mudar as datas, essas exclusões
+        // deixam de valer e o período volta a ser contínuo.
+        function activeDates() {
+            const start = $('event-date').value;
+            if (!start) return [];
+            const end = currentEndDate() || start;
+            const out = [];
+            const d = new Date(start + 'T00:00:00');
+            const guard = new Date(end + 'T00:00:00');
+            while (d <= guard) {
+                out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                d.setDate(d.getDate() + 1);
+            }
+            const periodUnchanged = start === state.originalDate && (currentEndDate() || null) === state.originalEndDate;
+            if (!periodUnchanged || !state.excludedDates.length) return out;
+            const excluded = new Set(state.excludedDates);
+            const kept = out.filter(iso => !excluded.has(iso));
+            return kept.length ? kept : out;
+        }
+
+        const NUMEROS_EXTENSO = [
+            'zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez',
+            'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito',
+            'dezenove', 'vinte', 'vinte e um', 'vinte e dois', 'vinte e três', 'vinte e quatro',
+            'vinte e cinco', 'vinte e seis', 'vinte e sete', 'vinte e oito', 'vinte e nove', 'trinta', 'trinta e um'
+        ];
+        function numeroPorExtenso(n) { return NUMEROS_EXTENSO[n] || String(n); }
+
+        // Blocos de texto do contrato que dependem do período (usados no HTML e no PDF).
+        function contractPeriodTexts() {
+            const start = $('event-date').value;
+            const end = currentEndDate();
+            const dias = activeDates();
+            const startTime = $('event-start').value || NAO_DECLARADO;
+            const endTime = $('event-end').value || NAO_DECLARADO;
+
+            // O valor do contrato é o que a equipe fechou para o período combinado. Se o
+            // cliente mudou o período aqui no link, o preço NÃO acompanha — então a cláusula
+            // do valor precisa dizer isso, senão o documento assinado fica contraditório.
+            const diasContratados = state.originalActiveDays || 1;
+            const periodoAlterado = start !== state.originalDate || (end || null) !== state.originalEndDate;
+            const ressalvaValor = periodoAlterado
+                ? ` O valor acima corresponde ao período originalmente contratado (${String(diasContratados).padStart(2, '0')} dia(s), a partir de ${formatDateShort(state.originalDate)}). Como o período foi alterado pela CONTRATANTE neste cadastro, o valor final fica sujeito a revisão e confirmação pela CONTRATADA antes da execução dos serviços.`
+                : '';
+
+            if (!end || dias.length <= 1) {
+                const data = formatDateLong(start);
+                return {
+                    isMultiDay: false,
+                    ressalvaValor,
+                    objeto: `A ser realizado no dia ${data}, com início previsto para às ${startTime} e término às ${endTime}, no local do evento.`,
+                    prazo: `O presente contrato será por prazo determinado de 01 (um) dia, isto é, em ${data}, com início às ${startTime} e término às ${endTime}, ou seja, somente durante o período de realização do evento.`
+                };
+            }
+
+            const n = dias.length;
+            const periodo = `${formatDateLong(start)} a ${formatDateLong(end)}`;
+            // Se algum dia do intervalo foi removido, o contrato precisa listar os dias um a um.
+            const contiguo = n === activeDatesContiguousCount(start, end);
+            const listaDias = dias.map(formatDateShort).join(', ');
+            return {
+                isMultiDay: true,
+                ressalvaValor,
+                objeto: `A ser realizado no período de ${periodo}, totalizando ${String(n).padStart(2, '0')} (${numeroPorExtenso(n)}) dias de evento${contiguo ? '' : `, nas seguintes datas: ${listaDias}`}, com início previsto para às ${startTime} e término às ${endTime} em cada dia, no local do evento.`,
+                prazo: `O presente contrato será por prazo determinado de ${String(n).padStart(2, '0')} (${numeroPorExtenso(n)}) dias, isto é, ${contiguo ? `de ${periodo}` : `nas datas de ${listaDias}`}, com início às ${startTime} e término às ${endTime} em cada dia, ou seja, somente durante o período de realização do evento.`
+            };
+        }
+
+        // excludedDates chega da API como string JSON (ou array já parseado).
+        function parseExcluded(value) {
+            if (!value) return [];
+            let raw = value;
+            if (typeof raw === 'string') {
+                try { raw = JSON.parse(raw); } catch (_) { return []; }
+            }
+            return Array.isArray(raw) ? raw.filter(v => /^\d{4}-\d{2}-\d{2}$/.test(v)) : [];
+        }
+
+        // Quantidade de dias entre duas datas, sem descontar exclusões.
+        function activeDatesContiguousCount(start, end) {
+            if (!start || !end) return 0;
+            const a = new Date(start + 'T00:00:00');
+            const b = new Date(end + 'T00:00:00');
+            return Math.round((b - a) / 86400000) + 1;
+        }
+
         // ===== Wizard =====
         function goToStep(n) {
             state.step = n;
@@ -768,9 +926,7 @@
                 logradouro: $('ev-logradouro').value, complemento: $('ev-complemento').value,
                 bairro: $('ev-bairro').value, cidade: $('ev-cidade').value, uf: $('ev-uf').value
             });
-            const eventDate = formatDateLong($('event-date').value);
-            const startTime = $('event-start').value || NAO_DECLARADO;
-            const endTime = $('event-end').value || NAO_DECLARADO;
+            const periodo = contractPeriodTexts();
 
             // Itens (originais + extras)
             const allItems = [
@@ -792,21 +948,21 @@
 
             // Cidade e data do contrato
             const signCity = ($('ev-cidade').value || 'Goiânia').trim();
-            const signDate = formatDateLong(new Date().toISOString().slice(0, 10));
+            const signDate = formatDateLong(hojeISO());
 
             const html = `
                 <div class="text-center font-bold uppercase text-[13px] mb-2">Contrato de Prestação de Serviço com Fornecimento de Mão de Obra e Equipamentos para Eventos</div>
                 <p>${contratanteIntro}</p>
                 <p>${contratadaIntro}</p>
                 <p>As partes acima nomeadas e qualificadas resolvem celebrar este <strong>CONTRATO DE PRESTAÇÃO DE SERVIÇO, COM FORNECIMENTO DE BRINQUEDOS, MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS</strong>, de acordo com as cláusulas seguintes:</p>
-                <p><strong>CLÁUSULA PRIMEIRA</strong> — O presente contrato tem por objetivo a locação de brinquedos recreativos no evento da contratante no endereço: <strong>${eventAddress}</strong>. A ser realizado no dia <strong>${eventDate}</strong>, com início previsto para às <strong>${startTime}</strong> e término às <strong>${endTime}</strong>, no local do evento.</p>
+                <p><strong>CLÁUSULA PRIMEIRA</strong> — O presente contrato tem por objetivo a locação de brinquedos recreativos no evento da contratante no endereço: <strong>${eventAddress}</strong>. ${periodo.objeto}</p>
                 <p><strong>CLÁUSULA SEGUNDA</strong> — Consistem em serviços necessários para a execução do objeto deste contrato:</p>
                 <p class="pl-4">a) Fornecimento dos equipamentos necessários para execução dos serviços;<br>
                 b) Montagem e desmontagem dos equipamentos;<br>
                 c) Fornecimento de mão de obra;<br>
                 d) <strong>${itemsList}</strong>, sob o regime de locação.</p>
-                <p><strong>CLÁUSULA TERCEIRA</strong> — O presente contrato será por prazo determinado de 01 (um) dia, isto é, em <strong>${eventDate}</strong>, com início às <strong>${startTime}</strong> e término às <strong>${endTime}</strong>, ou seja, somente durante o período de realização do evento.</p>
-                <p><strong>CLÁUSULA QUARTA</strong> — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de <strong>${formatBRL(total)}</strong>${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}. ${paymentBlock}</p>
+                <p><strong>CLÁUSULA TERCEIRA</strong> — ${periodo.prazo}</p>
+                <p><strong>CLÁUSULA QUARTA</strong> — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de <strong>${formatBRL(total)}</strong>${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}.${periodo.ressalvaValor} ${paymentBlock}</p>
                 <p><strong>CLÁUSULA QUINTA</strong> — O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.</p>
                 <p><strong>CLÁUSULA SEXTA</strong> — Fica condicionada à anuência da CONTRATANTE a escolha dos horários para utilização dos equipamentos dentro do período contratado.</p>
                 <p><strong>CLÁUSULA SÉTIMA</strong> — A CONTRATADA não se responsabiliza pelo controle de caixa dos brinquedos locados. Quando aplicável, fabricação e venda das fichas fica sob responsabilidade da CONTRATADA.</p>
@@ -829,9 +985,7 @@
                 logradouro: $('ev-logradouro').value, complemento: $('ev-complemento').value,
                 bairro: $('ev-bairro').value, cidade: $('ev-cidade').value, uf: $('ev-uf').value
             });
-            const eventDate = formatDateLong($('event-date').value);
-            const startTime = $('event-start').value || NAO_DECLARADO;
-            const endTime = $('event-end').value || NAO_DECLARADO;
+            const periodo = contractPeriodTexts();
 
             const contratante = isPJ
                 ? `${nd(clientName).toUpperCase()}, pessoa jurídica de direito privado, inscrita no CNPJ sob nº ${nd($('pj-cnpj').value)}, neste ato representada por ${nd($('pj-rep-nome').value)}, com telefone de contato ${nd($('pj-rep-telefone').value)}, situada à ${addr}, doravante denominada CONTRATANTE.`
@@ -856,7 +1010,7 @@
                 : 'Forma de pagamento a ser combinada diretamente com a CONTRATADA.';
 
             const signCity = ($('ev-cidade').value || 'Goiânia').trim();
-            const signDate = formatDateLong(new Date().toISOString().slice(0, 10));
+            const signDate = formatDateLong(hojeISO());
 
             return {
                 title: 'CONTRATO DE PRESTAÇÃO DE SERVIÇO COM FORNECIMENTO DE MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS',
@@ -864,14 +1018,14 @@
                     contratante,
                     contratada,
                     'As partes acima nomeadas e qualificadas resolvem celebrar este CONTRATO DE PRESTAÇÃO DE SERVIÇO, COM FORNECIMENTO DE BRINQUEDOS, MÃO DE OBRA E EQUIPAMENTOS PARA EVENTOS, de acordo com as cláusulas seguintes:',
-                    `CLÁUSULA PRIMEIRA — O presente contrato tem por objetivo a locação de brinquedos recreativos no evento da contratante no endereço: ${addr}. A ser realizado no dia ${eventDate}, com início previsto para às ${startTime} e término às ${endTime}, no local do evento.`,
+                    `CLÁUSULA PRIMEIRA — O presente contrato tem por objetivo a locação de brinquedos recreativos no evento da contratante no endereço: ${addr}. ${periodo.objeto}`,
                     'CLÁUSULA SEGUNDA — Consistem em serviços necessários para a execução do objeto deste contrato:',
                     'a) Fornecimento dos equipamentos necessários para execução dos serviços;',
                     'b) Montagem e desmontagem dos equipamentos;',
                     'c) Fornecimento de mão de obra;',
                     `d) ${itemsList}, sob o regime de locação.`,
-                    `CLÁUSULA TERCEIRA — O presente contrato será por prazo determinado de 01 (um) dia, isto é, em ${eventDate}, com início às ${startTime} e término às ${endTime}, ou seja, somente durante o período de realização do evento.`,
-                    `CLÁUSULA QUARTA — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de ${formatBRL(total)}${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}. ${payInfo}`,
+                    `CLÁUSULA TERCEIRA — ${periodo.prazo}`,
+                    `CLÁUSULA QUARTA — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de ${formatBRL(total)}${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}.${periodo.ressalvaValor} ${payInfo}`,
                     'CLÁUSULA QUINTA — O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.',
                     'CLÁUSULA SEXTA — Fica condicionada à anuência da CONTRATANTE a escolha dos horários para utilização dos equipamentos dentro do período contratado.',
                     'CLÁUSULA SÉTIMA — A CONTRATADA não se responsabiliza pelo controle de caixa dos brinquedos locados. Quando aplicável, fabricação e venda das fichas fica sob responsabilidade da CONTRATADA.',
@@ -1072,11 +1226,10 @@
                 eventLng: state.eventLng,
                 isBirthday: !$('birthday-section').classList.contains('hidden'),
                 birthdayPersonName: $('bday-nome').value.trim() || null,
-                birthdayPersonDob: $('bday-data').value || null,
-                date: $('event-date').value || null,
-                endDate: $('event-end-date').value || null,
-                startTime: $('event-start').value || null,
-                endTime: $('event-end').value || null
+                birthdayPersonDob: $('bday-data').value || null
+                // Data e horário ficam de fora do rascunho de propósito: o que está no banco
+                // é o combinado com o vendedor, e é contra ele que o envio final detecta a
+                // alteração pedida pelo cliente. O backend também ignora esses campos aqui.
             };
         }
 
@@ -1324,6 +1477,13 @@
             totals.classList.remove('hidden');
             const subtotal = Number(state.subtotal || 0);
             $('totals-subtotal').textContent = formatCurrency(subtotal);
+            // Em evento de vários dias as atrações contam por dia — deixa isso explícito,
+            // senão o subtotal parece não bater com a lista de itens (que é de um dia).
+            // Usa a contagem que a equipe usou para precificar (já sem os dias excluídos).
+            const diasContratados = state.originalActiveDays || 1;
+            $('totals-subtotal-label').textContent = diasContratados > 1
+                ? `Subtotal (${diasContratados} dias)`
+                : 'Subtotal';
 
             let total = subtotal;
             const dv = Number(state.discountValue || 0);
@@ -1439,13 +1599,101 @@
         }
 
         let availabilityTimer = null;
-        function dateTimeChanged() {
+        function dateChanged() {
             return $('event-date').value !== state.originalDate
+                || (currentEndDate() || null) !== state.originalEndDate;
+        }
+        function dateTimeChanged() {
+            return dateChanged()
                 || ($('event-start').value || null) !== state.originalStart
                 || ($('event-end').value || null) !== state.originalEnd;
         }
+
+        // ===== Aviso de alteração de data/horário =====
+        // O cliente pode mudar, mas o combinado com o vendedor só muda com a confirmação dele.
+        function renderScheduleChangeWarning() {
+            const box = $('schedule-change-warning');
+            if (!dateTimeChanged()) { box.classList.add('hidden'); return; }
+
+            const antes = state.originalEndDate
+                ? `${formatDateShort(state.originalDate)} a ${formatDateShort(state.originalEndDate)}`
+                : formatDateShort(state.originalDate);
+            const agora = currentEndDate()
+                ? `${formatDateShort($('event-date').value)} a ${formatDateShort(currentEndDate())}`
+                : formatDateShort($('event-date').value);
+
+            const partes = [];
+            if (dateChanged() && antes && agora) partes.push(`Data combinada: <strong>${antes}</strong> → <strong>${agora}</strong>`);
+            else if (dateChanged()) partes.push('Você alterou a data do evento');
+            if (($('event-start').value || null) !== state.originalStart || ($('event-end').value || null) !== state.originalEnd) {
+                partes.push('Você alterou o horário');
+            }
+            $('schedule-change-detail').innerHTML = `${partes.join(' · ')}. Fale com o vendedor para confirmar a disponibilidade${currentEndDate() ? ' e o valor dos dias a mais' : ''}.`;
+
+            const link = $('schedule-change-whatsapp');
+            const wa = buildScheduleChangeWhatsAppLink(antes, agora);
+            if (wa) { link.href = wa; link.classList.remove('hidden'); }
+            else { link.classList.add('hidden'); }
+
+            box.classList.remove('hidden');
+        }
+
+        // Mensagem pronta para o cliente mandar ao vendedor pedindo a alteração.
+        function buildScheduleChangeWhatsAppLink(antes, agora) {
+            const num = toWhatsAppNumber(state.companyPhone);
+            if (!num) return null;
+            const nome = firstName($('pf-nome').value || $('pj-razao').value || '');
+            let msg = 'Olá! ';
+            if (nome) msg += `Aqui é ${nome}. `;
+            msg += 'Preciso ajustar o agendamento do meu evento';
+            if (antes && agora && antes !== agora) msg += `: estava para ${antes} e gostaria de ${agora}`;
+            const hStart = $('event-start').value, hEnd = $('event-end').value;
+            if (hStart || hEnd) msg += `, das ${hStart || '—'} às ${hEnd || '—'}`;
+            msg += '. Conseguem confirmar a disponibilidade? 😊';
+            return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+        }
+
+        // Sincroniza o toggle multi-dia com os campos e mostra a contagem de dias.
+        function refreshMultiDayUI() {
+            const cb = $('event-multiday');
+            const wrap = $('event-enddate-wrap');
+            const endInput = $('event-end-date');
+            const startVal = $('event-date').value;
+
+            endInput.min = startVal || '';
+            // Teto de 60 dias: barra erro de digitação no ano (2926 em vez de 2026), que
+            // criaria um evento de séculos. Mesmo limite validado no backend.
+            if (startVal) {
+                const max = new Date(startVal + 'T00:00:00');
+                max.setDate(max.getDate() + 59);
+                endInput.max = `${max.getFullYear()}-${String(max.getMonth() + 1).padStart(2, '0')}-${String(max.getDate()).padStart(2, '0')}`;
+            } else {
+                endInput.removeAttribute('max');
+            }
+            wrap.classList.toggle('hidden', !cb.checked);
+            if (!cb.checked) endInput.value = '';
+            else if (endInput.value && startVal && endInput.value < startVal) endInput.value = '';
+
+            const hint = $('event-days-hint');
+            const dias = activeDates().length;
+            const motivo = motivoPeriodoInvalido();
+            if (motivo) {
+                hint.textContent = motivo;
+                hint.className = $('event-end-date').value
+                    ? 'text-[10px] font-semibold text-red-600 mt-1.5'
+                    : 'text-[10px] text-gray-500 mt-1.5';
+            } else if (dias > 1) {
+                hint.textContent = `${dias} dias de evento.`;
+                hint.className = 'text-[10px] font-semibold text-indigo-700 mt-1.5';
+            } else {
+                hint.textContent = '';
+                hint.className = 'text-[10px] text-gray-500 mt-1.5';
+            }
+        }
+
         async function maybeCheckAvailability() {
             const date = $('event-date').value;
+            const endDate = currentEndDate();
             const start = $('event-start').value;
             const end = $('event-end').value;
             if (!date) { setAvailabilityStatus('hidden'); return; }
@@ -1455,6 +1703,7 @@
             try {
                 const url = new URL(`${API_BASE}/public/availability`);
                 url.searchParams.set('date', date);
+                if (endDate) url.searchParams.set('endDate', endDate);
                 if (start) url.searchParams.set('startTime', start);
                 if (end) url.searchParams.set('endTime', end);
                 if (eventId) url.searchParams.set('excludeId', eventId);
@@ -1473,8 +1722,12 @@
             clearTimeout(availabilityTimer);
             availabilityTimer = setTimeout(maybeCheckAvailability, 500);
         };
-        ['event-date', 'event-start', 'event-end'].forEach(id => {
-            $(id).addEventListener('change', debouncedCheck);
+        ['event-date', 'event-end-date', 'event-multiday', 'event-start', 'event-end'].forEach(id => {
+            $(id).addEventListener('change', () => {
+                refreshMultiDayUI();
+                renderScheduleChangeWarning();
+                debouncedCheck();
+            });
         });
 
         // ===== Carregar evento =====
@@ -1495,13 +1748,21 @@
                 $('greeting-card').classList.remove('hidden');
 
                 // Resumo: data e horário editáveis
+                const evEndDate = (ev.endDate && ev.date && ev.endDate > ev.date) ? ev.endDate : null;
                 state.originalDate = ev.date || null;
+                state.originalEndDate = evEndDate;
                 state.originalStart = ev.startTime || null;
                 state.originalEnd = ev.endTime || null;
+                state.excludedDates = parseExcluded(ev.excludedDates);
+                // activeDates vem pronto do backend e é a mesma contagem que a equipe usou
+                // para precificar — não recalcule pelo intervalo bruto.
+                state.originalActiveDays = (Array.isArray(ev.activeDates) && ev.activeDates.length) || 1;
                 $('event-date').value = ev.date || '';
-                $('event-end-date').value = ev.endDate || '';
+                $('event-end-date').value = evEndDate || '';
+                $('event-multiday').checked = !!evEndDate;
                 $('event-start').value = ev.startTime || '';
                 $('event-end').value = ev.endTime || '';
+                refreshMultiDayUI();
 
                 // Itens
                 const items = ev.items || [];
@@ -1620,12 +1881,15 @@
             const num = toWhatsAppNumber(state.companyPhone);
             if (!num) return null;
             const fname = firstName(clientName);
+            const endStr = currentEndDate();
             const dataFmt = dateStr ? formatDateLong(dateStr) : '';
             const valorFmt = formatCurrency(signalAmount);
             let msg = 'Olá! ';
             if (fname) msg += `Aqui é ${fname}. `;
             msg += 'Acabei de fazer o cadastro do meu evento';
-            if (dataFmt && dataFmt !== NAO_DECLARADO) msg += ` do dia ${dataFmt}`;
+            if (dataFmt && dataFmt !== NAO_DECLARADO) {
+                msg += endStr ? ` de ${dataFmt} a ${formatDateLong(endStr)}` : ` do dia ${dataFmt}`;
+            }
             msg += ` e a entrada de ${valorFmt} via PIX. Segue o comprovante para confirmar a reserva. 😊`;
             return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
         }
@@ -1740,6 +2004,14 @@
                 return;
             }
 
+            // Multi-dia marcado exige data final válida.
+            const motivoPeriodo = motivoPeriodoInvalido();
+            if (motivoPeriodo) {
+                alert(motivoPeriodo);
+                $('event-end-date').focus();
+                return;
+            }
+
             // Se cliente alterou data/horário e o sistema marcou indisponível, bloqueia.
             if (dateTimeChanged() && state.availability && state.availability.available === false) {
                 alert('O horário escolhido aparenta estar ocupado. Por favor, escolha outro.');
@@ -1781,7 +2053,7 @@
                 birthdayPersonDob: $('bday-data').value || null,
                 // Data/horário (apenas se cliente mudou)
                 date: $('event-date').value || null,
-                endDate: $('event-end-date').value || null,
+                endDate: currentEndDate() || null,
                 startTime: $('event-start').value || null,
                 endTime: $('event-end').value || null,
                 // Brinquedos extras

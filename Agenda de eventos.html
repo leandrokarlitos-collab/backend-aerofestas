@@ -2458,6 +2458,15 @@
                 <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Data do Evento</label>
                     <input type="text" id="link-cadastro-date" class="form-input w-full px-3 py-2 rounded-md bg-gray-100" readonly>
+                    <label class="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                        <input type="checkbox" id="link-cadastro-multiday" class="w-4 h-4 accent-amber-500">
+                        <span class="text-sm text-gray-700">Evento de vários dias</span>
+                    </label>
+                    <div id="link-cadastro-enddate-wrap" class="hidden mt-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Termina em</label>
+                        <input type="date" id="link-cadastro-end-date" class="form-input w-full px-3 py-2 rounded-md">
+                        <p id="link-cadastro-days-hint" class="text-xs text-gray-500 mt-1">Escolha o último dia do evento.</p>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Empresa Contratada <span class="text-red-500">*</span></label>
@@ -2570,7 +2579,7 @@
                         <span id="link-share-client" class="font-semibold text-gray-800">—</span>
                     </div>
                     <div class="flex items-center justify-between text-sm mb-1.5">
-                        <span class="text-gray-500"><i class="fas fa-calendar-day mr-1.5 text-amber-400"></i>Data</span>
+                        <span id="link-share-date-label" class="text-gray-500"><i class="fas fa-calendar-day mr-1.5 text-amber-400"></i>Data</span>
                         <span id="link-share-date" class="font-semibold text-gray-800">—</span>
                     </div>
                     <div id="link-share-entrada-row" class="flex items-center justify-between text-sm pt-2 mt-2 border-t border-amber-100 hidden">
@@ -4163,6 +4172,15 @@
                 return out;
             };
 
+            // Número por extenso — usado na redação jurídica do contrato ("03 (três) dias").
+            const NUMEROS_EXTENSO = [
+                'zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez',
+                'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito',
+                'dezenove', 'vinte', 'vinte e um', 'vinte e dois', 'vinte e três', 'vinte e quatro',
+                'vinte e cinco', 'vinte e seis', 'vinte e sete', 'vinte e oito', 'vinte e nove', 'trinta', 'trinta e um'
+            ];
+            const numeroPorExtenso = (n) => NUMEROS_EXTENSO[n] || String(n);
+
             // === Valor do evento por mês — distribui o TOTAL (event.price) pelo PESO de cada dia ===
             // Cada dia pesa pelo seu valor real (daySubtotalForDate: override do dia ou base por dia).
             // Distribuir o total pelo peso CONSERVA sempre o total do evento — nunca infla, mesmo em
@@ -4441,6 +4459,26 @@
                 });
             };
 
+            // "Já conferi" do aviso de alteração pedida pelo cliente — delegado, porque os
+            // cards da lista são recriados a cada render.
+            dayEventsList.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.change-note-ok-btn');
+                if (!btn) return;
+                const id = parseFloat(btn.dataset.eventId);
+                btn.disabled = true;
+                const res = await api.confirmarAlteracaoCliente(id);
+                if (!res || !res.success) {
+                    btn.disabled = false;
+                    showToast('Não foi possível marcar como conferido.', true);
+                    return;
+                }
+                const ev = events.find(x => x.id === id);
+                if (ev) ev.clientChangeNote = null;
+                renderAll();
+                if (selectedDate) renderDayEvents(selectedDate);
+                showToast('Aviso removido.', false);
+            });
+
             const renderDayEvents = (dateStr) => {
                 const dayEvents = events.filter(e => eventOccursOnDate(e, dateStr));
                 dayEventsList.innerHTML = '';
@@ -4535,6 +4573,14 @@
                             const dayIdx = activeDates.indexOf(dateStr) + 1;
                             multiDayBadge = `<div class="mb-2 px-3 py-1.5 rounded-md bg-indigo-50 border border-indigo-300 text-indigo-700 text-xs font-semibold flex items-center gap-1.5"><i class="fas fa-calendar-week"></i> Evento multi-dia: ${fmtBR(event.date)} → ${fmtBR(event.endDate)} (dia ${dayIdx}/${totalDays})</div>`;
                         }
+
+                        // Pedido de alteração de data/horário feito pelo cliente no link público.
+                        const changeNoteBadge = event.clientChangeNote
+                            ? `<div class="mb-2 px-3 py-2 rounded-md bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold">
+                                   <div class="flex items-start gap-1.5"><i class="fas fa-triangle-exclamation mt-0.5"></i><span>${escAttr(event.clientChangeNote)}</span></div>
+                                   <button type="button" class="change-note-ok-btn mt-2 px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold" data-event-id="${event.id}"><i class="fas fa-check mr-1"></i>Já conferi</button>
+                               </div>`
+                            : '';
                         // Horário deste dia específico (pode ter override)
                         const dayTimes = getEventTimesForDate(event, dateStr);
                         const dayHasTime = dayTimes.startTime || dayTimes.endTime;
@@ -4629,6 +4675,7 @@
                         <div class="${isCancelled ? 'opacity-60' : ''}">
                             ${cancelledBadge}
                             ${cadastroStatusBadge}
+                            ${changeNoteBadge}
                             ${multiDayBadge}
                             ${toysHtml}
                             <div class="mt-2 space-y-1 text-sm text-gray-500">
@@ -8830,11 +8877,27 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             // Contexto do último link gerado (para montar a mensagem premium de compartilhamento)
             let linkShareContext = { clientName: '', companyName: '', dateBR: '', signalAmount: 0, url: '' };
 
+            // Data final escolhida no modal (vazia = evento de 1 dia).
+            const linkCadastroEndDate = () => {
+                const cb = document.getElementById('link-cadastro-multiday');
+                const v = document.getElementById('link-cadastro-end-date').value;
+                if (!cb.checked || !v || !linkCadastroDateStr || v <= linkCadastroDateStr) return '';
+                return v;
+            };
+            // Quantos dias o link vai cobrir (mesma regra do resto do sistema: intervalo inteiro).
+            const linkCadastroDayCount = () =>
+                listDatesInRange(linkCadastroDateStr, linkCadastroEndDate() || linkCadastroDateStr).length || 1;
+
             const openLinkCadastroModal = (dateStr) => {
                 linkCadastroDateStr = dateStr;
                 linkCadastroToys = [];
                 const [y, m, d] = dateStr.split('-');
                 document.getElementById('link-cadastro-date').value = `${d}/${m}/${y}`;
+                document.getElementById('link-cadastro-multiday').checked = false;
+                document.getElementById('link-cadastro-enddate-wrap').classList.add('hidden');
+                const endInput = document.getElementById('link-cadastro-end-date');
+                endInput.value = '';
+                endInput.min = dateStr;
                 document.getElementById('link-cadastro-client-name').value = '';
                 document.getElementById('link-cadastro-start-time').value = '';
                 document.getElementById('link-cadastro-end-time').value = '';
@@ -8901,8 +8964,12 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 });
             };
 
-            const updateLinkTotalPrice = () => {
-                const subtotal = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+            // Totais do link. Em evento de vários dias as atrações contam por dia
+            // (mesma regra de recomputeEventTotals); frete e desconto contam uma vez.
+            const linkCadastroTotals = () => {
+                const days = linkCadastroDayCount();
+                const perDay = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+                const subtotal = perDay * days;
                 const discountType = document.getElementById('link-discount-type').value;
                 const discountValue = parseFloat(document.getElementById('link-discount-value').value) || 0;
                 const deliveryFee = parseFloat(document.getElementById('link-delivery-fee').value) || 0;
@@ -8910,8 +8977,15 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     ? (subtotal * discountValue / 100)
                     : discountValue;
                 const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
+                return { days, perDay, subtotal, discountType, discountValue, deliveryFee, discountAmount, total };
+            };
 
-                document.getElementById('link-subtotal').textContent = formatCurrency(subtotal);
+            const updateLinkTotalPrice = () => {
+                const { days, perDay, subtotal, discountType, discountValue, deliveryFee, discountAmount, total } = linkCadastroTotals();
+
+                document.getElementById('link-subtotal').textContent = days > 1
+                    ? `${formatCurrency(subtotal)} (${formatCurrency(perDay)} × ${days} dias)`
+                    : formatCurrency(subtotal);
 
                 const discRow = document.getElementById('link-discount-row');
                 if (discountValue > 0) {
@@ -8939,6 +9013,35 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 document.getElementById(id).addEventListener('input', updateLinkTotalPrice);
                 document.getElementById(id).addEventListener('change', updateLinkTotalPrice);
             });
+
+            // Multi-dia: abre/fecha o campo de data final e atualiza a contagem de dias.
+            const refreshLinkMultiDay = () => {
+                const cb = document.getElementById('link-cadastro-multiday');
+                const wrap = document.getElementById('link-cadastro-enddate-wrap');
+                const endInput = document.getElementById('link-cadastro-end-date');
+                const hint = document.getElementById('link-cadastro-days-hint');
+
+                wrap.classList.toggle('hidden', !cb.checked);
+                if (!cb.checked) {
+                    endInput.value = '';
+                } else if (endInput.value && endInput.value < linkCadastroDateStr) {
+                    endInput.value = '';
+                }
+
+                if (cb.checked) {
+                    if (!endInput.value) {
+                        hint.textContent = 'Escolha o último dia do evento.';
+                        hint.className = 'text-xs text-gray-500 mt-1';
+                    } else {
+                        const days = linkCadastroDayCount();
+                        hint.textContent = `${days} dias de evento — as atrações contam por dia.`;
+                        hint.className = 'text-xs text-amber-700 font-medium mt-1';
+                    }
+                }
+                updateLinkTotalPrice();
+            };
+            document.getElementById('link-cadastro-multiday').addEventListener('change', refreshLinkMultiDay);
+            document.getElementById('link-cadastro-end-date').addEventListener('change', refreshLinkMultiDay);
 
             document.getElementById('link-add-toy-btn').addEventListener('click', () => {
                 const sel = document.getElementById('link-toy-select');
@@ -8973,14 +9076,14 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 if (linkCadastroToys.length === 0) { showToast('Adicione ao menos um brinquedo.', true); return; }
                 const selectedCompanyId = document.getElementById('link-cadastro-company').value;
                 if (!selectedCompanyId) { showToast('Selecione a empresa contratada.', true); return; }
-                const subtotal = linkCadastroToys.reduce((sum, t) => sum + (t.price * t.quantity), 0);
-                const discountType = document.getElementById('link-discount-type').value;
-                const discountValue = parseFloat(document.getElementById('link-discount-value').value) || 0;
-                const deliveryFee = parseFloat(document.getElementById('link-delivery-fee').value) || 0;
-                const discountAmount = discountType === 'percent'
-                    ? (subtotal * discountValue / 100)
-                    : discountValue;
-                const totalPrice = Math.max(0, subtotal - discountAmount) + deliveryFee;
+                const multiDayChecked = document.getElementById('link-cadastro-multiday').checked;
+                const endDateStr = linkCadastroEndDate();
+                if (multiDayChecked && !endDateStr) {
+                    showToast('Informe uma data de término posterior à data de início.', true);
+                    document.getElementById('link-cadastro-end-date').focus();
+                    return;
+                }
+                const { subtotal, discountType, discountValue, deliveryFee, total: totalPrice } = linkCadastroTotals();
 
                 // Entrada (sinal): valor tem prioridade sobre a %; vazio => sem etapa de pagamento
                 const entradaValueRaw = document.getElementById('link-entrada-value').value.trim();
@@ -9002,6 +9105,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 const eventData = {
                     id: eventId,
                     date: linkCadastroDateStr,
+                    endDate: endDateStr || null,
                     clientName: clientNameInput || null,
                     yourCompanyId: parseFloat(selectedCompanyId),
                     startTime: startTimeInput || null,
@@ -9033,13 +9137,16 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     // Contexto para a mensagem premium
                     const companySel = document.getElementById('link-cadastro-company');
                     const companyName = companySel.options[companySel.selectedIndex]?.textContent?.trim() || '';
-                    const [yy, mm, dd] = linkCadastroDateStr.split('-');
-                    const dateBR = `${dd}/${mm}/${yy}`;
-                    linkShareContext = { clientName: clientNameInput, companyName, dateBR, signalAmount, url };
+                    const dateBR = endDateStr
+                        ? `${fmtDateBR(linkCadastroDateStr)} a ${fmtDateBR(endDateStr)}`
+                        : fmtDateBR(linkCadastroDateStr);
+                    linkShareContext = { clientName: clientNameInput, companyName, dateBR, isMultiDay: !!endDateStr, signalAmount, url };
 
                     // Preenche o resumo discreto
                     document.getElementById('link-share-client').textContent = clientNameInput || 'A definir';
                     document.getElementById('link-share-date').textContent = dateBR;
+                    document.getElementById('link-share-date-label').innerHTML =
+                        `<i class="fas fa-calendar-day mr-1.5 text-amber-400"></i>${endDateStr ? 'Período' : 'Data'}`;
                     const entradaRow = document.getElementById('link-share-entrada-row');
                     if (signalAmount > 0) {
                         document.getElementById('link-share-entrada').textContent = `${formatCurrency(signalAmount)} para confirmar`;
@@ -9079,15 +9186,19 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 const url = `${window.location.origin}/e/${event.id}`;
                 const company = (companies || []).find(c => c.id === event.yourCompanyId);
                 const companyName = company?.name || '';
-                const [yy, mm, dd] = String(event.date || '').split('-');
-                const dateBR = (yy && mm && dd) ? `${dd}/${mm}/${yy}` : String(event.date || '');
+                const isMultiDay = !!(event.endDate && event.endDate > event.date);
+                const dateBR = isMultiDay
+                    ? `${fmtDateBR(event.date)} a ${fmtDateBR(event.endDate)}`
+                    : fmtDateBR(event.date);
                 const signalAmount = Number(event.signalAmount) || 0;
                 const clientName = event.clientName || '';
-                linkShareContext = { clientName, companyName, dateBR, signalAmount, url };
+                linkShareContext = { clientName, companyName, dateBR, isMultiDay, signalAmount, url };
 
                 document.getElementById('link-cadastro-url').value = url;
                 document.getElementById('link-share-client').textContent = clientName || 'A definir';
                 document.getElementById('link-share-date').textContent = dateBR || '—';
+                document.getElementById('link-share-date-label').innerHTML =
+                    `<i class="fas fa-calendar-day mr-1.5 text-amber-400"></i>${isMultiDay ? 'Período' : 'Data'}`;
                 const entradaRow = document.getElementById('link-share-entrada-row');
                 if (signalAmount > 0) {
                     document.getElementById('link-share-entrada').textContent = `${formatCurrency(signalAmount)} para confirmar`;
@@ -9102,10 +9213,10 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
 
             // Monta a mensagem premium, calorosa e personalizada para o cliente
             const buildLinkShareMessage = () => {
-                const { clientName, companyName, dateBR, signalAmount, url } = linkShareContext;
+                const { clientName, companyName, dateBR, isMultiDay, signalAmount, url } = linkShareContext;
                 const saudacao = clientName ? `Olá, ${clientName}! ✨` : 'Olá! ✨';
                 const empresa = companyName ? ` na ${companyName}` : '';
-                const dataTrecho = dateBR ? ` no dia ${dateBR}` : '';
+                const dataTrecho = dateBR ? (isMultiDay ? ` de ${dateBR}` : ` no dia ${dateBR}`) : '';
                 const linhas = [
                     `${saudacao} Que alegria receber você${empresa}.`,
                     '',
@@ -9268,6 +9379,22 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 }).format(dateObj);
                 const todayFormatted = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
 
+                // Evento de vários dias: o contrato precisa listar o período e os dias reais
+                // (getEventActiveDates já desconta os dias removidos), com o horário de cada dia.
+                const contratoIsMultiDay = !!(event.endDate && event.endDate > event.date) && event.eventType !== 'meeting';
+                const contratoDias = contratoIsMultiDay ? getEventActiveDates(event) : [event.date];
+                const contratoDiasLinhas = contratoDias.map(iso => {
+                    const t = getEventTimesForDate(event, iso);
+                    const diaSemana = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(new Date(iso + 'T00:00:00'));
+                    return `  - ${fmtDateBR(iso)} (${diaSemana}), das ${t.startTime || 'a definir'} às ${t.endTime || 'a definir'}`;
+                }).join('\n');
+                const contratoPeriodoBloco = contratoIsMultiDay
+                    ? `- **Período:** de ${fmtDateBR(event.date)} a ${fmtDateBR(event.endDate)}, totalizando ${contratoDias.length} (${numeroPorExtenso(contratoDias.length)}) dias de evento.
+- **Dias e horários contratados:**
+${contratoDiasLinhas}
+- IMPORTANTE: somente os dias listados acima integram o contrato. Dias do intervalo que não estejam na lista NÃO fazem parte do objeto contratado.`
+                    : `- **Data e hora:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.`;
+
                 const fullEventAddressContract = [event.clientAddress, event.complemento, event.bairro, event.cidade, event.uf]
                     .filter(Boolean)
                     .join(', ');
@@ -9363,7 +9490,7 @@ OBJETO DO CONTRATO (Equipamentos/Serviços):
 ${toyListString}
 
 EVENTO:
-- **Data e hora:** ${formattedEventDate}, das ${event.startTime} às ${event.endTime}.
+${contratoPeriodoBloco}
 - **Local de instalação:** ${fullEventAddressContract || 'O mesmo endereço do contratante.'}
 ${birthdayContractPrompt ? `- **Detalhe:** ${birthdayContractPrompt}` : ''}
 
@@ -9373,9 +9500,11 @@ ${financePromptSection}
 CONDIÇÕES DE PAGAMENTO ESPECÍFICAS: ${paymentDetailsText}. ${paymentDataText}
 
 CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... – ..."):
-1. CLÁUSULA PRIMEIRA – DO OBJETO: descrever a locação dos equipamentos/brinquedos listados para o evento na data, hora e local especificados${birthdayContractPrompt ? '. ' + birthdayContractPrompt : ''}. Mencionar que inclui montagem e desmontagem.
+1. CLÁUSULA PRIMEIRA – DO OBJETO: descrever a locação dos equipamentos/brinquedos listados para o evento ${contratoIsMultiDay ? 'nas datas, horários e local especificados, deixando claro que se trata de evento realizado em mais de um dia' : 'na data, hora e local especificados'}${birthdayContractPrompt ? '. ' + birthdayContractPrompt : ''}. Mencionar que inclui montagem e desmontagem.
 2. CLÁUSULA SEGUNDA – DOS SERVIÇOS: listar serviços inclusos (fornecimento, montagem/desmontagem, monitores se aplicável).
-3. CLÁUSULA TERCEIRA – DO PRAZO: prazo determinado, correspondendo exatamente à data/horários do evento.
+3. CLÁUSULA TERCEIRA – DO PRAZO: ${contratoIsMultiDay
+                        ? `prazo determinado de ${contratoDias.length} (${numeroPorExtenso(contratoDias.length)}) dias, compreendendo exclusivamente as datas e horários listados no bloco EVENTO. Deixe explícito que dias não listados não integram o objeto deste contrato.`
+                        : 'prazo determinado, correspondendo exatamente à data/horários do evento.'}
 4. CLÁUSULA QUARTA – DO VALOR E DO PAGAMENTO: mencionar valor total **${formatCurrency(valorTotal)}**, taxa de entrega **${formatCurrency(frete)}** e usar EXATAMENTE as condições e status financeiro fornecidos.
 5. CLÁUSULA QUINTA – DAS DESPESAS: o valor pago engloba todas as despesas da CONTRATADA (material, transporte, mão de obra, tributos), constituindo única remuneração devida.
 6. CLÁUSULA SEXTA – DAS OBRIGAÇÕES DA CONTRATADA: entregar equipamentos em perfeitas condições de uso e segurança; realizar montagem/desmontagem nos horários acordados.

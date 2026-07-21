@@ -4,6 +4,13 @@ const webpush = require('../config/webpush');
 const { getBucket } = require('./firebaseAdmin');
 const crypto = require('crypto');
 const path = require('path');
+const {
+    MAX_DIAS_PERIODO,
+    eventActiveDates,
+    countDaysInRange,
+    normalizeDateRange,
+    pruneExcludedDates
+} = require('../utils/eventDates');
 
 // Tipos de arquivo aceitos como contrato anexado (PDF, imagens e Word).
 const CONTRACT_ALLOWED_MIME = [
@@ -34,6 +41,38 @@ function serializeJsonField(value) {
     } catch {
         return null;
     }
+}
+
+// 'YYYY-MM-DD' -> 'DD/MM/YYYY' (sem Date, para não sofrer shift de fuso).
+const isoToBR = (iso) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '—');
+};
+
+const rangeToBR = (date, endDate) =>
+    (endDate && endDate > date) ? `${isoToBR(date)} a ${isoToBR(endDate)}` : isoToBR(date);
+
+const timesToBR = (start, end) =>
+    (start || end) ? `${start || '—'} às ${end || '—'}` : 'não informado';
+
+// Compara o que o vendedor combinou com o que o cliente enviou pelo link público.
+// Retorna null quando nada de data/horário mudou; senão, o texto do pedido de alteração.
+function describeScheduleChange(before, next) {
+    const parts = [];
+    const beforeRange = rangeToBR(before.date, before.endDate);
+    const nextRange = rangeToBR(next.date, next.endDate);
+    if (beforeRange !== nextRange) parts.push(`Data: ${beforeRange} → ${nextRange}`);
+
+    const beforeTimes = timesToBR(before.startTime, before.endTime);
+    const nextTimes = timesToBR(next.startTime, next.endTime);
+    if (beforeTimes !== nextTimes) parts.push(`Horário: ${beforeTimes} → ${nextTimes}`);
+
+    if (!parts.length) return null;
+
+    const quando = new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo'
+    }).format(new Date());
+    return `Cliente pediu alteração pelo link em ${quando} — ${parts.join('; ')}. Confirmar com o cliente antes de fechar.`;
 }
 
 const toFloatOr = (v, fallback) =>
@@ -326,6 +365,10 @@ async function getPublicEvent(id) {
         id: event.id,
         date: event.date,
         endDate: event.endDate,
+        // Dias removidos do intervalo pelo admin — o link público não deixa o cliente
+        // editá-los, mas precisa deles para contar os dias e listar as datas no contrato.
+        excludedDates: event.excludedDates,
+        activeDates: eventActiveDates(event),
         eventType: event.eventType || 'event',
         startTime: event.startTime,
         endTime: event.endTime,
@@ -419,26 +462,60 @@ async function updatePublicEvent(id, d, meta = {}) {
         status: 'cadastro_completo'
     };
 
+    // Estado atual — precisa vir antes para validar a faixa de datas e detectar
+    // o que o cliente mudou em relação ao que o vendedor combinou.
+    const before = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: {
+            date: true, endDate: true, startTime: true, endTime: true,
+            excludedDates: true, signedAt: true, clientChangeNote: true
+        }
+    });
+    if (!before) {
+        const err = new Error('Evento não encontrado');
+        err.status = 404;
+        throw err;
+    }
+
     // Cliente pode propor nova data/horário — admin confirma depois.
     if (d.date) updateData.date = d.date;
-    if (d.endDate !== undefined) updateData.endDate = d.endDate || null;
     if (d.startTime) updateData.startTime = d.startTime;
     if (d.endTime) updateData.endTime = d.endTime;
     if (d.eventLat !== undefined) updateData.eventLat = d.eventLat;
     if (d.eventLng !== undefined) updateData.eventLng = d.eventLng;
 
-    // Assinatura simples: só registra se chegou signed=true E ainda não foi assinado.
-    if (d.signed === true) {
-        const existing = await prisma.event.findUnique({
-            where: { id: eventId },
-            select: { signedAt: true }
-        });
-        if (existing && !existing.signedAt) {
-            updateData.signedAt = new Date();
-            updateData.signedName = d.clientName || null;
-            updateData.signedIp = meta.ip || null;
-            updateData.signedUserAgent = meta.userAgent || null;
+    const nextDate = updateData.date || before.date;
+    if (d.endDate !== undefined) {
+        const { endDate, error } = normalizeDateRange(nextDate, d.endDate);
+        if (error) {
+            const err = new Error(error);
+            err.status = 400;
+            throw err;
         }
+        updateData.endDate = endDate;
+    }
+
+    // Se a faixa mudou, dias excluídos que ficaram fora dela deixam de fazer sentido.
+    const nextEndDate = updateData.endDate !== undefined ? updateData.endDate : before.endDate;
+    if (before.excludedDates && (nextDate !== before.date || nextEndDate !== before.endDate)) {
+        updateData.excludedDates = pruneExcludedDates(before.excludedDates, nextDate, nextEndDate);
+    }
+
+    // Pedido de alteração: o cliente pode mexer, mas o vendedor precisa confirmar.
+    const changeNote = describeScheduleChange(before, {
+        date: nextDate,
+        endDate: nextEndDate,
+        startTime: updateData.startTime || before.startTime,
+        endTime: updateData.endTime || before.endTime
+    });
+    if (changeNote) updateData.clientChangeNote = changeNote;
+
+    // Assinatura simples: só registra se chegou signed=true E ainda não foi assinado.
+    if (d.signed === true && !before.signedAt) {
+        updateData.signedAt = new Date();
+        updateData.signedName = d.clientName || null;
+        updateData.signedIp = meta.ip || null;
+        updateData.signedUserAgent = meta.userAgent || null;
     }
 
     const updated = await prisma.event.update({ where: { id: eventId }, data: updateData });
@@ -482,14 +559,17 @@ async function saveDraftPublicEvent(id, d) {
         throw err;
     }
 
+    // Data e horário NÃO entram aqui de propósito: são o que o vendedor combinou e
+    // servem de referência para detectar o pedido de alteração do cliente no envio
+    // final (updatePublicEvent). Se o auto-save gravasse a data nova, o "antes" já
+    // estaria mutado e a alteração passaria despercebida pela equipe.
     const ALLOWED = [
         'clientType', 'clientName', 'clientCpf', 'clientRg', 'clientDob',
         'clientPhone', 'clientPhoneBackup', 'clientSocial',
         'cnpj', 'companyAddress', 'repName', 'repCpf', 'repPhone', 'repPhoneBackup',
         'clientAddress', 'cep', 'complemento', 'referencia', 'bairro', 'cidade', 'uf',
         'eventLat', 'eventLng',
-        'isBirthday', 'birthdayPersonName', 'birthdayPersonDob',
-        'date', 'endDate', 'startTime', 'endTime'
+        'isBirthday', 'birthdayPersonName', 'birthdayPersonDob'
     ];
     const updateData = {};
     for (const k of ALLOWED) {
@@ -510,6 +590,23 @@ async function saveDraftPublicEvent(id, d) {
     return updated;
 }
 
+// Vendedor conferiu o pedido de alteração do cliente — some com o aviso amarelo.
+async function clearClientChangeNote(id, user) {
+    const eventId = parseFloat(id);
+    const updated = await prisma.event.update({
+        where: { id: eventId },
+        data: { clientChangeNote: null, updatedBy: user?.id ? String(user.id) : null }
+    });
+    safeAudit({
+        entityType: 'Event',
+        entityId: eventId,
+        action: 'UPDATE',
+        user,
+        changes: { clientChangeNote: { from: 'pendente', to: null } }
+    });
+    return updated;
+}
+
 async function listPublicToys() {
     return prisma.toy.findMany({
         select: { id: true, name: true, imageUrl: true },
@@ -517,26 +614,65 @@ async function listPublicToys() {
     });
 }
 
-// Verifica se há conflito com outro evento confirmado no mesmo dia/horário.
-// Retorna { available: boolean, reason?: string } — nunca confirma de forma definitiva,
-// apenas indica se *aparenta* estar livre.
-async function checkAvailability({ date, startTime, endTime, excludeEventId }) {
+// Verifica se há conflito com outro evento em QUALQUER dia do período pedido.
+// Retorna { available: boolean, reason?: string, conflictDates?: string[] } — nunca confirma
+// de forma definitiva, apenas indica se *aparenta* estar livre.
+async function checkAvailability({ date, endDate, startTime, endTime, excludeEventId }) {
     if (!date) return { available: false, reason: 'Data obrigatória' };
 
-    const sameDayEvents = await prisma.event.findMany({
+    // Rota pública e sem auth: nunca enumere uma faixa arbitrária vinda da query.
+    if (countDaysInRange(date, endDate) > MAX_DIAS_PERIODO) {
+        return { available: false, reason: `Período muito longo (máximo de ${MAX_DIAS_PERIODO} dias)` };
+    }
+
+    const requested = eventActiveDates({ date, endDate });
+    if (requested.length === 0) return { available: false, reason: 'Data inválida' };
+
+    const rangeStart = requested[0];
+    const rangeEnd = requested[requested.length - 1];
+
+    // Candidatos: qualquer evento cujo intervalo [date, endDate] possa tocar o período pedido.
+    // endDate é null em evento de 1 dia, por isso o OR.
+    const candidates = await prisma.event.findMany({
         where: {
-            date,
+            date: { lte: rangeEnd },
+            OR: [{ endDate: { gte: rangeStart } }, { date: { gte: rangeStart } }],
             status: { not: 'cancelado' },
             ...(excludeEventId ? { id: { not: parseFloat(excludeEventId) } } : {})
         },
-        select: { id: true, startTime: true, endTime: true, eventType: true }
+        select: {
+            id: true, date: true, endDate: true, excludedDates: true,
+            startTime: true, endTime: true, eventType: true
+        }
     });
 
-    if (sameDayEvents.length === 0) return { available: true };
+    const requestedSet = new Set(requested);
+    // Dias em que existe algum outro evento, com os eventos daquele dia.
+    const byDate = new Map();
+    for (const ev of candidates) {
+        // Recorta cada candidato à janela pedida — evento longo não vira array gigante.
+        for (const iso of eventActiveDates(ev, rangeStart, rangeEnd)) {
+            if (!requestedSet.has(iso)) continue;
+            if (!byDate.has(iso)) byDate.set(iso, []);
+            byDate.get(iso).push(ev);
+        }
+    }
 
-    // Sem horário informado — qualquer evento no dia bloqueia.
+    if (byDate.size === 0) return { available: true };
+
+    const fmtDays = (isos) => isos.slice(0, 3).map(isoToBR).join(', ')
+        + (isos.length > 3 ? ` e mais ${isos.length - 3}` : '');
+
+    // Sem horário informado — qualquer evento nos dias pedidos bloqueia.
     if (!startTime || !endTime) {
-        return { available: false, reason: 'Já existem outros eventos neste dia' };
+        const days = [...byDate.keys()].sort();
+        return {
+            available: false,
+            conflictDates: days,
+            reason: requested.length > 1
+                ? `Já existem outros eventos em ${fmtDays(days)}`
+                : 'Já existem outros eventos neste dia'
+        };
     }
 
     const toMin = (t) => {
@@ -546,18 +682,33 @@ async function checkAvailability({ date, startTime, endTime, excludeEventId }) {
     const reqStart = toMin(startTime);
     const reqEnd = toMin(endTime);
 
-    for (const ev of sameDayEvents) {
-        if (!ev.startTime || !ev.endTime) {
-            return { available: false, reason: 'Há outro evento no dia sem horário definido' };
-        }
-        const evStart = toMin(ev.startTime);
-        const evEnd = toMin(ev.endTime);
-        if (reqStart < evEnd && reqEnd > evStart) {
-            return { available: false, reason: 'Horário sobrepõe outro evento' };
+    const conflicts = [];
+    let semHorario = false;
+    for (const [iso, evs] of byDate) {
+        for (const ev of evs) {
+            if (!ev.startTime || !ev.endTime) {
+                semHorario = true;
+                conflicts.push(iso);
+                break;
+            }
+            if (reqStart < toMin(ev.endTime) && reqEnd > toMin(ev.startTime)) {
+                conflicts.push(iso);
+                break;
+            }
         }
     }
 
-    return { available: true };
+    if (conflicts.length === 0) return { available: true };
+
+    conflicts.sort();
+    const ondeTxt = requested.length > 1 ? ` em ${fmtDays(conflicts)}` : '';
+    return {
+        available: false,
+        conflictDates: conflicts,
+        reason: semHorario
+            ? `Há outro evento sem horário definido${ondeTxt || ' no dia'}`
+            : `Horário sobrepõe outro evento${ondeTxt}`
+    };
 }
 
 async function notifyAdminsCadastroCompleto(clientName) {
@@ -687,6 +838,7 @@ module.exports = {
     getPublicEvent,
     updatePublicEvent,
     saveDraftPublicEvent,
+    clearClientChangeNote,
     listPublicToys,
     checkAvailability,
     uploadContract,

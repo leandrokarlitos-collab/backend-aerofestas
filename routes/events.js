@@ -43,6 +43,14 @@ adminRouter.put('/events/:id/assignments', authenticate, async (req, res, next) 
     } catch (err) { next(err); }
 });
 
+// Marca como conferido o pedido de alteração de data/horário feito pelo cliente.
+adminRouter.delete('/events/:id/change-note', authenticate, async (req, res, next) => {
+    try {
+        await EventService.clearClientChangeNote(req.params.id, req.user);
+        res.json({ success: true });
+    } catch (err) { next(err); }
+});
+
 // Anexar / substituir o contrato do evento (arquivo: PDF, imagem ou Word).
 adminRouter.post('/events/:id/contract', authenticate, contractUpload.single('file'), async (req, res, next) => {
     try {
@@ -75,7 +83,12 @@ publicRouter.put('/events/:id', async (req, res, next) => {
         const userAgent = req.get('user-agent') || null;
         const updated = await EventService.updatePublicEvent(req.params.id, req.body, { ip, userAgent });
         res.json({ success: true, data: updated });
-    } catch (err) { next(err); }
+    } catch (err) {
+        if (err.status === 400 || err.status === 404) {
+            return res.status(err.status).json({ error: err.message });
+        }
+        next(err);
+    }
 });
 
 // Auto-save parcial enquanto o cliente preenche.
@@ -97,13 +110,14 @@ publicRouter.get('/toys', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-// Checa se data/horário aparentam estar livres na agenda.
-// GET /api/public/availability?date=YYYY-MM-DD&startTime=HH:MM&endTime=HH:MM&excludeId=...
+// Checa se o período/horário aparentam estar livres na agenda.
+// GET /api/public/availability?date=YYYY-MM-DD&endDate=YYYY-MM-DD&startTime=HH:MM&endTime=HH:MM&excludeId=...
+// endDate é opcional — sem ele, checa apenas o dia de `date` (comportamento anterior).
 publicRouter.get('/availability', async (req, res, next) => {
     try {
-        const { date, startTime, endTime, excludeId } = req.query;
+        const { date, endDate, startTime, endTime, excludeId } = req.query;
         const result = await EventService.checkAvailability({
-            date, startTime, endTime, excludeEventId: excludeId
+            date, endDate, startTime, endTime, excludeEventId: excludeId
         });
         res.json(result);
     } catch (err) { next(err); }

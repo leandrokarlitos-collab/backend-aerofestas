@@ -488,6 +488,18 @@ export const api = {
         } catch (error) { console.error('Erro ao remover contrato:', error); return { success: false }; }
     },
 
+    // Marca como conferido o pedido de alteração de data/horário feito pelo cliente no link.
+    confirmarAlteracaoCliente: async (eventId) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events/${eventId}/change-note`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : { success: false };
+        } catch (error) { console.error('Erro ao confirmar alteração do cliente:', error); return { success: false }; }
+    },
+
     // Salvar Empresa
     salvarEmpresa: async (empresa) => {
         try {

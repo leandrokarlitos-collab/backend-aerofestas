@@ -230,6 +230,10 @@ model Event {
   birthdayPersonDob  String?
   status             String?
 
+  // Pedido de alteração de data/horário feito pelo cliente no link público.
+  // Texto livre com o "de → para" e o carimbo do tempo; o vendedor limpa ao confirmar.
+  clientChangeNote String?
+
   // Tipo de agendamento: "event" (default) ou "meeting" (reunião — sem cliente/equipamentos/financeiro)
   eventType String? @default("event")
 
