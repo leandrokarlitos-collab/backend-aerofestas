@@ -623,6 +623,9 @@
             companyPhone: null,
             companyPaymentInfo: null,
             companyName: null,
+            // Condições de pagamento escritas pelo vendedor — viram itens da CLÁUSULA QUARTA
+            contractPaymentTerms: null,
+            contractTemplateVersion: null,
             // Assinatura simples
             signed: false,
             signedAt: null,
@@ -852,6 +855,129 @@
             };
         }
 
+        // ===== CLÁUSULA QUARTA: condições de pagamento — FONTE ÚNICA (HTML + PDF) =====
+        // Devolve TEXTO PURO em três partes; quem renderiza decide o formato:
+        //   HTML -> escapeHtml + <br>   |   PDF -> cru, um item por parágrafo.
+        // NUNCA escreva texto de pagamento dentro de renderContract()/buildContractTextData():
+        // divergência entre o contrato que o cliente aceita na tela e o PDF que ele baixa é o
+        // pior defeito possível num documento assinado.
+        //
+        // A fonte helvetica do jsPDF só desenha cp1252 — emoji vira lixo no PDF. Filtramos aqui,
+        // no texto cru, para que suma nos DOIS renderizadores (filtrar só no PDF criaria a
+        // divergência que esta função existe para impedir).
+        const FORA_CP1252 = /[^\x20-\x7E\xA0-\xFF–—‘’“”€\n]/g;
+
+        // Precisa bater com CONTRACT_TEMPLATE_VERSION do services/EventService.js.
+        const CONTRACT_TEMPLATE_VERSION = 2;
+
+        function contractPaymentParts(periodo) {
+            const company = state.company || {};
+            const signal = Number(state.signalAmount || 0);
+
+            // Redação de sempre — a que todo contrato já assinado contém.
+            const blocoLegado = () => ({
+                personalizado: false,
+                caudaCaput: company.paymentInfo
+                    ? ` O pagamento será realizado conforme dados informados pela CONTRATADA: ${company.paymentInfo}.`
+                    : ' Forma de pagamento a ser combinada diretamente com a CONTRATADA.',
+                itens: [],
+                fecho: ''
+            });
+
+            // (1) Itens escritos pelo vendedor — uma linha = um item da cláusula.
+            // O regex de marcador exige espaço depois: sem isso, "1.500,00 na assinatura"
+            // perderia o "1." e viraria "500,00 na assinatura" dentro do contrato. Letras são
+            // aceitas ("a) ...") porque o próprio contrato usa esse formato na CLÁUSULA SEGUNDA
+            // e o vendedor tende a copiá-lo — sem isso o item sairia como "a) A) ...".
+            const vistos = new Set();
+            const livres = String(state.contractPaymentTerms || '')
+                .replace(/\r\n?/g, '\n')
+                .replace(/\t/g, ' ')
+                .replace(FORA_CP1252, '')
+                .split('\n')
+                .map(s => s.trim().replace(/^(?:[-–—•*]|\d{1,2}[.)]|[a-zA-Z][.)])\s+/, '').trim())
+                // Linha sem nenhuma letra ou número é marcador solto ou separador ("-", "---",
+                // "*") deixado por engano: viraria a alínea vazia "b) -." no contrato.
+                .filter(s => /[0-9A-Za-zÀ-ÿ]/.test(s))
+                .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+                .map(s => s.replace(/[\s.;:,!?…]+$/, ''))
+                .filter(s => {
+                    const chave = s.toLowerCase();
+                    if (vistos.has(chave)) return false; // condição repetida não vira duas alíneas
+                    vistos.add(chave);
+                    return true;
+                })
+                .map(s => s + '.');
+
+            // (2) Evento anterior a esta redação e sem condição escrita: sai exatamente como
+            // sempre saiu. Sem esta guarda, todo evento antigo COM entrada — a maioria — teria a
+            // CLÁUSULA QUARTA reescrita retroativamente, inclusive os já assinados.
+            const versaoAntiga = Number(state.contractTemplateVersion || 0) < CONTRACT_TEMPLATE_VERSION;
+            if (versaoAntiga && !livres.length) return blocoLegado();
+
+            // (3) A entrada NÃO é digitada: é derivada do valor que a equipe definiu. Texto
+            // digitado à mão vira foto do passado — mudar brinquedo, frete ou período faria o
+            // contrato afirmar um valor e a tela do PIX mostrar outro.
+            // Evitamos de propósito a palavra "sinal": é termo técnico (arras, arts. 417-420 CC)
+            // e dispararia perda/devolução em dobro num contrato que não tem cláusula de rescisão.
+            const itens = [];
+            if (signal > 0) {
+                itens.push(
+                    `Entrada de ${formatBRL(signal)}, via PIX, no ato da assinatura deste contrato, ` +
+                    `a título de antecipação do preço, ficando a data reservada a partir da confirmação do pagamento.`
+                );
+            }
+            itens.push(...livres);
+
+            if (!itens.length) return blocoLegado();
+
+            // (4) Com condições. A ordem das frases é jurídica, não estética: o valor total e a
+            // ressalva de período vêm ANTES; se as condições viessem primeiro, o documento fixaria
+            // a entrada em valor fechado e só depois diria que o total é revisável.
+            const plural = itens.length > 1;
+            const dados = String(company.paymentInfo || '').trim().replace(/[.,;\s]+$/, '');
+            const salvaguarda = plural
+                ? 'Havendo divergência entre as condições acima e o valor total indicado nesta cláusula, prevalece o valor total.'
+                : 'Havendo divergência entre a condição acima e o valor total indicado nesta cláusula, prevalece o valor total.';
+            const ressalva = periodo.ressalvaValor
+                ? (plural
+                    ? ' Os valores e prazos indicados nas condições acima referem-se ao período originalmente contratado e serão confirmados pela CONTRATADA.'
+                    : ' O valor e o prazo indicados na condição acima referem-se ao período originalmente contratado e serão confirmados pela CONTRATADA.')
+                : '';
+            const dadosFrase = dados
+                ? ` Os pagamentos serão realizados conforme os dados informados pela CONTRATADA: ${dados}.`
+                : '';
+            const fecho = (salvaguarda + ressalva + dadosFrase).trim();
+
+            if (itens.length === 1) {
+                return {
+                    personalizado: true,
+                    caudaCaput: ` O pagamento do valor acima observará a seguinte condição: ${itens[0]}`,
+                    itens: [],
+                    fecho
+                };
+            }
+
+            const marcador = itens.length > 26 ? () => '—' : (i) => String.fromCharCode(97 + i) + ')';
+            return {
+                personalizado: true,
+                caudaCaput: ' O pagamento do valor acima observará as seguintes condições:',
+                itens: itens.map((t, i) => `${marcador(i)} ${t}`),
+                fecho
+            };
+        }
+
+        // A QUINTA declara que o valor pago é "a única remuneração devida à CONTRATADA". Quando o
+        // vendedor escreve uma condição que acrescenta custo (taxa de cartão, por exemplo), as duas
+        // cláusulas se contradizem. A ressalva só entra quando há condições — contrato sem elas
+        // continua com a redação de sempre, palavra por palavra.
+        function clausulaQuintaTexto(personalizado) {
+            const ressalva = personalizado ? 'ressalvado o disposto na CLÁUSULA QUARTA, ' : '';
+            return 'O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, '
+                + ressalva
+                + 'a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.';
+        }
+
         // excludedDates chega da API como string JSON (ou array já parseado).
         function parseExcluded(value) {
             if (!value) return [];
@@ -942,9 +1068,8 @@
             const deliveryFee = Number(state.deliveryFee || 0);
             const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
 
-            const paymentBlock = company.paymentInfo
-                ? `O pagamento será realizado conforme dados informados pela CONTRATADA: ${company.paymentInfo}.`
-                : 'Forma de pagamento a ser combinada diretamente com a CONTRATADA.';
+            // Texto de pagamento: vem inteiro da fonte única (ver contractPaymentParts).
+            const pag = contractPaymentParts(periodo);
 
             // Cidade e data do contrato
             const signCity = ($('ev-cidade').value || 'Goiânia').trim();
@@ -962,8 +1087,10 @@
                 c) Fornecimento de mão de obra;<br>
                 d) <strong>${itemsList}</strong>, sob o regime de locação.</p>
                 <p><strong>CLÁUSULA TERCEIRA</strong> — ${periodo.prazo}</p>
-                <p><strong>CLÁUSULA QUARTA</strong> — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de <strong>${formatBRL(total)}</strong>${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}.${periodo.ressalvaValor} ${paymentBlock}</p>
-                <p><strong>CLÁUSULA QUINTA</strong> — O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.</p>
+                <p><strong>CLÁUSULA QUARTA</strong> — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de <strong>${formatBRL(total)}</strong>${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}.${periodo.ressalvaValor}${escapeHtml(pag.caudaCaput)}</p>
+                ${pag.itens.length ? `<p class="pl-4">${pag.itens.map(escapeHtml).join('<br>')}</p>` : ''}
+                ${pag.fecho ? `<p>${escapeHtml(pag.fecho)}</p>` : ''}
+                <p><strong>CLÁUSULA QUINTA</strong> — ${escapeHtml(clausulaQuintaTexto(pag.personalizado))}</p>
                 <p><strong>CLÁUSULA SEXTA</strong> — Fica condicionada à anuência da CONTRATANTE a escolha dos horários para utilização dos equipamentos dentro do período contratado.</p>
                 <p><strong>CLÁUSULA SÉTIMA</strong> — A CONTRATADA não se responsabiliza pelo controle de caixa dos brinquedos locados. Quando aplicável, fabricação e venda das fichas fica sob responsabilidade da CONTRATADA.</p>
                 <p><strong>CLÁUSULA OITAVA</strong> — A CONTRATADA não se responsabiliza por mau funcionamento de seus equipamentos em decorrência de problemas de energia, queda ou falta da mesma, condições naturais do tempo e depredação por terceiros.</p>
@@ -1005,9 +1132,8 @@
             const deliveryFee = Number(state.deliveryFee || 0);
             const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
 
-            const payInfo = company.paymentInfo
-                ? `O pagamento será realizado conforme dados informados pela CONTRATADA: ${company.paymentInfo}.`
-                : 'Forma de pagamento a ser combinada diretamente com a CONTRATADA.';
+            // Mesma fonte única do HTML — ver contractPaymentParts.
+            const pag = contractPaymentParts(periodo);
 
             const signCity = ($('ev-cidade').value || 'Goiânia').trim();
             const signDate = formatDateLong(hojeISO());
@@ -1025,8 +1151,15 @@
                     'c) Fornecimento de mão de obra;',
                     `d) ${itemsList}, sob o regime de locação.`,
                     `CLÁUSULA TERCEIRA — ${periodo.prazo}`,
-                    `CLÁUSULA QUARTA — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de ${formatBRL(total)}${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}.${periodo.ressalvaValor} ${payInfo}`,
-                    'CLÁUSULA QUINTA — O valor pago à CONTRATADA engloba toda e qualquer despesa com material, alimentação, transportes, encargos sociais, trabalhistas, previdenciários, treinamento, seguros, impostos e tributos incidentes, lucro e demais despesas ligadas direta e/ou indiretamente ao serviço contratado, constituindo assim, a única remuneração devida à CONTRATADA pelo serviço objeto deste contrato.',
+                    // Array = bloco atômico: o caput e seus itens não podem ser separados por uma
+                    // quebra de página, senão "a) Entrada..." abre a página seguinte órfã, sem o
+                    // cabeçalho da cláusula a que pertence.
+                    [
+                        `CLÁUSULA QUARTA — O CONTRATANTE pagará à CONTRATADA, a título de contraprestação pelo serviço prestado, um valor total de ${formatBRL(total)}${discountAmount > 0 ? ` (já com desconto de ${formatBRL(discountAmount)} aplicado sobre o subtotal de ${formatBRL(subtotal)})` : ''}${deliveryFee > 0 ? `, incluindo taxa de entrega de ${formatBRL(deliveryFee)}` : ''}.${periodo.ressalvaValor}${pag.caudaCaput}`,
+                        ...pag.itens,
+                        ...(pag.fecho ? [pag.fecho] : [])
+                    ],
+                    `CLÁUSULA QUINTA — ${clausulaQuintaTexto(pag.personalizado)}`,
                     'CLÁUSULA SEXTA — Fica condicionada à anuência da CONTRATANTE a escolha dos horários para utilização dos equipamentos dentro do período contratado.',
                     'CLÁUSULA SÉTIMA — A CONTRATADA não se responsabiliza pelo controle de caixa dos brinquedos locados. Quando aplicável, fabricação e venda das fichas fica sob responsabilidade da CONTRATADA.',
                     'CLÁUSULA OITAVA — A CONTRATADA não se responsabiliza por mau funcionamento de seus equipamentos em decorrência de problemas de energia, queda ou falta da mesma, condições naturais do tempo e depredação por terceiros.',
@@ -1075,19 +1208,34 @@
             // Parágrafos
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10.5);
+            // Um item de `paragraphs` pode ser uma string (parágrafo solto) ou um array
+            // (bloco atômico: caput + itens de uma mesma cláusula, que não podem ser
+            // separados por quebra de página).
             for (const p of data.paragraphs) {
-                const lines = doc.splitTextToSize(p, usableW);
-                needBreak(lines.length * 5 + 2);
-                for (const ln of lines) {
-                    needBreak(5);
-                    doc.text(ln, ml, y, { align: 'justify', maxWidth: usableW });
-                    y += 5;
-                }
+                const bloco = Array.isArray(p) ? p : [p];
+                const linhasDoBloco = bloco.map(t => doc.splitTextToSize(t, usableW));
+                // O respiro de 1mm existe ENTRE sub-parágrafos; somá-lo ao último reservaria 1mm
+                // a mais e mudaria a paginação dos contratos antigos, que são de bloco único.
+                const alturaBloco = linhasDoBloco.reduce((h, ls) => h + ls.length * 5, 0)
+                    + (linhasDoBloco.length - 1) + 2;
+                // Bloco maior que a página não cabe em lugar nenhum: não force uma folha em branco.
+                needBreak(Math.min(alturaBloco, pageH - mt - mb));
+                linhasDoBloco.forEach((lines, i) => {
+                    for (const ln of lines) {
+                        needBreak(5);
+                        doc.text(ln, ml, y, { align: 'justify', maxWidth: usableW });
+                        y += 5;
+                    }
+                    if (i < linhasDoBloco.length - 1) y += 1; // itens respiram menos que parágrafos
+                });
                 y += 3;
             }
 
             // Assinaturas — precisa de espaço; quebra página se não couber.
-            const signBlockHeight = 60;
+            // 71mm é o consumo real do bloco inteiro (10+5+5+3+18 do CONTRATANTE, 10+12+8 da
+            // CONTRATADA e da cidade/data). Reservar menos deixava as duas assinaturas do mesmo
+            // contrato em folhas diferentes quando o texto terminava perto do rodapé.
+            const signBlockHeight = 80;
             needBreak(signBlockHeight);
             y += 10;
 
@@ -1113,8 +1261,8 @@
             }
             y += 18;
 
-            // Bloco da CONTRATADA
-            needBreak(35);
+            // Bloco da CONTRATADA — sem needBreak aqui: o espaço já foi reservado inteiro acima,
+            // e era justamente esta quebra que partia o bloco de assinaturas ao meio.
             doc.setLineWidth(0.3);
             doc.line(pageW / 2 - 50, y, pageW / 2 + 50, y);
             y += 5;
@@ -1784,6 +1932,8 @@
                 state.companyPhone = ev.company?.phone || null;
                 state.companyPaymentInfo = ev.company?.paymentInfo || null;
                 state.companyName = ev.company?.name || null;
+                state.contractPaymentTerms = ev.contractPaymentTerms || null;
+                state.contractTemplateVersion = ev.contractTemplateVersion || null;
 
                 renderItems();
                 renderTotals();

@@ -24,7 +24,10 @@ const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
-    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems'
+    'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems',
+    // Texto que o cliente assina: alteração precisa deixar o "de → para" no histórico, senão não
+    // há como reconstruir o que ele leu se contestar a condição depois.
+    'contractPaymentTerms', 'paymentDetails'
 ];
 
 // Serializa campo JSON do evento (excludedDates, dateOverrides) — aceita string já serializada,
@@ -85,6 +88,26 @@ const toFloatOrNull = (v) => {
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : null;
 };
+
+// Condições de pagamento do contrato: texto público que o cliente lê e assina.
+// Normaliza quebras de linha e recusa texto absurdo em vez de cortar — truncar aqui
+// mutilaria uma condição no meio da frase dentro de um contrato já assinado.
+// Redação vigente do contrato do link público. Só eventos carimbados com esta versão recebem a
+// cláusula de pagamento nova; os anteriores (coluna NULL) continuam renderizando o texto antigo.
+const CONTRACT_TEMPLATE_VERSION = 2;
+
+const MAX_CONTRACT_PAYMENT_TERMS = 2000;
+function normalizeContractPaymentTerms(value) {
+    if (value === null || value === undefined) return null;
+    const s = String(value).replace(/\r\n?/g, '\n').trim();
+    if (!s) return null;
+    if (s.length > MAX_CONTRACT_PAYMENT_TERMS) {
+        const err = new Error(`Condições de pagamento muito longas (máximo de ${MAX_CONTRACT_PAYMENT_TERMS} caracteres).`);
+        err.status = 400;
+        throw err;
+    }
+    return s;
+}
 
 // Fire-and-forget: auditoria nunca deve quebrar o fluxo principal.
 function safeAudit(payload) {
@@ -173,6 +196,13 @@ function buildEventFields(evt, userId) {
         pixKey: evt.pixKey || null,
         paymentDetails: evt.paymentDetails,
 
+        // Condições de pagamento do contrato (texto público). Mesmo guard de eventLat/eventLng:
+        // só grava quando o campo vem no payload, para que um save parcial que não o inclua não
+        // apague a cláusula de um contrato já assinado.
+        ...(evt.contractPaymentTerms !== undefined
+            ? { contractPaymentTerms: normalizeContractPaymentTerms(evt.contractPaymentTerms) }
+            : {}),
+
         isTicketSale: evt.isTicketSale === true,
         estimatedValue: evt.isTicketSale === true ? toFloatOr(evt.estimatedValue, 0) : null,
         // Resultado pós-evento (venda por ficha): opcionais — null quando não informados.
@@ -244,12 +274,16 @@ async function upsertEvent(evt, user) {
 
     const items = normalizeItems(evt.items || evt.toys);
     const externalRentals = normalizeExternalRentals(evt.externalRentals);
+
+    // Valida ANTES de destruir: buildEventFields pode lançar 400 (condições longas demais) e os
+    // deleteMany abaixo não estão em transação — se a ordem se invertesse, um payload inválido
+    // apagaria os brinquedos e as locações do evento e devolveria erro sem regravar nada.
+    const fields = buildEventFields(evt, user.id);
+
     if (isUpdate) {
         await prisma.eventItem.deleteMany({ where: { eventId } });
         await prisma.eventExternalRental.deleteMany({ where: { eventId } });
     }
-
-    const fields = buildEventFields(evt, user.id);
 
     const saved = await prisma.event.upsert({
         where: { id: eventId },
@@ -262,6 +296,10 @@ async function upsertEvent(evt, user) {
             id: eventId,
             ...fields,
             createdBy: user.id,
+            // Carimba a redação do contrato vigente. Eventos criados antes desta coluna ficam
+            // NULL e continuam sendo renderizados com a redação antiga — um contrato assinado
+            // nunca pode mudar de texto por causa de um deploy.
+            contractTemplateVersion: CONTRACT_TEMPLATE_VERSION,
             items: { create: items },
             externalRentals: { create: externalRentals }
         },
@@ -398,6 +436,12 @@ async function getPublicEvent(id) {
         price: event.price,
         signalAmount: event.signalAmount,
         pixKey: event.pixKey,
+        // Somente LEITURA para o cliente: alimenta a CLÁUSULA QUARTA do contrato. Note que o
+        // campo NÃO entra em updatePublicEvent nem na ALLOWED de saveDraftPublicEvent — senão o
+        // cliente reescreveria a própria condição de pagamento pelo PATCH do rascunho.
+        contractPaymentTerms: event.contractPaymentTerms,
+        // Qual redação de contrato este evento usa (NULL = anterior à cláusula de pagamento nova).
+        contractTemplateVersion: event.contractTemplateVersion,
         clientType: event.clientType,
         clientName: event.clientName,
         clientCpf: event.clientCpf,

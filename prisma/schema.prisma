@@ -207,7 +207,18 @@ model Event {
   signalAmount   Float? // Entrada (R$) para confirmar a reserva — mostrada ao cliente no link
   signalReceived Boolean?
   pixKey         String? // Chave PIX exibida ao cliente na etapa de pagamento do link
-  paymentDetails String?
+  paymentDetails String? // Recado INTERNO de pagamento — sai na O.S. impressa e no card da agenda
+
+  // Condições de pagamento redigidas pelo vendedor (modal do link de cadastro ou edição do
+  // evento). Texto PÚBLICO: entra na CLÁUSULA QUARTA do contrato que o cliente lê e assina.
+  // Uma linha = um item da cláusula. Deliberadamente separado de `paymentDetails`, que é
+  // recado interno e nunca deve chegar ao cliente.
+  contractPaymentTerms String?
+
+  // Versão da redação do contrato usada por este evento. NULL = criado antes da cláusula de
+  // pagamento personalizável; esses continuam sendo renderizados com o texto antigo, para que
+  // um contrato já assinado não mude de teor por causa de um deploy.
+  contractTemplateVersion Int?
 
   // Evento vendido por ingresso (sem locação fixa) — apenas projeção
   isTicketSale        Boolean?
