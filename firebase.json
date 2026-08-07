@@ -33,6 +33,10 @@
                 "destination": "/cadastro-evento.html"
             },
             {
+                "source": "/r/**",
+                "destination": "/r.html"
+            },
+            {
                 "source": "/p/maple-bear",
                 "destination": "/propostas/maple-bear/index.html"
             },
@@ -121,6 +125,15 @@
                     {
                         "key": "Cache-Control",
                         "value": "public, max-age=60, must-revalidate"
+                    }
+                ]
+            },
+            {
+                "source": "/r/**",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
                     }
                 ]
             }

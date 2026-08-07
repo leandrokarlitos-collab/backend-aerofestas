@@ -1512,6 +1512,114 @@ export const api = {
         } catch (e) { return null; }
     },
 
+    // ============ LINKS RASTREADOS (QR) ============
+    // Encurtador próprio: o QR impresso aponta para /r/<slug> e o destino
+    // é editável aqui, sem reimprimir material.
+
+    listarLinksRastreados: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/tracked-links`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) { console.error('Erro ao listar links rastreados:', e); return []; }
+    },
+
+    getLinkRastreado: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    // Retorno: { ok, status, ...json } — 409 quando o slug já existe
+    criarLinkRastreado: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/tracked-links`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
+    atualizarLinkRastreado: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
+    deletarLinkRastreado: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok;
+        } catch (e) { return false; }
+    },
+
+    getAnalyticsLink: async (id, from, to) => {
+        try {
+            const token = getToken();
+            const qs = new URLSearchParams();
+            if (from) qs.set('from', from);
+            if (to) qs.set('to', to);
+            const suffix = qs.toString() ? `?${qs.toString()}` : '';
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/${id}/analytics${suffix}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao buscar analytics do link:', e); return null; }
+    },
+
+    // opts: { limit, offset, from, to } → { total, items }
+    getHitsLink: async (id, opts = {}) => {
+        try {
+            const token = getToken();
+            const qs = new URLSearchParams();
+            if (opts.limit != null) qs.set('limit', opts.limit);
+            if (opts.offset != null) qs.set('offset', opts.offset);
+            if (opts.from) qs.set('from', opts.from);
+            if (opts.to) qs.set('to', opts.to);
+            const suffix = qs.toString() ? `?${qs.toString()}` : '';
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/${id}/hits${suffix}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    // Retorna o Blob do CSV (quem chama monta o download com URL.createObjectURL)
+    exportarHitsLinkCSV: async (id, from, to) => {
+        try {
+            const token = getToken();
+            const qs = new URLSearchParams();
+            if (from) qs.set('from', from);
+            if (to) qs.set('to', to);
+            const suffix = qs.toString() ? `?${qs.toString()}` : '';
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/${id}/export${suffix}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.blob() : null;
+        } catch (e) { console.error('Erro ao exportar CSV do link:', e); return null; }
+    },
+
     // 📋 AUDITORIA
     getEntityHistory: async (entityType, entityId) => {
         try {

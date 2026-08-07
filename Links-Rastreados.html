@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./js/theme.js"></script>
+    <title>Divulgação &amp; QR Codes · Aero Festas</title>
+
+    <!-- PWA Config -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="js/pwa-init.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/aero.css">
+    <link rel="icon" href="./icons/Logo_Aero_Festas.png" type="image/png">
+
+    <!-- Gráficos e geração de QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <style>
+        /* ---- Divulgação & QR Codes: mínimos específicos da página (tokens do DS) ---- */
+
+        /* Mantém o toggle .hidden funcionando com .modal-backdrop { display:flex } */
+        .modal-backdrop.hidden { display: none; }
+        /* Mesmo caso do .warn-banner abaixo, que também é display:flex */
+        .warn-banner.hidden { display: none; }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: -.01em;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .section-title i { color: var(--brand-600); font-size: 17px; }
+        .dark .section-title i { color: var(--brand-400); }
+
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-head h3 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-head h3 i { color: var(--text-faint); font-size: 13px; }
+
+        .hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+
+        .warn-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius);
+            font-size: 13.5px;
+            line-height: 1.5;
+            background: var(--warning-soft);
+            color: #B45309;
+            font-weight: 500;
+        }
+        .dark .warn-banner { color: var(--warning); }
+        .warn-banner i { margin-top: 2px; }
+
+        .info-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .info-note i { color: var(--text-faint); margin-top: 2px; }
+
+        /* ---- Cartão do link na lista ---- */
+        .link-card {
+            padding: 18px 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: start;
+        }
+        .link-card .head {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .link-card .dest-row {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .link-card .dest-row a {
+            color: var(--brand-600);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dark .link-card .dest-row a { color: var(--brand-400); }
+        .link-card .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+        .link-card .meta-row span { display: inline-flex; align-items: center; gap: 5px; }
+        .link-card .meta-row i { color: var(--text-faint); }
+
+        .url-row {
+            margin-top: 10px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .url-row .url-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text-faint);
+            white-space: nowrap;
+        }
+        .url-row code {
+            flex: 1;
+            font-family: var(--font-body);
+            color: var(--brand-600);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+        .url-row button {
+            border: none;
+            background: transparent;
+            color: var(--brand-600);
+            cursor: pointer;
+            font-size: 0.78rem;
+            padding: 2px 6px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .dark .url-row code, .dark .url-row button { color: var(--brand-400); }
+
+        .actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .actions .act-danger { color: var(--danger); }
+        .actions .act-danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+        @media (max-width: 640px) {
+            .link-card { grid-template-columns: 1fr; }
+            .link-card .actions { justify-content: flex-start; }
+        }
+
+        /* ---- Filtro de período ---- */
+        .period-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .period-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .period-chips .chip-btn {
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-muted);
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--dur) var(--ease);
+        }
+        .period-chips .chip-btn:hover { border-color: var(--border-strong); color: var(--text); }
+        .period-chips .chip-btn.is-active {
+            background: var(--brand-600);
+            border-color: var(--brand-600);
+            color: #fff;
+        }
+        .period-bar .date-field { min-width: 150px; }
+        .period-bar .date-field .input { padding-top: 8px; padding-bottom: 8px; }
+
+        /* ---- Gráficos ---- */
+        .chart-wrap { position: relative; height: 280px; }
+        .chart-wrap canvas { max-width: 100%; }
+        .chart-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-faint);
+            font-size: 13px;
+            text-align: center;
+            padding: 0 16px;
+        }
+
+        /* ---- Listas em barra ---- */
+        .break-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+        }
+        .bar-row { margin-bottom: 10px; }
+        .bar-row:last-child { margin-bottom: 0; }
+        .bar-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12.5px;
+            margin-bottom: 4px;
+        }
+        .bar-key {
+            color: var(--text);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .bar-val { color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .bar-track {
+            height: 6px;
+            background: var(--surface-2);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: var(--brand-600);
+            border-radius: 999px;
+        }
+        .dark .bar-fill { background: var(--brand-400); }
+        .bar-more { font-size: 11.5px; color: var(--text-faint); margin-top: 8px; }
+
+        /* ---- Histórico de destinos ---- */
+        .change-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .change-item:last-child { border-bottom: none; }
+        .change-item .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--brand-600);
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .dark .change-item .dot { background: var(--brand-400); }
+        .change-item .urls { min-width: 0; }
+        .change-item .u-old { color: var(--text-faint); text-decoration: line-through; word-break: break-all; }
+        .change-item .u-new { color: var(--text); font-weight: 500; word-break: break-all; }
+        .change-item .when { color: var(--text-muted); font-size: 11.5px; margin-top: 3px; }
+
+        /* ---- QR ---- */
+        .qr-stage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: #FFFFFF;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+        .qr-stage canvas { width: 260px; height: 260px; image-rendering: pixelated; }
+
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .cell-muted { color: var(--text-muted) !important; }
+        .cell-faint { color: var(--text-faint) !important; font-size: 12px; }
+        .truncate-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .pager {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 18px;
+            border-top: 1px solid var(--border);
+            font-size: 12.5px;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body data-page="links">
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+    <header class="page-header">
+        <div>
+            <h1 class="flex items-center gap-3">
+                <i class="fas fa-qrcode text-grad-brand"></i> Divulgação &amp; QR Codes
+            </h1>
+            <p class="page-subtitle">
+                Cada QR impresso aponta para um link curto fixo da Aero Festas. O destino desse link
+                pode ser trocado aqui a qualquer momento — panfleto, banner e cartão já impressos
+                continuam funcionando, sem reimprimir nada.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" id="btn-reload" class="btn btn-secondary" title="Atualizar lista" aria-label="Atualizar lista">
+                <i class="fas fa-rotate"></i> <span class="hidden sm:inline">Atualizar</span>
+            </button>
+            <button type="button" id="btn-novo" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Novo link
+            </button>
+        </div>
+    </header>
+
+    <!-- ================= Lista de links ================= -->
+    <section id="view-list">
+        <div id="links-list" class="space-y-3"></div>
+    </section>
+
+    <!-- ================= Relatório do link ================= -->
+    <section id="view-report" class="hidden">
+
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <button type="button" id="btn-voltar" class="btn btn-ghost btn-icon" title="Voltar para a lista" aria-label="Voltar para a lista">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2 class="section-title"><i class="fas fa-chart-line"></i> <span id="rep-title">Relatório</span></h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" id="rep-btn-qr" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-qrcode"></i> <span class="hidden sm:inline">QR Code</span>
+                </button>
+                <button type="button" id="rep-btn-edit" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-pen"></i> <span class="hidden sm:inline">Editar destino</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="surface p-4 mb-4">
+            <div id="rep-url-row" class="url-row" style="margin-top:0;"></div>
+            <div id="rep-dest-row" class="hint"></div>
+        </div>
+
+        <!-- Filtro de período -->
+        <div class="surface p-4 mb-4">
+            <div class="period-bar">
+                <div class="period-chips" id="period-chips">
+                    <button type="button" class="chip-btn" data-days="7">7 dias</button>
+                    <button type="button" class="chip-btn is-active" data-days="30">30 dias</button>
+                    <button type="button" class="chip-btn" data-days="90">90 dias</button>
+                    <button type="button" class="chip-btn" data-days="0">Tudo</button>
+                </div>
+                <div class="date-field">
+                    <label class="input-label" for="rep-from">De</label>
+                    <input type="date" id="rep-from" class="input">
+                </div>
+                <div class="date-field">
+                    <label class="input-label" for="rep-to">Até</label>
+                    <input type="date" id="rep-to" class="input">
+                </div>
+                <button type="button" id="rep-apply" class="btn btn-primary btn-sm">
+                    <i class="fas fa-filter"></i> Aplicar
+                </button>
+            </div>
+        </div>
+
+        <!-- Totais -->
+        <div id="rep-kpis" class="mb-4"></div>
+
+        <!-- Aviso de período truncado (só aparece se o backend mandar truncado=true) -->
+        <div id="rep-truncado" class="warn-banner hidden mb-4"></div>
+
+        <!-- Gráficos -->
+        <div class="surface overflow-hidden mb-4">
+            <div class="card-head"><h3><i class="fas fa-calendar-days"></i> Scans por dia</h3></div>
+            <div class="p-4"><div class="chart-wrap" id="wrap-dia"></div></div>
+        </div>
+
+        <div class="surface overflow-hidden mb-4">
+            <div class="card-head"><h3><i class="fas fa-clock"></i> Scans por hora do dia</h3></div>
+            <div class="p-4"><div class="chart-wrap" id="wrap-hora"></div></div>
+        </div>
+
+        <!-- Quebras -->
+        <div class="mb-3 info-note">
+            <i class="fas fa-circle-info"></i>
+            <span>Cidade, UF e país são <strong>estimativas</strong> calculadas pelo endereço IP — podem apontar a cidade da operadora, não a do visitante.</span>
+        </div>
+        <div id="rep-breakdowns" class="break-grid mb-4"></div>
+
+        <!-- Histórico de destinos -->
+        <div class="surface overflow-hidden mb-4">
+            <div class="card-head"><h3><i class="fas fa-clock-rotate-left"></i> Histórico de destinos</h3></div>
+            <div id="rep-changes" class="p-4"></div>
+        </div>
+
+        <!-- Acessos detalhados -->
+        <div class="surface overflow-hidden mb-10">
+            <div class="card-head">
+                <h3><i class="fas fa-list"></i> Acessos detalhados</h3>
+                <button type="button" id="rep-export" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-file-csv"></i> Exportar CSV
+                </button>
+            </div>
+            <div id="rep-hits"></div>
+            <div id="rep-pager" class="pager hidden">
+                <span id="rep-pager-info"></span>
+                <div class="flex gap-2">
+                    <button type="button" id="rep-prev" class="btn btn-ghost btn-sm"><i class="fas fa-chevron-left"></i> Anteriores</button>
+                    <button type="button" id="rep-next" class="btn btn-ghost btn-sm">Próximos <i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- ================= Modal: criar / editar link ================= -->
+<div id="modal-form" class="hidden modal-backdrop sheet-on-mobile">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="form-title">Novo link</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close-form aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="form-link">
+            <div class="modal-body space-y-4">
+                <div id="form-warn" class="warn-banner hidden">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <span>
+                        <strong>Atenção:</strong> trocar o destino vale <strong>imediatamente</strong> para
+                        todos os panfletos, banners e cartões já impressos com este QR. O link curto não muda —
+                        só para onde ele leva.
+                    </span>
+                </div>
+
+                <div>
+                    <label class="input-label" for="f-name">Nome interno</label>
+                    <input type="text" id="f-name" class="input" required maxlength="80" placeholder="Ex.: Panfleto Verão 2026">
+                    <div class="hint">Só aparece aqui no sistema, para você identificar a campanha.</div>
+                </div>
+
+                <div>
+                    <label class="input-label" for="f-slug">Slug (final do link curto)</label>
+                    <input type="text" id="f-slug" class="input" required maxlength="40" placeholder="panfleto-verao" autocapitalize="none" autocomplete="off" spellcheck="false">
+                    <div class="hint" id="f-slug-preview">https://agenda-aero-festas.web.app/r/…</div>
+                </div>
+
+                <div>
+                    <label class="input-label" for="f-dest">Destino atual (para onde o QR leva)</label>
+                    <input type="url" id="f-dest" class="input" required placeholder="https://agenda-aero-festas.web.app/…">
+                    <div class="hint">Precisa começar com http:// ou https://.</div>
+                </div>
+
+                <div>
+                    <label class="input-label" for="f-notes">Observações</label>
+                    <textarea id="f-notes" class="textarea" rows="2" maxlength="500" placeholder="Onde o material foi distribuído, tiragem, responsável…"></textarea>
+                </div>
+
+                <label class="check-row" for="f-active">
+                    <input type="checkbox" id="f-active" checked>
+                    Link ativo (desligado, o QR impresso para de redirecionar)
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-close-form>Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="f-submit">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= Modal: QR Code ================= -->
+<div id="modal-qr" class="hidden modal-backdrop sheet-on-mobile">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="qr-title">QR Code</div>
+            <button type="button" class="btn btn-ghost btn-icon" data-close-qr aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body space-y-4">
+            <div class="qr-stage"><canvas id="qr-canvas" width="260" height="260" role="img" aria-label="QR Code do link"></canvas></div>
+            <div id="qr-url-row" class="url-row" style="margin-top:0;"></div>
+            <label class="check-row" for="qr-logo">
+                <input type="checkbox" id="qr-logo" checked>
+                Com logo no centro
+            </label>
+            <div class="info-note">
+                <i class="fas fa-print"></i>
+                <span>O download sai em 2000×2000 px (correção de erro nível H), tamanho de sobra para
+                gráfica. Teste o QR com o celular antes de mandar imprimir.</span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" data-close-qr>Fechar</button>
+            <button type="button" class="btn btn-primary" id="qr-download">
+                <i class="fas fa-download"></i> Baixar PNG
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="./js/ui.js"></script>
+<script src="./js/nav.js"></script>
+<script src="js/protect.js"></script>
+
+<script type="module">
+import { api, API_BASE_URL } from './js/api.js';
+import { getToken } from './js/auth.js';
+
+// Base pública do link curto — é o que vai impresso no material.
+const PUBLIC_BASE = 'https://agenda-aero-festas.web.app/r/';
+const HITS_LIMIT = 50;
+
+// ---------------- Estado ----------------
+let links = [];             // lista completa
+let current = null;         // link aberto no relatório (com changes)
+let analytics = null;       // último analytics carregado
+let hitsOffset = 0;
+let hitsTotal = 0;
+let period = { from: '', to: '' };
+let editingId = null;       // null = criação
+const charts = {};          // instâncias Chart.js vivas
+
+// ---------------- Utilitários ----------------
+function qs(id) { return document.getElementById(id); }
+
+function escapeHtml(text) {
+    // Escapa também aspas — o resultado é interpolado dentro de atributos
+    // HTML (title="...", data-url="...") em template strings.
+    return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtNum(n) { return Number(n || 0).toLocaleString('pt-BR'); }
+
+function fmtDateTime(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('pt-BR'); } catch (e) { return '—'; }
+}
+
+function isoLocal(d) {
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+function dayLabel(key) {
+    const parts = String(key || '').split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : String(key || '');
+}
+
+function linkUrl(slug) { return PUBLIC_BASE + String(slug || ''); }
+
+function normalizeSlug(v) {
+    return String(v || '').trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // tira acentos
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+
+// Copiar com fallback para contextos sem permissão de clipboard
+async function copiar(texto) {
+    try {
+        await navigator.clipboard.writeText(texto);
+        UI.toast('Link copiado!', 'success');
+        return;
+    } catch (e) { /* segue para o fallback */ }
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = texto;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        UI.toast(ok ? 'Link copiado!' : 'Não foi possível copiar', ok ? 'success' : 'error');
+    } catch (e) {
+        UI.toast('Não foi possível copiar', 'error');
+    }
+}
+
+function urlRowHtml(url, tag) {
+    return `
+        <span class="url-tag">${escapeHtml(tag || 'Link do QR')}</span>
+        <code>${escapeHtml(url)}</code>
+        <button type="button" data-action="copy" data-url="${escapeHtml(url)}" aria-label="Copiar link do QR" title="Copiar link do QR">
+            <i class="fas fa-copy"></i> Copiar
+        </button>`;
+}
+
+// ---------------- Lista de links ----------------
+async function loadLinks() {
+    const list = qs('links-list');
+    UI.skeleton(list, 'cards', 3);
+    const data = await api.listarLinksRastreados();
+    links = Array.isArray(data) ? data : [];
+    renderList();
+}
+
+function renderList() {
+    const list = qs('links-list');
+    if (!links.length) {
+        UI.empty(list, {
+            icon: 'fa-qrcode',
+            title: 'Nenhum link rastreado ainda',
+            text: 'Crie o primeiro link, gere o QR Code e use no panfleto. Depois é só trocar o destino aqui quando a campanha mudar.',
+            cta: { label: 'Novo link', onClick: () => openForm(null) }
+        });
+        return;
+    }
+
+    list.innerHTML = links.map((l) => {
+        const url = linkUrl(l.slug);
+        const dest = l.destination || '';
+        const destSafe = /^https?:\/\//i.test(dest) ? dest : '';
+        return `
+            <article class="link-card surface surface-hover" data-id="${escapeHtml(l.id)}">
+                <div class="min-w-0">
+                    <h3 class="head">
+                        ${escapeHtml(l.name || 'Sem nome')}
+                        ${l.active === false
+                            ? '<span class="badge badge-danger"><i class="fas fa-ban"></i> Inativo</span>'
+                            : '<span class="badge badge-success"><i class="fas fa-check"></i> Ativo</span>'}
+                    </h3>
+                    <div class="dest-row">
+                        <i class="fas fa-arrow-right-long"></i>
+                        ${destSafe
+                            ? `<a href="${escapeHtml(destSafe)}" target="_blank" rel="noopener" title="${escapeHtml(dest)}">${escapeHtml(dest)}</a>`
+                            : `<span class="cell-faint">${escapeHtml(dest || 'sem destino')}</span>`}
+                    </div>
+                    <div class="url-row">${urlRowHtml(url)}</div>
+                    <div class="meta-row">
+                        <span title="Total de scans"><i class="fas fa-bolt"></i> ${fmtNum(l.totalHits)} scan${Number(l.totalHits || 0) === 1 ? '' : 's'}</span>
+                        <span title="Visitantes únicos"><i class="fas fa-user-group"></i> ${fmtNum(l.uniqueVisitors)} único${Number(l.uniqueVisitors || 0) === 1 ? '' : 's'}</span>
+                        <span title="Último scan"><i class="fas fa-clock"></i> ${l.lastHitAt ? fmtDateTime(l.lastHitAt) : 'nunca escaneado'}</span>
+                    </div>
+                    ${l.notes ? `<div class="hint"><i class="fas fa-note-sticky"></i> ${escapeHtml(l.notes)}</div>` : ''}
+                </div>
+                <div class="actions">
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="report" aria-label="Ver relatório" title="Ver relatório">
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="qr" aria-label="Ver QR Code" title="Ver QR Code">
+                        <i class="fas fa-qrcode"></i>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm" data-action="edit" aria-label="Editar link" title="Editar link">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon btn-sm act-danger" data-action="delete" aria-label="Excluir link" title="Excluir link">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </article>`;
+    }).join('');
+}
+
+qs('links-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+
+    if (action === 'copy') { copiar(btn.dataset.url || ''); return; }
+
+    const card = btn.closest('.link-card');
+    if (!card) return;
+    const link = links.find((l) => String(l.id) === card.dataset.id);
+    if (!link) return;
+
+    if (action === 'report') {
+        openReport(link.id);
+    } else if (action === 'qr') {
+        openQr(link);
+    } else if (action === 'edit') {
+        openForm(link);
+    } else if (action === 'delete') {
+        const ok = await UI.confirm({
+            title: 'Excluir link',
+            message: `Excluir "${link.name || link.slug}"? O link ${linkUrl(link.slug)} deixa de funcionar e todo o histórico de scans é apagado. Materiais já impressos com este QR viram link morto.`,
+            confirmText: 'Excluir',
+            danger: true
+        });
+        if (!ok) return;
+        btn.disabled = true;
+        const done = await api.deletarLinkRastreado(link.id);
+        btn.disabled = false;
+        if (done) {
+            UI.toast('Link excluído', 'success');
+            if (current && String(current.id) === String(link.id)) showList();
+            await loadLinks();
+        } else {
+            UI.toast('Erro ao excluir o link', 'error');
+        }
+    }
+});
+
+qs('btn-reload').addEventListener('click', () => {
+    // No relatório, recarrega também o link (destino e histórico de mudanças)
+    if (current) { openReport(current.id); } else { loadLinks(); }
+});
+qs('btn-novo').addEventListener('click', () => openForm(null));
+
+// ---------------- Modal de criação / edição ----------------
+function openForm(link) {
+    editingId = link ? link.id : null;
+    qs('form-title').textContent = link ? 'Editar link' : 'Novo link';
+    qs('f-name').value = link ? (link.name || '') : '';
+    qs('f-slug').value = link ? (link.slug || '') : '';
+    qs('f-dest').value = link ? (link.destination || '') : '';
+    qs('f-notes').value = link ? (link.notes || '') : '';
+    qs('f-active').checked = link ? link.active !== false : true;
+
+    // O slug é o que está impresso: não pode mudar depois de criado.
+    const slugInput = qs('f-slug');
+    slugInput.disabled = !!link;
+    qs('form-warn').classList.toggle('hidden', !link);
+    updateSlugPreview();
+
+    qs('modal-form').classList.remove('hidden');
+    setTimeout(() => qs('f-name').focus(), 40);
+}
+
+function closeForm() {
+    qs('modal-form').classList.add('hidden');
+    qs('form-link').reset();
+    editingId = null;
+}
+
+function updateSlugPreview() {
+    const slug = normalizeSlug(qs('f-slug').value);
+    qs('f-slug-preview').textContent = PUBLIC_BASE + (slug || '…');
+}
+
+qs('f-slug').addEventListener('input', updateSlugPreview);
+document.querySelectorAll('[data-close-form]').forEach((b) => b.addEventListener('click', closeForm));
+qs('modal-form').addEventListener('mousedown', (e) => { if (e.target === qs('modal-form')) closeForm(); });
+
+qs('form-link').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submit = qs('f-submit');
+    const name = qs('f-name').value.trim();
+    const destination = qs('f-dest').value.trim();
+    const notes = qs('f-notes').value.trim();
+    const active = qs('f-active').checked;
+
+    if (!name) { UI.toast('Informe o nome do link', 'error'); return; }
+    if (!/^https?:\/\//i.test(destination)) {
+        UI.toast('O destino precisa começar com http:// ou https://', 'error');
+        return;
+    }
+
+    submit.disabled = true;
+    let res;
+    if (editingId) {
+        res = await api.atualizarLinkRastreado(editingId, { name, destination, notes, active });
+    } else {
+        const slug = normalizeSlug(qs('f-slug').value);
+        if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(slug)) {
+            submit.disabled = false;
+            UI.toast('Slug inválido: use 2 a 40 caracteres, apenas letras minúsculas, números e hífen', 'error');
+            return;
+        }
+        // 'active' vai sempre no corpo: sem ele o link nascia ativo mesmo com a
+        // caixa desmarcada (QR de campanha futura ligava antes da hora).
+        res = await api.criarLinkRastreado({ slug, name, destination, notes, active });
+    }
+    submit.disabled = false;
+
+    if (res && res.ok) {
+        UI.toast(editingId ? 'Link atualizado — o QR já aponta para o novo destino' : 'Link criado', 'success');
+        const savedId = editingId;
+        closeForm();
+        await loadLinks();
+        if (current && savedId && String(current.id) === String(savedId)) {
+            await openReport(savedId);
+        }
+    } else {
+        const msg = (res && (res.error || res.message)) ||
+            (res && res.status === 409 ? 'Já existe um link com esse slug' : 'Erro ao salvar o link');
+        UI.toast(msg, 'error');
+    }
+});
+
+// ---------------- Modal do QR Code ----------------
+let qrLink = null;
+
+function openQr(link) {
+    qrLink = link;
+    qs('qr-title').textContent = 'QR Code · ' + (link.name || link.slug || '');
+    qs('qr-url-row').innerHTML = urlRowHtml(linkUrl(link.slug));
+    qs('modal-qr').classList.remove('hidden');
+    renderQrPreview();
+}
+
+function closeQr() {
+    qs('modal-qr').classList.add('hidden');
+    qrLink = null;
+}
+
+document.querySelectorAll('[data-close-qr]').forEach((b) => b.addEventListener('click', closeQr));
+qs('modal-qr').addEventListener('mousedown', (e) => { if (e.target === qs('modal-qr')) closeQr(); });
+qs('modal-qr').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="copy"]');
+    if (btn) copiar(btn.dataset.url || '');
+});
+qs('qr-logo').addEventListener('change', renderQrPreview);
+
+function loadImagem(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+// Desenha o QR no canvas; nível H tolera a logo sobreposta no centro.
+async function desenharQr(canvas, texto, tamanho, comLogo) {
+    if (!window.QRCode) throw new Error('Biblioteca de QR não carregou');
+    await window.QRCode.toCanvas(canvas, texto, {
+        width: tamanho,
+        margin: 2,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#000000', light: '#FFFFFF' }
+    });
+    if (!comLogo) return;
+    try {
+        const img = await loadImagem('./icons/icon-512.png');
+        const ctx = canvas.getContext('2d');
+        const lado = canvas.width;
+        const caixa = Math.round(lado * 0.22);   // quadrado branco de fundo
+        const logo = Math.round(lado * 0.17);    // logo dentro do quadrado
+        const cx = Math.round((lado - caixa) / 2);
+        const lx = Math.round((lado - logo) / 2);
+        ctx.fillStyle = '#FFFFFF';
+        roundRect(ctx, cx, cx, caixa, caixa, Math.round(caixa * 0.18));
+        ctx.fill();
+        ctx.drawImage(img, lx, lx, logo, logo);
+    } catch (e) {
+        // Sem logo o QR continua perfeitamente válido — não é erro fatal.
+        console.warn('Não foi possível sobrepor a logo no QR:', e);
+    }
+}
+
+async function renderQrPreview() {
+    if (!qrLink) return;
+    const canvas = qs('qr-canvas');
+    try {
+        await desenharQr(canvas, linkUrl(qrLink.slug), 520, qs('qr-logo').checked);
+    } catch (e) {
+        UI.toast('Não foi possível gerar o QR Code', 'error');
+    }
+}
+
+qs('qr-download').addEventListener('click', async () => {
+    if (!qrLink) return;
+    const btn = qs('qr-download');
+    const icon = btn.querySelector('i');
+    btn.disabled = true;
+    icon.className = 'fas fa-spinner fa-spin';
+    try {
+        const off = document.createElement('canvas');
+        await desenharQr(off, linkUrl(qrLink.slug), 2000, qs('qr-logo').checked);
+        const a = document.createElement('a');
+        a.href = off.toDataURL('image/png');
+        a.download = `qr-${qrLink.slug || 'aero-festas'}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        UI.toast('QR Code baixado em alta resolução', 'success');
+    } catch (e) {
+        UI.toast('Erro ao gerar o PNG do QR Code', 'error');
+    } finally {
+        btn.disabled = false;
+        icon.className = 'fas fa-download';
+    }
+});
+
+// ---------------- Relatório ----------------
+function showList() {
+    current = null;
+    analytics = null;
+    destroyCharts();
+    qs('view-report').classList.add('hidden');
+    qs('view-list').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+qs('btn-voltar').addEventListener('click', showList);
+
+async function openReport(id) {
+    const link = await api.getLinkRastreado(id);
+    if (!link) { UI.toast('Não foi possível abrir o relatório deste link', 'error'); return; }
+    current = link;
+    qs('view-list').classList.add('hidden');
+    qs('view-report').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    qs('rep-title').textContent = link.name || link.slug || 'Relatório';
+    qs('rep-url-row').innerHTML = urlRowHtml(linkUrl(link.slug));
+    const dest = link.destination || '';
+    const destSafe = /^https?:\/\//i.test(dest) ? dest : '';
+    qs('rep-dest-row').innerHTML =
+        `<i class="fas fa-arrow-right-long"></i> Destino atual: ` +
+        (destSafe
+            ? `<a href="${escapeHtml(destSafe)}" target="_blank" rel="noopener" style="color:var(--brand-600);font-weight:600;">${escapeHtml(dest)}</a>`
+            : `<span class="cell-faint">${escapeHtml(dest || 'não definido')}</span>`) +
+        (link.active === false ? ' <span class="badge badge-danger">Inativo — o QR não redireciona</span>' : '');
+
+    renderChanges(link.changes || []);
+    setPeriodDays(30);
+}
+
+qs('rep-btn-qr').addEventListener('click', () => { if (current) openQr(current); });
+qs('rep-btn-edit').addEventListener('click', () => { if (current) openForm(current); });
+qs('view-report').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="copy"]');
+    if (btn) copiar(btn.dataset.url || '');
+});
+
+function setPeriodDays(days) {
+    document.querySelectorAll('#period-chips .chip-btn').forEach((b) => {
+        b.classList.toggle('is-active', Number(b.dataset.days) === Number(days));
+    });
+    if (Number(days) > 0) {
+        const to = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - (Number(days) - 1));
+        period = { from: isoLocal(from), to: isoLocal(to) };
+    } else {
+        period = { from: '', to: '' };
+    }
+    qs('rep-from').value = period.from;
+    qs('rep-to').value = period.to;
+    loadReport();
+}
+
+qs('period-chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip-btn');
+    if (b) setPeriodDays(Number(b.dataset.days));
+});
+
+qs('rep-apply').addEventListener('click', () => {
+    period = { from: qs('rep-from').value || '', to: qs('rep-to').value || '' };
+    document.querySelectorAll('#period-chips .chip-btn').forEach((b) => b.classList.remove('is-active'));
+    loadReport();
+});
+
+function analyticsVazio() {
+    return {
+        totals: { hits: 0, uniqueVisitors: 0, returningHits: 0, firstHitAt: null, lastHitAt: null },
+        byDay: [], byHour: [], byWeekday: [], byDevice: [], byOs: [], byBrowser: [],
+        byInApp: [], byCountry: [], byRegion: [], byCity: [], byLanguage: [],
+        byTimezone: [], byReferrer: [],
+        truncado: false, amostraDe: 0
+    };
+}
+
+// Aviso fixo no painel quando o backend avisa que a amostra do período foi cortada.
+// Se a resposta não trouxer 'truncado', nada aparece — a página segue igual.
+function renderAvisoTruncado() {
+    const box = qs('rep-truncado');
+    if (!box) return;
+    if (!analytics || analytics.truncado !== true) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+    }
+    const amostra = Number(analytics.amostraDe);
+    const trecho = Number.isFinite(amostra) && amostra > 0
+        ? `Os gráficos e as quebras abaixo consideram apenas <strong>${fmtNum(amostra)}</strong> acessos deste período.`
+        : 'Os gráficos e as quebras abaixo consideram apenas parte dos acessos deste período.';
+    box.innerHTML =
+        '<i class="fas fa-triangle-exclamation"></i>' +
+        '<span><strong>Este período tem mais acessos do que o gráfico consegue mostrar.</strong> ' +
+        trecho +
+        ' Os números aqui estão incompletos — filtre um intervalo menor (7 ou 30 dias) para ver o total real do período.</span>';
+    box.classList.remove('hidden');
+}
+
+async function loadReport() {
+    if (!current) return;
+    UI.skeleton(qs('rep-kpis'), 'kpis', 4);
+    qs('wrap-dia').innerHTML = '<div class="chart-empty"><i class="fas fa-spinner fa-spin"></i></div>';
+    qs('wrap-hora').innerHTML = '<div class="chart-empty"><i class="fas fa-spinner fa-spin"></i></div>';
+    UI.skeleton(qs('rep-breakdowns'), 'cards', 2);
+    UI.skeleton(qs('rep-hits'), 'table', 4);
+    qs('rep-pager').classList.add('hidden');
+    qs('rep-truncado').classList.add('hidden');   // não deixa aviso do período anterior na tela
+    hitsOffset = 0;
+
+    const [an, hits] = await Promise.all([
+        api.getAnalyticsLink(current.id, period.from, period.to),
+        api.getHitsLink(current.id, { limit: HITS_LIMIT, offset: 0, from: period.from, to: period.to })
+    ]);
+
+    analytics = Object.assign(analyticsVazio(), an || {});
+    if (!analytics.totals) analytics.totals = analyticsVazio().totals;
+
+    renderTotais();
+    renderAvisoTruncado();
+    renderGraficos();
+    renderBreakdowns();
+    renderHits(hits);
+}
+
+function renderTotais() {
+    const t = analytics.totals || {};
+    qs('rep-kpis').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fas fa-bolt"></i> Scans</div>
+                <div class="kpi-value">${fmtNum(t.hits)}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fas fa-user-group"></i> Visitantes únicos</div>
+                <div class="kpi-value">${fmtNum(t.uniqueVisitors)}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fas fa-rotate-right"></i> Scans recorrentes</div>
+                <div class="kpi-value">${fmtNum(t.returningHits)}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fas fa-flag-checkered"></i> Primeiro scan</div>
+                <div class="kpi-value" style="font-size:16px;">${fmtDateTime(t.firstHitAt)}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fas fa-clock"></i> Último scan</div>
+                <div class="kpi-value" style="font-size:16px;">${fmtDateTime(t.lastHitAt)}</div>
+            </div>
+        </div>`;
+}
+
+// ---------------- Gráficos (Chart.js) ----------------
+function paleta() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (nome, alt) => (cs.getPropertyValue(nome) || '').trim() || alt;
+    const dark = document.documentElement.classList.contains('dark');
+    return {
+        brand: dark ? v('--brand-400', '#818CF8') : v('--brand-600', '#4F46E5'),
+        brandSoft: dark ? 'rgba(129,140,248,.22)' : 'rgba(79,70,229,.14)',
+        accent: v('--accent', '#F59E0B'),
+        grid: dark ? 'rgba(148,163,184,.14)' : 'rgba(15,23,42,.07)',
+        text: v('--text-muted', '#64748B')
+    };
+}
+
+function destroyChart(nome) {
+    if (charts[nome]) {
+        try { charts[nome].destroy(); } catch (e) { /* já destruído */ }
+        charts[nome] = null;
+    }
+}
+
+function destroyCharts() {
+    Object.keys(charts).forEach(destroyChart);
+}
+
+// Recria o canvas do zero: evita instância vazada a cada filtro aplicado.
+function novoCanvas(wrapId, nome) {
+    destroyChart(nome);
+    const wrap = qs(wrapId);
+    wrap.innerHTML = '<canvas></canvas>';
+    return wrap.querySelector('canvas');
+}
+
+function chartVazio(wrapId, nome, texto) {
+    destroyChart(nome);
+    qs(wrapId).innerHTML = `<div class="chart-empty">${escapeHtml(texto)}</div>`;
+}
+
+function renderGraficos() {
+    if (!window.Chart) {
+        chartVazio('wrap-dia', 'dia', 'Não foi possível carregar a biblioteca de gráficos.');
+        chartVazio('wrap-hora', 'hora', 'Não foi possível carregar a biblioteca de gráficos.');
+        return;
+    }
+    const c = paleta();
+
+    // --- Scans por dia ---
+    const byDay = Array.isArray(analytics.byDay) ? analytics.byDay : [];
+    if (!byDay.length) {
+        chartVazio('wrap-dia', 'dia', 'Nenhum scan registrado no período.');
+    } else {
+        const canvas = novoCanvas('wrap-dia', 'dia');
+        charts.dia = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: byDay.map((d) => dayLabel(d.key)),
+                datasets: [
+                    {
+                        label: 'Scans',
+                        data: byDay.map((d) => Number(d.hits || 0)),
+                        borderColor: c.brand,
+                        backgroundColor: c.brandSoft,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: byDay.length > 45 ? 0 : 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'Visitantes únicos',
+                        data: byDay.map((d) => Number(d.uniques || 0)),
+                        borderColor: c.accent,
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [4, 4],
+                        fill: false,
+                        tension: 0.35,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { labels: { color: c.text, boxWidth: 12, usePointStyle: true } } },
+                scales: {
+                    x: { grid: { color: c.grid }, ticks: { color: c.text, maxTicksLimit: 12, maxRotation: 0 } },
+                    y: { beginAtZero: true, grid: { color: c.grid }, ticks: { color: c.text, precision: 0 } }
+                }
+            }
+        });
+    }
+
+    // --- Scans por hora (0..23 sempre preenchidos) ---
+    const horas = new Array(24).fill(0);
+    (Array.isArray(analytics.byHour) ? analytics.byHour : []).forEach((h) => {
+        const k = Number(h.key);
+        if (k >= 0 && k <= 23) horas[k] = Number(h.hits || 0);
+    });
+    const totalHoras = horas.reduce((a, b) => a + b, 0);
+    if (!totalHoras) {
+        chartVazio('wrap-hora', 'hora', 'Nenhum scan registrado no período.');
+    } else {
+        const canvas = novoCanvas('wrap-hora', 'hora');
+        charts.hora = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: horas.map((_, i) => String(i).padStart(2, '0') + 'h'),
+                datasets: [{
+                    label: 'Scans',
+                    data: horas,
+                    backgroundColor: c.brand,
+                    borderRadius: 4,
+                    maxBarThickness: 22
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: c.text, maxTicksLimit: 12, maxRotation: 0 } },
+                    y: { beginAtZero: true, grid: { color: c.grid }, ticks: { color: c.text, precision: 0 } }
+                }
+            }
+        });
+    }
+}
+
+// Tema trocado: recria os gráficos com as cores novas (destruindo os antigos)
+window.addEventListener('themechange', () => {
+    if (current && analytics) renderGraficos();
+});
+
+// ---------------- Quebras (listas em barra) ----------------
+const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+const BREAKDOWNS = [
+    { key: 'byDevice',   title: 'Dispositivo',      icon: 'fa-mobile-screen-button' },
+    { key: 'byOs',       title: 'Sistema',          icon: 'fa-microchip' },
+    { key: 'byBrowser',  title: 'Navegador',        icon: 'fa-compass' },
+    { key: 'byInApp',    title: 'Abriu por dentro de', icon: 'fa-window-restore' },
+    { key: 'byCity',     title: 'Cidade (estimada)', icon: 'fa-city' },
+    { key: 'byRegion',   title: 'UF (estimada)',     icon: 'fa-map' },
+    { key: 'byCountry',  title: 'País (estimado)',   icon: 'fa-earth-americas' },
+    { key: 'byLanguage', title: 'Idioma',            icon: 'fa-language' },
+    { key: 'byTimezone', title: 'Fuso horário',      icon: 'fa-clock' },
+    { key: 'byReferrer', title: 'Origem',            icon: 'fa-arrow-right-to-bracket' },
+    { key: 'byWeekday',  title: 'Dia da semana',     icon: 'fa-calendar-day', label: (k) => DIAS_SEMANA[Number(k)] || String(k) }
+];
+
+function barrasHtml(itens, rotulo) {
+    const lista = (itens || []).filter((i) => i && Number(i.hits || 0) > 0);
+    if (!lista.length) return '<div class="cell-faint" style="font-size:12.5px;">Sem dados no período.</div>';
+    const max = Math.max.apply(null, lista.map((i) => Number(i.hits || 0)));
+    const total = lista.reduce((a, i) => a + Number(i.hits || 0), 0);
+    const top = lista.slice(0, 8);
+    let html = top.map((i) => {
+        const hits = Number(i.hits || 0);
+        const nome = rotulo ? rotulo(i.key) : (i.key == null || i.key === '' ? '(não informado)' : String(i.key));
+        const pct = max > 0 ? Math.max(3, Math.round((hits / max) * 100)) : 0;
+        const share = total > 0 ? Math.round((hits / total) * 100) : 0;
+        return `
+            <div class="bar-row">
+                <div class="bar-top">
+                    <span class="bar-key" title="${escapeHtml(nome)}">${escapeHtml(nome)}</span>
+                    <span class="bar-val">${fmtNum(hits)} · ${share}%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+            </div>`;
+    }).join('');
+    if (lista.length > top.length) {
+        html += `<div class="bar-more">e mais ${fmtNum(lista.length - top.length)} item(ns)</div>`;
+    }
+    return html;
+}
+
+function renderBreakdowns() {
+    const alvo = qs('rep-breakdowns');
+    const cards = BREAKDOWNS.map((cfg) => {
+        const dados = Array.isArray(analytics[cfg.key]) ? analytics[cfg.key] : [];
+        return `
+            <div class="surface overflow-hidden">
+                <div class="card-head"><h3><i class="fas ${cfg.icon}"></i> ${escapeHtml(cfg.title)}</h3></div>
+                <div class="p-4">${barrasHtml(dados, cfg.label)}</div>
+            </div>`;
+    }).join('');
+    alvo.innerHTML = cards;
+}
+
+// ---------------- Histórico de destinos ----------------
+function renderChanges(changes) {
+    const alvo = qs('rep-changes');
+    const lista = Array.isArray(changes) ? changes : [];
+    if (!lista.length) {
+        alvo.innerHTML = '<div class="cell-faint" style="font-size:12.5px;">O destino nunca foi alterado desde a criação do link.</div>';
+        return;
+    }
+    alvo.innerHTML = lista.map((c) => `
+        <div class="change-item">
+            <span class="dot"></span>
+            <div class="urls">
+                ${c.fromUrl ? `<div class="u-old">${escapeHtml(c.fromUrl)}</div>` : ''}
+                <div class="u-new"><i class="fas fa-arrow-right-long cell-faint"></i> ${escapeHtml(c.toUrl || '—')}</div>
+                <div class="when">${fmtDateTime(c.createdAt)}${c.changedBy ? ' · por ' + escapeHtml(c.changedBy) : ''}</div>
+            </div>
+        </div>`).join('');
+}
+
+// ---------------- Acessos detalhados ----------------
+function origemHit(h) {
+    if (h.utmSource || h.utmCampaign) {
+        return [h.utmSource, h.utmMedium, h.utmCampaign].filter(Boolean).join(' / ');
+    }
+    return h.referrer || '(direto)';
+}
+
+function renderHits(resposta) {
+    const alvo = qs('rep-hits');
+    const itens = (resposta && Array.isArray(resposta.items)) ? resposta.items : [];
+    hitsTotal = (resposta && Number(resposta.total)) || 0;
+
+    if (!itens.length) {
+        UI.empty(alvo, {
+            icon: 'fa-list',
+            title: 'Nenhum acesso no período',
+            text: 'Assim que alguém escanear o QR Code, o acesso aparece aqui em segundos.'
+        });
+        qs('rep-pager').classList.add('hidden');
+        return;
+    }
+
+    const linhas = itens.map((h) => {
+        const local = [h.city, h.region].filter(Boolean).join(' / ') || '—';
+        const origem = origemHit(h);
+        return `
+            <tr>
+                <td class="cell-muted whitespace-nowrap">${fmtDateTime(h.createdAt)}</td>
+                <td class="whitespace-nowrap">
+                    ${h.isReturning
+                        ? '<span class="badge badge-info">Recorrente</span>'
+                        : '<span class="badge badge-success">Novo</span>'}
+                </td>
+                <td class="cell-muted whitespace-nowrap">${escapeHtml(h.deviceType || '—')}</td>
+                <td class="cell-muted whitespace-nowrap">${escapeHtml([h.os, h.osVersion].filter(Boolean).join(' ') || '—')}</td>
+                <td class="cell-muted whitespace-nowrap">${escapeHtml([h.browser, h.browserVersion].filter(Boolean).join(' ') || '—')}</td>
+                <td class="cell-muted whitespace-nowrap">${escapeHtml(local)}${h.country ? ` <span class="cell-faint">${escapeHtml(h.country)}</span>` : ''}</td>
+                <td><span class="truncate-cell cell-faint" title="${escapeHtml(origem)}">${escapeHtml(origem)}</span></td>
+                <td><span class="truncate-cell cell-faint" title="${escapeHtml(h.destination || '—')}">${escapeHtml(h.destination || '—')}</span></td>
+            </tr>`;
+    }).join('');
+
+    alvo.innerHTML = `
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Data/hora</th>
+                        <th>Visitante</th>
+                        <th>Dispositivo</th>
+                        <th>Sistema</th>
+                        <th>Navegador</th>
+                        <th>Cidade / UF</th>
+                        <th>Origem</th>
+                        <th>Destino entregue</th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>`;
+
+    const inicio = hitsOffset + 1;
+    const fim = hitsOffset + itens.length;
+    qs('rep-pager-info').textContent = `${fmtNum(inicio)}–${fmtNum(fim)} de ${fmtNum(hitsTotal)} acesso(s)`;
+    qs('rep-prev').disabled = hitsOffset <= 0;
+    qs('rep-next').disabled = fim >= hitsTotal;
+    qs('rep-pager').classList.remove('hidden');
+}
+
+async function loadHits(offset) {
+    if (!current) return;
+    hitsOffset = Math.max(0, offset);
+    UI.skeleton(qs('rep-hits'), 'table', 4);
+    const resposta = await api.getHitsLink(current.id, {
+        limit: HITS_LIMIT, offset: hitsOffset, from: period.from, to: period.to
+    });
+    renderHits(resposta);
+}
+
+qs('rep-prev').addEventListener('click', () => loadHits(hitsOffset - HITS_LIMIT));
+qs('rep-next').addEventListener('click', () => loadHits(hitsOffset + HITS_LIMIT));
+
+// Baixa o CSV lendo também o header 'X-Export-Truncado' — api.exportarHitsLinkCSV
+// devolve só o Blob, e o header se perde lá dentro. Se esta chamada falhar,
+// caímos no api.exportarHitsLinkCSV (o CSV continua saindo, sem o aviso).
+async function baixarCsvExport(id, from, to) {
+    try {
+        const p = new URLSearchParams();
+        if (from) p.set('from', from);
+        if (to) p.set('to', to);
+        const query = p.toString() ? `?${p.toString()}` : '';
+        const res = await fetch(`${API_BASE_URL}/admin/tracked-links/${id}/export${query}`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        if (!res.ok) return { blob: null, truncado: false };
+        // Header ausente (backend antigo ou não exposto no CORS) → sem aviso.
+        const marca = String(res.headers.get('X-Export-Truncado') || '').trim().toLowerCase();
+        return { blob: await res.blob(), truncado: marca === 'true' || marca === '1' };
+    } catch (e) {
+        const blob = await api.exportarHitsLinkCSV(id, from, to);
+        return { blob: blob instanceof Blob ? blob : null, truncado: false };
+    }
+}
+
+// Exportar CSV — Blob + <a download>, nunca window.open depois de await
+qs('rep-export').addEventListener('click', async () => {
+    if (!current) return;
+    const btn = qs('rep-export');
+    const icon = btn.querySelector('i');
+    btn.disabled = true;
+    icon.className = 'fas fa-spinner fa-spin';
+    try {
+        const { blob, truncado } = await baixarCsvExport(current.id, period.from, period.to);
+        if (!blob) { UI.toast('Erro ao gerar o CSV', 'error'); return; }
+        const url = URL.createObjectURL(blob);
+        const sufixo = period.from || period.to ? `-${period.from || 'inicio'}_${period.to || 'hoje'}` : '';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `acessos-${current.slug || 'link'}${sufixo}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        // Firefox/Safari podem abortar o download se o object URL for revogado
+        // no mesmo tick do click — solta o <a> e a URL só depois de uns segundos.
+        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 2000);
+        if (truncado) {
+            UI.toast('CSV parcial: o período tem mais acessos do que o export consegue enviar. Exporte por intervalos menores.', { type: 'warning', duration: 7000 });
+        } else {
+            UI.toast('CSV exportado', 'success');
+        }
+    } catch (e) {
+        UI.toast('Erro ao exportar o CSV', 'error');
+    } finally {
+        btn.disabled = false;
+        icon.className = 'fas fa-file-csv';
+    }
+});
+
+// ---------------- Fechar modais com Esc ----------------
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!qs('modal-qr').classList.contains('hidden')) { closeQr(); return; }
+    if (!qs('modal-form').classList.contains('hidden')) closeForm();
+});
+
+// ---------------- Início ----------------
+loadLinks();
+</script>
+</body>
+</html>

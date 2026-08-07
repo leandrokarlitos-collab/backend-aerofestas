@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.16.0';
+const CACHE_NAME = 'aero-festas-v3.18.0';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
     '/equipe.html',
     '/admin-monitor.html',
     '/admin.html',
+    '/Links-Rastreados.html',
     '/profile.html',
     '/register.html',
     '/forgot-password.html',
@@ -82,10 +83,12 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Propostas dinâmicas (/p/* e /propostas/view.html) — SEMPRE rede,
+    // Conteúdo dinâmico (/p/*, /propostas/view.html, /e/* e /r/*) — SEMPRE rede,
     // nunca cacheia: o conteúdo depende da API e pode ser editado a qualquer momento.
-    if (url.pathname === '/propostas/view.html' || url.pathname.startsWith('/p/') || url.pathname.startsWith('/e/')) {
-        return; // bypass total do SW (propostas e link curto de cadastro /e/<id>)
+    // CRÍTICO para /r/: é o redirecionador dos QR Codes IMPRESSOS; se o PWA servisse
+    // essa página (ou o destino) do cache, o QR do panfleto viraria link morto.
+    if (url.pathname === '/propostas/view.html' || url.pathname.startsWith('/p/') || url.pathname.startsWith('/e/') || url.pathname.startsWith('/r/')) {
+        return; // bypass total do SW (propostas, link curto de cadastro /e/<id> e redirecionador de QR /r/<slug>)
     }
 
     // Apenas para recursos LOCAIS da aplicação

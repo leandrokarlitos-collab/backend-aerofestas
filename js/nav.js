@@ -15,7 +15,8 @@
         { key: 'clientes',  label: 'Clientes',     icon: 'fa-users',          href: './Sistema de CRM.html' },
         { key: 'equip',     label: 'Equipamentos', icon: 'fa-cubes',          href: './Equipamentos.html' },
         { key: 'propostas', label: 'Propostas',    icon: 'fa-file-signature', href: './Propostas.html' },
-        { key: 'equipe',    label: 'Equipe',       icon: 'fa-people-group',   href: './equipe.html' }
+        { key: 'equipe',    label: 'Equipe',       icon: 'fa-people-group',   href: './equipe.html' },
+        { key: 'links',     label: 'Divulgação',   icon: 'fa-qrcode',         href: './Links-Rastreados.html' }
     ];
     // Itens do bottom nav mobile (4 principais + Mais)
     var BOTTOM_KEYS = ['home', 'agenda', 'financas', 'clientes'];

@@ -792,3 +792,87 @@ model PropostaTrack {
   @@index([slug, createdAt])
   @@index([slug, sessionId])
 }
+
+// --- RASTREAMENTO DE LINKS / QR CODE (encurtador próprio) ---
+// Substitui o Bitly: o QR impresso aponta para /r/<slug> e o destino pode ser
+// trocado a qualquer momento no admin sem reimprimir o material.
+model TrackedLink {
+  id          String   @id @default(uuid())
+  slug        String   @unique // parte final da URL curta: /r/<slug>
+  name        String // nome interno para o gestor identificar a campanha
+  destination String // para onde redirecionar HOJE (editável)
+  active      Boolean  @default(true) // desligado = /r/<slug> responde 404 e não registra acesso
+  notes       String? // observações do gestor (onde o QR foi distribuído etc.)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+
+  hits    TrackedLinkHit[]
+  changes TrackedLinkChange[]
+
+  @@index([slug])
+}
+
+// Histórico de trocas de destino — permite auditar para onde o QR apontava em cada período.
+model TrackedLinkChange {
+  id        String      @id @default(uuid())
+  linkId    String
+  link      TrackedLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  fromUrl   String? // destino anterior (nulo na primeira gravação)
+  toUrl     String // destino novo
+  changedBy String?
+  createdAt DateTime    @default(now())
+
+  @@index([linkId, createdAt])
+}
+
+// Um registro por acesso ao link curto (scan do QR ou clique).
+model TrackedLinkHit {
+  id     Int         @id @default(autoincrement())
+  linkId String
+  link   TrackedLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  slug   String // cópia do slug no momento do acesso (facilita consultas)
+
+  visitorId   String? // id anônimo gerado no navegador (localStorage), sem dado pessoal
+  isReturning Boolean @default(false) // true quando o visitorId já existia no aparelho
+
+  ip        String?
+  ipVersion String? // "IPv4" | "IPv6"
+  asn       String? // reservado p/ uso futuro (operadora/provedor do IP)
+  network   String? // reservado p/ uso futuro (bloco de rede do IP)
+
+  country     String? // sigla do país (ex.: "BR") — ESTIMATIVA por IP
+  countryName String?
+  region      String? // UF/estado — ESTIMATIVA por IP
+  city        String? // cidade — ESTIMATIVA por IP
+  latitude    Float?
+  longitude   Float?
+  geoTimezone String? // fuso horário deduzido do IP
+
+  userAgent      String?
+  deviceType     String? // "mobile" | "tablet" | "desktop"
+  os             String?
+  osVersion      String?
+  browser        String?
+  browserVersion String?
+  inApp          String? // navegador embutido de app (ex.: "Instagram", "WhatsApp")
+
+  screenW     Int? // largura da tela em px
+  screenH     Int? // altura da tela em px
+  dpr         Float? // densidade de pixels (devicePixelRatio)
+  language    String? // idioma do navegador (ex.: "pt-BR")
+  tzName      String? // fuso declarado pelo navegador
+  tzOffsetMin Int? // deslocamento do fuso em minutos
+
+  referrer    String? // página de origem; vazio = acesso direto (QR impresso)
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  destination String? // destino entregue neste acesso (o link pode mudar depois)
+  createdAt   DateTime @default(now())
+
+  @@index([linkId, createdAt])
+  @@index([slug, createdAt])
+  @@index([visitorId])
+}

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <title>Redirecionando… — Aero Festas</title>
+    <link rel="icon" href="/Logo_aviao.ico">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #f4f5f7;
+            color: #3c4257;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+        .caixa {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+        .spinner {
+            width: 42px;
+            height: 42px;
+            border: 4px solid #d9dce3;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: girar 0.9s linear infinite;
+        }
+        @keyframes girar { to { transform: rotate(360deg); } }
+        .texto {
+            margin-top: 18px;
+            font-size: 15px;
+            letter-spacing: 0.2px;
+        }
+        /* Escotilha de emergencia visual, caso o redirecionamento nao aconteca
+           (script quebrado, evento que nunca dispara).
+
+           ATENCAO — ESTE E UM TEMPORIZADOR DO ORCAMENTO DE TEMPO, so que em
+           CSS. O atraso de 6,5s tem de ser SEMPRE MAIOR que a rede de
+           seguranca de 6s do <head> (que por sua vez e maior que o
+           xhr.timeout de 4,5s). Se ele aparecer antes, o visitante toca no
+           link enquanto a consulta ainda esta em voo, cai no /contato.html e
+           nunca ve o destino impresso no panfleto. Mexeu nos tempos do
+           <head>? Ajuste este tambem.
+
+           Enquanto invisivel ele fica com visibility:hidden e
+           pointer-events:none: so opacity:0 deixava o link CLICAVEL no meio
+           da tela, e um toque distraido durante a espera ja mandava o
+           visitante para o fallback. */
+        #manual {
+            margin-top: 22px;
+            font-size: 14px;
+            color: #4f46e5;
+            text-decoration: underline;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            animation: aparecer 0.3s ease-out 6.5s forwards;
+        }
+        @keyframes aparecer {
+            from { opacity: 0; visibility: visible; pointer-events: none; }
+            to   { opacity: 1; visibility: visible; pointer-events: auto; }
+        }
+        /* Troca suave do texto de espera (aplicada por JS aos ~1,8s). */
+        .texto--paciencia { animation: surgir 0.35s ease-out; }
+        @keyframes surgir { from { opacity: 0; } to { opacity: 1; } }
+        .aviso { font-size: 14px; margin: 14px 0 0; }
+        @media (prefers-color-scheme: dark) {
+            html, body { background: #14161b; color: #c9ced9; }
+            .spinner { border-color: #2b303a; border-top-color: #8b83ff; }
+            #manual { color: #8b83ff; }
+        }
+    </style>
+
+    <script>
+        /* =================================================================
+           REDE DE SEGURANCA #1 — roda ANTES de qualquer outra coisa.
+           Se o script principal abaixo nem chegar a ser interpretado
+           (navegador antigo, erro de sintaxe, arquivo truncado), este bloco
+           minusculo ainda leva o visitante para algum lugar util.
+           ================================================================= */
+
+        /* -----------------------------------------------------------------
+           DESTINO DE EMERGENCIA (FALLBACK)
+
+           O QR Code que aponta para /r/<slug> vai ser IMPRESSO em panfleto e
+           distribuido para prefeituras. Papel impresso nao se recolhe.
+           Se o backend estiver fora do ar, demorar demais ou o slug nao
+           existir mais, o visitante NAO pode ficar numa tela de erro:
+           mandamos ele para /contato.html, uma pagina PUBLICA e estatica
+           (Firebase Hosting) com logo, WhatsApp e telefone da Aero Festas,
+           que continua no ar mesmo com o backend caido.
+
+           ATENCAO: NAO aponte para a raiz do Hosting ('/'). A raiz e servida
+           por index.html, que so redireciona para login.html — ou seja, o
+           visitante do panfleto cairia no formulario de login INTERNO do
+           sistema, pedindo e-mail e senha.
+
+           NUNCA apague nem deixe esta constante vazia.
+           ----------------------------------------------------------------- */
+        window.AERO_FALLBACK = 'https://agenda-aero-festas.web.app/contato.html';
+
+        /* Garante que o redirecionamento aconteca UMA unica vez. */
+        window.AERO_JA_FOI = false;
+
+        window.aeroIr = function (url) {
+            if (window.AERO_JA_FOI) return;
+            /* So aceitamos http(s): bloqueia javascript:, data:, etc.,
+               caso o destino venha corrompido do banco. */
+            if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+                url = window.AERO_FALLBACK;
+            }
+            window.AERO_JA_FOI = true;
+            try {
+                window.location.replace(url);
+            } catch (e) {
+                try { window.location.href = url; } catch (e2) { /* sem saida */ }
+            }
+        };
+
+        /* -----------------------------------------------------------------
+           ORCAMENTO DE TEMPO — todos os temporizadores de JS da pagina
+           ficam aqui, juntos, de proposito.
+
+           O backend roda no Railway e o container DORME quando fica ocioso.
+           O primeiro scan depois da ociosidade paga o "cold start": a
+           maquina precisa subir antes de responder, e isso pode passar de
+           5s. Com um orcamento curto (era 2,5s) o visitante do panfleto era
+           mandado para o /contato.html sem nunca ver o destino que
+           escaneou. Como o QR vai IMPRESSO e nao da para corrigir o papel,
+           preferimos esperar um pouco mais do que errar o destino.
+
+             1,8s — troca o texto por uma mensagem de paciencia (so visual)
+             4,5s — xhr.timeout: desiste da consulta e cai no fallback
+             6,0s — rede de seguranca #2: fallback aconteca o que acontecer
+             6,5s — link "Nao foi redirecionado?" aparece (temporizador em
+                    CSS, no bloco #manual do <style> acima — o unico que NAO
+                    mora aqui)
+
+           REGRA: 1,8s < xhr.timeout (4,5s) < rede de seguranca (6s) < link
+           manual (6,5s). Se a rede de seguranca ficar menor ou igual ao
+           xhr.timeout, ela dispara antes e anula o tempo dado ao backend; se
+           o link manual aparecer antes do fim do orcamento, o visitante toca
+           nele com a consulta ainda em voo e perde o destino do panfleto.
+           Mexeu em um, confira todos os outros.
+           ----------------------------------------------------------------- */
+
+        /* 1,8s — apenas troca o texto na tela. NAO redireciona nada.
+           Roda so se o redirecionamento ainda nao tiver comecado. */
+        setTimeout(function () {
+            if (window.AERO_JA_FOI) return;
+            try {
+                var alvo = document.getElementById('texto');
+                /* innerHTML com texto fixo (sem dado externo) para funcionar
+                   tambem em navegadores sem textContent. */
+                if (alvo) {
+                    alvo.innerHTML = 'Quase lá, só um instante…';
+                    alvo.className = 'texto texto--paciencia';
+                }
+            } catch (e) { /* sem a troca, a pagina segue igual: inofensivo */ }
+        }, 1800);
+
+        /* Rede de seguranca #2: se em 6s nada tiver redirecionado
+           (XHR travado, evento que nunca dispara, etc.), vai pro fallback.
+           Nao precisa de clearTimeout: a flag AERO_JA_FOI protege. */
+        setTimeout(function () { window.aeroIr(window.AERO_FALLBACK); }, 6000);
+    </script>
+</head>
+<body>
+    <div class="caixa">
+        <div class="spinner"></div>
+        <p class="texto" id="texto">Redirecionando…</p>
+
+        <noscript>
+            <!-- Este <style> so e aplicado quando o JavaScript esta desativado. -->
+            <style>#manual { display: none; }</style>
+            <p class="aviso">O JavaScript está desativado neste navegador.</p>
+            <p class="aviso">
+                <!-- Mesmo destino do window.AERO_FALLBACK acima. -->
+                <a href="https://agenda-aero-festas.web.app/contato.html">Falar com a Aero Festas</a>
+            </p>
+        </noscript>
+
+        <!-- Mesmo destino do window.AERO_FALLBACK acima. -->
+        <a id="manual" href="https://agenda-aero-festas.web.app/contato.html">Não foi redirecionado? Toque aqui.</a>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* Backend que traduz o slug para o destino ATUAL (editavel no admin). */
+        var API = 'https://backend-aerofestas-production.up.railway.app';
+
+        var FALLBACK = window.AERO_FALLBACK;
+
+        function irPara(url) { window.aeroIr(url); }
+        function fallback() { window.aeroIr(FALLBACK); }
+
+        /* ---------------------------------------------------------------
+           1) Slug = ultimo segmento do caminho (/r/<slug>).
+           Tolera barra final, maiusculas e caracteres codificados.
+           --------------------------------------------------------------- */
+        var slug = '';
+        try {
+            var partes = String(window.location.pathname || '').split('/');
+            /* remove segmentos vazios do fim (barra final: /r/promo/) */
+            while (partes.length && partes[partes.length - 1] === '') {
+                partes.pop();
+            }
+            slug = partes.length ? partes[partes.length - 1] : '';
+            try { slug = decodeURIComponent(slug); } catch (e) { /* mantem cru */ }
+            slug = slug.replace(/^\s+/, '').replace(/\s+$/, '');
+        } catch (e) {
+            slug = '';
+        }
+
+        /* Sem slug (acesso a /r/, /r ou direto a /r.html): nao ha o que
+           resolver, vai direto para o destino de emergencia. */
+        if (!slug || slug === 'r' || slug === 'r.html') {
+            fallback();
+            return;
+        }
+
+        /* ---------------------------------------------------------------
+           2) Identificador do visitante (para separar scans novos de
+           recorrentes). Modo anonimo/privado pode bloquear o storage —
+           por isso TUDO fica dentro de try/catch.
+           --------------------------------------------------------------- */
+        function agora() {
+            try { return (new Date()).getTime(); } catch (e) { return 0; }
+        }
+
+        function novoId() {
+            /* crypto.randomUUID nao existe em navegador antigo nem em
+               contexto sem HTTPS: temos dois planos B. */
+            try {
+                if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                    return window.crypto.randomUUID();
+                }
+            } catch (e) { /* segue para o proximo plano */ }
+            try {
+                if (window.crypto && typeof window.crypto.getRandomValues === 'function' && window.Uint8Array) {
+                    var bytes = new Uint8Array(16);
+                    window.crypto.getRandomValues(bytes);
+                    var hex = '';
+                    for (var i = 0; i < bytes.length; i++) {
+                        hex += (bytes[i] + 0x100).toString(16).slice(1);
+                    }
+                    return hex;
+                }
+            } catch (e) { /* segue para o proximo plano */ }
+            /* Ultimo recurso: relogio + aleatorio. */
+            return 'v' + agora().toString(16) +
+                   Math.random().toString(16).slice(2) +
+                   Math.random().toString(16).slice(2);
+        }
+
+        var visitorId = null;
+        var returning = false;
+        try {
+            var ls = window.localStorage;
+            if (ls) {
+                visitorId = ls.getItem('aero_vid');
+                if (visitorId) {
+                    returning = true;
+                } else {
+                    visitorId = novoId();
+                    ls.setItem('aero_vid', visitorId);
+                }
+            }
+        } catch (e) {
+            /* localStorage indisponivel (modo anonimo, cookies bloqueados,
+               iframe restrito). Segue sem persistir. */
+            visitorId = null;
+            returning = false;
+        }
+        /* Sem storage geramos um id efemero: o scan continua sendo contado,
+           apenas nunca aparece como visitante recorrente. */
+        if (!visitorId) {
+            visitorId = novoId();
+            returning = false;
+        }
+
+        /* ---------------------------------------------------------------
+           3) Contexto do dispositivo — nenhum campo pode derrubar a pagina.
+           --------------------------------------------------------------- */
+        function seguro(fn) {
+            try {
+                var v = fn();
+                return (v === undefined || v === '') ? null : v;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function param(nome) {
+            try {
+                var busca = String(window.location.search || '');
+                var achado = new RegExp('[?&]' + nome + '=([^&#]*)').exec(busca);
+                if (!achado) return null;
+                return decodeURIComponent(achado[1].replace(/\+/g, ' '));
+            } catch (e) {
+                return null;
+            }
+        }
+
+        var payload = {
+            visitorId: visitorId,
+            returning: returning,
+            tzName: seguro(function () { return Intl.DateTimeFormat().resolvedOptions().timeZone; }),
+            /* Minutos em relacao ao UTC (Brasilia = -180). */
+            tzOffsetMin: seguro(function () { return -(new Date()).getTimezoneOffset(); }),
+            screenW: seguro(function () { return screen.width; }),
+            screenH: seguro(function () { return screen.height; }),
+            dpr: seguro(function () { return window.devicePixelRatio; }),
+            language: seguro(function () { return navigator.language || navigator.userLanguage; }),
+            referrer: seguro(function () { return document.referrer; }),
+            utmSource: param('utm_source'),
+            utmMedium: param('utm_medium'),
+            utmCampaign: param('utm_campaign')
+        };
+
+        var corpo = '{}';
+        try {
+            corpo = JSON.stringify(payload);
+        } catch (e) {
+            corpo = '{}';
+        }
+
+        /* ---------------------------------------------------------------
+           4) Consulta o destino atual.
+           XMLHttpRequest (e nao fetch/AbortController) por compatibilidade:
+           xhr.timeout funciona em navegadores bem mais antigos.
+           Content-Type text/plain evita o preflight de CORS — um round-trip
+           a menos no 4G ruim de um evento de rua.
+           --------------------------------------------------------------- */
+        var xhr;
+        try {
+            xhr = new XMLHttpRequest();
+        } catch (e) {
+            fallback();
+            return;
+        }
+        if (!xhr) { fallback(); return; }
+
+        try {
+            xhr.open('POST', API + '/api/public/r/' + encodeURIComponent(slug), true);
+        } catch (e) {
+            fallback();
+            return;
+        }
+
+        try { xhr.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8'); } catch (e) { /* ignora */ }
+        /* 4,5s: folga para o cold start do Railway (ver ORCAMENTO DE TEMPO
+           no <head>). Tem de continuar MENOR que a rede de seguranca de 6s. */
+        try { xhr.timeout = 4500; } catch (e) { /* navegador sem suporte: cai na rede de seguranca de 6s */ }
+
+        xhr.ontimeout = fallback;   /* backend lento */
+        xhr.onerror = fallback;     /* backend fora do ar, DNS, CORS, offline */
+        xhr.onabort = fallback;
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+
+            var destino = null;
+            try {
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    var dados = JSON.parse(xhr.responseText);
+                    if (dados && typeof dados.destination === 'string') {
+                        destino = dados.destination;
+                    }
+                }
+            } catch (e) {
+                /* 404 (slug inexistente/inativo), HTML de erro do proxy,
+                   JSON quebrado — tudo cai no fallback. */
+                destino = null;
+            }
+
+            if (destino && /^https?:\/\//i.test(destino)) {
+                irPara(destino);
+            } else {
+                fallback();
+            }
+        };
+
+        try {
+            xhr.send(corpo);
+        } catch (e) {
+            fallback();
+        }
+    })();
+    </script>
+</body>
+</html>
