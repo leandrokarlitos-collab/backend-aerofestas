@@ -117,6 +117,61 @@ publicRouter.post(
     }
 );
 
+// GIF 1x1 transparente do pixel — conteúdo fixo, montado uma única vez no load do módulo.
+const PIXEL_GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+
+// GET /api/public/scan-pixel.gif — pixel de rastreio do <noscript> do r.html.
+// Com JavaScript desligado o POST acima nunca dispara; o <img> do <noscript>
+// carrega mesmo assim e cai aqui. O slug viaja no header Referer (a página é
+// /r/<slug> e o r.html usa referrerpolicy=unsafe-url), então dá para saber qual
+// link foi acessado sem nenhum parâmetro na URL do pixel.
+// REGRA DE OURO: um pixel responde 200 com o GIF SEMPRE — sem Referer, Referer
+// inválido, slug inexistente/desativado ou banco fora do ar, a resposta é
+// idêntica. Pixel nunca devolve erro nem revela se o slug existe.
+publicRouter.get('/scan-pixel.gif', redirectLimiter, (req, res) => {
+    // Responde PRIMEIRO (o GIF não depende de nada) e registra DEPOIS,
+    // no mesmo padrão fire-and-forget da rota de scan acima.
+    res.set('Content-Type', 'image/gif');
+    res.set('Cache-Control', 'no-store');
+    // O helmet global aplica Cross-Origin-Resource-Policy: same-origin, e este
+    // GIF é carregado de OUTRA origem (r.html no Firebase → pixel no Railway):
+    // sem a liberação o navegador descarta a imagem no cliente. O hit já teria
+    // sido contado (o Referer chega antes do CORP agir), mas resposta limpa é
+    // resposta que não aparece como erro no console de ninguém.
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.status(200).send(PIXEL_GIF);
+
+    try {
+        // Extrai o slug do pathname do Referer (/r/<slug>, barra final aceita).
+        // A ORIGEM não importa — só o caminho identifica o link.
+        let slug = null;
+        const referer = req.headers.referer || req.headers.referrer;
+        if (referer) {
+            try {
+                let pathname = new URL(referer).pathname;
+                if (pathname.endsWith('/')) pathname = pathname.slice(0, -1);
+                const m = /^\/r\/([a-z0-9][a-z0-9-]{1,39})$/.exec(pathname);
+                if (m) slug = m[1];
+            } catch (_) {
+                // Referer que nem URL é — ignora; o GIF já foi entregue.
+            }
+        }
+        if (!slug) return;
+
+        // Fire-and-forget: sem await, com .catch para não gerar unhandled
+        // rejection, e dentro de try/catch para barrar também exceção síncrona.
+        Promise.resolve(
+            TrackedLinkService.findLinkBySlugCached(slug).then(link =>
+                (link && link.active)
+                    // Payload mínimo: IP/geo/User-Agent o recordHit já capta do req.
+                    ? TrackedLinkService.recordHit(link, { noJs: true }, req)
+                    : null)
+        ).catch(e => console.error('[trackedLink] falha ao registrar acesso do pixel:', e && e.message ? e.message : e));
+    } catch (e) {
+        console.error('[trackedLink] falha ao registrar acesso do pixel:', e && e.message ? e.message : e);
+    }
+});
+
 // ---------------- ADMIN ----------------
 
 adminRouter.get('/', authenticate, async (req, res, next) => {

@@ -187,6 +187,23 @@
                 <!-- Mesmo destino do window.AERO_FALLBACK acima. -->
                 <a href="https://agenda-aero-festas.web.app/contato.html">Falar com a Aero Festas</a>
             </p>
+            <!-- PIXEL DE RASTREIO — por que ele existe: com o JavaScript
+                 desligado, o POST de telemetria do script principal nunca
+                 dispara e o visitante simplesmente NAO era contado. Este
+                 <img> carrega mesmo sem JS; o backend le o slug no header
+                 Referer (o caminho /r/<slug> desta propria pagina), registra
+                 o acesso marcado como "sem JS" e devolve um GIF transparente.
+                 Como <noscript> so renderiza com JS desligado, o visitante
+                 normal jamais e contado duas vezes.
+
+                 referrerpolicy="unsafe-url" e NECESSARIO: a policy padrao dos
+                 navegadores (strict-origin-when-cross-origin) corta o caminho
+                 /r/<slug> do Referer em requisicao cross-origin — e o slug
+                 viaja exatamente ali. A URL nao tem nada sensivel: e a mesma
+                 impressa no panfleto. -->
+            <img src="https://backend-aerofestas-production.up.railway.app/api/public/scan-pixel.gif"
+                 referrerpolicy="unsafe-url" width="1" height="1" alt=""
+                 style="position:absolute;opacity:0">
         </noscript>
 
         <!-- Mesmo destino do window.AERO_FALLBACK acima. -->

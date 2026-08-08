@@ -1174,7 +1174,10 @@ function renderTotais() {
                 <div class="kpi-label"><i class="fas fa-clock"></i> Último scan</div>
                 <div class="kpi-value" style="font-size:16px;">${fmtDateTime(t.lastHitAt)}</div>
             </div>
-        </div>`;
+        </div>
+        ${Number(t.semJs) > 0
+            ? `<div class="hint" style="margin-top:8px;"><i class="fas fa-image"></i> Inclui ${fmtNum(t.semJs)} acesso(s) sem JavaScript (contados por pixel).</div>`
+            : ''}`;
 }
 
 // ---------------- Gráficos (Chart.js) ----------------

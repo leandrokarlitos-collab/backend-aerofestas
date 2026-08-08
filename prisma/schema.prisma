@@ -836,6 +836,7 @@ model TrackedLinkHit {
 
   visitorId   String? // id anônimo gerado no navegador (localStorage), sem dado pessoal
   isReturning Boolean @default(false) // true quando o visitorId já existia no aparelho
+  noJs        Boolean @default(false) // gravado pelo pixel do <noscript> quando o visitante está sem JavaScript
 
   ip        String?
   ipVersion String? // "IPv4" | "IPv6"

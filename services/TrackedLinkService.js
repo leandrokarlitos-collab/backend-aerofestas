@@ -338,6 +338,8 @@ async function recordHit(link, payload, req) {
 
                 visitorId: str(p.visitorId, MAX_TXT),
                 isReturning: boolOrFalse(p.returning),
+                // true só quando o hit veio do pixel do <noscript> (visitante sem JavaScript)
+                noJs: boolOrFalse(p.noJs),
 
                 ip: str(ip, 60),
                 ipVersion,
@@ -724,7 +726,7 @@ async function analytics(id, { from, to } = {}) {
         orderBy: { createdAt: 'asc' },
         take: MAX_ANALYTICS_ROWS,
         select: {
-            createdAt: true, visitorId: true, isReturning: true,
+            createdAt: true, visitorId: true, isReturning: true, noJs: true,
             deviceType: true, os: true, browser: true, inApp: true,
             country: true, countryName: true, region: true, city: true,
             language: true, tzName: true, referrer: true
@@ -748,6 +750,7 @@ async function analytics(id, { from, to } = {}) {
 
     const visitors = new Set();
     let returningHits = 0;
+    let semJs = 0;
 
     for (const h of hits) {
         const p = spParts(h.createdAt);
@@ -762,6 +765,7 @@ async function analytics(id, { from, to } = {}) {
         bump(hourMap, p.hour);
         bump(weekdayMap, weekdayOfYmd(p.ymd));
         if (h.isReturning) returningHits++;
+        if (h.noJs) semJs++;
 
         bump(device, str(h.deviceType, MAX_TXT) || VAZIO);
         bump(os, str(h.os, MAX_TXT) || VAZIO);
@@ -807,6 +811,8 @@ async function analytics(id, { from, to } = {}) {
             hits: hits.length,
             uniqueVisitors: visitors.size,
             returningHits,
+            // Acessos registrados pelo pixel do <noscript> (visitante sem JavaScript).
+            semJs,
             firstHitAt: hits.length ? hits[0].createdAt : null,
             lastHitAt: hits.length ? hits[hits.length - 1].createdAt : null
         },
@@ -829,7 +835,8 @@ async function analytics(id, { from, to } = {}) {
 }
 
 /**
- * Lista paginada dos acessos (mais recentes primeiro).
+ * Lista paginada dos acessos (mais recentes primeiro). Sem `select`, então cada
+ * item traz o registro completo — inclusive o noJs do pixel do <noscript>.
  */
 async function listHits(id, { limit, offset, from, to } = {}) {
     const link = await mustFindLink(id);
@@ -861,7 +868,7 @@ async function listHits(id, { limit, offset, from, to } = {}) {
 const CSV_HEADERS = [
     'Data/hora', 'Cidade', 'UF', 'País', 'Dispositivo', 'Sistema', 'Navegador',
     'Dentro de app', 'Idioma', 'Fuso', 'Tela', 'Visitante', 'Recorrente',
-    'Origem', 'Destino', 'IP'
+    'Sem JavaScript', 'Origem', 'Destino', 'IP'
 ];
 
 function csvCell(v) {
@@ -932,6 +939,9 @@ async function hitsCsv(id, { from, to } = {}) {
             tela,
             h.visitorId || '',
             h.isReturning ? 'Sim' : 'Não',
+            // 'Não' (e não '-'): célula começando com '-' ganharia o apóstrofo
+            // anti-fórmula do csvCell e apareceria como "'-" fora do Excel.
+            h.noJs ? 'Sim' : 'Não',
             h.referrer || '',
             h.destination || '',
             h.ip || ''
