@@ -64,8 +64,31 @@ app.use(cors({
         cb(null, ok);
     }
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// --- Guarda do caminho público do scan de QR (POST /api/public/r/:slug) ---
+// A rota tem teto próprio de 16kb (express.text em routes/trackedLinks.js), mas
+// os parsers globais de 50mb abaixo rodam ANTES do roteador: um POST com
+// Content-Type application/json (ou urlencoded) seria bufferizado até 50mb
+// ANTES do rate limit — vetor barato de OOM num endpoint sem autenticação,
+// derrubando justamente o redirecionador dos QR Codes já impressos.
+// Defesa em duas camadas: (1) corta cedo por Content-Length, antes de qualquer
+// parse; (2) desvia esse caminho dos parsers globais — quem parseia é o
+// express.text de 16kb da própria rota, que aceita qualquer Content-Type e
+// impõe o limite também em corpos chunked (sem Content-Length).
+const R_PUBLICO_SCAN = /^\/api\/public\/r\//;
+const LIMITE_SCAN_BYTES = 16 * 1024;
+app.use((req, res, next) => {
+    if (req.method === 'POST' && R_PUBLICO_SCAN.test(req.path)) {
+        const len = parseInt(req.headers['content-length'], 10);
+        if (Number.isFinite(len) && len > LIMITE_SCAN_BYTES) {
+            res.set('Cache-Control', 'no-store');
+            return res.status(413).json({ error: 'Requisição inválida.' });
+        }
+    }
+    next();
+});
+const foraDoScan = (mw) => (req, res, next) => (R_PUBLICO_SCAN.test(req.path) ? next() : mw(req, res, next));
+app.use(foraDoScan(express.json({ limit: '50mb' })));
+app.use(foraDoScan(express.urlencoded({ extended: true, limit: '50mb' })));
 
 // Limita tentativas de login/recuperação de senha por IP (o escritório compartilha
 // IP — teto folgado o bastante p/ uso legítimo, apertado p/ brute-force)

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.18.0';
+const CACHE_NAME = 'aero-festas-v3.18.1';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -31,6 +31,10 @@ const ASSETS_TO_CACHE = [
     '/js/charts-financeiro.js',
     '/js/charts-init.js',
     '/js/profile.js',
+    // qrcode 1.5.1 vendorizada (o CDN virou 404): é a dependência do botão
+    // "Baixar PNG" de Links-Rastreados.html — sem ela no precache, a página
+    // abre offline mas a geração do QR quebra.
+    '/js/vendor/qrcode.min.js',
     '/manifest.json',
     '/icons/icon-192.png',
     '/icons/icon-512.png',

@@ -314,7 +314,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
         }
-        .qr-stage canvas { width: 260px; height: 260px; image-rendering: pixelated; }
+        .qr-stage canvas { width: 260px; max-width: 100%; height: auto; image-rendering: pixelated; }
 
         .check-row {
             display: flex;
@@ -582,6 +582,7 @@ let analytics = null;       // último analytics carregado
 let hitsOffset = 0;
 let hitsTotal = 0;
 let period = { from: '', to: '' };
+let repSeq = 0;             // guarda de sequência: resposta atrasada de filtro/link anterior é descartada
 let editingId = null;       // null = criação
 const charts = {};          // instâncias Chart.js vivas
 
@@ -655,11 +656,38 @@ function urlRowHtml(url, tag) {
         </button>`;
 }
 
+// Estado de ERRO (≠ vazio): falha de rede/sessão não pode parecer "sem dados",
+// senão o dono conclui que ninguém escaneou o panfleto com base num zero falso.
+function erroEstado(alvo, titulo, texto, onRetry) {
+    alvo.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'empty-state';
+    box.innerHTML =
+        '<div class="empty-icon"><i class="fas fa-triangle-exclamation"></i></div>' +
+        `<div class="empty-title">${escapeHtml(titulo)}</div>` +
+        `<div class="empty-text">${escapeHtml(texto)}</div>`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary btn-sm';
+    btn.innerHTML = '<i class="fas fa-rotate-right"></i> Tentar de novo';
+    btn.addEventListener('click', onRetry);
+    box.appendChild(btn);
+    alvo.appendChild(box);
+}
+
 // ---------------- Lista de links ----------------
 async function loadLinks() {
     const list = qs('links-list');
     UI.skeleton(list, 'cards', 3);
     const data = await api.listarLinksRastreados();
+    // null = erro na API (a função devolve [] só quando a lista está mesmo vazia)
+    if (data === null) {
+        erroEstado(list, 'Não foi possível carregar os links',
+            'Falha ao falar com o servidor (rede instável, sessão expirada ou servidor iniciando). Os links continuam existindo — tente de novo.',
+            () => loadLinks());
+        UI.toast('Não foi possível carregar os links', 'error');
+        return;
+    }
     links = Array.isArray(data) ? data : [];
     renderList();
 }
@@ -895,7 +923,11 @@ async function desenharQr(canvas, texto, tamanho, comLogo) {
     if (!window.QRCode) throw new Error('Biblioteca de QR não carregou');
     await window.QRCode.toCanvas(canvas, texto, {
         width: tamanho,
-        margin: 2,
+        // 4 módulos de zona quieta — mínimo da ISO/IEC 18004. Este canvas gera o
+        // arquivo que vai para a GRÁFICA: com o panfleto dobrado, sombreado ou
+        // com fundo colorido encostando no código, é a zona quieta que garante
+        // a leitura. Não reduzir.
+        margin: 4,
         errorCorrectionLevel: 'H',
         color: { dark: '#000000', light: '#FFFFFF' }
     });
@@ -923,6 +955,14 @@ async function renderQrPreview() {
     const canvas = qs('qr-canvas');
     try {
         await desenharQr(canvas, linkUrl(qrLink.slug), 520, qs('qr-logo').checked);
+        // A lib grava style inline com os 520px do bitmap, vencendo o CSS de
+        // 260px do .qr-stage — o preview estourava o modal. Re-ancora o tamanho
+        // de EXIBIÇÃO a cada render (o bitmap continua 520px, nítido em retina).
+        canvas.style.width = '260px';
+        canvas.style.maxWidth = '100%';
+        // height auto (e não 260px fixo): se o max-width encolher o canvas numa
+        // tela estreita, o QR continua quadrado — altura fixa o distorceria.
+        canvas.style.height = 'auto';
     } catch (e) {
         UI.toast('Não foi possível gerar o QR Code', 'error');
     }
@@ -1054,8 +1094,28 @@ function renderAvisoTruncado() {
     box.classList.remove('hidden');
 }
 
+// Erro de rede/API no relatório: mostra estado de erro com retry em vez de
+// KPIs zerados — "0 scans" falso levaria o dono a descartar uma campanha viva.
+function renderErroRelatorio() {
+    chartVazio('wrap-dia', 'dia', 'Não foi possível carregar os dados.');
+    chartVazio('wrap-hora', 'hora', 'Não foi possível carregar os dados.');
+    qs('rep-breakdowns').innerHTML = '';
+    qs('rep-hits').innerHTML = '';
+    qs('rep-pager').classList.add('hidden');
+    qs('rep-truncado').classList.add('hidden');
+    erroEstado(qs('rep-kpis'), 'Não foi possível carregar o relatório',
+        'Falha ao falar com o servidor (rede instável, sessão expirada ou servidor iniciando). Os números NÃO são zero — tente de novo.',
+        () => loadReport());
+    UI.toast('Não foi possível carregar o relatório', 'error');
+}
+
 async function loadReport() {
     if (!current) return;
+    // Guarda de sequência: cada clique em chip/Aplicar dispara um novo par de
+    // requisições; só a MAIS RECENTE pode pintar a tela ('Tudo' pode demorar
+    // segundos e chegar depois de '7 dias', sobrescrevendo o filtro ativo).
+    const seq = ++repSeq;
+    const reqLinkId = current.id;
     UI.skeleton(qs('rep-kpis'), 'kpis', 4);
     qs('wrap-dia').innerHTML = '<div class="chart-empty"><i class="fas fa-spinner fa-spin"></i></div>';
     qs('wrap-hora').innerHTML = '<div class="chart-empty"><i class="fas fa-spinner fa-spin"></i></div>';
@@ -1066,9 +1126,19 @@ async function loadReport() {
     hitsOffset = 0;
 
     const [an, hits] = await Promise.all([
-        api.getAnalyticsLink(current.id, period.from, period.to),
-        api.getHitsLink(current.id, { limit: HITS_LIMIT, offset: 0, from: period.from, to: period.to })
+        api.getAnalyticsLink(reqLinkId, period.from, period.to),
+        api.getHitsLink(reqLinkId, { limit: HITS_LIMIT, offset: 0, from: period.from, to: period.to })
     ]);
+
+    // Resposta obsoleta (outro filtro ou outro link já foi pedido): descarta.
+    if (seq !== repSeq || !current || String(current.id) !== String(reqLinkId)) return;
+
+    // null = erro na API (getAnalyticsLink devolve null em falha) — não pode
+    // ser mesclado com analyticsVazio(), senão vira "0 scans" legítimo.
+    if (an === null) {
+        renderErroRelatorio();
+        return;
+    }
 
     analytics = Object.assign(analyticsVazio(), an || {});
     if (!analytics.totals) analytics.totals = analyticsVazio().totals;
@@ -1328,8 +1398,19 @@ function origemHit(h) {
 
 function renderHits(resposta) {
     const alvo = qs('rep-hits');
-    const itens = (resposta && Array.isArray(resposta.items)) ? resposta.items : [];
-    hitsTotal = (resposta && Number(resposta.total)) || 0;
+
+    // null = erro na API (getHitsLink devolve null em falha): mensagem própria,
+    // para não confundir queda de rede com "nenhum acesso no período".
+    if (resposta == null) {
+        erroEstado(alvo, 'Não foi possível carregar os acessos',
+            'Falha ao falar com o servidor. Os acessos não sumiram — tente de novo.',
+            () => loadHits(hitsOffset));
+        qs('rep-pager').classList.add('hidden');
+        return;
+    }
+
+    const itens = Array.isArray(resposta.items) ? resposta.items : [];
+    hitsTotal = Number(resposta.total) || 0;
 
     if (!itens.length) {
         UI.empty(alvo, {
@@ -1390,11 +1471,16 @@ function renderHits(resposta) {
 
 async function loadHits(offset) {
     if (!current) return;
+    // Mesma guarda de sequência do loadReport: uma página lenta que chega
+    // depois de o usuário trocar filtro/link não pode sobrescrever a tabela.
+    const seq = ++repSeq;
+    const reqLinkId = current.id;
     hitsOffset = Math.max(0, offset);
     UI.skeleton(qs('rep-hits'), 'table', 4);
-    const resposta = await api.getHitsLink(current.id, {
+    const resposta = await api.getHitsLink(reqLinkId, {
         limit: HITS_LIMIT, offset: hitsOffset, from: period.from, to: period.to
     });
+    if (seq !== repSeq || !current || String(current.id) !== String(reqLinkId)) return;
     renderHits(resposta);
 }
 

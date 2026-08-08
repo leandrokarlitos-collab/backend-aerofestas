@@ -1522,8 +1522,11 @@ export const api = {
             const res = await fetch(`${BASE_URL}/admin/tracked-links`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            return res.ok ? await res.json() : [];
-        } catch (e) { console.error('Erro ao listar links rastreados:', e); return []; }
+            // null em erro (≠ [] lista vazia): o painel precisa distinguir
+            // "a API caiu" de "não existe nenhum link" — antes os dois casos
+            // viravam o mesmo [] e a falha aparecia como lista vazia legítima.
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao listar links rastreados:', e); return null; }
     },
 
     getLinkRastreado: async (id) => {

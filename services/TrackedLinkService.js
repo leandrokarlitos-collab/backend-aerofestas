@@ -865,7 +865,14 @@ const CSV_HEADERS = [
 ];
 
 function csvCell(v) {
-    const s = v == null ? '' : String(v);
+    let s = v == null ? '' : String(v);
+    // Neutraliza injeção de fórmula (OWASP CSV Injection): vários campos vêm
+    // crus do POST público de scan (referrer, idioma, fuso, visitorId) e uma
+    // célula começando com = + - @ (ou TAB/CR) seria AVALIADA pelo Excel ao
+    // abrir o relatório — HYPERLINK/WEBSERVICE/DDE viram vetor de ataque.
+    // Aspas do CSV não protegem (são delimitador, não conteúdo): só o
+    // apóstrofo inicial força o Excel a tratar a célula como texto.
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
