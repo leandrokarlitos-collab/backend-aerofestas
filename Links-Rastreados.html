@@ -346,6 +346,34 @@
             color: var(--text-muted);
             flex-wrap: wrap;
         }
+        /* ---------- Impressão / "Salvar PDF" ---------- */
+        /* Na tela o cabeçalho de impressão não existe; no papel, só o relatório. */
+        .print-only { display: none; }
+        @media print {
+            /* Navegação injetada (nav.js/protect.js), lista, filtros, botões e modais fora */
+            #aero-sidebar, #aero-bottomnav, #user-menu-container,
+            .page-header, #view-list, #rep-pager, .no-print,
+            .btn, .modal-backdrop, .toast, #toast-container { display: none !important; }
+
+            /* O relatório ocupa a folha inteira, sem o recuo da sidebar */
+            body, body.has-aero-nav { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+            main { max-width: none !important; padding: 0 !important; }
+            #view-report.hidden { display: none !important; } /* imprimir a lista não imprime relatório fantasma */
+
+            /* Tema escuro na tela não pode virar texto claro no papel: remapeia
+               os tokens para a paleta clara só durante a impressão. (Os gráficos
+               são canvas já pintado — aceitável; o texto é o que precisa ler.) */
+            html.dark {
+                --text: #18181b; --text-muted: #3f3f46; --text-faint: #71717a;
+                --surface: #ffffff; --surface-inset: #f4f4f5; --border: #e4e4e7;
+            }
+
+            .surface { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+
+            #print-header { display: block; padding: 0 0 14px; border-bottom: 2px solid #18181b; margin-bottom: 16px; }
+            #print-header .ph-title { font-size: 20px; font-weight: 700; }
+            #print-header .ph-meta { font-size: 12px; color: #3f3f46; margin-top: 4px; }
+        }
     </style>
 </head>
 <body data-page="links">
@@ -381,7 +409,7 @@
     <!-- ================= Relatório do link ================= -->
     <section id="view-report" class="hidden">
 
-        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4 no-print">
             <div class="flex items-center gap-3 min-w-0">
                 <button type="button" id="btn-voltar" class="btn btn-ghost btn-icon" title="Voltar para a lista" aria-label="Voltar para a lista">
                     <i class="fas fa-arrow-left"></i>
@@ -395,8 +423,18 @@
                 <button type="button" id="rep-btn-edit" class="btn btn-secondary btn-sm">
                     <i class="fas fa-pen"></i> <span class="hidden sm:inline">Editar destino</span>
                 </button>
+                <!-- "PDF" aqui é a visão de impressão do navegador: o diálogo de
+                     imprimir oferece "Salvar como PDF" em qualquer aparelho, sem
+                     dependência nova no backend. O CSS @media print esconde tudo
+                     que não é relatório. -->
+                <button type="button" id="rep-print" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-file-pdf"></i> <span class="hidden sm:inline">Salvar PDF</span>
+                </button>
             </div>
         </div>
+
+        <!-- Cabeçalho que SÓ existe na impressão/PDF (preenchido ao clicar em Salvar PDF) -->
+        <div id="print-header" class="print-only"></div>
 
         <div class="surface p-4 mb-4">
             <div id="rep-url-row" class="url-row" style="margin-top:0;"></div>
@@ -404,7 +442,7 @@
         </div>
 
         <!-- Filtro de período -->
-        <div class="surface p-4 mb-4">
+        <div class="surface p-4 mb-4 no-print">
             <div class="period-bar">
                 <div class="period-chips" id="period-chips">
                     <button type="button" class="chip-btn" data-days="7">7 dias</button>
@@ -1499,7 +1537,10 @@ async function baixarCsvExport(id, from, to) {
         if (from) p.set('from', from);
         if (to) p.set('to', to);
         const query = p.toString() ? `?${p.toString()}` : '';
-        const res = await fetch(`${API_BASE_URL}/admin/tracked-links/${id}/export${query}`, {
+        // API_BASE_URL é a RAIZ do Railway (sem /api — o js/api.js monta o /api
+        // num BASE_URL privado). Fetch direto aqui precisa do prefixo completo;
+        // sem ele o Express devolve 404 e o botão morria em "Erro ao gerar o CSV".
+        const res = await fetch(`${API_BASE_URL}/api/admin/tracked-links/${id}/export${query}`, {
             headers: { 'Authorization': `Bearer ${getToken()}` }
         });
         if (!res.ok) return { blob: null, truncado: false };
@@ -1543,6 +1584,26 @@ qs('rep-export').addEventListener('click', async () => {
         btn.disabled = false;
         icon.className = 'fas fa-file-csv';
     }
+});
+
+// Salvar PDF — preenche o cabeçalho que só existe na impressão e abre o diálogo
+// do navegador, onde "Salvar como PDF" está disponível em qualquer aparelho.
+// O @media print do <style> esconde tudo que não é o relatório.
+qs('rep-print').addEventListener('click', () => {
+    if (!current) return;
+    // 'YYYY-MM-DD' → 'DD/MM/YYYY' direto da string: new Date('YYYY-MM-DD') é UTC
+    // e deslocaria o dia no fuso do Brasil.
+    const diaBr = (s) => String(s).split('-').reverse().join('/');
+    const periodo = (period.from || period.to)
+        ? `${period.from ? diaBr(period.from) : 'início'} a ${period.to ? diaBr(period.to) : 'hoje'}`
+        : 'todo o período';
+    qs('print-header').innerHTML = `
+        <div class="ph-title">Aero Festas — Relatório de scans · ${escapeHtml(current.name || current.slug)}</div>
+        <div class="ph-meta">
+            QR: ${escapeHtml(linkUrl(current.slug))} &nbsp;·&nbsp; destino atual: ${escapeHtml(current.destination || '—')}<br>
+            Período: ${escapeHtml(periodo)} &nbsp;·&nbsp; gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>`;
+    window.print();
 });
 
 // ---------------- Fechar modais com Esc ----------------
