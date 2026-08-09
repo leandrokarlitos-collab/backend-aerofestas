@@ -457,6 +457,127 @@ function normalizeDestination(raw) {
     return d;
 }
 
+// Logo do centro do QR: só data URL base64 de imagem (PNG/JPEG/WebP), até
+// MAX_LOGO_CHARS. A rota já valida, mas o service revalida (mesmo padrão de
+// name/destination): quem chamar o service direto não pode gravar lixo.
+const MAX_LOGO_CHARS = 500000; // ~366 KB de imagem — o cliente redimensiona p/ 512x512 antes de enviar
+const LOGO_DATA_URL_REGEX = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+
+function normalizeLogoDataUrl(raw) {
+    if (raw === null) return null; // remove a logo do link (volta à padrão do sistema)
+    // Tipo e tamanho ANTES da regex: não faz sentido rodar regex em payload gigante.
+    if (typeof raw !== 'string' || raw.length > MAX_LOGO_CHARS || !LOGO_DATA_URL_REGEX.test(raw)) {
+        throw err400('Logo inválida: envie uma imagem PNG, JPEG ou WebP como data URL base64 de até 500 mil caracteres, ou null para voltar à logo padrão.');
+    }
+    return raw;
+}
+
+// Estilo visual do QR (formato dos pontos/cantos, cores e cartão do panfleto).
+// WHITELIST estrita: chave desconhecida derruba o payload inteiro com 400 — o QR
+// vai para gráfica e um estilo corrompido/injetado vira prejuízo impresso.
+// O que se grava é SEMPRE o JSON re-serializado das chaves validadas, em ordem
+// fixa (canônica) — nunca o texto cru do cliente.
+const QR_STYLE_MAX_CHARS = 2000; // teto de segurança do JSON recebido
+const QR_DOT_TYPES = ['square', 'rounded', 'dots', 'classy', 'extra-rounded'];
+const QR_CORNER_TYPES = ['square', 'dot', 'extra-rounded'];
+const QR_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+const QR_STYLE_KEYS = ['dotType', 'cornerType', 'dotColor', 'cornerColor', 'bgColor', 'card'];
+const QR_CARD_KEYS = ['enabled', 'radius', 'shadow'];
+
+function errQrStyle(detalhe) {
+    return err400(`Estilo do QR inválido: ${detalhe}`);
+}
+
+/**
+ * Valida e canoniza o estilo do QR. Aceita objeto ou string JSON; devolve a
+ * string JSON canônica (chaves em ordem fixa, cores em minúsculas) ou null
+ * (remove o estilo — o QR volta ao padrão preto no branco). Toda chave é
+ * opcional; chave fora da whitelist, valor fora do domínio ou cor fora de
+ * #RRGGBB → erro 400. Idempotente: normalizar o resultado devolve o mesmo JSON.
+ */
+function normalizeQrStyle(raw) {
+    if (raw === null) return null; // remove o estilo (volta ao QR padrão)
+
+    let obj = raw;
+    if (typeof raw === 'string') {
+        // Tamanho ANTES do parse: não faz sentido parsear payload gigante.
+        if (raw.length > QR_STYLE_MAX_CHARS) {
+            throw errQrStyle(`o JSON passa de ${QR_STYLE_MAX_CHARS} caracteres.`);
+        }
+        try {
+            obj = JSON.parse(raw);
+        } catch (_) {
+            throw errQrStyle('JSON malformado.');
+        }
+    }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+        throw errQrStyle('envie um objeto com as chaves permitidas, ou null para voltar ao padrão.');
+    }
+
+    // 1) Nenhuma chave fora da whitelist — inclusive as herdadas de protótipo não entram
+    //    (Object.keys só enumera as próprias).
+    for (const key of Object.keys(obj)) {
+        if (!QR_STYLE_KEYS.includes(key)) {
+            throw errQrStyle(`chave desconhecida "${String(key).slice(0, 60)}".`);
+        }
+    }
+
+    // 2) Valida cada chave presente e monta o objeto canônico em ordem FIXA,
+    //    independentemente da ordem em que o cliente mandou.
+    const out = {};
+
+    if (obj.dotType !== undefined) {
+        if (!QR_DOT_TYPES.includes(obj.dotType)) {
+            throw errQrStyle(`dotType deve ser um de: ${QR_DOT_TYPES.join(', ')}.`);
+        }
+        out.dotType = obj.dotType;
+    }
+
+    if (obj.cornerType !== undefined) {
+        if (!QR_CORNER_TYPES.includes(obj.cornerType)) {
+            throw errQrStyle(`cornerType deve ser um de: ${QR_CORNER_TYPES.join(', ')}.`);
+        }
+        out.cornerType = obj.cornerType;
+    }
+
+    for (const corKey of ['dotColor', 'cornerColor', 'bgColor']) {
+        if (obj[corKey] !== undefined) {
+            if (typeof obj[corKey] !== 'string' || !QR_COLOR_REGEX.test(obj[corKey])) {
+                throw errQrStyle(`${corKey} deve ser uma cor hexadecimal no formato #RRGGBB.`);
+            }
+            out[corKey] = obj[corKey].toLowerCase(); // canônico: sempre minúsculas
+        }
+    }
+
+    if (obj.card !== undefined) {
+        const card = obj.card;
+        if (!card || typeof card !== 'object' || Array.isArray(card)) {
+            throw errQrStyle('card deve ser um objeto { enabled, radius, shadow }.');
+        }
+        for (const ck of Object.keys(card)) {
+            if (!QR_CARD_KEYS.includes(ck)) {
+                throw errQrStyle(`chave desconhecida em card: "${String(ck).slice(0, 60)}".`);
+            }
+            if (typeof card[ck] !== 'boolean') {
+                throw errQrStyle(`card.${ck} deve ser true ou false.`);
+            }
+        }
+        const cardOut = {};
+        for (const ck of QR_CARD_KEYS) {
+            if (card[ck] !== undefined) cardOut[ck] = card[ck];
+        }
+        out.card = cardOut;
+    }
+
+    // Com a whitelist o JSON canônico nunca chega perto do teto; a checagem é
+    // só defesa em profundidade caso a whitelist cresça no futuro.
+    const json = JSON.stringify(out);
+    if (json.length > QR_STYLE_MAX_CHARS) {
+        throw errQrStyle(`o JSON passa de ${QR_STYLE_MAX_CHARS} caracteres.`);
+    }
+    return json;
+}
+
 function prepareSlug(raw) {
     const slug = normalizeSlug(raw);
     if (!slug) throw err400('Informe o apelido (slug) do link.');
@@ -478,7 +599,17 @@ async function assertSlugLivre(slug, ignoreId) {
  * Duas consultas agregadas — sem N+1.
  */
 async function listLinks() {
-    const links = await prisma.trackedLink.findMany({ orderBy: { createdAt: 'desc' } });
+    // select explícito SEM logoDataUrl (base64 que pode chegar a ~500 KB por
+    // link — incluí-lo incharia cada linha da listagem e a leitura do banco) e
+    // SEM qrStyle (só o modal do QR usa). Quem precisa deles abre o link e usa
+    // getLink(id), que traz o registro completo.
+    const links = await prisma.trackedLink.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true, slug: true, name: true, destination: true, active: true,
+            notes: true, createdBy: true, createdAt: true, updatedBy: true, updatedAt: true
+        }
+    });
     if (!links.length) return [];
 
     const [totals, visitors] = await Promise.all([
@@ -519,6 +650,8 @@ async function listLinks() {
 
 /**
  * Um link com o histórico de trocas de destino. Devolve null se não existir.
+ * Sem `select`, então vem o registro completo — INCLUSIVE logoDataUrl e qrStyle
+ * (o modal do QR usa esta rota justamente para obtê-los; o listLinks não traz).
  */
 async function getLink(id) {
     const linkId = str(id, 60);
@@ -595,7 +728,7 @@ async function createLink({ slug, name, destination, notes, active } = {}, user)
 /**
  * Atualiza um link. Se o destino mudar, grava um TrackedLinkChange.
  */
-async function updateLink(id, { slug, name, destination, notes, active } = {}, user) {
+async function updateLink(id, { slug, name, destination, notes, active, logoDataUrl, qrStyle } = {}, user) {
     const linkId = str(id, 60);
     if (!linkId) throw err400('ID inválido.');
 
@@ -628,6 +761,9 @@ async function updateLink(id, { slug, name, destination, notes, active } = {}, u
 
     if (notes !== undefined) data.notes = str(notes, MAX_NOTES);
     if (active !== undefined) data.active = boolOrFalse(active);
+    if (logoDataUrl !== undefined) data.logoDataUrl = normalizeLogoDataUrl(logoDataUrl);
+    // Grava o JSON canônico re-serializado (ou null p/ voltar ao padrão) — nunca o texto cru.
+    if (qrStyle !== undefined) data.qrStyle = normalizeQrStyle(qrStyle);
 
     const ops = [prisma.trackedLink.update({ where: { id: linkId }, data })];
     if (novoDestino) {
@@ -835,6 +971,130 @@ async function analytics(id, { from, to } = {}) {
 }
 
 /**
+ * Visão geral de TODAS as campanhas no período — o dono usa um link por
+ * campanha (panfleto, bio do Insta, stories...) e aqui compara todas de uma vez.
+ * `from`/`to` são 'YYYY-MM-DD' opcionais e `to` é INCLUSIVO; dias no fuso de
+ * São Paulo. Duas consultas no total (hits do período + links), agregação em
+ * JS — SEM N+1: nenhuma consulta por link.
+ */
+async function overviewAnalytics({ from, to } = {}) {
+    const range = buildRange(from, to);
+    const where = {};
+    if (range) where.createdAt = range;
+
+    const [hits, links] = await Promise.all([
+        // Mesmo teto/ordem do analytics: ao bater em MAX_ANALYTICS_ROWS o
+        // relatório vira AMOSTRA (os acessos mais antigos do período) e o
+        // campo `truncado` avisa a interface. Select mínimo de propósito:
+        // só o necessário para totais, ranking e série por dia.
+        prisma.trackedLinkHit.findMany({
+            where,
+            orderBy: { createdAt: 'asc' },
+            take: MAX_ANALYTICS_ROWS,
+            select: { linkId: true, visitorId: true, noJs: true, createdAt: true }
+        }),
+        // Select leve SEM logoDataUrl (base64 de até ~500 KB por link) e SEM
+        // qrStyle — a visão geral não usa nenhum dos dois.
+        prisma.trackedLink.findMany({
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, slug: true, name: true, destination: true, active: true }
+        })
+    ]);
+
+    const visitors = new Set();     // visitorId distintos no conjunto TODO
+    let semJs = 0;
+
+    const statsPorLink = new Map(); // linkId → { hits, visitors:Set, lastHitAt }
+    const dayTotal = new Map();     // ymd → total de hits
+    const dayPorLink = new Map();   // ymd → Map(linkId → hits)
+
+    for (const h of hits) {
+        if (h.visitorId) visitors.add(h.visitorId);
+        if (h.noJs) semJs++;
+
+        let s = statsPorLink.get(h.linkId);
+        if (!s) {
+            s = { hits: 0, visitors: new Set(), lastHitAt: null };
+            statsPorLink.set(h.linkId, s);
+        }
+        s.hits++;
+        if (h.visitorId) s.visitors.add(h.visitorId);
+        // Ordenado por createdAt ASC: o último atribuído é o mais recente.
+        s.lastHitAt = h.createdAt;
+
+        const ymd = spParts(h.createdAt).ymd;
+        dayTotal.set(ymd, (dayTotal.get(ymd) || 0) + 1);
+        let dl = dayPorLink.get(ymd);
+        if (!dl) {
+            dl = new Map();
+            dayPorLink.set(ymd, dl);
+        }
+        dl.set(h.linkId, (dl.get(h.linkId) || 0) + 1);
+    }
+
+    const totalHits = hits.length;
+
+    // Ranking com TODOS os links — até os com 0 hit no período (eles precisam
+    // aparecer: campanha impressa que não gera scan é informação, não ruído).
+    // pct com 1 casa decimal; total 0 → pct 0 (nunca NaN).
+    const ranking = links.map(link => {
+        const s = statsPorLink.get(link.id);
+        const linkHits = s ? s.hits : 0;
+        return {
+            id: link.id,
+            slug: link.slug,
+            name: link.name,
+            active: link.active,
+            destination: link.destination,
+            hits: linkHits,
+            uniques: s ? s.visitors.size : 0,
+            lastHitAt: s ? s.lastHitAt : null,
+            pct: totalHits ? Math.round((linkHits / totalHits) * 1000) / 10 : 0
+        };
+    }).sort((a, b) =>
+        (b.hits - a.hits) ||
+        (b.uniques - a.uniques) ||
+        String(a.name).localeCompare(String(b.name), 'pt-BR'));
+
+    // byDay preenchido dia a dia (buracos viram zero), mesmo critério do
+    // analytics: período do filtro quando informado; sem filtro, do primeiro
+    // ao último acesso. Teto MAX_DAYS_FILL contra intervalos absurdos.
+    const diasComHit = [...dayTotal.keys()].sort();
+    const inicio = (from && spDayBoundary(from, false)) ? String(from).trim() : (diasComHit[0] || null);
+    const fim = (to && spDayBoundary(to, true)) ? String(to).trim() : (diasComHit[diasComHit.length - 1] || null);
+
+    const byDay = [];
+    if (inicio && fim && inicio <= fim) {
+        let cursor = inicio;
+        let guard = 0;
+        while (cursor <= fim && guard++ < MAX_DAYS_FILL) {
+            const dl = dayPorLink.get(cursor);
+            const porLink = {};
+            if (dl) {
+                for (const [linkId, n] of dl) porLink[linkId] = n;
+            }
+            byDay.push({ key: cursor, total: dayTotal.get(cursor) || 0, porLink });
+            cursor = ymdAddDays(cursor, 1);
+        }
+    }
+
+    return {
+        totals: {
+            hits: totalHits,
+            uniqueVisitors: visitors.size,
+            // Acessos registrados pelo pixel do <noscript> (visitante sem JavaScript).
+            semJs,
+            linksTotal: links.length,
+            linksAtivos: links.filter(l => l.active).length
+        },
+        ranking,
+        byDay,
+        truncado: totalHits >= MAX_ANALYTICS_ROWS,
+        amostraDe: totalHits
+    };
+}
+
+/**
  * Lista paginada dos acessos (mais recentes primeiro). Sem `select`, então cada
  * item traz o registro completo — inclusive o noJs do pixel do <noscript>.
  */
@@ -959,6 +1219,7 @@ async function hitsCsv(id, { from, to } = {}) {
 
 module.exports = {
     parseUserAgent,
+    normalizeQrStyle,
     recordHit,
     findLinkBySlugCached,
     invalidarCacheSlug,
@@ -968,6 +1229,7 @@ module.exports = {
     updateLink,
     deleteLink,
     analytics,
+    overviewAnalytics,
     listHits,
     hitsCsv
 };

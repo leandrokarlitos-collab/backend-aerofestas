@@ -61,6 +61,30 @@ function validarDestino(valor) {
     return destination;
 }
 
+// Logo do centro do QR: só data URL base64 de imagem (PNG/JPEG/WebP). O data:
+// é obrigatório — URL remota sem CORS "taint-aria" o canvas do frontend e o
+// toDataURL do "Baixar PNG" lançaria. null remove a logo (volta à padrão).
+const LOGO_DATA_URL_REGEX = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const LOGO_MAX_CHARS = 500000; // ~366 KB de imagem — o cliente redimensiona p/ 512x512 antes de enviar
+
+function validarLogo(valor) {
+    if (valor === null) return null; // remove a logo do link (usa a padrão)
+    // Checa tipo e tamanho ANTES da regex: não faz sentido rodar regex em payload gigante.
+    if (typeof valor !== 'string' || valor.length > LOGO_MAX_CHARS || !LOGO_DATA_URL_REGEX.test(valor)) {
+        throw erro(400, 'Logo inválida: envie uma imagem PNG, JPEG ou WebP como data URL base64 de até 500 mil caracteres, ou null para voltar à logo padrão.');
+    }
+    return valor;
+}
+
+// Estilo do QR: whitelist estrita (dotType/cornerType/cores #RRGGBB/card) com
+// uma única fonte da regra — o normalizeQrStyle do service, que valida e devolve
+// o JSON canônico re-serializado (ou null p/ voltar ao padrão). Chave desconhecida,
+// cor fora de #RRGGBB ou JSON acima de 2000 caracteres → 400. O que segue para o
+// updateLink já é o canônico — nunca o texto cru do cliente.
+function validarQrStyle(valor) {
+    return TrackedLinkService.normalizeQrStyle(valor);
+}
+
 // Data de hoje (fuso de Brasília) no formato YYYY-MM-DD, para o nome do CSV.
 function dataDeHoje() {
     try {
@@ -205,6 +229,20 @@ adminRouter.post('/', authenticate, async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+// Visão geral de TODAS as campanhas no período (compara os links entre si).
+// ATENÇÃO DE ROTEAMENTO: esta rota TEM de vir ANTES de qualquer '/:id' —
+// senão ':id' captura o literal "overview" e o endpoint morre em
+// "Link não encontrado". Não mover para baixo.
+adminRouter.get('/overview', authenticate, async (req, res, next) => {
+    try {
+        const data = await TrackedLinkService.overviewAnalytics({
+            from: req.query.from || null,
+            to: req.query.to || null
+        });
+        res.json(data);
+    } catch (err) { next(err); }
+});
+
 adminRouter.get('/:id', authenticate, async (req, res, next) => {
     try {
         const link = await TrackedLinkService.getLink(req.params.id);
@@ -221,6 +259,8 @@ adminRouter.put('/:id', authenticate, async (req, res, next) => {
         if (body.destination !== undefined) dados.destination = validarDestino(body.destination);
         if (body.active !== undefined) dados.active = body.active === true || body.active === 'true';
         if (body.notes !== undefined) dados.notes = body.notes ? String(body.notes).trim() : null;
+        if (body.logoDataUrl !== undefined) dados.logoDataUrl = validarLogo(body.logoDataUrl);
+        if (body.qrStyle !== undefined) dados.qrStyle = validarQrStyle(body.qrStyle);
         if (Object.keys(dados).length === 0) throw erro(400, 'Nada para atualizar.');
 
         const data = await TrackedLinkService.updateLink(req.params.id, dados, req.user);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.18.3';
+const CACHE_NAME = 'aero-festas-v3.18.5';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -35,6 +35,20 @@ const ASSETS_TO_CACHE = [
     // "Baixar PNG" de Links-Rastreados.html — sem ela no precache, a página
     // abre offline mas a geração do QR quebra.
     '/js/vendor/qrcode.min.js',
+    // jsPDF + AutoTable vendorizadas: dependências do botão "Baixar PDF" do
+    // relatório de Links-Rastreados.html — mesma razão do qrcode acima.
+    '/js/vendor/jspdf.umd.min.js',
+    '/js/vendor/jspdf.plugin.autotable.min.js',
+    // Chart.js 4.4.1 vendorizada: gráficos do relatório de Links-Rastreados.html
+    // (mesma lição do qrcode: CDN sem versão fixada já quebrou produção).
+    '/js/vendor/chart.umd.js',
+    // qr-code-styling 1.6.0-rc.1 vendorizada: motor dos QRs ESTILIZADOS
+    // (pontos arredondados, cores, cantos) de Links-Rastreados.html. Sem ela
+    // no precache, offline o modal cai no QR clássico preto e branco.
+    '/js/vendor/qr-code-styling.js',
+    // jsQR 1.4.0 vendorizada: teste de leitura do QR antes do download — o
+    // arquivo vai para gráfica, um QR bonito que não lê é prejuízo irreversível.
+    '/js/vendor/jsqr.js',
     '/manifest.json',
     '/icons/icon-192.png',
     '/icons/icon-512.png',

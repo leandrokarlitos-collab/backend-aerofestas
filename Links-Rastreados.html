@@ -24,12 +24,28 @@
     <link rel="icon" href="./icons/Logo_Aero_Festas.png" type="image/png">
 
     <!-- Gráficos e geração de QR Code -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js 4.4.1 vendorizada (mesma lição do qrcode abaixo: CDN sem versão
+         fixada já quebrou produção uma vez). Servida do próprio projeto e
+         precacheada no sw.js — os gráficos do relatório funcionam offline. -->
+    <script src="./js/vendor/chart.umd.js"></script>
     <!-- qrcode 1.5.1 servido do próprio projeto, NÃO de CDN: o jsDelivr deixou de
          publicar build/qrcode.min.js a partir da 1.5.2 e a versão fixada virou 404,
          quebrando a geração do QR. Como daqui sai o arquivo que vai para a gráfica,
          não pode depender de um terceiro mudar o que publica. -->
     <script src="./js/vendor/qrcode.min.js"></script>
+    <!-- qr-code-styling 1.6.0-rc.1 vendorizada (mesma lição do qrcode acima):
+         motor dos QRs ESTILIZADOS (formato dos pontos, cores, cantos). Se não
+         carregar, o modal cai no desenharQr clássico — o Baixar PNG nunca morre. -->
+    <script src="./js/vendor/qr-code-styling.js"></script>
+    <!-- jsQR 1.4.0 vendorizada: decodifica o canvas gerado e confere se o QR
+         REALMENTE lê, no preview e antes de todo download — o arquivo vai para
+         gráfica, e um QR estilizado que não lê é prejuízo irreversível. -->
+    <script src="./js/vendor/jsqr.js"></script>
+    <!-- jsPDF 2.5.1 + AutoTable 3.8.2 vendorizadas (mesma lição do qrcode acima:
+         CDN em runtime já sumiu com um build e quebrou produção). São a base do
+         botão "Baixar PDF" do relatório — o arquivo é montado inteiro no navegador. -->
+    <script src="./js/vendor/jspdf.umd.min.js"></script>
+    <script src="./js/vendor/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         /* ---- Divulgação & QR Codes: mínimos específicos da página (tokens do DS) ---- */
@@ -230,6 +246,10 @@
         .period-bar .date-field { min-width: 150px; }
         .period-bar .date-field .input { padding-top: 8px; padding-bottom: 8px; }
 
+        /* ---- Visão geral: linha do ranking abre o relatório da campanha ---- */
+        #ov-ranking tbody tr { cursor: pointer; }
+        #ov-ranking tbody tr:hover td { background: var(--surface-2); }
+
         /* ---- Gráficos ---- */
         .chart-wrap { position: relative; height: 280px; }
         .chart-wrap canvas { max-width: 100%; }
@@ -315,6 +335,48 @@
             border-radius: var(--radius-lg);
         }
         .qr-stage canvas { width: 260px; max-width: 100%; height: auto; image-rendering: pixelated; }
+
+        /* ---- Personalização visual do QR (qrStyle por link) ---- */
+        .qr-estilo-box { border-top: 1px solid var(--border); padding-top: 14px; }
+        .qr-estilo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .qr-estilo-cores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .qr-cor input[type="color"] {
+            width: 100%;
+            height: 36px;
+            padding: 2px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: transparent;
+        }
+        /* Selo "Leitura verificada" — o jsQR decodificou o canvas e o texto bate */
+        .qr-selo {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--success);
+            background: var(--success-soft);
+            border-radius: 999px;
+            padding: 4px 12px;
+        }
+        .qr-aviso {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 12.5px;
+            line-height: 1.5;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            background: var(--warning-soft);
+            color: #B45309;
+            font-weight: 500;
+        }
+        .dark .qr-aviso { color: var(--warning); }
+        .qr-aviso i { margin-top: 2px; }
+        .qr-aviso-forte { background: var(--danger-soft); color: #BE123C; }
+        .dark .qr-aviso-forte { color: var(--danger); }
 
         .check-row {
             display: flex;
@@ -403,6 +465,56 @@
 
     <!-- ================= Lista de links ================= -->
     <section id="view-list">
+
+        <!-- ---- Visão geral: todas as campanhas lado a lado ---- -->
+        <div id="overview-box" class="mb-8">
+            <h2 class="section-title mb-3"><i class="fas fa-chart-column"></i> Visão geral das campanhas</h2>
+
+            <!-- Régua de período PRÓPRIA (independente da do relatório por link) -->
+            <div class="surface p-4 mb-4">
+                <div class="period-bar">
+                    <div class="period-chips" id="ov-chips">
+                        <button type="button" class="chip-btn" data-days="7">7 dias</button>
+                        <button type="button" class="chip-btn" data-days="15">15 dias</button>
+                        <button type="button" class="chip-btn is-active" data-days="30">30 dias</button>
+                        <button type="button" class="chip-btn" data-days="60">60 dias</button>
+                        <button type="button" class="chip-btn" data-days="90">90 dias</button>
+                        <button type="button" class="chip-btn" data-days="0">Tudo</button>
+                    </div>
+                    <div class="date-field">
+                        <label class="input-label" for="ov-from">De</label>
+                        <input type="date" id="ov-from" class="input">
+                    </div>
+                    <div class="date-field">
+                        <label class="input-label" for="ov-to">Até</label>
+                        <input type="date" id="ov-to" class="input">
+                    </div>
+                    <button type="button" id="ov-apply" class="btn btn-primary btn-sm">
+                        <i class="fas fa-filter"></i> Aplicar
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs consolidados de todas as campanhas -->
+            <div id="ov-kpis" class="mb-4"></div>
+
+            <!-- Aviso de amostra cortada (só aparece se o backend mandar truncado=true) -->
+            <div id="ov-truncado" class="warn-banner hidden mb-4"></div>
+
+            <!-- Uma linha por campanha (top 8) + "Outros" -->
+            <div class="surface overflow-hidden mb-4">
+                <div class="card-head"><h3><i class="fas fa-calendar-days"></i> Scans por dia — por campanha</h3></div>
+                <div class="p-4"><div class="chart-wrap" id="ov-wrap-dia"></div></div>
+            </div>
+
+            <!-- Ranking: clicar numa linha abre o relatório daquela campanha -->
+            <div class="surface overflow-hidden">
+                <div class="card-head"><h3><i class="fas fa-ranking-star"></i> Ranking de campanhas</h3></div>
+                <div id="ov-ranking"></div>
+            </div>
+        </div>
+
+        <h2 class="section-title mb-3"><i class="fas fa-link"></i> Seus links</h2>
         <div id="links-list" class="space-y-3"></div>
     </section>
 
@@ -423,12 +535,12 @@
                 <button type="button" id="rep-btn-edit" class="btn btn-secondary btn-sm">
                     <i class="fas fa-pen"></i> <span class="hidden sm:inline">Editar destino</span>
                 </button>
-                <!-- "PDF" aqui é a visão de impressão do navegador: o diálogo de
-                     imprimir oferece "Salvar como PDF" em qualquer aparelho, sem
-                     dependência nova no backend. O CSS @media print esconde tudo
-                     que não é relatório. -->
+                <!-- Baixa um .pdf montado no navegador (jsPDF + AutoTable vendorizados).
+                     Se as bibliotecas não carregarem, cai no window.print() antigo — o
+                     CSS @media print e o #print-header continuam no arquivo, e o Ctrl+P
+                     segue funcionando como bônus. -->
                 <button type="button" id="rep-print" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-file-pdf"></i> <span class="hidden sm:inline">Salvar PDF</span>
+                    <i class="fas fa-file-pdf"></i> <span class="hidden sm:inline">Baixar PDF</span>
                 </button>
             </div>
         </div>
@@ -446,7 +558,9 @@
             <div class="period-bar">
                 <div class="period-chips" id="period-chips">
                     <button type="button" class="chip-btn" data-days="7">7 dias</button>
+                    <button type="button" class="chip-btn" data-days="15">15 dias</button>
                     <button type="button" class="chip-btn is-active" data-days="30">30 dias</button>
+                    <button type="button" class="chip-btn" data-days="60">60 dias</button>
                     <button type="button" class="chip-btn" data-days="90">90 dias</button>
                     <button type="button" class="chip-btn" data-days="0">Tudo</button>
                 </div>
@@ -582,10 +696,79 @@
         <div class="modal-body space-y-4">
             <div class="qr-stage"><canvas id="qr-canvas" width="260" height="260" role="img" aria-label="QR Code do link"></canvas></div>
             <div id="qr-url-row" class="url-row" style="margin-top:0;"></div>
-            <label class="check-row" for="qr-logo">
-                <input type="checkbox" id="qr-logo" checked>
-                Com logo no centro
-            </label>
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <label class="check-row" for="qr-logo">
+                    <input type="checkbox" id="qr-logo" checked>
+                    Com logo no centro
+                </label>
+                <div class="flex items-center gap-2">
+                    <img id="qr-logo-thumb" src="./icons/icon-512.png" alt="Logo atual do centro do QR"
+                         style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);object-fit:contain;background:#fff;padding:2px;">
+                    <button type="button" id="qr-logo-trocar" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-image"></i> Trocar logo
+                    </button>
+                    <button type="button" id="qr-logo-padrao" class="btn btn-ghost btn-sm hidden">
+                        Usar padrão
+                    </button>
+                    <input type="file" id="qr-logo-file" accept="image/*" class="hidden">
+                </div>
+            </div>
+
+            <!-- ---- Personalização visual (persistida por link em qrStyle) ---- -->
+            <div class="qr-estilo-box space-y-3">
+                <div class="qr-estilo-grid">
+                    <div>
+                        <label class="input-label" for="qr-dot-type">Formato dos pontos</label>
+                        <select id="qr-dot-type" class="input">
+                            <option value="square">Quadrado</option>
+                            <option value="rounded">Arredondado</option>
+                            <option value="dots">Bolinhas</option>
+                            <option value="classy">Classy</option>
+                            <option value="extra-rounded">Extra-arredondado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="input-label" for="qr-corner-type">Cantos</label>
+                        <select id="qr-corner-type" class="input">
+                            <option value="square">Quadrado</option>
+                            <option value="dot">Bolinha</option>
+                            <option value="extra-rounded">Extra-arredondado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="qr-estilo-cores">
+                    <div class="qr-cor">
+                        <label class="input-label" for="qr-cor-pontos">Cor dos pontos</label>
+                        <input type="color" id="qr-cor-pontos" value="#000000">
+                    </div>
+                    <div class="qr-cor">
+                        <label class="input-label" for="qr-cor-cantos">Cor dos cantos</label>
+                        <input type="color" id="qr-cor-cantos" value="#000000">
+                    </div>
+                    <div class="qr-cor">
+                        <label class="input-label" for="qr-cor-fundo">Cor do fundo</label>
+                        <input type="color" id="qr-cor-fundo" value="#FFFFFF">
+                    </div>
+                </div>
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="space-y-2">
+                        <label class="check-row" for="qr-card-radius">
+                            <input type="checkbox" id="qr-card-radius">
+                            Fundo com borda arredondada
+                        </label>
+                        <label class="check-row" for="qr-card-shadow">
+                            <input type="checkbox" id="qr-card-shadow">
+                            Sombra suave
+                        </label>
+                    </div>
+                    <button type="button" id="qr-estilo-padrao" class="btn btn-ghost btn-sm">
+                        <i class="fas fa-rotate-left"></i> Restaurar padrão
+                    </button>
+                </div>
+                <!-- Selo "Leitura verificada" / avisos de contraste e falha de leitura -->
+                <div id="qr-leitura" class="space-y-2" aria-live="polite"></div>
+            </div>
+
             <div class="info-note">
                 <i class="fas fa-print"></i>
                 <span>O download sai em 2000×2000 px (correção de erro nível H), tamanho de sobra para
@@ -621,6 +804,8 @@ let hitsOffset = 0;
 let hitsTotal = 0;
 let period = { from: '', to: '' };
 let repSeq = 0;             // guarda de sequência: resposta atrasada de filtro/link anterior é descartada
+let repSeqFinalizado = 0;   // último repSeq cuja resposta voltou — repSeq !== repSeqFinalizado ⇒ há requisição em voo
+let analyticsPeriodKey = null; // período (from|to) que os KPIs/gráficos na tela realmente representam
 let editingId = null;       // null = criação
 const charts = {};          // instâncias Chart.js vivas
 
@@ -820,6 +1005,7 @@ qs('links-list').addEventListener('click', async (e) => {
             UI.toast('Link excluído', 'success');
             if (current && String(current.id) === String(link.id)) showList();
             await loadLinks();
+            loadOverview();   // a visão geral acima também muda (ranking/KPIs)
         } else {
             UI.toast('Erro ao excluir o link', 'error');
         }
@@ -828,9 +1014,265 @@ qs('links-list').addEventListener('click', async (e) => {
 
 qs('btn-reload').addEventListener('click', () => {
     // No relatório, recarrega também o link (destino e histórico de mudanças)
-    if (current) { openReport(current.id); } else { loadLinks(); }
+    if (current) { openReport(current.id); } else { loadLinks(); loadOverview(); }
 });
 qs('btn-novo').addEventListener('click', () => openForm(null));
+
+// ---------------- Visão geral (todas as campanhas) ----------------
+// Régua de período PRÓPRIA: mexer aqui não toca no filtro do relatório por
+// link (period/repSeq) — são estados independentes de propósito.
+let ovPeriod = { from: '', to: '' };
+let ovSeq = 0;          // guarda de corrida: só a resposta mais recente pinta
+let ovData = null;      // última visão geral carregada
+let ovChart = null;     // instância viva do gráfico — fica FORA do registro
+                        // 'charts' de propósito: o destroyCharts() do relatório
+                        // (chamado no voltar para a lista) não pode derrubá-la.
+
+// Cores das linhas (uma por campanha): tons distintos do DS, legíveis nos dois
+// temas. "Outros" é cinza tracejado — agregado, não é uma campanha.
+const OV_CORES = ['#6366F1', '#F59E0B', '#10B981', '#EF4444', '#0EA5E9', '#A855F7', '#EC4899', '#14B8A6'];
+const OV_COR_OUTROS = '#94A3B8';
+const OV_TOP_LINHAS = 8;
+
+function ovDestroyChart() {
+    if (ovChart) {
+        try { ovChart.destroy(); } catch (e) { /* já destruído */ }
+        ovChart = null;
+    }
+}
+
+function ovChartVazio(texto) {
+    ovDestroyChart();
+    qs('ov-wrap-dia').innerHTML = `<div class="chart-empty">${escapeHtml(texto)}</div>`;
+}
+
+function ovSetPeriodDays(days) {
+    document.querySelectorAll('#ov-chips .chip-btn').forEach((b) => {
+        b.classList.toggle('is-active', Number(b.dataset.days) === Number(days));
+    });
+    if (Number(days) > 0) {
+        const to = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - (Number(days) - 1));
+        ovPeriod = { from: isoLocal(from), to: isoLocal(to) };
+    } else {
+        ovPeriod = { from: '', to: '' };
+    }
+    qs('ov-from').value = ovPeriod.from;
+    qs('ov-to').value = ovPeriod.to;
+    loadOverview();
+}
+
+qs('ov-chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip-btn');
+    if (b) ovSetPeriodDays(Number(b.dataset.days));
+});
+
+qs('ov-apply').addEventListener('click', () => {
+    ovPeriod = { from: qs('ov-from').value || '', to: qs('ov-to').value || '' };
+    document.querySelectorAll('#ov-chips .chip-btn').forEach((b) => b.classList.remove('is-active'));
+    loadOverview();
+});
+
+async function loadOverview() {
+    // Guarda de corrida própria: trocar de chip rápido dispara requisições em
+    // sequência e só a MAIS RECENTE pode pintar KPIs, gráfico e ranking.
+    const seq = ++ovSeq;
+    UI.skeleton(qs('ov-kpis'), 'kpis', 3);
+    qs('ov-wrap-dia').innerHTML = '<div class="chart-empty"><i class="fas fa-spinner fa-spin"></i></div>';
+    UI.skeleton(qs('ov-ranking'), 'table', 4);
+    qs('ov-truncado').classList.add('hidden');
+
+    const data = await api.getOverviewLinks(ovPeriod.from, ovPeriod.to);
+    // Resposta obsoleta (outro período já foi pedido durante o await): descarta.
+    if (seq !== ovSeq) return;
+
+    // null = erro na API — estado de erro com retry, NUNCA "0 scans" falso:
+    // o dono compararia campanhas em cima de zeros que não existem.
+    if (data === null) {
+        ovChartVazio('Não foi possível carregar os dados.');
+        qs('ov-ranking').innerHTML = '';
+        erroEstado(qs('ov-kpis'), 'Não foi possível carregar a visão geral',
+            'Falha ao falar com o servidor (rede instável, sessão expirada ou servidor iniciando). Os números NÃO são zero — tente de novo.',
+            () => loadOverview());
+        UI.toast('Não foi possível carregar a visão geral', 'error');
+        return;
+    }
+
+    ovData = (data && typeof data === 'object') ? data : {};
+    if (!ovData.totals) ovData.totals = { hits: 0, uniqueVisitors: 0, semJs: 0, linksTotal: 0, linksAtivos: 0 };
+    renderOvKpis();
+    renderOvTruncado();
+    renderOvChart();
+    renderOvRanking();
+}
+
+function renderOvKpis() {
+    const t = ovData.totals || {};
+    const cards = [
+        { icon: 'fa-bolt', label: 'Scans no período', valor: fmtNum(t.hits) },
+        { icon: 'fa-user-group', label: 'Visitantes únicos', valor: fmtNum(t.uniqueVisitors) },
+        {
+            icon: 'fa-toggle-on', label: 'Links ativos',
+            valor: `${fmtNum(t.linksAtivos)} <span style="font-size:14px;font-weight:600;color:var(--text-faint);">de ${fmtNum(t.linksTotal)}</span>`
+        }
+    ];
+    // "Sem JavaScript" só quando existe — zero é o caso normal, não é KPI.
+    if (Number(t.semJs) > 0) cards.push({ icon: 'fa-image', label: 'Sem JavaScript', valor: fmtNum(t.semJs) });
+    qs('ov-kpis').innerHTML =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">' +
+        cards.map((c) => `
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="fas ${c.icon}"></i> ${c.label}</div>
+                <div class="kpi-value">${c.valor}</div>
+            </div>`).join('') +
+        '</div>';
+}
+
+// Mesmo padrão do renderAvisoTruncado do relatório, com texto da visão geral.
+function renderOvTruncado() {
+    const box = qs('ov-truncado');
+    if (!box) return;
+    if (!ovData || ovData.truncado !== true) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+    }
+    const amostra = Number(ovData.amostraDe);
+    const trecho = Number.isFinite(amostra) && amostra > 0
+        ? `A comparação abaixo considera apenas <strong>${fmtNum(amostra)}</strong> acessos deste período.`
+        : 'A comparação abaixo considera apenas parte dos acessos deste período.';
+    box.innerHTML =
+        '<i class="fas fa-triangle-exclamation"></i>' +
+        '<span><strong>Este período tem mais acessos do que a visão geral consegue somar.</strong> ' +
+        trecho +
+        ' Os números estão incompletos — filtre um intervalo menor (7 ou 30 dias) para ver o total real.</span>';
+    box.classList.remove('hidden');
+}
+
+function renderOvChart() {
+    if (!window.Chart) {
+        ovChartVazio('Não foi possível carregar a biblioteca de gráficos.');
+        return;
+    }
+    const byDay = Array.isArray(ovData.byDay) ? ovData.byDay : [];
+    const ranking = Array.isArray(ovData.ranking) ? ovData.ranking : [];
+    // Só campanhas com scan viram linha (o ranking vem ordenado por hits DESC);
+    // uma linha reta no zero para cada link parado só sujaria a comparação.
+    const comScan = ranking.filter((r) => Number(r.hits || 0) > 0);
+    if (!byDay.length || !comScan.length) {
+        ovChartVazio('Nenhum scan registrado no período.');
+        return;
+    }
+    const c = paleta();
+    const top = comScan.slice(0, OV_TOP_LINHAS);
+    const idsTop = top.map((r) => String(r.id));
+
+    const datasets = top.map((r, i) => ({
+        label: r.name || r.slug || `Link ${i + 1}`,
+        data: byDay.map((d) => Number(((d && d.porLink) || {})[String(r.id)] || 0)),
+        borderColor: OV_CORES[i % OV_CORES.length],
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        fill: false,
+        tension: 0.35,
+        pointRadius: byDay.length > 45 ? 0 : 2,
+        pointHoverRadius: 4
+    }));
+    // "Outros" agrega o que ficou fora do top 8 — só entra se existir resto.
+    if (comScan.length > top.length) {
+        datasets.push({
+            label: 'Outros',
+            data: byDay.map((d) => {
+                const porLink = (d && d.porLink) || {};
+                const somaTop = idsTop.reduce((a, id) => a + Number(porLink[id] || 0), 0);
+                return Math.max(0, Number((d && d.total) || 0) - somaTop);
+            }),
+            borderColor: OV_COR_OUTROS,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            fill: false,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 4
+        });
+    }
+
+    // destroy antes de recriar — instância vazada segue ouvindo resize/hover.
+    ovDestroyChart();
+    const wrap = qs('ov-wrap-dia');
+    wrap.innerHTML = '<canvas></canvas>';
+    ovChart = new Chart(wrap.querySelector('canvas').getContext('2d'), {
+        type: 'line',
+        data: { labels: byDay.map((d) => dayLabel(d.key)), datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { labels: { color: c.text, boxWidth: 12, usePointStyle: true } } },
+            scales: {
+                x: { grid: { color: c.grid }, ticks: { color: c.text, maxTicksLimit: 12, maxRotation: 0 } },
+                y: { beginAtZero: true, grid: { color: c.grid }, ticks: { color: c.text, precision: 0 } }
+            }
+        }
+    });
+}
+
+function renderOvRanking() {
+    const alvo = qs('ov-ranking');
+    const ranking = Array.isArray(ovData.ranking) ? ovData.ranking : [];
+    if (!ranking.length) {
+        alvo.innerHTML = '<div class="cell-faint" style="font-size:12.5px;padding:16px 18px;">Nenhum link criado ainda — crie o primeiro em "Novo link".</div>';
+        return;
+    }
+    // O backend já ordena por hits DESC (links sem scan no período vão ao fim).
+    const linhas = ranking.map((r) => {
+        const pct = Number(r.pct);
+        return `
+            <tr data-id="${escapeHtml(r.id)}" title="Abrir o relatório de ${escapeHtml(r.name || r.slug || '')}">
+                <td>
+                    <div style="font-weight:600;color:var(--text);">${escapeHtml(r.name || 'Sem nome')}</div>
+                    <div class="cell-faint">/r/${escapeHtml(r.slug || '')}</div>
+                </td>
+                <td class="whitespace-nowrap">${fmtNum(r.hits)}</td>
+                <td class="cell-muted whitespace-nowrap">${fmtNum(r.uniques)}</td>
+                <td class="cell-muted whitespace-nowrap">${Number.isFinite(pct) ? pct.toLocaleString('pt-BR') : '0'}%</td>
+                <td class="cell-muted whitespace-nowrap">${r.lastHitAt ? fmtDateTime(r.lastHitAt) : 'nunca escaneado'}</td>
+                <td>${r.active === false
+                    ? '<span class="badge badge-danger"><i class="fas fa-ban"></i> Desativado</span>'
+                    : '<span class="badge badge-success"><i class="fas fa-check"></i> Ativo</span>'}</td>
+            </tr>`;
+    }).join('');
+    alvo.innerHTML = `
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Campanha</th>
+                        <th>Scans</th>
+                        <th>Únicos</th>
+                        <th>% do total</th>
+                        <th>Último scan</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>`;
+}
+
+// Linha do ranking abre o relatório daquela campanha — mesma navegação usada
+// pelo botão de relatório da lista (openReport busca o link completo).
+qs('ov-ranking').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) openReport(tr.dataset.id);
+});
+
+// Tema trocado: recria o gráfico da visão geral com as cores novas
+window.addEventListener('themechange', () => {
+    if (ovData) renderOvChart();
+});
 
 // ---------------- Modal de criação / edição ----------------
 function openForm(link) {
@@ -903,6 +1345,7 @@ qs('form-link').addEventListener('submit', async (e) => {
         const savedId = editingId;
         closeForm();
         await loadLinks();
+        loadOverview();   // nome/status novos também aparecem na visão geral
         if (current && savedId && String(current.id) === String(savedId)) {
             await openReport(savedId);
         }
@@ -916,12 +1359,47 @@ qs('form-link').addEventListener('submit', async (e) => {
 // ---------------- Modal do QR Code ----------------
 let qrLink = null;
 
-function openQr(link) {
+// Logo padrão do centro do QR (a da Aero Festas). A logo por link é um
+// data:image/...;base64 persistido em TrackedLink.logoDataUrl.
+// Por que data URL e não arquivo no Storage: (1) é o padrão já existente no
+// sistema (a foto de perfil do monitor também é base64); (2) data: não
+// contamina ("taint") o canvas — se a logo viesse de uma URL remota sem CORS,
+// o toDataURL() do "Baixar PNG" LANÇARIA SecurityError e o download morreria.
+const LOGO_PADRAO = './icons/icon-512.png';
+
+function logoDoLink() {
+    return (qrLink && qrLink.logoDataUrl) ? qrLink.logoDataUrl : LOGO_PADRAO;
+}
+
+function atualizarLogoUi() {
+    qs('qr-logo-thumb').src = logoDoLink();
+    // "Usar padrão" só faz sentido quando existe logo própria persistida
+    qs('qr-logo-padrao').classList.toggle('hidden', !(qrLink && qrLink.logoDataUrl));
+}
+
+async function openQr(link) {
     qrLink = link;
+    qrEstiloSalvo = ('qrStyle' in link) ? (link.qrStyle || null) : null;
     qs('qr-title').textContent = 'QR Code · ' + (link.name || link.slug || '');
     qs('qr-url-row').innerHTML = urlRowHtml(linkUrl(link.slug));
     qs('modal-qr').classList.remove('hidden');
+    atualizarLogoUi();
+    atualizarEstiloUi();
     renderQrPreview();
+    // A lista (listLinks) NÃO traz logoDataUrl (base64 grande incharia o
+    // payload de cada linha) nem qrStyle: busca o link completo para saber a
+    // logo e o estilo reais. Se a busca falhar, o modal segue com o que tinha.
+    if (!('logoDataUrl' in link) || !('qrStyle' in link)) {
+        const full = await api.getLinkRastreado(link.id);
+        // O modal pode ter fechado ou trocado de link durante o await
+        if (full && qrLink && String(qrLink.id) === String(link.id)) {
+            qrLink = full;
+            qrEstiloSalvo = full.qrStyle || null;
+            atualizarLogoUi();
+            atualizarEstiloUi();
+            renderQrPreview();
+        }
+    }
 }
 
 function closeQr() {
@@ -957,7 +1435,9 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // Desenha o QR no canvas; nível H tolera a logo sobreposta no centro.
-async function desenharQr(canvas, texto, tamanho, comLogo) {
+// logoSrc: data URL da logo do link ou o caminho da logo padrão — preview e
+// download 2000px passam a MESMA fonte, o que se vê é o que se imprime.
+async function desenharQr(canvas, texto, tamanho, comLogo, logoSrc) {
     if (!window.QRCode) throw new Error('Biblioteca de QR não carregou');
     await window.QRCode.toCanvas(canvas, texto, {
         width: tamanho,
@@ -971,7 +1451,7 @@ async function desenharQr(canvas, texto, tamanho, comLogo) {
     });
     if (!comLogo) return;
     try {
-        const img = await loadImagem('./icons/icon-512.png');
+        const img = await loadImagem(logoSrc || LOGO_PADRAO);
         const ctx = canvas.getContext('2d');
         const lado = canvas.width;
         const caixa = Math.round(lado * 0.22);   // quadrado branco de fundo
@@ -988,19 +1468,296 @@ async function desenharQr(canvas, texto, tamanho, comLogo) {
     }
 }
 
+// ---------------- Estilo visual do QR (TrackedLink.qrStyle) ----------------
+
+// Espelho da whitelist do backend — chave inválida cai no padrão em vez de
+// derrubar o render (um qrStyle antigo/corrompido nunca pode matar o modal).
+const QR_DOT_TYPES = ['square', 'rounded', 'dots', 'classy', 'extra-rounded'];
+const QR_CORNER_TYPES = ['square', 'dot', 'extra-rounded'];
+const QR_COR_RE = /^#[0-9a-fA-F]{6}$/;
+
+let qrEstiloSalvo = null;   // último qrStyle CONFIRMADO no servidor (string JSON ou null) — base do rollback
+
+function qrEstiloPadrao() {
+    return {
+        dotType: 'square',
+        cornerType: 'square',
+        dotColor: '#000000',
+        cornerColor: '#000000',
+        bgColor: '#FFFFFF',
+        card: { enabled: false, radius: false, shadow: false }
+    };
+}
+
+// Normaliza o qrStyle do link (o backend guarda TEXT: pode vir string JSON,
+// objeto já parseado ou null). Cada chave é validada isoladamente.
+function estiloDoLink() {
+    const estilo = qrEstiloPadrao();
+    let bruto = qrLink ? qrLink.qrStyle : null;
+    if (typeof bruto === 'string') {
+        try { bruto = JSON.parse(bruto); } catch (e) { bruto = null; }
+    }
+    if (!bruto || typeof bruto !== 'object') return estilo;
+    if (QR_DOT_TYPES.includes(bruto.dotType)) estilo.dotType = bruto.dotType;
+    if (QR_CORNER_TYPES.includes(bruto.cornerType)) estilo.cornerType = bruto.cornerType;
+    if (QR_COR_RE.test(bruto.dotColor || '')) estilo.dotColor = bruto.dotColor;
+    if (QR_COR_RE.test(bruto.cornerColor || '')) estilo.cornerColor = bruto.cornerColor;
+    if (QR_COR_RE.test(bruto.bgColor || '')) estilo.bgColor = bruto.bgColor;
+    if (bruto.card && typeof bruto.card === 'object') {
+        estilo.card.radius = bruto.card.radius === true;
+        estilo.card.shadow = bruto.card.shadow === true;
+        estilo.card.enabled = bruto.card.enabled === true || estilo.card.radius || estilo.card.shadow;
+    }
+    return estilo;
+}
+
+// Gera o QR estilizado num canvas próprio via QRCodeStyling.
+// Inegociáveis independentes do estilo escolhido:
+//  - errorCorrectionLevel 'H' (tolera logo E sujeira de impressão);
+//  - margem de 10% da largura ≈ 4 módulos de zona quieta (ISO/IEC 18004) —
+//    mesma garantia do desenharQr clássico, o arquivo vai para a GRÁFICA.
+async function qrEstilizado(texto, tamanho, comLogo, logoSrc, estilo) {
+    const opcoes = {
+        width: tamanho,
+        height: tamanho,
+        type: 'canvas',
+        data: texto,
+        margin: Math.round(tamanho * 0.10),
+        qrOptions: { errorCorrectionLevel: 'H' },
+        dotsOptions: { type: estilo.dotType, color: estilo.dotColor },
+        cornersSquareOptions: { type: estilo.cornerType, color: estilo.cornerColor },
+        // Sem type: o miolo do olho herda o desenho dos pontos; a cor acompanha
+        // o canto para o olho inteiro ficar coerente.
+        cornersDotOptions: { color: estilo.cornerColor },
+        backgroundOptions: { color: estilo.bgColor }
+    };
+    if (comLogo) {
+        opcoes.image = logoSrc || LOGO_PADRAO;
+        opcoes.imageOptions = {
+            hideBackgroundDots: true,
+            // A lib mede por ÁREA escondida: cobertura linear ≈ √(0.30 × imageSize)
+            // (0.30 = teto do nível H). 0.16 ⇒ ~22% do lado, como o desenharQr de hoje.
+            imageSize: 0.16,
+            margin: Math.max(2, Math.round(tamanho * 0.008)),
+            crossOrigin: 'anonymous'
+        };
+    }
+    const qr = new window.QRCodeStyling(opcoes);
+    const blob = await qr.getRawData('png');
+    if (!blob) throw new Error('QRCodeStyling não devolveu a imagem');
+    const url = URL.createObjectURL(blob);
+    try {
+        const img = await loadImagem(url);
+        const cv = document.createElement('canvas');
+        cv.width = tamanho;
+        cv.height = tamanho;
+        cv.getContext('2d').drawImage(img, 0, 0, tamanho, tamanho);
+        return cv;
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+}
+
+// Cartão (card.*): moldura desenhada num canvas próprio EM VOLTA do QR pronto.
+// A moldura usa a MESMA cor do fundo do QR — na prática ela ESTENDE a zona
+// quieta; o arredondado e a sombra acontecem além dela, nunca por cima.
+function comporCartao(qrCv, estilo) {
+    const t = qrCv.width;
+    const borda = Math.round(t * 0.04);   // faixa do cartão além da zona quieta
+    // Folga TRANSPARENTE ao redor: respiro para compor na arte do panfleto e
+    // espaço para a sombra não ser cortada na borda do PNG.
+    const folga = estilo.card.shadow ? Math.round(t * 0.06) : Math.round(t * 0.02);
+    const lado = t + 2 * (borda + folga);
+    const cv = document.createElement('canvas');
+    cv.width = lado;
+    cv.height = lado;
+    const ctx = cv.getContext('2d');
+    ctx.save();
+    if (estilo.card.shadow) {
+        ctx.shadowColor = 'rgba(15, 23, 42, 0.30)';
+        ctx.shadowBlur = t * 0.03;
+        ctx.shadowOffsetY = t * 0.012;
+    }
+    // Raio de 6% recorta no máximo ~1.8% do canto — menos que a borda de 4%,
+    // então o arredondado nunca alcança o canvas do QR (nem a zona quieta).
+    const raio = estilo.card.radius ? Math.round(t * 0.06) : 0;
+    roundRect(ctx, folga, folga, t + 2 * borda, t + 2 * borda, raio);
+    ctx.fillStyle = estilo.bgColor;
+    ctx.fill();
+    ctx.restore();
+    ctx.drawImage(qrCv, folga + borda, folga + borda);
+    return cv;
+}
+
+// FUNÇÃO CENTRAL: preview (520) e download (2000) passam AQUI e só aqui —
+// o que se vê no modal é pixel a pixel o que vai para a gráfica.
+// Degradação em camadas: estilizado com logo → estilizado sem logo → clássico
+// (desenharQr). O botão Baixar PNG nunca morre por causa do estilo.
+async function gerarQrFinal(tamanho) {
+    const texto = linkUrl(qrLink.slug);
+    const comLogo = qs('qr-logo').checked;
+    const estilo = estiloDoLink();
+    if (window.QRCodeStyling) {
+        let cv = null;
+        try {
+            cv = await qrEstilizado(texto, tamanho, comLogo, logoDoLink(), estilo);
+        } catch (e) {
+            console.warn('QR estilizado falhou' + (comLogo ? ', tentando sem a logo' : '') + ':', e);
+            if (comLogo) {
+                try { cv = await qrEstilizado(texto, tamanho, false, null, estilo); }
+                catch (e2) { console.warn('QR estilizado falhou também sem logo:', e2); }
+            }
+        }
+        if (cv) return (estilo.card && estilo.card.enabled) ? comporCartao(cv, estilo) : cv;
+    }
+    // FALLBACK (QRCodeStyling ausente ou quebrado): caminho clássico intacto.
+    const cv = document.createElement('canvas');
+    await desenharQr(cv, texto, tamanho, comLogo, logoDoLink());
+    return cv;
+}
+
+// ---------------- Teste de leitura (jsQR) ----------------
+
+// Decodifica o canvas final e confere se o texto lido é EXATAMENTE a URL do
+// link. Retornos: true = leu certo, false = não leu (ou leu outra coisa),
+// null = jsQR indisponível/erro no teste (sem veredicto — não bloqueia nada).
+function testarLeituraQr(canvas, textoEsperado) {
+    if (!window.jsQR) return null;
+    try {
+        // Duas escalas (teto de 1000px — o 2000 da gráfica demoraria à toa):
+        // o jsQR é sensível ao tamanho do módulo após o reescalonamento, e uma
+        // escala única gera alarme falso por artefato de amostragem, sobretudo
+        // no estilo "Bolinhas". Reprovado = falhou nas DUAS. Falso positivo não
+        // existe: ou o decoder devolve exatamente a URL do link, ou nada.
+        const maior = Math.max(canvas.width, canvas.height);
+        const larguras = [...new Set([Math.min(1000, maior), 640])];
+        for (const alvo of larguras) {
+            const escala = alvo / maior;
+            const w = Math.max(1, Math.round(canvas.width * escala));
+            const h = Math.max(1, Math.round(canvas.height * escala));
+            const cv = document.createElement('canvas');
+            cv.width = w;
+            cv.height = h;
+            const ctx = cv.getContext('2d', { willReadFrequently: true });
+            // ACHATA sobre branco: jsQR ignora o canal alfa, e os pixels
+            // transparentes do cartão virariam preto, cercando o QR de "tinta".
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(canvas, 0, 0, w, h);
+            const dados = ctx.getImageData(0, 0, w, h);
+            // dontInvert de propósito: o jsQR até leria QR invertido (claro
+            // sobre escuro), mas muitas câmeras de celular NÃO — o teste
+            // precisa reprovar o que o leitor mais fraco da rua reprovaria.
+            const lido = window.jsQR(dados.data, w, h, { inversionAttempts: 'dontInvert' });
+            if (lido && lido.data === textoEsperado) return true;
+        }
+        return false;
+    } catch (e) {
+        console.warn('Teste de leitura indisponível:', e);
+        return null;
+    }
+}
+
+// Luminância relativa (WCAG) — guarda de contraste que EDUCA antes do juiz
+// final (o teste de leitura) dar o veredicto.
+function luminanciaHex(hex) {
+    const c = [1, 3, 5].map((i) => {
+        const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
+function razaoContraste(corA, corB) {
+    const l1 = luminanciaHex(corA);
+    const l2 = luminanciaHex(corB);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+
+function renderLeituraUi(ok, estilo) {
+    const box = qs('qr-leitura');
+    if (!box) return;
+    const partes = [];
+    const invertido = luminanciaHex(estilo.dotColor) > luminanciaHex(estilo.bgColor);
+    const razao = razaoContraste(estilo.dotColor, estilo.bgColor);
+    if (invertido) {
+        partes.push(
+            '<div class="qr-aviso qr-aviso-forte"><i class="fas fa-circle-exclamation"></i>' +
+            '<span><strong>QR invertido:</strong> os pontos estão mais claros que o fundo — ' +
+            'muitos leitores não leem código claro sobre fundo escuro. Use pontos escuros sobre fundo claro.</span></div>');
+    } else if (razao < 4) {
+        partes.push(
+            '<div class="qr-aviso"><i class="fas fa-triangle-exclamation"></i>' +
+            `<span><strong>Contraste baixo</strong> entre pontos e fundo (${razao.toFixed(1)}:1 — o ideal é 4:1 ou mais). ` +
+            'Impresso, a leitura pode falhar.</span></div>');
+    }
+    if (ok === true) {
+        partes.push('<div class="qr-selo"><i class="fas fa-circle-check"></i> Leitura verificada</div>');
+    } else if (ok === false) {
+        partes.push(
+            '<div class="qr-aviso qr-aviso-forte"><i class="fas fa-ban"></i>' +
+            '<span><strong>Esta combinação falhou no teste de leitura</strong> — ajuste as cores ou o ' +
+            'formato antes de imprimir. Um QR bonito que não lê é panfleto jogado fora.</span></div>');
+    } else if (!window.jsQR) {
+        // jsQR não carregou neste aparelho: sem veredicto possível. A nota é
+        // NEUTRA de propósito — sem ela o selo simplesmente sumia e o usuário
+        // não distinguia "passou no teste" de "não foi testado".
+        partes.push(
+            '<div class="info-note"><i class="fas fa-circle-info"></i>' +
+            '<span>Teste de leitura indisponível neste aparelho — teste com a câmera antes de imprimir.</span></div>');
+    }
+    // ok === null com jsQR presente (erro pontual no teste): sem selo e sem
+    // alarde — o teste é um extra de segurança, não um pré-requisito.
+    box.innerHTML = partes.join('');
+}
+
+// Guarda de sequência do preview: arrastar o seletor de cor dispara vários
+// renders assíncronos — só o último pode pintar o canvas e o selo.
+let qrPreviewSeq = 0;
+
 async function renderQrPreview() {
     if (!qrLink) return;
+    const seq = ++qrPreviewSeq;
+    const alvo = qrLink;
     const canvas = qs('qr-canvas');
     try {
-        await desenharQr(canvas, linkUrl(qrLink.slug), 520, qs('qr-logo').checked);
-        // A lib grava style inline com os 520px do bitmap, vencendo o CSS de
-        // 260px do .qr-stage — o preview estourava o modal. Re-ancora o tamanho
-        // de EXIBIÇÃO a cada render (o bitmap continua 520px, nítido em retina).
+        const pronto = await gerarQrFinal(520);
+        // Render obsoleto (outra cor já foi escolhida) ou modal trocou de link
+        if (seq !== qrPreviewSeq || qrLink !== alvo) return;
+        canvas.width = pronto.width;
+        canvas.height = pronto.height;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(pronto, 0, 0);
+        // O bitmap pode ter 520px (ou mais, com cartão) — re-ancora o tamanho
+        // de EXIBIÇÃO a cada render para não estourar o modal (nítido em retina).
         canvas.style.width = '260px';
         canvas.style.maxWidth = '100%';
         // height auto (e não 260px fixo): se o max-width encolher o canvas numa
         // tela estreita, o QR continua quadrado — altura fixa o distorceria.
         canvas.style.height = 'auto';
+        // Teste de leitura em CADA preview: decodifica o canvas final inteiro
+        // (com estilo, logo e cartão) e compara com a URL do link.
+        let leitura = testarLeituraQr(pronto, linkUrl(alvo.slug));
+        if (leitura === false) {
+            // Falso alarme conhecido: com módulos pequenos ("Bolinhas"), o jsQR
+            // reprova o render de 520px por amostragem, mas o arquivo de 2000px
+            // — o que de fato vai para a GRÁFICA — lê normalmente (verificado no
+            // harness: dots reprova em 520 e passa em 2000). O selo/aviso é um
+            // veredicto sobre o ARQUIVO: antes de acusar, retesta no 2000 da
+            // mesma gerarQrFinal do download. QR invertido continua reprovando
+            // em qualquer tamanho (dontInvert).
+            // Debounce de ~150ms ANTES do render pesado: arrastar o seletor de
+            // cor por uma faixa ruim reprova vários previews em sequência e cada
+            // um pediria um 2000px. A guarda qrPreviewSeq já DESCARTA resultados
+            // obsoletos — a espera evita fazer o trabalho de CPU à toa.
+            await new Promise((r) => setTimeout(r, 150));
+            if (seq !== qrPreviewSeq || qrLink !== alvo) return;
+            const grande = await gerarQrFinal(2000);
+            if (seq !== qrPreviewSeq || qrLink !== alvo) return;
+            leitura = testarLeituraQr(grande, linkUrl(alvo.slug));
+        }
+        renderLeituraUi(leitura, estiloDoLink());
     } catch (e) {
         UI.toast('Não foi possível gerar o QR Code', 'error');
     }
@@ -1013,8 +1770,19 @@ qs('qr-download').addEventListener('click', async () => {
     btn.disabled = true;
     icon.className = 'fas fa-spinner fa-spin';
     try {
-        const off = document.createElement('canvas');
-        await desenharQr(off, linkUrl(qrLink.slug), 2000, qs('qr-logo').checked);
+        const off = await gerarQrFinal(2000);
+        // Juiz final ANTES de todo download: o arquivo vai para a gráfica e
+        // 1.000 panfletos com QR ilegível não têm correção depois.
+        const leitura = testarLeituraQr(off, linkUrl(qrLink.slug));
+        if (leitura === false) {
+            const seguir = await UI.confirm({
+                title: 'QR reprovado no teste de leitura',
+                message: 'Este arquivo NÃO passou no teste de leitura aqui no navegador — impresso, é muito provável que os celulares não abram o link, e material impresso não tem conserto. Ajuste as cores/formato ou volte ao padrão. Baixar mesmo assim?',
+                confirmText: 'Baixar mesmo assim',
+                danger: true
+            });
+            if (!seguir) return;
+        }
         const a = document.createElement('a');
         a.href = off.toDataURL('image/png');
         a.download = `qr-${qrLink.slug || 'aero-festas'}.png`;
@@ -1030,10 +1798,163 @@ qs('qr-download').addEventListener('click', async () => {
     }
 });
 
+// ---------------- UI e persistência do estilo ----------------
+
+function atualizarEstiloUi() {
+    const e = estiloDoLink();
+    qs('qr-dot-type').value = e.dotType;
+    qs('qr-corner-type').value = e.cornerType;
+    qs('qr-cor-pontos').value = e.dotColor;
+    qs('qr-cor-cantos').value = e.cornerColor;
+    qs('qr-cor-fundo').value = e.bgColor;
+    qs('qr-card-radius').checked = !!(e.card && e.card.radius);
+    qs('qr-card-shadow').checked = !!(e.card && e.card.shadow);
+}
+
+function lerEstiloDosControles() {
+    const radius = qs('qr-card-radius').checked;
+    const shadow = qs('qr-card-shadow').checked;
+    return {
+        dotType: qs('qr-dot-type').value,
+        cornerType: qs('qr-corner-type').value,
+        dotColor: qs('qr-cor-pontos').value,
+        cornerColor: qs('qr-cor-cantos').value,
+        bgColor: qs('qr-cor-fundo').value,
+        card: { enabled: radius || shadow, radius: radius, shadow: shadow }
+    };
+}
+
+// Persiste o estilo (objeto ou null = volta ao padrão) com o MESMO padrão da
+// logo: preview otimista imediato + rollback se a API falhar + toast.
+async function salvarEstilo(novoEstilo) {
+    if (!qrLink) return;
+    const alvoId = qrLink.id;
+    const novoStr = novoEstilo ? JSON.stringify(novoEstilo) : null;
+    qrLink.qrStyle = novoStr;
+    atualizarEstiloUi();
+    renderQrPreview();
+    const res = await api.atualizarLinkRastreado(alvoId, { qrStyle: novoEstilo });
+    if (res && res.ok) {
+        if (qrLink && String(qrLink.id) === String(alvoId)) qrEstiloSalvo = novoStr;
+        // Mantém o link do relatório em sincronia (reabrir o modal não refaz o GET)
+        if (current && String(current.id) === String(alvoId)) current.qrStyle = novoStr;
+        UI.toast(novoEstilo ? 'Estilo do QR salvo' : 'QR voltou ao estilo padrão', 'success');
+    } else {
+        // Modal pode ter trocado de link durante o await — só reverte se ainda é ele
+        if (qrLink && String(qrLink.id) === String(alvoId)) {
+            qrLink.qrStyle = qrEstiloSalvo;
+            atualizarEstiloUi();
+            renderQrPreview();
+        }
+        UI.toast((res && (res.error || res.message)) || 'Erro ao salvar o estilo do QR', 'error');
+    }
+}
+
+// Selects e checkboxes: uma mudança = um render + um save.
+['qr-dot-type', 'qr-corner-type', 'qr-card-radius', 'qr-card-shadow'].forEach((id) => {
+    qs(id).addEventListener('change', () => { if (qrLink) salvarEstilo(lerEstiloDosControles()); });
+});
+
+// Cores: 'input' dispara a CADA arrasto no seletor — só re-renderiza o preview
+// (otimista, local); 'change' (seletor fechado) é quem persiste na API.
+['qr-cor-pontos', 'qr-cor-cantos', 'qr-cor-fundo'].forEach((id) => {
+    const el = qs(id);
+    el.addEventListener('input', () => {
+        if (!qrLink) return;
+        qrLink.qrStyle = JSON.stringify(lerEstiloDosControles());
+        renderQrPreview();
+    });
+    el.addEventListener('change', () => { if (qrLink) salvarEstilo(lerEstiloDosControles()); });
+});
+
+qs('qr-estilo-padrao').addEventListener('click', () => { if (qrLink) salvarEstilo(null); });
+
+// ---------------- Logo editável do QR ----------------
+
+// Redimensiona a imagem escolhida para caber em NO MÁXIMO 512×512 (preserva a
+// proporção, fundo transparente) e exporta PNG como data URL. Uma foto de 8MB
+// vira poucos KB aqui; GIF/BMP/WebP viram PNG pelo próprio canvas. O resultado
+// é um data: URL justamente para não contaminar o canvas do QR (ver LOGO_PADRAO).
+function redimensionarLogo(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Arquivo de imagem inválido'));
+            img.onload = () => {
+                try {
+                    if (!img.width || !img.height) { reject(new Error('Imagem sem dimensões')); return; }
+                    const MAX = 512;
+                    const escala = Math.min(1, MAX / Math.max(img.width, img.height));
+                    const w = Math.max(1, Math.round(img.width * escala));
+                    const h = Math.max(1, Math.round(img.height * escala));
+                    const cv = document.createElement('canvas');
+                    cv.width = w;
+                    cv.height = h;
+                    cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(cv.toDataURL('image/png'));
+                } catch (e) { reject(e); }
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Persiste a logo (data URL ou null = volta ao padrão) com preview imediato e
+// rollback se a API falhar — o QR na tela nunca mente sobre o que está salvo.
+async function salvarLogo(novaLogo, msgOk, msgErro) {
+    if (!qrLink) return;
+    const alvoId = qrLink.id;
+    const logoAnterior = qrLink.logoDataUrl || null;
+    qrLink.logoDataUrl = novaLogo;
+    atualizarLogoUi();
+    renderQrPreview();
+    const res = await api.atualizarLinkRastreado(alvoId, { logoDataUrl: novaLogo });
+    if (res && res.ok) {
+        UI.toast(msgOk, 'success');
+        // Mantém o link do relatório em sincronia (reabrir o modal não refaz o GET)
+        if (current && String(current.id) === String(alvoId)) current.logoDataUrl = novaLogo;
+    } else {
+        // Modal pode ter trocado de link durante o await — só reverte se ainda é ele
+        if (qrLink && String(qrLink.id) === String(alvoId)) {
+            qrLink.logoDataUrl = logoAnterior;
+            atualizarLogoUi();
+            renderQrPreview();
+        }
+        UI.toast((res && (res.error || res.message)) || msgErro, 'error');
+    }
+}
+
+qs('qr-logo-trocar').addEventListener('click', () => qs('qr-logo-file').click());
+
+qs('qr-logo-file').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';   // permite escolher o mesmo arquivo de novo depois
+    if (!file || !qrLink) return;
+    const alvoId = qrLink.id;
+    let dataUrl;
+    try {
+        dataUrl = await redimensionarLogo(file);
+    } catch (err) {
+        // Arquivo ilegível/corrompido: avisa e MANTÉM a logo atual intacta
+        UI.toast('Não foi possível ler essa imagem — a logo atual foi mantida', 'error');
+        return;
+    }
+    if (!qrLink || String(qrLink.id) !== String(alvoId)) return;
+    await salvarLogo(dataUrl, 'Logo do QR atualizada', 'Erro ao salvar a logo');
+});
+
+qs('qr-logo-padrao').addEventListener('click', () => {
+    salvarLogo(null, 'QR voltou a usar a logo padrão', 'Erro ao voltar para a logo padrão');
+});
+
 // ---------------- Relatório ----------------
 function showList() {
     current = null;
     analytics = null;
+    analyticsPeriodKey = null;
     destroyCharts();
     qs('view-report').classList.add('hidden');
     qs('view-list').classList.remove('hidden');
@@ -1171,6 +2092,10 @@ async function loadReport() {
     // Resposta obsoleta (outro filtro ou outro link já foi pedido): descarta.
     if (seq !== repSeq || !current || String(current.id) !== String(reqLinkId)) return;
 
+    // Esta é a requisição mais recente e ela terminou (com dado ou com erro):
+    // nada mais está em voo — o guard do "Baixar PDF" usa isso.
+    repSeqFinalizado = seq;
+
     // null = erro na API (getAnalyticsLink devolve null em falha) — não pode
     // ser mesclado com analyticsVazio(), senão vira "0 scans" legítimo.
     if (an === null) {
@@ -1186,6 +2111,12 @@ async function loadReport() {
     renderGraficos();
     renderBreakdowns();
     renderHits(hits);
+
+    // Só DEPOIS do render: este é o período que a tela de fato mostra. O
+    // "Baixar PDF" compara esta chave com o filtro atual — se o dono trocou o
+    // chip e a recarga falhou (ou ainda está em voo), o PDF não sai misturando
+    // cabeçalho do período novo com KPIs/gráficos do antigo.
+    analyticsPeriodKey = period.from + '|' + period.to;
 }
 
 function renderTotais() {
@@ -1522,6 +2453,9 @@ async function loadHits(offset) {
         limit: HITS_LIMIT, offset: hitsOffset, from: period.from, to: period.to
     });
     if (seq !== repSeq || !current || String(current.id) !== String(reqLinkId)) return;
+    // A paginação também consome repSeq: sem marcar a conclusão aqui, o guard
+    // do "Baixar PDF" acharia que há requisição em voo para sempre após paginar.
+    repSeqFinalizado = seq;
     renderHits(resposta);
 }
 
@@ -1586,24 +2520,360 @@ qs('rep-export').addEventListener('click', async () => {
     }
 });
 
-// Salvar PDF — preenche o cabeçalho que só existe na impressão e abre o diálogo
-// do navegador, onde "Salvar como PDF" está disponível em qualquer aparelho.
-// O @media print do <style> esconde tudo que não é o relatório.
-qs('rep-print').addEventListener('click', () => {
-    if (!current) return;
-    // 'YYYY-MM-DD' → 'DD/MM/YYYY' direto da string: new Date('YYYY-MM-DD') é UTC
-    // e deslocaria o dia no fuso do Brasil.
-    const diaBr = (s) => String(s).split('-').reverse().join('/');
-    const periodo = (period.from || period.to)
+// ---------------- Baixar PDF (jsPDF + AutoTable vendorizados) ----------------
+
+// 'YYYY-MM-DD' → 'DD/MM/YYYY' direto da string: new Date('YYYY-MM-DD') é UTC
+// e deslocaria o dia no fuso do Brasil.
+function diaBr(s) { return String(s).split('-').reverse().join('/'); }
+
+function periodoTexto() {
+    return (period.from || period.to)
         ? `${period.from ? diaBr(period.from) : 'início'} a ${period.to ? diaBr(period.to) : 'hoje'}`
         : 'todo o período';
+}
+
+// Caminho ANTIGO, mantido como fallback: preenche o cabeçalho que só existe na
+// impressão e abre o diálogo do navegador ("Salvar como PDF" existe em qualquer
+// aparelho). O @media print do <style> esconde tudo que não é o relatório —
+// e o Ctrl+P continua usando este mesmo CSS.
+function imprimirRelatorio() {
+    if (!current) return;
     qs('print-header').innerHTML = `
         <div class="ph-title">Aero Festas — Relatório de scans · ${escapeHtml(current.name || current.slug)}</div>
         <div class="ph-meta">
             QR: ${escapeHtml(linkUrl(current.slug))} &nbsp;·&nbsp; destino atual: ${escapeHtml(current.destination || '—')}<br>
-            Período: ${escapeHtml(periodo)} &nbsp;·&nbsp; gerado em ${new Date().toLocaleString('pt-BR')}
+            Período: ${escapeHtml(periodoTexto())} &nbsp;·&nbsp; gerado em ${new Date().toLocaleString('pt-BR')}
         </div>`;
     window.print();
+}
+
+// As fontes padrão do jsPDF (helvetica) só cobrem latin-1: os acentos do pt-BR
+// passam inteiros, mas travessão, aspas curvas e emoji virariam lixo no PDF.
+// Normaliza o que tem equivalente e troca o resto por '?'.
+function pdfTxt(v) {
+    return String(v == null ? '' : v)
+        .replace(/[–—]/g, '-')
+        .replace(/[‘’]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/ /g, ' ')
+        .replace(/[^\x00-\xff]/g, '?');
+}
+
+// O canvas do Chart.js é transparente e, no tema escuro, os rótulos são claros —
+// ilegíveis sobre a folha branca do PDF. Composita o gráfico sobre o fundo do
+// card (branco no claro, --surface-1 no escuro, lido do próprio tema): o PDF
+// sai legível nos dois temas, com a mesma cara da tela.
+function chartParaPng(chart) {
+    const src = chart.canvas;
+    const off = document.createElement('canvas');
+    off.width = src.width;
+    off.height = src.height;
+    const ctx = off.getContext('2d');
+    let fundo = '#FFFFFF';
+    if (document.documentElement.classList.contains('dark')) {
+        fundo = (getComputedStyle(document.documentElement).getPropertyValue('--surface-1') || '').trim() || '#131C2E';
+    }
+    ctx.fillStyle = fundo;
+    ctx.fillRect(0, 0, off.width, off.height);
+    ctx.drawImage(src, 0, 0);
+    return { dataUrl: off.toDataURL('image/png'), w: src.width, h: src.height };
+}
+
+// Teto de linhas da tabela do PDF. O backend clampa o limit de /hits em 500 por
+// página (routes/trackedLinks.js e TrackedLinkService.listHits): uma página cheia
+// já cobre o teto, mas o laço pagina mesmo assim, caso o teto do servidor mude.
+const PDF_MAX_LINHAS = 500;
+const PDF_LIMIT_API = 500;
+
+async function coletarHitsPdf(linkId) {
+    const itens = [];
+    let total = 0;
+    while (itens.length < PDF_MAX_LINHAS) {
+        const resposta = await api.getHitsLink(linkId, {
+            limit: Math.min(PDF_LIMIT_API, PDF_MAX_LINHAS - itens.length),
+            offset: itens.length,
+            from: period.from,
+            to: period.to
+        });
+        if (!resposta || !Array.isArray(resposta.items)) {
+            // Falhou logo na primeira página: sem linha nenhuma o PDF sairia
+            // mentindo "nenhum acesso" — aborta com erro claro.
+            if (!itens.length) throw new Error('Falha ao buscar os acessos detalhados');
+            break;  // já temos parte — o rodapé da tabela avisa o corte
+        }
+        total = Math.max(total, Number(resposta.total) || 0);
+        if (!resposta.items.length) break;
+        itens.push(...resposta.items);
+        if (itens.length >= total) break;
+    }
+    return { itens, total: Math.max(total, itens.length) };
+}
+
+async function gerarPdfRelatorio() {
+    const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const M = 40;                       // margem lateral
+    const RODAPE = 30;                  // faixa reservada ao "Página X de Y"
+    const contentW = pageW - M * 2;
+    let y = M;
+
+    const PRETO = [24, 24, 27];
+    const CINZA = [63, 63, 70];
+    const CINZA_CLARO = [113, 113, 122];
+    const BRAND = [79, 70, 229];
+    const GRADE = [228, 228, 231];
+
+    function quebraSePreciso(altura) {
+        if (y + altura > pageH - RODAPE) { doc.addPage(); y = M; }
+    }
+
+    // ---- 1. Cabeçalho ----
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(PRETO[0], PRETO[1], PRETO[2]);
+    const linhasTitulo = doc.splitTextToSize(
+        pdfTxt(`Aero Festas - Relatório de scans · ${current.name || current.slug}`), contentW);
+    doc.text(linhasTitulo, M, y + 12);
+    y += 12 + linhasTitulo.length * 18;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]);
+    [
+        `QR: ${linkUrl(current.slug)}`,
+        `Destino atual: ${current.destination || 'não definido'}`,
+        `Período: ${periodoTexto()} · gerado em ${new Date().toLocaleString('pt-BR')}`
+    ].forEach((linha) => {
+        const partes = doc.splitTextToSize(pdfTxt(linha), contentW);
+        doc.text(partes, M, y);
+        y += partes.length * 12;
+    });
+    y += 4;
+    doc.setDrawColor(PRETO[0], PRETO[1], PRETO[2]);
+    doc.setLineWidth(1.2);
+    doc.line(M, y, pageW - M, y);
+    y += 20;
+
+    // ---- 2. KPIs em linha ----
+    const t = (analytics && analytics.totals) || {};
+    const kpis = [
+        { label: 'SCANS', valor: fmtNum(t.hits) },
+        { label: 'VISITANTES ÚNICOS', valor: fmtNum(t.uniqueVisitors) },
+        { label: 'RECORRENTES', valor: fmtNum(t.returningHits) }
+    ];
+    if (Number(t.semJs) > 0) kpis.push({ label: 'SEM JAVASCRIPT', valor: fmtNum(t.semJs) });
+    const colW = contentW / kpis.length;
+    kpis.forEach((k, i) => {
+        const x = M + i * colW;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(CINZA_CLARO[0], CINZA_CLARO[1], CINZA_CLARO[2]);
+        doc.text(pdfTxt(k.label), x, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(PRETO[0], PRETO[1], PRETO[2]);
+        doc.text(pdfTxt(k.valor), x, y + 17);
+    });
+    y += 32;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(CINZA[0], CINZA[1], CINZA[2]);
+    doc.text(pdfTxt(`Primeiro scan: ${fmtDateTime(t.firstHitAt)} · Último scan: ${fmtDateTime(t.lastHitAt)}`), M, y);
+    y += 22;
+
+    // ---- 3. Gráficos capturados dos canvas já renderizados na tela ----
+    function secaoGrafico(nome, chart) {
+        let img = null, w = 0, h = 0;
+        if (chart && chart.canvas && chart.canvas.width > 0) {
+            img = chartParaPng(chart);
+            w = contentW;
+            h = Math.round(w * (img.h / img.w));
+            const hMax = 230;
+            if (h > hMax) { h = hMax; w = Math.round(h * (img.w / img.h)); }
+        }
+        quebraSePreciso(18 + (img ? h : 14) + 16);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(PRETO[0], PRETO[1], PRETO[2]);
+        doc.text(pdfTxt(nome), M, y);
+        y += 12;
+        if (img) {
+            doc.addImage(img.dataUrl, 'PNG', M, y, w, h);
+            y += h + 16;
+        } else {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(CINZA_CLARO[0], CINZA_CLARO[1], CINZA_CLARO[2]);
+            doc.text(pdfTxt('Nenhum scan registrado no período.'), M, y + 6);
+            y += 24;
+        }
+    }
+    secaoGrafico('Scans por dia', charts.dia);
+    secaoGrafico('Por hora do dia', charts.hora);
+
+    // ---- 4. Quebras (top 8), duas tabelas lado a lado por linha ----
+    const QUEBRAS_PDF = [
+        { titulo: 'Cidade',    dados: analytics.byCity },
+        { titulo: 'Aparelho',  dados: analytics.byDevice },
+        { titulo: 'Sistema',   dados: analytics.byOs },
+        { titulo: 'Navegador', dados: analytics.byBrowser },
+        { titulo: 'Origem',    dados: analytics.byReferrer }
+    ];
+    const GAP = 14;
+    const meiaW = (contentW - GAP) / 2;
+
+    function corpoQuebra(dados) {
+        const lista = (Array.isArray(dados) ? dados : []).filter((i) => i && Number(i.hits || 0) > 0);
+        const total = lista.reduce((a, i) => a + Number(i.hits || 0), 0);
+        return lista.slice(0, 8).map((i) => {
+            const hits = Number(i.hits || 0);
+            const nome = (i.key == null || i.key === '') ? '(não informado)' : String(i.key);
+            const share = total > 0 ? Math.round((hits / total) * 100) : 0;
+            return [pdfTxt(nome), fmtNum(hits), share + '%'];
+        });
+    }
+
+    function tabelaQuebra(cfg, x) {
+        const corpo = corpoQuebra(cfg.dados);
+        doc.autoTable({
+            head: [[pdfTxt(cfg.titulo), 'Scans', '%']],
+            body: corpo.length ? corpo : [[pdfTxt('Sem dados no período.'), '', '']],
+            startY: y,
+            margin: { left: x, bottom: RODAPE + 6 },
+            tableWidth: meiaW,
+            theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 8, cellPadding: 3, textColor: CINZA, lineColor: GRADE, lineWidth: 0.5, overflow: 'ellipsize' },
+            headStyles: { fillColor: BRAND, textColor: [255, 255, 255], fontStyle: 'bold' },
+            columnStyles: {
+                0: { cellWidth: meiaW - 72 },
+                1: { cellWidth: 42, halign: 'right' },
+                2: { cellWidth: 30, halign: 'right' }
+            },
+            pageBreak: 'avoid',
+            rowPageBreak: 'avoid'
+        });
+        return doc.lastAutoTable.finalY;
+    }
+
+    for (let i = 0; i < QUEBRAS_PDF.length; i += 2) {
+        // Garante espaço para o PAR inteiro (cabeçalho + 8 linhas ≈ 140pt): sem
+        // isso a tabela da esquerda pularia de página e a da direita, desenhada
+        // com o mesmo startY, sobreporia a página nova.
+        quebraSePreciso(160);
+        const fimEsq = tabelaQuebra(QUEBRAS_PDF[i], M);
+        const fimDir = QUEBRAS_PDF[i + 1] ? tabelaQuebra(QUEBRAS_PDF[i + 1], M + meiaW + GAP) : fimEsq;
+        y = Math.max(fimEsq, fimDir) + 14;
+    }
+
+    // ---- 5. Acessos detalhados (busca via API, paginada, até 500 linhas) ----
+    const { itens, total } = await coletarHitsPdf(current.id);
+
+    quebraSePreciso(70);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(PRETO[0], PRETO[1], PRETO[2]);
+    doc.text(pdfTxt('Acessos detalhados'), M, y);
+    y += 8;
+
+    if (!itens.length) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(CINZA_CLARO[0], CINZA_CLARO[1], CINZA_CLARO[2]);
+        doc.text(pdfTxt('Nenhum acesso no período.'), M, y + 8);
+        y += 26;
+    } else {
+        const corpo = itens.map((h) => [
+            pdfTxt(fmtDateTime(h.createdAt)),
+            pdfTxt([h.city, h.region].filter(Boolean).join(' / ') || '-'),
+            pdfTxt(h.deviceType || '-'),
+            pdfTxt([h.os, h.osVersion].filter(Boolean).join(' ') || '-'),
+            pdfTxt([h.browser, h.browserVersion].filter(Boolean).join(' ') || '-'),
+            h.noJs ? 'Sim' : 'Não',
+            pdfTxt(origemHit(h))
+        ]);
+        doc.autoTable({
+            head: [['Data/hora', 'Cidade/UF', 'Aparelho', 'Sistema', 'Navegador', 'Sem JS', 'Origem']],
+            body: corpo,
+            startY: y,
+            margin: { left: M, right: M, top: M, bottom: RODAPE + 6 },
+            theme: 'striped',
+            styles: { font: 'helvetica', fontSize: 7, cellPadding: 3, textColor: CINZA, overflow: 'ellipsize' },
+            headStyles: { fillColor: BRAND, textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [244, 244, 245] },
+            columnStyles: {
+                0: { cellWidth: 80 },
+                5: { cellWidth: 36, halign: 'center' },
+                6: { cellWidth: 110 }
+            }
+        });
+        y = doc.lastAutoTable.finalY + 14;
+        if (total > itens.length) {
+            quebraSePreciso(16);
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(8.5);
+            doc.setTextColor(CINZA_CLARO[0], CINZA_CLARO[1], CINZA_CLARO[2]);
+            doc.text(pdfTxt(`Mostrando ${fmtNum(itens.length)} de ${fmtNum(total)} acessos - use o Exportar CSV para a lista completa.`), M, y);
+            y += 14;
+        }
+    }
+
+    // ---- 6. Rodapé "Página X de Y" em todas as páginas ----
+    const totalPaginas = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPaginas; p++) {
+        doc.setPage(p);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(CINZA_CLARO[0], CINZA_CLARO[1], CINZA_CLARO[2]);
+        doc.text(pdfTxt(`Página ${p} de ${totalPaginas}`), pageW - M, pageH - 14, { align: 'right' });
+    }
+
+    const sufixo = (period.from || period.to)
+        ? `${period.from || 'inicio'}_${period.to || 'hoje'}`
+        : 'completo';
+    doc.save(`relatorio-${current.slug || 'link'}-${sufixo}.pdf`);
+}
+
+function pdfLibsOk() {
+    return !!(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API &&
+        typeof window.jspdf.jsPDF.API.autoTable === 'function');
+}
+
+// Baixar PDF — monta e baixa o relatório direto no navegador. Se as libs
+// vendorizadas não carregaram, avisa e cai no diálogo de impressão antigo.
+qs('rep-print').addEventListener('click', async () => {
+    if (!current) return;
+    if (!pdfLibsOk()) {
+        UI.toast('Biblioteca de PDF não carregou — abrindo a impressão do navegador', 'error');
+        imprimirRelatorio();
+        return;
+    }
+    if (!analytics) {
+        UI.toast('Aguarde o relatório terminar de carregar', 'error');
+        return;
+    }
+    // Guard de período: o filtro (chip/Aplicar) muda 'period' na hora do clique,
+    // mas KPIs/gráficos só refletem o período novo quando a recarga termina.
+    // Sem isto, baixar o PDF na janela da recarga (ou após falha dela) sairia
+    // com cabeçalho/tabela do período NOVO e KPIs/gráficos do ANTIGO.
+    if (repSeq !== repSeqFinalizado || analyticsPeriodKey !== (period.from + '|' + period.to)) {
+        UI.toast('O relatório ainda está atualizando — aguarde um instante e tente de novo.', 'error');
+        return;
+    }
+    const btn = qs('rep-print');
+    const icon = btn.querySelector('i');
+    btn.disabled = true;
+    icon.className = 'fas fa-spinner fa-spin';
+    try {
+        await gerarPdfRelatorio();
+        UI.toast('PDF do relatório baixado', 'success');
+    } catch (e) {
+        console.error('Erro ao gerar o PDF do relatório:', e);
+        UI.toast('Erro ao gerar o PDF do relatório', 'error');
+    } finally {
+        btn.disabled = false;
+        icon.className = 'fas fa-file-pdf';
+    }
 });
 
 // ---------------- Fechar modais com Esc ----------------
@@ -1615,6 +2885,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------------- Início ----------------
 loadLinks();
+ovSetPeriodDays(30);   // visão geral: padrão 30 dias (régua própria, já dispara o load)
 </script>
 </body>
 </html>

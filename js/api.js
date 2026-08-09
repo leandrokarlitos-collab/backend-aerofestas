@@ -1608,6 +1608,23 @@ export const api = {
         } catch (e) { return null; }
     },
 
+    // Visão geral de TODAS as campanhas no período:
+    // { totals, ranking, byDay, truncado, amostraDe } | null em erro (≠ objeto
+    // zerado: o painel precisa distinguir "a API caiu" de "ninguém escaneou").
+    getOverviewLinks: async (from, to) => {
+        try {
+            const token = getToken();
+            const qs = new URLSearchParams();
+            if (from) qs.set('from', from);
+            if (to) qs.set('to', to);
+            const suffix = qs.toString() ? `?${qs.toString()}` : '';
+            const res = await fetch(`${BASE_URL}/admin/tracked-links/overview${suffix}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao buscar a visão geral dos links:', e); return null; }
+    },
+
     // Retorna o Blob do CSV (quem chama monta o download com URL.createObjectURL)
     exportarHitsLinkCSV: async (id, from, to) => {
         try {

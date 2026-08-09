@@ -803,6 +803,8 @@ model TrackedLink {
   destination String // para onde redirecionar HOJE (editável)
   active      Boolean  @default(true) // desligado = /r/<slug> responde 404 e não registra acesso
   notes       String? // observações do gestor (onde o QR foi distribuído etc.)
+  logoDataUrl String? // logo do centro do QR: data URL base64 (PNG/JPEG/WebP, redimensionada no cliente); null = logo padrão do sistema
+  qrStyle     String? // estilo visual do QR: JSON canônico validado por whitelist (dotType/cornerType/cores #RRGGBB/card); null = QR padrão preto no branco
   createdBy   String?
   createdAt   DateTime @default(now())
   updatedBy   String?
