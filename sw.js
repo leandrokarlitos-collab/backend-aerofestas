@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.18.5';
+const CACHE_NAME = 'aero-festas-v3.18.6';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -49,6 +49,10 @@ const ASSETS_TO_CACHE = [
     // jsQR 1.4.0 vendorizada: teste de leitura do QR antes do download — o
     // arquivo vai para gráfica, um QR bonito que não lê é prejuízo irreversível.
     '/js/vendor/jsqr.js',
+    // Pacifico vendorizada (SIL OFL): fonte cursiva da assinatura "Aero" no QR
+    // de Links-Rastreados.html. Mora no projeto (mesma lição do qrcode: CDN em
+    // runtime já quebrou produção) e precisa do precache para funcionar offline.
+    '/fonts/pacifico.woff2',
     '/manifest.json',
     '/icons/icon-192.png',
     '/icons/icon-512.png',

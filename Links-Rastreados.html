@@ -349,6 +349,15 @@
             border-radius: var(--radius);
             background: transparent;
         }
+        /* Slider do tamanho da logo (10..28% na caixa, 10..50% na sobreposta) */
+        .qr-logo-range {
+            width: 100%;
+            margin-top: 10px;
+            accent-color: var(--brand-600);
+            cursor: pointer;
+        }
+        .qr-logo-range:disabled { cursor: default; opacity: .45; }
+        #qr-logo-tamanho-val { color: var(--text-muted); font-weight: 600; }
         /* Selo "Leitura verificada" — o jsQR decodificou o canvas e o texto bate */
         .qr-selo {
             display: inline-flex;
@@ -712,6 +721,32 @@
                     </button>
                     <input type="file" id="qr-logo-file" accept="image/*" class="hidden">
                 </div>
+            </div>
+
+            <!-- ---- Logo: modo, tamanho e assinatura (persistidos em qrStyle) ---- -->
+            <div class="space-y-3">
+                <div class="qr-estilo-grid">
+                    <div>
+                        <label class="input-label" for="qr-logo-modo">Estilo da logo</label>
+                        <select id="qr-logo-modo" class="input">
+                            <option value="caixa">Com fundo limpo</option>
+                            <option value="sobreposta">Sobreposta ao código</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="input-label" for="qr-logo-tamanho">
+                            Tamanho da logo · <span id="qr-logo-tamanho-val">16%</span>
+                        </label>
+                        <input type="range" id="qr-logo-tamanho" class="qr-logo-range" min="10" max="28" step="1" value="16">
+                    </div>
+                </div>
+                <!-- Independente do "Com logo": a assinatura existe mesmo sem logo -->
+                <label class="check-row" for="qr-assinatura">
+                    <input type="checkbox" id="qr-assinatura">
+                    Assinatura “Aero” no canto
+                </label>
+                <!-- Aviso: logo JPEG (sem transparência) no modo sobreposto -->
+                <div id="qr-logo-aviso" aria-live="polite"></div>
             </div>
 
             <!-- ---- Personalização visual (persistida por link em qrStyle) ---- -->
@@ -1375,10 +1410,13 @@ function atualizarLogoUi() {
     qs('qr-logo-thumb').src = logoDoLink();
     // "Usar padrão" só faz sentido quando existe logo própria persistida
     qs('qr-logo-padrao').classList.toggle('hidden', !(qrLink && qrLink.logoDataUrl));
+    // A logo mudou: o aviso de JPEG no modo sobreposto pode ter mudado junto.
+    renderAvisoLogo(estiloDoLink());
 }
 
 async function openQr(link) {
     qrLink = link;
+    logoArquivoJpeg = false;   // a marca de "logo veio de JPEG" é por sessão do modal
     qrEstiloSalvo = ('qrStyle' in link) ? (link.qrStyle || null) : null;
     qs('qr-title').textContent = 'QR Code · ' + (link.name || link.slug || '');
     qs('qr-url-row').innerHTML = urlRowHtml(linkUrl(link.slug));
@@ -1413,7 +1451,12 @@ qs('modal-qr').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action="copy"]');
     if (btn) copiar(btn.dataset.url || '');
 });
-qs('qr-logo').addEventListener('change', renderQrPreview);
+qs('qr-logo').addEventListener('change', () => {
+    // Sem logo, seletor de modo e slider de tamanho não fazem nada — desabilita.
+    // A ASSINATURA fica de fora de propósito: ela é independente da logo.
+    atualizarEstiloUi();
+    renderQrPreview();
+});
 
 function loadImagem(src) {
     return new Promise((resolve, reject) => {
@@ -1437,7 +1480,10 @@ function roundRect(ctx, x, y, w, h, r) {
 // Desenha o QR no canvas; nível H tolera a logo sobreposta no centro.
 // logoSrc: data URL da logo do link ou o caminho da logo padrão — preview e
 // download 2000px passam a MESMA fonte, o que se vê é o que se imprime.
-async function desenharQr(canvas, texto, tamanho, comLogo, logoSrc) {
+// estilo (opcional): usa logoSize/logoMode para o fallback ficar igual ao
+// estilizado — caixa escala as proporções clássicas pelo fator (tamanho/16%);
+// sobreposta desenha a logo direto sobre os módulos, sem quadrado branco.
+async function desenharQr(canvas, texto, tamanho, comLogo, logoSrc, estilo) {
     if (!window.QRCode) throw new Error('Biblioteca de QR não carregou');
     await window.QRCode.toCanvas(canvas, texto, {
         width: tamanho,
@@ -1454,13 +1500,18 @@ async function desenharQr(canvas, texto, tamanho, comLogo, logoSrc) {
         const img = await loadImagem(logoSrc || LOGO_PADRAO);
         const ctx = canvas.getContext('2d');
         const lado = canvas.width;
-        const caixa = Math.round(lado * 0.22);   // quadrado branco de fundo
-        const logo = Math.round(lado * 0.17);    // logo dentro do quadrado
-        const cx = Math.round((lado - caixa) / 2);
+        // Proporções clássicas (16% ⇒ caixa 22% / logo 17% do lado) escaladas
+        // pelo tamanho escolhido no slider — mesmo resultado do estilizado.
+        const fator = ((estilo && estilo.logoSize) || 0.16) / 0.16;
+        const logo = Math.round(lado * 0.17 * fator);    // lado da logo
         const lx = Math.round((lado - logo) / 2);
-        ctx.fillStyle = '#FFFFFF';
-        roundRect(ctx, cx, cx, caixa, caixa, Math.round(caixa * 0.18));
-        ctx.fill();
+        if (!estilo || estilo.logoMode !== 'sobreposta') {
+            const caixa = Math.round(lado * 0.22 * fator);   // quadrado branco de fundo
+            const cx = Math.round((lado - caixa) / 2);
+            ctx.fillStyle = '#FFFFFF';
+            roundRect(ctx, cx, cx, caixa, caixa, Math.round(caixa * 0.18));
+            ctx.fill();
+        }
         ctx.drawImage(img, lx, lx, logo, logo);
     } catch (e) {
         // Sem logo o QR continua perfeitamente válido — não é erro fatal.
@@ -1478,6 +1529,19 @@ const QR_COR_RE = /^#[0-9a-fA-F]{6}$/;
 
 let qrEstiloSalvo = null;   // último qrStyle CONFIRMADO no servidor (string JSON ou null) — base do rollback
 
+// Limites do slider "Tamanho da logo" (em % do lado). No modo caixa o teto é
+// menor: o quadrado branco esconde módulos de verdade. No sobreposto a
+// cobertura real é só o desenho da logo (as partes transparentes deixam os
+// módulos aparecerem) — por isso o teto maior, como no panfleto original.
+const LOGO_SIZE_MIN = 10;
+const LOGO_SIZE_PADRAO = 16;
+const LOGO_SIZE_MAX_CAIXA = 28;
+const LOGO_SIZE_MAX_SOBREPOSTA = 50;
+
+function limiteTamanhoLogo(modo) {
+    return modo === 'sobreposta' ? LOGO_SIZE_MAX_SOBREPOSTA : LOGO_SIZE_MAX_CAIXA;
+}
+
 function qrEstiloPadrao() {
     return {
         dotType: 'square',
@@ -1485,7 +1549,10 @@ function qrEstiloPadrao() {
         dotColor: '#000000',
         cornerColor: '#000000',
         bgColor: '#FFFFFF',
-        card: { enabled: false, radius: false, shadow: false }
+        card: { enabled: false, radius: false, shadow: false },
+        logoSize: LOGO_SIZE_PADRAO / 100,
+        logoMode: 'caixa',
+        assinatura: false
     };
 }
 
@@ -1508,6 +1575,17 @@ function estiloDoLink() {
         estilo.card.shadow = bruto.card.shadow === true;
         estilo.card.enabled = bruto.card.enabled === true || estilo.card.radius || estilo.card.shadow;
     }
+    if (bruto.logoMode === 'caixa' || bruto.logoMode === 'sobreposta') estilo.logoMode = bruto.logoMode;
+    if (typeof bruto.logoSize === 'number' && isFinite(bruto.logoSize) &&
+        bruto.logoSize >= 0.10 && bruto.logoSize <= 0.50) {
+        estilo.logoSize = Math.round(bruto.logoSize * 100) / 100;
+    }
+    // Teto do modo caixa vale também para estilo gravado por fora da UI: acima
+    // de 28% o quadrado branco esconde módulos demais — clampa em vez de quebrar.
+    if (estilo.logoMode === 'caixa' && estilo.logoSize > LOGO_SIZE_MAX_CAIXA / 100) {
+        estilo.logoSize = LOGO_SIZE_MAX_CAIXA / 100;
+    }
+    if (bruto.assinatura === true) estilo.assinatura = true;
     return estilo;
 }
 
@@ -1533,14 +1611,24 @@ async function qrEstilizado(texto, tamanho, comLogo, logoSrc, estilo) {
     };
     if (comLogo) {
         opcoes.image = logoSrc || LOGO_PADRAO;
-        opcoes.imageOptions = {
-            hideBackgroundDots: true,
-            // A lib mede por ÁREA escondida: cobertura linear ≈ √(0.30 × imageSize)
-            // (0.30 = teto do nível H). 0.16 ⇒ ~22% do lado, como o desenharQr de hoje.
-            imageSize: 0.16,
-            margin: Math.max(2, Math.round(tamanho * 0.008)),
-            crossOrigin: 'anonymous'
-        };
+        opcoes.imageOptions = (estilo.logoMode === 'sobreposta')
+            ? {
+                // Estilo do panfleto original: a logo vai DIRETO sobre os
+                // módulos, sem caixa branca — os pontos aparecem entre as
+                // partes transparentes da imagem. Sem margem de propósito.
+                hideBackgroundDots: false,
+                imageSize: estilo.logoSize,
+                margin: 0,
+                crossOrigin: 'anonymous'
+            }
+            : {
+                hideBackgroundDots: true,
+                // A lib mede por ÁREA escondida: cobertura linear ≈ √(0.30 × imageSize)
+                // (0.30 = teto do nível H). 0.16 ⇒ ~22% do lado, como o desenharQr clássico.
+                imageSize: estilo.logoSize,
+                margin: Math.max(2, Math.round(tamanho * 0.008)),
+                crossOrigin: 'anonymous'
+            };
     }
     const qr = new window.QRCodeStyling(opcoes);
     const blob = await qr.getRawData('png');
@@ -1589,16 +1677,69 @@ function comporCartao(qrCv, estilo) {
     return cv;
 }
 
+// ---------------- Assinatura "Aero" (fonte cursiva vendorizada) ----------------
+
+// Pacifico (SIL OFL — uso comercial livre) mora em ./fonts/pacifico.woff2, no
+// PRÓPRIO projeto: dependência externa em runtime já quebrou produção uma vez
+// (lição do qrcode.min.js). Carrega uma única vez via FontFace; se falhar, a
+// assinatura é PULADA silenciosamente — render e download nunca morrem por ela.
+let fonteAssinaturaPromise = null;
+function carregarFonteAssinatura() {
+    if (!fonteAssinaturaPromise) {
+        fonteAssinaturaPromise = (async () => {
+            if (typeof FontFace === 'undefined') return false;
+            const face = new FontFace('AssinaturaAero', "url('./fonts/pacifico.woff2')");
+            const carregada = await face.load();
+            document.fonts.add(carregada);
+            return true;
+        })().catch((e) => {
+            console.warn('Fonte da assinatura não carregou — assinatura pulada:', e);
+            return false;
+        });
+    }
+    return fonteAssinaturaPromise;
+}
+
+// Desenha "Aero" no canto inferior direito do canvas FINAL já composto (depois
+// do cartão, se houver). Tudo proporcional à largura — preview 520, download
+// 2000 e fallback clássico saem com a MESMA escala. A assinatura invade a
+// margem como a do Bitly no panfleto original; quem decide se o QR continua
+// legível é o teste de leitura, que roda DEPOIS dela.
+async function desenharAssinatura(canvas, estilo) {
+    const ok = await carregarFonteAssinatura();
+    if (!ok) return;
+    try {
+        const ctx = canvas.getContext('2d');
+        const lado = canvas.width;
+        const fonte = Math.max(8, Math.round(lado * 0.045));   // ~4,5% da largura
+        const folga = Math.round(lado * 0.025);                // ~2,5% de respiro
+        ctx.save();
+        ctx.font = fonte + 'px AssinaturaAero';
+        ctx.fillStyle = (estilo && estilo.dotColor) || '#000000';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('Aero', lado - folga, canvas.height - folga);
+        ctx.restore();
+    } catch (e) {
+        // Sem assinatura o QR continua perfeitamente válido — não é erro fatal.
+        console.warn('Não foi possível desenhar a assinatura no QR:', e);
+    }
+}
+
 // FUNÇÃO CENTRAL: preview (520) e download (2000) passam AQUI e só aqui —
 // o que se vê no modal é pixel a pixel o que vai para a gráfica.
 // Degradação em camadas: estilizado com logo → estilizado sem logo → clássico
 // (desenharQr). O botão Baixar PNG nunca morre por causa do estilo.
+// ORDEM CRÍTICA: a assinatura é a ÚLTIMA camada, desenhada no canvas final já
+// composto (depois do cartão). Como o teste de leitura roda sobre o canvas que
+// esta função DEVOLVE (no preview, no reteste 2000 e no download), o veredicto
+// sempre inclui a assinatura.
 async function gerarQrFinal(tamanho) {
     const texto = linkUrl(qrLink.slug);
     const comLogo = qs('qr-logo').checked;
     const estilo = estiloDoLink();
+    let cv = null;
     if (window.QRCodeStyling) {
-        let cv = null;
         try {
             cv = await qrEstilizado(texto, tamanho, comLogo, logoDoLink(), estilo);
         } catch (e) {
@@ -1608,11 +1749,14 @@ async function gerarQrFinal(tamanho) {
                 catch (e2) { console.warn('QR estilizado falhou também sem logo:', e2); }
             }
         }
-        if (cv) return (estilo.card && estilo.card.enabled) ? comporCartao(cv, estilo) : cv;
+        if (cv && estilo.card && estilo.card.enabled) cv = comporCartao(cv, estilo);
     }
-    // FALLBACK (QRCodeStyling ausente ou quebrado): caminho clássico intacto.
-    const cv = document.createElement('canvas');
-    await desenharQr(cv, texto, tamanho, comLogo, logoDoLink());
+    if (!cv) {
+        // FALLBACK (QRCodeStyling ausente ou quebrado): caminho clássico intacto.
+        cv = document.createElement('canvas');
+        await desenharQr(cv, texto, tamanho, comLogo, logoDoLink(), estilo);
+    }
+    if (estilo.assinatura) await desenharAssinatura(cv, estilo);
     return cv;
 }
 
@@ -1800,6 +1944,26 @@ qs('qr-download').addEventListener('click', async () => {
 
 // ---------------- UI e persistência do estilo ----------------
 
+// JPEG não tem canal alfa: mesmo re-exportada como PNG a logo sai OPACA, e no
+// modo sobreposto ela cobriria o código com um retângulo cheio. A marca vem do
+// data URL salvo (logos jpeg antigas) ou do último arquivo escolhido no modal.
+let logoArquivoJpeg = false;
+
+function logoSemTransparencia() {
+    return /^data:image\/jpeg/i.test(logoDoLink()) || logoArquivoJpeg;
+}
+
+function renderAvisoLogo(estilo) {
+    const box = qs('qr-logo-aviso');
+    if (!box) return;
+    const mostrar = qs('qr-logo').checked && estilo.logoMode === 'sobreposta' && logoSemTransparencia();
+    box.innerHTML = mostrar
+        ? '<div class="qr-aviso"><i class="fas fa-triangle-exclamation"></i>' +
+          '<span>Logo sem transparência (JPEG) cobre o código com um retângulo — ' +
+          'prefira PNG com fundo transparente.</span></div>'
+        : '';
+}
+
 function atualizarEstiloUi() {
     const e = estiloDoLink();
     qs('qr-dot-type').value = e.dotType;
@@ -1809,18 +1973,38 @@ function atualizarEstiloUi() {
     qs('qr-cor-fundo').value = e.bgColor;
     qs('qr-card-radius').checked = !!(e.card && e.card.radius);
     qs('qr-card-shadow').checked = !!(e.card && e.card.shadow);
+    const comLogo = qs('qr-logo').checked;
+    const slider = qs('qr-logo-tamanho');
+    qs('qr-logo-modo').value = e.logoMode;
+    slider.max = String(limiteTamanhoLogo(e.logoMode));
+    slider.value = String(Math.min(Number(slider.max), Math.max(LOGO_SIZE_MIN, Math.round(e.logoSize * 100))));
+    qs('qr-logo-tamanho-val').textContent = slider.value + '%';
+    qs('qr-assinatura').checked = e.assinatura === true;
+    // Modo e tamanho só fazem sentido COM logo; a assinatura é independente
+    // dela (existe QR sem logo e com assinatura) e nunca é desabilitada aqui.
+    qs('qr-logo-modo').disabled = !comLogo;
+    slider.disabled = !comLogo;
+    renderAvisoLogo(e);
 }
 
 function lerEstiloDosControles() {
     const radius = qs('qr-card-radius').checked;
     const shadow = qs('qr-card-shadow').checked;
+    const modo = qs('qr-logo-modo').value === 'sobreposta' ? 'sobreposta' : 'caixa';
+    // Clampa no limite do MODO atual (caixa 10..28, sobreposta 10..50): é este
+    // número que vai para a API — o backend rejeita fora de 0.10..0.50.
+    const tamPct = Math.min(limiteTamanhoLogo(modo),
+        Math.max(LOGO_SIZE_MIN, Math.round(Number(qs('qr-logo-tamanho').value) || LOGO_SIZE_PADRAO)));
     return {
         dotType: qs('qr-dot-type').value,
         cornerType: qs('qr-corner-type').value,
         dotColor: qs('qr-cor-pontos').value,
         cornerColor: qs('qr-cor-cantos').value,
         bgColor: qs('qr-cor-fundo').value,
-        card: { enabled: radius || shadow, radius: radius, shadow: shadow }
+        card: { enabled: radius || shadow, radius: radius, shadow: shadow },
+        logoSize: tamPct / 100,
+        logoMode: modo,
+        assinatura: qs('qr-assinatura').checked
     };
 }
 
@@ -1851,9 +2035,32 @@ async function salvarEstilo(novoEstilo) {
 }
 
 // Selects e checkboxes: uma mudança = um render + um save.
-['qr-dot-type', 'qr-corner-type', 'qr-card-radius', 'qr-card-shadow'].forEach((id) => {
+// 'qr-assinatura' entra aqui: é um estado persistido como qualquer outro.
+['qr-dot-type', 'qr-corner-type', 'qr-card-radius', 'qr-card-shadow', 'qr-assinatura'].forEach((id) => {
     qs(id).addEventListener('change', () => { if (qrLink) salvarEstilo(lerEstiloDosControles()); });
 });
+
+// Modo da logo: trocar re-clampa o slider ANTES de ler os controles (caixa
+// 10..28, sobreposta 10..50) — o valor salvo nunca passa do teto do modo novo.
+qs('qr-logo-modo').addEventListener('change', () => {
+    if (!qrLink) return;
+    const slider = qs('qr-logo-tamanho');
+    const max = limiteTamanhoLogo(qs('qr-logo-modo').value);
+    slider.max = String(max);
+    if (Number(slider.value) > max) slider.value = String(max);
+    qs('qr-logo-tamanho-val').textContent = slider.value + '%';
+    salvarEstilo(lerEstiloDosControles());
+});
+
+// Tamanho da logo: 'input' (cada arrasto) só re-renderiza o preview otimista,
+// como as cores; 'change' (soltou o slider) é quem persiste via salvarEstilo.
+qs('qr-logo-tamanho').addEventListener('input', () => {
+    qs('qr-logo-tamanho-val').textContent = qs('qr-logo-tamanho').value + '%';
+    if (!qrLink) return;
+    qrLink.qrStyle = JSON.stringify(lerEstiloDosControles());
+    renderQrPreview();
+});
+qs('qr-logo-tamanho').addEventListener('change', () => { if (qrLink) salvarEstilo(lerEstiloDosControles()); });
 
 // Cores: 'input' dispara a CADA arrasto no seletor — só re-renderiza o preview
 // (otimista, local); 'change' (seletor fechado) é quem persiste na API.
@@ -1943,10 +2150,15 @@ qs('qr-logo-file').addEventListener('change', async (e) => {
         return;
     }
     if (!qrLink || String(qrLink.id) !== String(alvoId)) return;
+    // O redimensionarLogo re-exporta TUDO como PNG, então o mime salvo não
+    // denuncia mais a origem: marca aqui se o arquivo era JPEG (sem alfa) —
+    // é o que liga o aviso de "logo opaca" no modo sobreposto.
+    logoArquivoJpeg = /image\/jpe?g/i.test(file.type || '') || /\.jpe?g$/i.test(file.name || '');
     await salvarLogo(dataUrl, 'Logo do QR atualizada', 'Erro ao salvar a logo');
 });
 
 qs('qr-logo-padrao').addEventListener('click', () => {
+    logoArquivoJpeg = false;   // a logo padrão é PNG com transparência
     salvarLogo(null, 'QR voltou a usar a logo padrão', 'Erro ao voltar para a logo padrão');
 });
 

@@ -481,8 +481,14 @@ const QR_STYLE_MAX_CHARS = 2000; // teto de segurança do JSON recebido
 const QR_DOT_TYPES = ['square', 'rounded', 'dots', 'classy', 'extra-rounded'];
 const QR_CORNER_TYPES = ['square', 'dot', 'extra-rounded'];
 const QR_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
-const QR_STYLE_KEYS = ['dotType', 'cornerType', 'dotColor', 'cornerColor', 'bgColor', 'card'];
+const QR_STYLE_KEYS = ['dotType', 'cornerType', 'dotColor', 'cornerColor', 'bgColor', 'card', 'logoSize', 'logoMode', 'assinatura'];
 const QR_CARD_KEYS = ['enabled', 'radius', 'shadow'];
+// Logo do centro: fração do lado coberta (slider 10%..50% do modal) e modo de
+// composição — 'caixa' (quadrado limpo atrás da logo, o padrão de sempre) ou
+// 'sobreposta' (logo direto sobre os módulos, estilo do panfleto original).
+const QR_LOGO_MODES = ['caixa', 'sobreposta'];
+const QR_LOGO_SIZE_MIN = 0.10;
+const QR_LOGO_SIZE_MAX = 0.50;
 
 function errQrStyle(detalhe) {
     return err400(`Estilo do QR inválido: ${detalhe}`);
@@ -490,10 +496,12 @@ function errQrStyle(detalhe) {
 
 /**
  * Valida e canoniza o estilo do QR. Aceita objeto ou string JSON; devolve a
- * string JSON canônica (chaves em ordem fixa, cores em minúsculas) ou null
- * (remove o estilo — o QR volta ao padrão preto no branco). Toda chave é
- * opcional; chave fora da whitelist, valor fora do domínio ou cor fora de
- * #RRGGBB → erro 400. Idempotente: normalizar o resultado devolve o mesmo JSON.
+ * string JSON canônica (chaves em ordem fixa, cores em minúsculas, logoSize
+ * com 2 casas) ou null (remove o estilo — o QR volta ao padrão preto no
+ * branco). Toda chave é opcional; chave fora da whitelist, valor fora do
+ * domínio (inclusive logoSize fora de 0.10..0.50, logoMode fora de
+ * caixa/sobreposta ou assinatura não booleana) ou cor fora de #RRGGBB → erro
+ * 400. Idempotente: normalizar o resultado devolve o mesmo JSON.
  */
 function normalizeQrStyle(raw) {
     if (raw === null) return null; // remove o estilo (volta ao QR padrão)
@@ -567,6 +575,31 @@ function normalizeQrStyle(raw) {
             if (card[ck] !== undefined) cardOut[ck] = card[ck];
         }
         out.card = cardOut;
+    }
+
+    if (obj.logoSize !== undefined) {
+        const v = obj.logoSize;
+        // Número ESTRITO (string numérica não passa) e dentro da faixa do slider.
+        if (typeof v !== 'number' || !Number.isFinite(v) || v < QR_LOGO_SIZE_MIN || v > QR_LOGO_SIZE_MAX) {
+            throw errQrStyle('logoSize deve ser um número entre 0.10 e 0.50 (fração do QR coberta pela logo).');
+        }
+        // Canônico: 2 casas decimais — o slider anda de 1 em 1%, e arredondar
+        // mantém a normalização idempotente (renormalizar devolve o mesmo JSON).
+        out.logoSize = Math.round(v * 100) / 100;
+    }
+
+    if (obj.logoMode !== undefined) {
+        if (!QR_LOGO_MODES.includes(obj.logoMode)) {
+            throw errQrStyle(`logoMode deve ser um de: ${QR_LOGO_MODES.join(', ')}.`);
+        }
+        out.logoMode = obj.logoMode;
+    }
+
+    if (obj.assinatura !== undefined) {
+        if (typeof obj.assinatura !== 'boolean') {
+            throw errQrStyle('assinatura deve ser true ou false.');
+        }
+        out.assinatura = obj.assinatura;
     }
 
     // Com a whitelist o JSON canônico nunca chega perto do teto; a checagem é
