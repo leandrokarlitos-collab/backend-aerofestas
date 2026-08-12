@@ -33,6 +33,7 @@ const { adminRouter: propostasAdminRouter, publicRouter: propostasPublicRouter }
 const { adminRouter: trackedLinksAdminRouter, publicRouter: trackedLinksPublicRouter } = require('./routes/trackedLinks');
 const propostaTemplatesRouter = require('./routes/proposta-templates');
 const toyRouter = require('./routes/toys');
+const prospeccaoRouter = require('./routes/prospeccao');
 const clientRouter = require('./routes/clients');
 const companyRouter = require('./routes/companies');
 const aiRouter = require('./routes/ai');
@@ -372,6 +373,7 @@ app.use('/api/admin', eventsAdminRouter);
 app.use('/api/admin', propostasAdminRouter);
 app.use('/api/admin/proposta-templates', propostaTemplatesRouter);
 app.use('/api/admin/tracked-links', trackedLinksAdminRouter);
+app.use('/api/admin/prospeccao', prospeccaoRouter);
 app.use('/api/admin/toys', toyRouter);
 app.use('/api/admin/clients', clientRouter);
 app.use('/api/admin/companies', companyRouter);

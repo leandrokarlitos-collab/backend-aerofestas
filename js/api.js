@@ -1640,6 +1640,36 @@ export const api = {
         } catch (e) { console.error('Erro ao exportar CSV do link:', e); return null; }
     },
 
+    // ============ PROSPECÇÃO (PREFEITURAS GO + UFs VIZINHAS) ============
+    // Funil de contato com secretarias de assistência social; os dados-base
+    // dos municípios são snapshot estático (js/data/prospeccao-municipios.js)
+    // e aqui trafega só o andamento (status + anotação).
+
+    listarProspeccao: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            // null em erro (≠ [] vazio): a página precisa distinguir "API fora
+            // do ar" (bloqueia edição) de "nenhum andamento registrado ainda".
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao listar prospecção:', e); return null; }
+    },
+
+    salvarProspeccao: async (cod, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/${cod}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
     // 📋 AUDITORIA
     getEntityHistory: async (entityType, entityId) => {
         try {

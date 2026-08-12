@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="./js/theme.js"></script>
+<title>Prospecção · Prefeituras · Aero Festas</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="icon" href="./icons/Logo_Aero_Festas.png" type="image/png">
+
+<script src="js/pwa-init.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], display: ['Outfit','sans-serif'] } } } };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/aero.css">
+
+<style>
+    /* ---- Prospecção: mínimos específicos da página (tokens do DS) ---- */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    .kpi { padding: 14px 16px; }
+    .kpi .kpi-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .kpi .kpi-value {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 1.5rem;
+        color: var(--text);
+        margin-top: 4px;
+    }
+
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 340px; }
+    .search-wrap > i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-faint);
+        pointer-events: none;
+    }
+    .search-wrap .input { padding-left: 38px; }
+    .toolbar select.input { width: auto; }
+    .result-count { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 14px 2px; }
+
+    .mun-card { padding: 16px 18px; margin-bottom: 10px; }
+    .mun-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+    .mun-rank {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: var(--text-faint);
+        min-width: 34px;
+    }
+    .mun-nome {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: var(--text);
+    }
+    .badge-tier {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        letter-spacing: 0.03em;
+    }
+    .tier-A { background: var(--success-soft, rgba(16,185,129,.14)); color: var(--success); }
+    .tier-B { background: var(--brand-soft, rgba(79,70,229,.12)); color: var(--brand-600); }
+    .tier-C { background: rgba(245,158,11,.14); color: #b45309; }
+    .tier-D { background: var(--surface-inset); color: var(--text-muted); }
+    .dark .tier-C { color: #fbbf24; }
+    .dark .tier-B { color: var(--brand-400); }
+
+    .badge-status {
+        font-size: 0.68rem;
+        font-weight: 600;
+        padding: 2px 9px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: auto;
+    }
+    .st-nao_contatado   { background: var(--surface-inset); color: var(--text-muted); }
+    .st-contatado       { background: rgba(59,130,246,.13); color: #2563eb; }
+    .st-proposta_enviada{ background: rgba(139,92,246,.14); color: #7c3aed; }
+    .st-negociacao      { background: rgba(245,158,11,.15); color: #b45309; }
+    .st-fechado         { background: var(--success-soft, rgba(16,185,129,.15)); color: var(--success); }
+    .st-descartado      { background: rgba(239,68,68,.10); color: var(--danger); }
+    .dark .st-contatado { color: #60a5fa; }
+    .dark .st-proposta_enviada { color: #a78bfa; }
+    .dark .st-negociacao { color: #fbbf24; }
+
+    .mun-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 8px;
+    }
+    .mun-meta span { display: inline-flex; align-items: center; gap: 5px; }
+    .mun-meta i { color: var(--text-faint); }
+
+    .score-track {
+        height: 4px;
+        border-radius: 999px;
+        background: var(--surface-inset);
+        margin-top: 10px;
+        overflow: hidden;
+    }
+    .score-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--brand-600), #8b5cf6);
+    }
+
+    .mun-detalhes {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+    @media (max-width: 760px) { .mun-detalhes { grid-template-columns: 1fr; } }
+    .det-titulo {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .det-linha { font-size: 0.82rem; color: var(--text); margin-bottom: 7px; line-height: 1.45; }
+    .det-linha .rotulo { color: var(--text-muted); }
+    .det-linha a { color: var(--brand-600); font-weight: 600; text-decoration: none; }
+    .dark .det-linha a { color: var(--brand-400); }
+    .det-obs {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        background: var(--surface-inset);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+        margin-top: 8px;
+        line-height: 1.5;
+    }
+    .chip-fone {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: var(--surface-inset);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: var(--brand-600);
+        margin: 2px 4px 2px 0;
+        text-decoration: none;
+    }
+    .dark .chip-fone { color: var(--brand-400); }
+    .chip-fone.wa { color: var(--success); }
+
+    .andamento-form .input, .andamento-form textarea.input { width: 100%; margin-bottom: 8px; }
+    .andamento-form textarea.input { min-height: 72px; resize: vertical; }
+    .quem-salvou { font-size: 0.72rem; color: var(--text-faint); margin-top: 6px; }
+
+    /* ---- Edição de contatos (correções por cima do snapshot) ---- */
+    .campo-edit { display: block; margin-bottom: 8px; }
+    .campo-edit > span {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 3px;
+    }
+    .campo-edit .input { width: 100%; font-size: 0.82rem; }
+
+    /* ---- Canais de contato: evolução do trabalho, visível sem abrir o card ---- */
+    .canais-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .canal-chip {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        background: var(--brand-600);
+        color: #fff;
+    }
+    .canal-chip.c-whatsapp   { background: #25d366; }
+    .canal-chip.c-ligacao    { background: #2563eb; }
+    .canal-chip.c-email      { background: #7c3aed; }
+    .canal-chip.c-oficio     { background: #b45309; }
+    .canal-chip.c-presencial { background: var(--success); }
+    .canal-chip.c-instagram  { background: #d946a6; }
+
+    .canais-toggle { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .canal-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.74rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .canal-btn:hover:not(:disabled) { border-color: var(--brand-600); color: var(--brand-600); }
+    .canal-btn.on {
+        background: var(--brand-600);
+        border-color: var(--brand-600);
+        color: #fff;
+    }
+    .canal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .canais-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+    }
+
+    /* ---- Placar de canais: quanto esforço já foi feito por meio de contato ---- */
+    #canais-card { padding: 16px 18px; margin-bottom: 18px; }
+    #canais-placar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+        gap: 10px;
+    }
+    .placar-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--border);
+        background: var(--surface-inset);
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .placar-item:hover { border-color: var(--brand-600); transform: translateY(-1px); }
+    .placar-item.on { border-color: var(--brand-600); box-shadow: 0 0 0 2px var(--brand-soft, rgba(79,70,229,.18)); }
+    .placar-icone {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 0.82rem;
+        flex-shrink: 0;
+    }
+    .placar-num {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 1.15rem;
+        color: var(--text);
+        line-height: 1.1;
+    }
+    .placar-txt { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+    .placar-item.vazio .placar-num { color: var(--text-faint); }
+    .acoes-edit { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    /* ---- Perfil da praça: polo regional x sombra de capital ---- */
+    .badge-perfil {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .perfil-intermediario { background: rgba(16,185,129,.16); color: var(--success); }
+    .perfil-imediato      { background: rgba(59,130,246,.14); color: #2563eb; }
+    .perfil-orbita        { background: rgba(239,68,68,.12); color: var(--danger); }
+    .perfil-capital       { background: rgba(239,68,68,.18); color: var(--danger); }
+    .dark .perfil-imediato { color: #60a5fa; }
+
+    .tag-corrigido {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: rgba(245,158,11,.16);
+        color: #b45309;
+        white-space: nowrap;
+    }
+    .dark .tag-corrigido { color: #fbbf24; }
+
+    .fontes-nota {
+        font-size: 0.72rem;
+        color: var(--text-faint);
+        line-height: 1.6;
+        margin-top: 26px;
+        padding: 14px 16px;
+    }
+
+    /* ---- Radar de expansão: mapa do Brasil por UF ---- */
+    #radar-card { padding: 18px 20px; margin-bottom: 18px; }
+    #mapa-brasil svg {
+        width: 100%;
+        height: auto;
+        max-height: 380px;
+        display: block;
+        margin: 0 auto;
+    }
+    #mapa-brasil path {
+        fill: var(--surface-inset);
+        stroke: var(--border);
+        stroke-width: 1;
+        vector-effect: non-scaling-stroke;
+        transition: fill 0.15s ease;
+    }
+    #mapa-brasil path.uf-on { fill: var(--brand-600); cursor: pointer; }
+    #mapa-brasil path.uf-on:hover { fill: #8b5cf6; }
+    #radar-legenda { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+    .radar-chip {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: var(--brand-soft, rgba(79,70,229,.12));
+        color: var(--brand-600);
+    }
+    .dark .radar-chip { color: var(--brand-400); }
+    .radar-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
+</style>
+</head>
+
+<body data-page="prospeccao">
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <header class="page-header">
+        <div>
+            <h1 class="flex items-center gap-3">
+                <i class="fas fa-landmark text-grad-brand"></i> Prospecção — Prefeituras
+            </h1>
+            <p class="page-subtitle">
+                Municípios de GO e vizinhos (DF, TO, MG, BA, MT, MS) priorizados por orçamento de
+                assistência social, população e distância. Trabalhe o Tier A primeiro —
+                Dia das Crianças fecha em agosto/setembro.
+            </p>
+        </div>
+    </header>
+
+    <div class="kpi-grid" id="kpis"></div>
+
+    <section class="surface" id="canais-card">
+        <div class="det-titulo"><i class="fas fa-bullhorn"></i> Esforço por canal — clique para filtrar</div>
+        <div id="canais-placar"></div>
+    </section>
+
+    <section class="surface" id="radar-card">
+        <div class="det-titulo"><i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil</div>
+        <div id="mapa-brasil" aria-label="Mapa do Brasil com as UFs no radar de prospecção"></div>
+        <div id="radar-legenda"></div>
+        <div class="radar-info" id="radar-info"></div>
+    </section>
+
+    <div class="toolbar">
+        <div class="search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="f-busca" class="input" placeholder="Buscar município...">
+        </div>
+        <select id="f-uf" class="input">
+            <option value="">Todas as UFs</option>
+            <option value="GO">Goiás</option>
+            <option value="DF">Distrito Federal</option>
+            <option value="TO">Tocantins</option>
+            <option value="MG">Minas Gerais</option>
+            <option value="BA">Bahia</option>
+            <option value="MT">Mato Grosso</option>
+            <option value="MS">Mato Grosso do Sul</option>
+        </select>
+        <select id="f-tier" class="input">
+            <option value="">Todos os tiers</option>
+            <option value="A">Tier A — ligar/visitar agora</option>
+            <option value="B">Tier B — segunda onda (até 2.000 km)</option>
+            <option value="C">Tier C — mala direta</option>
+            <option value="D">Tier D — baixa prioridade</option>
+        </select>
+        <select id="f-status" class="input">
+            <option value="">Todos os status</option>
+            <option value="nao_contatado">Não contatado</option>
+            <option value="contatado">Contatado</option>
+            <option value="proposta_enviada">Proposta enviada</option>
+            <option value="negociacao">Em negociação</option>
+            <option value="fechado">Fechado</option>
+            <option value="descartado">Descartado</option>
+        </select>
+        <select id="f-dist" class="input">
+            <option value="">Qualquer distância</option>
+            <option value="até 100 km">Até 100 km</option>
+            <option value="100–250 km">100–250 km</option>
+            <option value="250–400 km">250–400 km</option>
+            <option value="400+ km">400+ km</option>
+        </select>
+        <select id="f-perfil" class="input">
+            <option value="">Qualquer perfil de praça</option>
+            <option value="intermediario">Polo regional (sede de região)</option>
+            <option value="imediato">Polo microrregional</option>
+            <option value="polo">Qualquer polo</option>
+            <option value="orbita">Órbita de capital</option>
+            <option value="capital">Capital</option>
+            <option value="comum">Sem polarização</option>
+        </select>
+        <select id="f-canal" class="input">
+            <option value="">Qualquer canal</option>
+            <option value="nenhum">Ainda sem contato</option>
+            <option value="algum">Já contatados</option>
+            <option value="whatsapp">Falamos por WhatsApp</option>
+            <option value="ligacao">Falamos por ligação</option>
+            <option value="email">Falamos por e-mail</option>
+            <option value="oficio">Enviamos ofício</option>
+            <option value="presencial">Visita presencial</option>
+            <option value="instagram">Falamos por Instagram</option>
+        </select>
+        <select id="f-conc" class="input">
+            <option value="">Qualquer concorrência</option>
+            <option value="quase nula">Quase nula</option>
+            <option value="baixa">Baixa</option>
+            <option value="média">Média</option>
+            <option value="alta">Alta</option>
+            <option value="nm">Não medida</option>
+        </select>
+        <select id="f-ordem" class="input">
+            <option value="score">Ordenar: prioridade</option>
+            <option value="pop">Ordenar: população</option>
+            <option value="dist">Ordenar: distância</option>
+            <option value="orc">Ordenar: orçamento AS</option>
+        </select>
+    </div>
+    <p class="result-count" id="contagem"></p>
+
+    <section id="lista">
+        <div class="surface" style="padding:40px;text-align:center;color:var(--text-muted);">
+            <i class="fas fa-spinner fa-spin"></i> Carregando municípios...
+        </div>
+    </section>
+
+    <div class="surface fontes-nota" id="fontes"></div>
+</main>
+
+<script src="./js/vendor/mapa-brasil-uf.js"></script>
+<script src="./js/data/prospeccao-municipios.js"></script>
+<script type="module">
+import { api } from './js/api.js';
+
+const DATA = window.PROSPECCAO_MUNICIPIOS || null;
+const $ = (sel) => document.querySelector(sel);
+
+const STATUS_META = {
+    nao_contatado:    { label: 'Não contatado',    icon: 'fa-circle' },
+    contatado:        { label: 'Contatado',        icon: 'fa-phone' },
+    proposta_enviada: { label: 'Proposta enviada', icon: 'fa-paper-plane' },
+    negociacao:       { label: 'Em negociação',    icon: 'fa-handshake' },
+    fechado:          { label: 'Fechado',          icon: 'fa-circle-check' },
+    descartado:       { label: 'Descartado',       icon: 'fa-ban' }
+};
+
+// Código IBGE da UF -> [sigla, nome] — usado pelo mapa do radar (paths do SVG têm id = código)
+const UF_POR_COD = {
+    '11': ['RO', 'Rondônia'],    '12': ['AC', 'Acre'],           '13': ['AM', 'Amazonas'],
+    '14': ['RR', 'Roraima'],     '15': ['PA', 'Pará'],           '16': ['AP', 'Amapá'],
+    '17': ['TO', 'Tocantins'],   '21': ['MA', 'Maranhão'],       '22': ['PI', 'Piauí'],
+    '23': ['CE', 'Ceará'],       '24': ['RN', 'Rio Grande do Norte'], '25': ['PB', 'Paraíba'],
+    '26': ['PE', 'Pernambuco'],  '27': ['AL', 'Alagoas'],        '28': ['SE', 'Sergipe'],
+    '29': ['BA', 'Bahia'],       '31': ['MG', 'Minas Gerais'],   '32': ['ES', 'Espírito Santo'],
+    '33': ['RJ', 'Rio de Janeiro'], '35': ['SP', 'São Paulo'],   '41': ['PR', 'Paraná'],
+    '42': ['SC', 'Santa Catarina'], '43': ['RS', 'Rio Grande do Sul'], '50': ['MS', 'Mato Grosso do Sul'],
+    '51': ['MT', 'Mato Grosso'], '52': ['GO', 'Goiás'],          '53': ['DF', 'Distrito Federal']
+};
+
+// cod -> { status, nota, updatedBy, updatedAt } vindo da API
+const andamento = new Map();
+let apiOk = false;         // false = API indisponível → edição bloqueada
+const abertos = new Set();  // cards expandidos (persistem entre re-renders)
+const editando = new Set(); // cards com o formulário de contatos aberto
+const PAGINA = 150;        // cards renderizados por vez (1.877 de uma vez trava o celular)
+let visivel = PAGINA;
+
+function esc(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtInt(n) { return n == null ? '—' : n.toLocaleString('pt-BR'); }
+
+function fmtReais(v) {
+    if (v == null || !(v > 0)) return 'sem dados';
+    if (v >= 1e6) return 'R$ ' + (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi';
+    if (v >= 1e3) return 'R$ ' + Math.round(v / 1e3).toLocaleString('pt-BR') + ' mil';
+    return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+
+function statusDe(cod) {
+    const a = andamento.get(cod);
+    return (a && a.status) || 'nao_contatado';
+}
+
+// Por onde já falamos com a prefeitura. A ordem aqui é a ordem exibida nos chips.
+const CANAIS = [
+    { chave: 'whatsapp',   label: 'WhatsApp',   icon: 'fa-whatsapp',      brand: true },
+    { chave: 'ligacao',    label: 'Ligação',    icon: 'fa-phone' },
+    { chave: 'email',      label: 'E-mail',     icon: 'fa-envelope' },
+    { chave: 'oficio',     label: 'Ofício',     icon: 'fa-file-signature' },
+    { chave: 'presencial', label: 'Visita',     icon: 'fa-handshake' },
+    { chave: 'instagram',  label: 'Instagram',  icon: 'fa-instagram',     brand: true }
+];
+
+// Perfil da praça (IBGE — Regiões Geográficas Imediatas/Intermediárias).
+// O alvo é o polo regional; capital e órbita de capital têm concorrência consolidada.
+const PERFIL_META = {
+    intermediario: { curto: 'Polo regional', icon: 'fa-star' },
+    imediato:      { curto: 'Polo micro',    icon: 'fa-location-dot' },
+    orbita:        { curto: 'Órbita capital', icon: 'fa-triangle-exclamation' },
+    capital:       { curto: 'Capital',       icon: 'fa-city' },
+    comum:         { curto: '',              icon: '' }
+};
+
+function canaisDe(cod) {
+    const a = andamento.get(cod);
+    if (!a || !a.canais) return [];
+    try { return JSON.parse(a.canais) || []; } catch (e) { return []; }
+}
+
+const CAMPOS_CONTATO = [
+    { chave: 'telPrefeitura',      rotulo: 'Telefone da prefeitura' },
+    { chave: 'secretaria',         rotulo: 'Nome da secretaria' },
+    { chave: 'secretario',         rotulo: 'Secretário(a)' },
+    { chave: 'contatoSecretaria',  rotulo: 'Contato da secretaria (telefone/e-mail)' },
+    { chave: 'enderecoSecretaria', rotulo: 'Endereço' },
+    { chave: 'site',               rotulo: 'Site da prefeitura' },
+    { chave: 'obs',                rotulo: 'Observação do vendedor' }
+];
+
+// Contatos efetivos = snapshot (CadSUAS) + correções do gestor gravadas no banco.
+// O snapshot nunca é sobrescrito: dá para restaurar o original a qualquer momento.
+function contatosDe(m) {
+    const a = andamento.get(m.cod);
+    let edit = {};
+    if (a && a.contatosEdit) {
+        try { edit = JSON.parse(a.contatosEdit) || {}; } catch (e) { edit = {}; }
+    }
+    const base = {
+        telPrefeitura: m.telPrefeitura, secretaria: m.secretaria, secretario: m.secretario,
+        contatoSecretaria: m.contatoSecretaria, enderecoSecretaria: m.enderecoSecretaria,
+        site: m.site, obs: ''
+    };
+    return { valores: { ...base, ...edit }, corrigidos: Object.keys(edit), temEdicao: Object.keys(edit).length > 0 };
+}
+
+// Telefones viram chips clicáveis: celular (11 dígitos c/ 9) → WhatsApp, fixo → tel:
+function linksDeContato(texto) {
+    if (!texto) return '';
+    let restante = esc(texto);
+    const fones = String(texto).match(/\(?\d{2}\)?[\s.-]?\d{4,5}[\s.-]?\d{4}/g) || [];
+    let chips = '';
+    for (const f of fones) {
+        const dig = f.replace(/\D/g, '');
+        if (dig.length === 11 && dig[2] === '9') {
+            chips += `<a class="chip-fone wa" target="_blank" rel="noopener" href="https://wa.me/55${dig}"><i class="fab fa-whatsapp"></i>${esc(f.trim())}</a>`;
+        } else if (dig.length >= 10) {
+            chips += `<a class="chip-fone" href="tel:+55${dig}"><i class="fas fa-phone"></i>${esc(f.trim())}</a>`;
+        }
+    }
+    const emails = String(texto).match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || [];
+    for (const e of emails) {
+        chips += `<a class="chip-fone" href="mailto:${esc(e)}"><i class="fas fa-envelope"></i>${esc(e)}</a>`;
+    }
+    return chips || restante;
+}
+
+function filtrados() {
+    const busca = ($('#f-busca').value || '').trim().toLowerCase();
+    const uf = $('#f-uf').value;
+    const tier = $('#f-tier').value;
+    const st = $('#f-status').value;
+    const dist = $('#f-dist').value;
+    const perfil = $('#f-perfil').value;
+    const canal = $('#f-canal').value;
+    const conc = $('#f-conc').value;
+    const ordem = $('#f-ordem').value;
+
+    let lista = DATA.municipios.filter(m => {
+        if (busca && !m.nome.toLowerCase().includes(busca)) return false;
+        if (uf && m.uf !== uf) return false;
+        if (tier && m.tier !== tier) return false;
+        if (st && statusDe(m.cod) !== st) return false;
+        if (dist && m.faixaDist !== dist) return false;
+        if (perfil) {
+            if (perfil === 'polo') { if (!['intermediario', 'imediato'].includes(m.perfil)) return false; }
+            else if (m.perfil !== perfil) return false;
+        }
+        if (canal) {
+            const cs = canaisDe(m.cod);
+            if (canal === 'nenhum' && cs.length) return false;
+            if (canal === 'algum' && !cs.length) return false;
+            if (canal !== 'nenhum' && canal !== 'algum' && !cs.includes(canal)) return false;
+        }
+        if (conc && (conc === 'nm' ? !!m.concNivel : m.concNivel !== conc)) return false;
+        return true;
+    });
+    const ord = {
+        score: (a, b) => b.score - a.score,
+        pop:   (a, b) => (b.pop || 0) - (a.pop || 0),
+        dist:  (a, b) => (a.distKm ?? 1e9) - (b.distKm ?? 1e9),
+        orc:   (a, b) => (b.asMelhor || 0) - (a.asMelhor || 0)
+    };
+    lista.sort(ord[ordem] || ord.score);
+    return lista;
+}
+
+function renderKpis() {
+    const ms = DATA.municipios;
+    const tierAPend = ms.filter(m => m.tier === 'A' && statusDe(m.cod) === 'nao_contatado').length;
+    const contatados = ms.filter(m => !['nao_contatado', 'descartado'].includes(statusDe(m.cod))).length;
+    const propostas = ms.filter(m => ['proposta_enviada', 'negociacao', 'fechado'].includes(statusDe(m.cod))).length;
+    const fechados = ms.filter(m => statusDe(m.cod) === 'fechado').length;
+    $('#kpis').innerHTML = `
+        <div class="surface kpi"><div class="kpi-label"><i class="fas fa-bullseye"></i> Tier A a contatar</div><div class="kpi-value">${tierAPend}</div></div>
+        <div class="surface kpi"><div class="kpi-label"><i class="fas fa-phone"></i> Contatados</div><div class="kpi-value">${contatados}</div></div>
+        <div class="surface kpi"><div class="kpi-label"><i class="fas fa-paper-plane"></i> Com proposta</div><div class="kpi-value">${propostas}</div></div>
+        <div class="surface kpi"><div class="kpi-label"><i class="fas fa-circle-check"></i> Fechados</div><div class="kpi-value">${fechados}</div></div>`;
+}
+
+function cardHtml(m) {
+    const st = statusDe(m.cod);
+    const stMeta = STATUS_META[st];
+    const a = andamento.get(m.cod);
+    const aberto = abertos.has(m.cod);
+    const canais = canaisDe(m.cod);
+    const orc2024 = fmtReais(m.asLiq2024), orc2025 = fmtReais(m.asLiq2025);
+
+    let detalhes = '';
+    if (aberto) {
+        const quemSalvou = a && a.updatedAt
+            ? `<div class="quem-salvou">Última atualização: ${esc(a.updatedBy || '?')} em ${new Date(a.updatedAt).toLocaleString('pt-BR')}</div>`
+            : '';
+        const c = contatosDe(m);
+        const v = c.valores;
+        const corrigido = (campo) => c.corrigidos.includes(campo)
+            ? ' <span class="tag-corrigido" title="Corrigido pelo vendedor (o dado original do CadSUAS foi preservado)"><i class="fas fa-pen"></i> corrigido</span>'
+            : '';
+
+        // Modo edição: o mesmo bloco vira formulário; salvar grava só o que mudou
+        const blocoContatos = editando.has(m.cod)
+            ? `<div class="det-titulo"><i class="fas fa-pen-to-square"></i> Editando contatos</div>
+               ${CAMPOS_CONTATO.map(f => `
+                   <label class="campo-edit">
+                       <span>${f.rotulo}</span>
+                       <input type="text" class="input" data-edit="${f.chave}" data-cod="${m.cod}" value="${esc(v[f.chave] || '')}">
+                   </label>`).join('')}
+               <div class="acoes-edit">
+                   <button type="button" class="btn btn-primary btn-sm" data-acao="salvar-contatos" data-cod="${m.cod}">
+                       <i class="fas fa-floppy-disk"></i> Salvar contatos
+                   </button>
+                   <button type="button" class="btn btn-ghost btn-sm" data-acao="cancelar-contatos" data-cod="${m.cod}">Cancelar</button>
+                   ${c.temEdicao ? `<button type="button" class="btn btn-ghost btn-sm" data-acao="restaurar-contatos" data-cod="${m.cod}" title="Volta aos dados originais do CadSUAS"><i class="fas fa-rotate-left"></i> Restaurar original</button>` : ''}
+               </div>`
+            : `<div class="det-titulo">
+                   <i class="fas fa-address-book"></i> Contatos
+                   ${apiOk ? `<button type="button" class="btn btn-ghost btn-icon btn-sm" data-acao="editar-contatos" data-cod="${m.cod}" title="Corrigir contatos"><i class="fas fa-pen"></i></button>` : ''}
+               </div>
+               <div class="det-linha"><span class="rotulo">Prefeitura:</span> ${linksDeContato(v.telPrefeitura) || '—'}${corrigido('telPrefeitura')}</div>
+               <div class="det-linha"><span class="rotulo">Secretaria:</span> ${esc(v.secretaria) || '—'}${corrigido('secretaria')}</div>
+               <div class="det-linha"><span class="rotulo">Secretário(a):</span> <strong>${esc(v.secretario) || '—'}</strong>${corrigido('secretario')}</div>
+               <div class="det-linha"><span class="rotulo">Contato:</span> ${linksDeContato(v.contatoSecretaria) || '—'}${corrigido('contatoSecretaria')}</div>
+               <div class="det-linha"><span class="rotulo">Endereço:</span> ${esc(v.enderecoSecretaria) || '—'}${corrigido('enderecoSecretaria')}</div>
+               ${v.site ? `<div class="det-linha"><span class="rotulo">Site:</span> <a href="${esc(v.site)}" target="_blank" rel="noopener">${esc(String(v.site).replace(/^https?:\/\//, ''))}</a>${corrigido('site')}</div>` : ''}
+               ${v.obs ? `<div class="det-linha"><span class="rotulo">Obs. do vendedor:</span> ${esc(v.obs)}</div>` : ''}`;
+
+        detalhes = `
+        <div class="mun-detalhes">
+            <div>
+                ${blocoContatos}
+                <div class="det-linha" style="margin-top:10px;"><span class="rotulo">Orçamento AS:</span> 2024: ${orc2024} · 2025: ${orc2025} · per capita: ${m.asPerCapita != null ? 'R$ ' + m.asPerCapita.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '/hab' : '—'}</div>
+                <div class="det-linha"><span class="rotulo">Concorrência:</span> ${m.concNivel ? `<strong>${esc(m.concNivel)}</strong>${m.concN != null ? ' — ' + m.concN + ' locadora(s) visível(is)' : ''}${m.concObs ? '. ' + esc(m.concObs) : ''}` : 'não medida (varredura pendente)'}</div>
+                <div class="det-linha"><span class="rotulo">Perfil da praça:</span> ${esc(m.perfilRotulo) || '—'}${m.distCapitalKm != null ? ` · capital mais próxima: ${esc(m.capitalMaisProxima)} a ${m.distCapitalKm} km` : ''}</div>
+                <div class="det-obs"><strong>Qualidade do dado:</strong> ${esc(m.statusDado) || '—'}${m.obsDado ? '<br>' + esc(m.obsDado) : ''}</div>
+            </div>
+            <div class="andamento-form">
+                <div class="det-titulo"><i class="fas fa-clipboard-check"></i> Andamento</div>
+                <div class="canais-label">Por onde já falamos (clique para marcar):</div>
+                <div class="canais-toggle">
+                    ${CANAIS.map(c => `
+                        <button type="button" class="canal-btn${canais.includes(c.chave) ? ' on' : ''}"
+                                data-acao="toggle-canal" data-cod="${m.cod}" data-canal="${c.chave}"
+                                ${apiOk ? '' : 'disabled'} title="${c.label}">
+                            <i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${c.label}
+                        </button>`).join('')}
+                </div>
+                <select class="input" data-campo="status" data-cod="${m.cod}" ${apiOk ? '' : 'disabled'}>
+                    ${Object.entries(STATUS_META).map(([k, v]) =>
+                        `<option value="${k}" ${k === st ? 'selected' : ''}>${v.label}</option>`).join('')}
+                </select>
+                <textarea class="input" data-campo="nota" data-cod="${m.cod}" placeholder="Anotações: com quem falou, retorno combinado..." ${apiOk ? '' : 'disabled'}>${esc(a && a.nota || '')}</textarea>
+                <button type="button" class="btn btn-primary btn-sm" data-acao="salvar" data-cod="${m.cod}" ${apiOk ? '' : 'disabled'}>
+                    <i class="fas fa-floppy-disk"></i> Salvar andamento
+                </button>
+                ${apiOk ? '' : '<div class="quem-salvou"><i class="fas fa-triangle-exclamation"></i> Sem conexão com a API — edição bloqueada.</div>'}
+                ${quemSalvou}
+            </div>
+        </div>`;
+    }
+
+    return `
+    <article class="surface mun-card" data-cod="${m.cod}">
+        <div class="mun-head" data-acao="toggle" data-cod="${m.cod}">
+            <span class="mun-rank">#${m.rank}</span>
+            <span class="mun-nome">${esc(m.nome)} <small style="color:var(--text-faint);font-weight:600;">${m.uf}</small></span>
+            <span class="badge-tier tier-${m.tier}">Tier ${m.tier}</span>
+            ${PERFIL_META[m.perfil] && m.perfil !== 'comum' ? `<span class="badge-perfil perfil-${m.perfil}" title="${esc(m.perfilRotulo)}">
+                <i class="fas ${PERFIL_META[m.perfil].icon}"></i>${PERFIL_META[m.perfil].curto}</span>` : ''}
+            ${canais.length ? `<span class="canais-chips" title="Já contatamos por: ${canais.map(k => (CANAIS.find(c => c.chave === k) || {}).label).join(', ')}">
+                ${canais.map(k => { const c = CANAIS.find(x => x.chave === k); return c
+                    ? `<span class="canal-chip c-${c.chave}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i></span>` : ''; }).join('')}
+            </span>` : ''}
+            <span class="badge-status st-${st}"><i class="fas ${stMeta.icon}"></i>${stMeta.label}</span>
+            <i class="fas fa-chevron-${aberto ? 'up' : 'down'}" style="color:var(--text-faint);margin-left:6px;"></i>
+        </div>
+        <div class="mun-meta">
+            <span title="Score de prioridade"><i class="fas fa-star"></i>${m.score}</span>
+            <span title="População (IBGE 2025)"><i class="fas fa-users"></i>${fmtInt(m.pop)} hab · ${esc(m.porte)}</span>
+            <span title="Distância rodoviária de Goiânia"><i class="fas fa-route"></i>${m.distKm != null ? m.distKm + ' km' : '—'}</span>
+            <span title="Despesa em assistência social (melhor exercício)"><i class="fas fa-coins"></i>${fmtReais(m.asMelhor)}</span>
+            <span title="Concorrência local visível (locadoras em busca web)"><i class="fas fa-store"></i>${m.concNivel ? 'conc. ' + m.concNivel + (m.concN != null ? ` (${m.concN})` : '') : 'conc. não medida'}</span>
+        </div>
+        <div class="score-track"><div class="score-fill" style="width:${m.score}%"></div></div>
+        ${detalhes}
+    </article>`;
+}
+
+function renderLista() {
+    const lista = filtrados();
+    $('#contagem').textContent = `${lista.length.toLocaleString('pt-BR')} de ${DATA.municipios.length.toLocaleString('pt-BR')} municípios`;
+    if (!lista.length) {
+        $('#lista').innerHTML = '';
+        window.UI.empty($('#lista'), { icon: 'fa-magnifying-glass', title: 'Nenhum município encontrado', text: 'Ajuste a busca ou os filtros.' });
+        return;
+    }
+    let html = lista.slice(0, visivel).map(cardHtml).join('');
+    if (lista.length > visivel) {
+        html += `<div style="text-align:center;margin:16px 0;">
+            <button type="button" class="btn btn-secondary" data-acao="mais">
+                <i class="fas fa-angles-down"></i> Mostrar mais (${(lista.length - visivel).toLocaleString('pt-BR')} restantes)
+            </button></div>`;
+    }
+    $('#lista').innerHTML = html;
+}
+
+// Placar de canais: quantos municípios já receberam cada tipo de contato.
+// Conta sobre a lista INTEIRA (não a filtrada) — é o total do esforço acumulado.
+function renderPlacarCanais() {
+    const ms = DATA.municipios;
+    const semContato = ms.filter(m => !canaisDe(m.cod).length).length;
+    const filtroAtual = $('#f-canal').value;
+
+    const item = (valor, num, rotulo, icone, cor, brand) => `
+        <button type="button" class="placar-item${filtroAtual === valor ? ' on' : ''}${num ? '' : ' vazio'}"
+                data-acao="filtrar-canal" data-valor="${valor}"
+                title="${num.toLocaleString('pt-BR')} município(s) — clique para filtrar">
+            <span class="placar-icone" style="background:${cor}"><i class="${brand ? 'fab' : 'fas'} ${icone}"></i></span>
+            <span>
+                <span class="placar-num">${num.toLocaleString('pt-BR')}</span><br>
+                <span class="placar-txt">${rotulo}</span>
+            </span>
+        </button>`;
+
+    const CORES = {
+        whatsapp: '#25d366', ligacao: '#2563eb', email: '#7c3aed',
+        oficio: '#b45309', presencial: '#10b981', instagram: '#d946a6'
+    };
+
+    $('#canais-placar').innerHTML =
+        item('nenhum', semContato, 'Sem contato', 'fa-hourglass-half', 'var(--text-faint)', false) +
+        CANAIS.map(c => item(
+            c.chave,
+            ms.filter(m => canaisDe(m.cod).includes(c.chave)).length,
+            c.label, c.icon, CORES[c.chave], c.brand
+        )).join('');
+}
+
+function render() { renderKpis(); renderPlacarCanais(); renderLista(); }
+
+// Mapa do Brasil: pinta as UFs presentes no snapshot ("no radar"); clicar filtra a lista.
+// Novas UFs adicionadas ao pipeline acendem sozinhas — o mapa lê os dados, não uma lista fixa.
+function renderRadar() {
+    if (!window.MAPA_BRASIL_SVG) return;
+    const cont = $('#mapa-brasil');
+    cont.innerHTML = window.MAPA_BRASIL_SVG;
+
+    const noRadar = new Map(); // sigla -> qtde de municípios
+    DATA.municipios.forEach(m => noRadar.set(m.uf, (noRadar.get(m.uf) || 0) + 1));
+
+    cont.querySelectorAll('path[id]').forEach(p => {
+        const info = UF_POR_COD[p.id];
+        if (!info) return;
+        const [sigla, nome] = info;
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        if (noRadar.has(sigla)) {
+            p.classList.add('uf-on');
+            t.textContent = `${nome} — ${noRadar.get(sigla).toLocaleString('pt-BR')} municípios no radar. Clique para filtrar.`;
+            p.addEventListener('click', () => {
+                $('#f-uf').value = sigla;
+                visivel = PAGINA;
+                renderLista();
+                $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        } else {
+            t.textContent = `${nome} — ainda fora do radar`;
+        }
+        p.appendChild(t);
+    });
+
+    $('#radar-legenda').innerHTML = [...noRadar.entries()]
+        .sort((a, b) => (a[0] === 'GO' ? -1 : b[0] === 'GO' ? 1 : b[1] - a[1]))
+        .map(([s, n]) => `<span class="radar-chip">${s} · ${n.toLocaleString('pt-BR')}</span>`).join('');
+    $('#radar-info').innerHTML =
+        `<strong>${noRadar.size} de 27 UFs</strong> no radar — expandindo gradativamente até cobrir todo o território nacional.`;
+}
+
+async function salvar(cod) {
+    const m = DATA.municipios.find(x => x.cod === cod);
+    const card = document.querySelector(`.mun-card[data-cod="${cod}"]`);
+    const status = card.querySelector('[data-campo="status"]').value;
+    const nota = card.querySelector('[data-campo="nota"]').value;
+    const btn = card.querySelector('[data-acao="salvar"]');
+    btn.disabled = true;
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, status, nota });
+    btn.disabled = false;
+    if (r.ok) {
+        andamento.set(cod, r.data);
+        window.UI.toast(`${m.nome}: andamento salvo`);
+        render();
+    } else {
+        window.UI.toast(r.error || 'Não foi possível salvar. Tente novamente.', 'error');
+    }
+}
+
+// Marcar/desmarcar canal salva na hora (1 clique = 1 registro) e o chip aparece
+// no cabeçalho do card, deixando a evolução visível sem precisar abrir.
+async function toggleCanal(cod, canal) {
+    const m = DATA.municipios.find(x => x.cod === cod);
+    const atuais = canaisDe(cod);
+    const novos = atuais.includes(canal) ? atuais.filter(c => c !== canal) : [...atuais, canal];
+    const btn = document.querySelector(`[data-acao="toggle-canal"][data-cod="${cod}"][data-canal="${canal}"]`);
+    if (btn) btn.disabled = true;
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, canais: novos });
+    if (r.ok) {
+        andamento.set(cod, r.data);
+        render();
+    } else {
+        if (btn) btn.disabled = false;
+        window.UI.toast(r.error || 'Não foi possível registrar o canal.', 'error');
+    }
+}
+
+// Grava só os campos que DIFEREM do snapshot: assim, quando a planilha for
+// atualizada, o município volta a seguir o dado oficial no que não foi corrigido.
+async function salvarContatos(cod) {
+    const m = DATA.municipios.find(x => x.cod === cod);
+    const card = document.querySelector(`.mun-card[data-cod="${cod}"]`);
+    const base = {
+        telPrefeitura: m.telPrefeitura, secretaria: m.secretaria, secretario: m.secretario,
+        contatoSecretaria: m.contatoSecretaria, enderecoSecretaria: m.enderecoSecretaria,
+        site: m.site, obs: ''
+    };
+    const edit = {};
+    card.querySelectorAll('[data-edit]').forEach(inp => {
+        const campo = inp.dataset.edit;
+        const novo = inp.value.trim();
+        if (novo !== String(base[campo] || '').trim()) edit[campo] = novo;
+    });
+
+    const btn = card.querySelector('[data-acao="salvar-contatos"]');
+    btn.disabled = true;
+    const r = await api.salvarProspeccao(cod, {
+        nome: m.nome,
+        contatosEdit: Object.keys(edit).length ? edit : null
+    });
+    btn.disabled = false;
+    if (r.ok) {
+        andamento.set(cod, r.data);
+        editando.delete(cod);
+        window.UI.toast(Object.keys(edit).length
+            ? `${m.nome}: contatos atualizados`
+            : `${m.nome}: contatos voltaram ao original`);
+        render();
+    } else {
+        window.UI.toast(r.error || 'Não foi possível salvar os contatos.', 'error');
+    }
+}
+
+async function restaurarContatos(cod) {
+    const m = DATA.municipios.find(x => x.cod === cod);
+    const ok = await window.UI.confirm({
+        title: 'Restaurar contatos originais',
+        message: `Descartar as correções de ${m.nome} e voltar aos dados do CadSUAS?`,
+        confirmText: 'Restaurar'
+    });
+    if (!ok) return;
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, contatosEdit: null });
+    if (r.ok) {
+        andamento.set(cod, r.data);
+        editando.delete(cod);
+        window.UI.toast(`${m.nome}: contatos originais restaurados`);
+        render();
+    } else {
+        window.UI.toast(r.error || 'Não foi possível restaurar.', 'error');
+    }
+}
+
+function initEventos() {
+    ['#f-busca', '#f-uf', '#f-tier', '#f-status', '#f-dist', '#f-perfil', '#f-canal', '#f-conc', '#f-ordem'].forEach(sel => {
+        $(sel).addEventListener('input', () => { visivel = PAGINA; renderPlacarCanais(); renderLista(); });
+    });
+
+    // Placar de canais: clicar aplica (ou remove) o filtro daquele canal
+    $('#canais-placar').addEventListener('click', (ev) => {
+        const alvo = ev.target.closest('[data-acao="filtrar-canal"]');
+        if (!alvo) return;
+        const valor = alvo.dataset.valor;
+        $('#f-canal').value = ($('#f-canal').value === valor) ? '' : valor; // reclicar limpa
+        visivel = PAGINA;
+        renderPlacarCanais();
+        renderLista();
+        $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    $('#lista').addEventListener('click', (ev) => {
+        const alvo = ev.target.closest('[data-acao]');
+        if (!alvo) return;
+        // clique em link/chip/campo dentro do card não deve expandir/recolher
+        const cod = alvo.dataset.cod;
+        if (alvo.dataset.acao === 'toggle') {
+            if (ev.target.closest('a, select, textarea, button, input, label')) return;
+            abertos.has(cod) ? abertos.delete(cod) : abertos.add(cod);
+            editando.delete(cod); // recolher o card fecha o formulário sem salvar
+            renderLista();
+        } else if (alvo.dataset.acao === 'salvar') {
+            salvar(cod);
+        } else if (alvo.dataset.acao === 'toggle-canal') {
+            toggleCanal(cod, alvo.dataset.canal);
+        } else if (alvo.dataset.acao === 'editar-contatos') {
+            editando.add(cod);
+            renderLista();
+        } else if (alvo.dataset.acao === 'cancelar-contatos') {
+            editando.delete(cod);
+            renderLista();
+        } else if (alvo.dataset.acao === 'salvar-contatos') {
+            salvarContatos(cod);
+        } else if (alvo.dataset.acao === 'restaurar-contatos') {
+            restaurarContatos(cod);
+        } else if (alvo.dataset.acao === 'mais') {
+            visivel += PAGINA;
+            renderLista();
+        }
+    });
+}
+
+async function init() {
+    if (!DATA || !Array.isArray(DATA.municipios) || !DATA.municipios.length) {
+        $('#lista').innerHTML = '';
+        window.UI.empty($('#lista'), { icon: 'fa-triangle-exclamation', title: 'Dados não carregados', text: 'js/data/prospeccao-municipios.js não foi encontrado. Atualize a página.' });
+        return;
+    }
+    $('#fontes').innerHTML =
+        `<strong>Fontes</strong> (snapshot de ${esc(DATA.geradoEm)}): população — ${esc(DATA.fontes.populacao)}; ` +
+        `distância — ${esc(DATA.fontes.distancia)}; orçamento — ${esc(DATA.fontes.assistenciaSocial)}; ` +
+        `contatos — ${esc(DATA.fontes.contatos)}.<br><strong>Score:</strong> ${esc(DATA.criterioScore)}.`;
+
+    // Opções de UF montadas a partir do snapshot: UF nova no pipeline aparece sozinha no filtro
+    const siglaNome = {};
+    Object.values(UF_POR_COD).forEach(([s, n]) => siglaNome[s] = n);
+    const ufsPresentes = [...new Set(DATA.municipios.map(m => m.uf))]
+        .sort((a, b) => (a === 'GO' ? -1 : b === 'GO' ? 1 : a.localeCompare(b)));
+    $('#f-uf').innerHTML = '<option value="">Todas as UFs</option>' +
+        ufsPresentes.map(s => `<option value="${s}">${esc(siglaNome[s] || s)}</option>`).join('');
+
+    renderRadar();
+    initEventos();
+    render(); // primeiro paint com o snapshot (offline-first)
+
+    const rows = await api.listarProspeccao();
+    if (rows === null) {
+        apiOk = false;
+        window.UI.toast('API indisponível — mostrando dados sem andamento.', 'warning');
+    } else {
+        apiOk = true;
+        rows.forEach(r => andamento.set(r.cod, r));
+    }
+    render();
+}
+
+init();
+</script>
+
+<script src="./js/ui.js"></script>
+<script src="./js/nav.js"></script>
+<script src="js/protect.js"></script>
+</body>
+</html>

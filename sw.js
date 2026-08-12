@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.18.6';
+const CACHE_NAME = 'aero-festas-v3.19.0';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -14,6 +14,7 @@ const ASSETS_TO_CACHE = [
     '/admin-monitor.html',
     '/admin.html',
     '/Links-Rastreados.html',
+    '/Prospeccao-Prefeituras.html',
     '/profile.html',
     '/register.html',
     '/forgot-password.html',
@@ -31,6 +32,10 @@ const ASSETS_TO_CACHE = [
     '/js/charts-financeiro.js',
     '/js/charts-init.js',
     '/js/profile.js',
+    // Snapshot dos 1.877 municípios de GO e UFs vizinhas (população, distância,
+    // orçamento, contatos) — dependência de Prospeccao-Prefeituras.html; sem
+    // ele no precache a página abre offline mas a lista fica vazia.
+    '/js/data/prospeccao-municipios.js',
     // qrcode 1.5.1 vendorizada (o CDN virou 404): é a dependência do botão
     // "Baixar PNG" de Links-Rastreados.html — sem ela no precache, a página
     // abre offline mas a geração do QR quebra.
@@ -49,6 +54,9 @@ const ASSETS_TO_CACHE = [
     // jsQR 1.4.0 vendorizada: teste de leitura do QR antes do download — o
     // arquivo vai para gráfica, um QR bonito que não lê é prejuízo irreversível.
     '/js/vendor/jsqr.js',
+    // Malha do Brasil por UF (IBGE, vendorizada): mapa "radar de expansão" de
+    // Prospeccao-Prefeituras.html — sem ela no precache o mapa some offline.
+    '/js/vendor/mapa-brasil-uf.js',
     // Pacifico vendorizada (SIL OFL): fonte cursiva da assinatura "Aero" no QR
     // de Links-Rastreados.html. Mora no projeto (mesma lição do qrcode: CDN em
     // runtime já quebrou produção) e precisa do precache para funcionar offline.
