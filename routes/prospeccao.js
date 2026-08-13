@@ -17,18 +17,28 @@ const CAMPOS_CONTATO = ['telPrefeitura', 'secretaria', 'secretario', 'contatoSec
 
 // Por onde já falamos com a prefeitura (acumulativo)
 const CANAIS_VALIDOS = ['whatsapp', 'ligacao', 'email', 'oficio', 'presencial', 'instagram'];
+// Por que NÃO alcançamos — separa "ainda não tentei" de "tentei e não deu"
+const PROBLEMAS_VALIDOS = ['tel_nao_encontrado', 'tel_desatualizado', 'nao_atende', 'whats_sem_resposta', 'email_sem_resposta', 'sem_retorno'];
 
-function validarCanais(valor) {
+// Valida lista contra whitelist e devolve JSON canônico (ordem da whitelist, sem duplicata)
+function validarLista(valor, permitidos, nomeCampo) {
     if (valor === null) return null;
-    if (!Array.isArray(valor)) throw erro(400, 'canais inválido: esperado lista.');
-    // dedup + ordem canônica (a whitelist define a ordem exibida na tela)
+    if (!Array.isArray(valor)) throw erro(400, `${nomeCampo} inválido: esperado lista.`);
     const set = new Set();
     for (const c of valor) {
         const s = String(c).trim();
-        if (!CANAIS_VALIDOS.includes(s)) throw erro(400, `Canal inválido: ${s}`);
+        if (!permitidos.includes(s)) throw erro(400, `Valor inválido em ${nomeCampo}: ${s}`);
         set.add(s);
     }
-    return set.size ? JSON.stringify(CANAIS_VALIDOS.filter(c => set.has(c))) : null;
+    return set.size ? JSON.stringify(permitidos.filter(c => set.has(c))) : null;
+}
+
+// Data de retorno: aceita 'AAAA-MM-DD' ou ISO; null limpa o lembrete
+function validarProximoContato(valor) {
+    if (valor === null || valor === '') return null;
+    const d = new Date(valor);
+    if (isNaN(d.getTime())) throw erro(400, 'Data de próximo contato inválida.');
+    return d;
 }
 
 function validarContatosEdit(valor) {
@@ -81,7 +91,16 @@ router.put('/:cod', authenticate, async (req, res, next) => {
             dados.nota = body.nota ? String(body.nota).trim().slice(0, 4000) : null;
         }
         if (body.canais !== undefined) {
-            dados.canais = validarCanais(body.canais);
+            dados.canais = validarLista(body.canais, CANAIS_VALIDOS, 'canais');
+        }
+        if (body.problemas !== undefined) {
+            dados.problemas = validarLista(body.problemas, PROBLEMAS_VALIDOS, 'problemas');
+        }
+        if (body.proximoContato !== undefined) {
+            dados.proximoContato = validarProximoContato(body.proximoContato);
+        }
+        if (body.jaAtendemos !== undefined) {
+            dados.jaAtendemos = body.jaAtendemos === true || body.jaAtendemos === 'true';
         }
         if (body.contatosEdit !== undefined) {
             dados.contatosEdit = validarContatosEdit(body.contatosEdit);
@@ -99,6 +118,9 @@ router.put('/:cod', authenticate, async (req, res, next) => {
                 status: dados.status || 'nao_contatado',
                 nota: dados.nota !== undefined ? dados.nota : null,
                 canais: dados.canais !== undefined ? dados.canais : null,
+                problemas: dados.problemas !== undefined ? dados.problemas : null,
+                proximoContato: dados.proximoContato !== undefined ? dados.proximoContato : null,
+                jaAtendemos: dados.jaAtendemos === true,
                 contatosEdit: dados.contatosEdit !== undefined ? dados.contatosEdit : null,
                 updatedBy: dados.updatedBy
             },

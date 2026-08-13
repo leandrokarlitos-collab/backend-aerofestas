@@ -301,6 +301,134 @@
     .placar-txt { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
     .placar-item.vazio .placar-num { color: var(--text-faint); }
     .acoes-edit { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    /* ---- Alertas de contato, retorno e cliente antigo ---- */
+    .badge-alerta {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(239,68,68,.13);
+        color: var(--danger);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .badge-cliente {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--success-soft, rgba(16,185,129,.16));
+        color: var(--success);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .badge-retorno {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--surface-inset);
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    /* Edital aberto: a informação mais acionável da tela — pisca de propósito */
+    .badge-edital {
+        font-size: 0.68rem;
+        font-weight: 800;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--danger);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        box-shadow: 0 0 0 3px rgba(239,68,68,.18);
+    }
+    .badge-jalicitou {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(16,185,129,.14);
+        color: var(--success);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .bloco-edital {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        background: rgba(239,68,68,.07);
+        border: 1px solid rgba(239,68,68,.25);
+        font-size: 0.78rem;
+        line-height: 1.5;
+    }
+    .bloco-edital .tit { font-weight: 700; color: var(--danger); margin-bottom: 4px; }
+    .badge-aniversario {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(139,92,246,.15);
+        color: #7c3aed;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .dark .badge-aniversario { color: #a78bfa; }
+    .badge-retorno.venceu { background: rgba(239,68,68,.15); color: var(--danger); }
+    .badge-retorno.hoje   { background: rgba(245,158,11,.18); color: #b45309; }
+    .dark .badge-retorno.hoje { color: #fbbf24; }
+
+    .prob-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.73rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .prob-btn:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+    .prob-btn.on { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .prob-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .linha-retorno { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .linha-retorno input[type="date"] { width: auto; flex: 1; min-width: 140px; }
+
+    /* ---- Cluster: municípios vizinhos para a mesma viagem ---- */
+    .viz-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--surface-inset);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin: 2px 4px 2px 0;
+        cursor: pointer;
+    }
+    .viz-chip:hover { border-color: var(--brand-600); color: var(--brand-600); }
+
     /* ---- Perfil da praça: polo regional x sombra de capital ---- */
     .badge-perfil {
         font-size: 0.66rem;
@@ -328,6 +456,35 @@
         white-space: nowrap;
     }
     .dark .tag-corrigido { color: #fbbf24; }
+
+    /* ---- Composição do score: mostra de onde vieram os 100 pontos ---- */
+    .pt-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+        gap: 6px;
+        margin-top: 8px;
+    }
+    .pt-item {
+        background: var(--surface-inset);
+        border-radius: var(--radius-sm);
+        padding: 6px 9px;
+    }
+    .pt-item .pt-nome {
+        font-size: 0.63rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-muted);
+    }
+    .pt-item .pt-val {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text);
+    }
+    .pt-item .pt-max { font-size: 0.7rem; color: var(--text-faint); font-weight: 600; }
+    .pt-barra { height: 3px; border-radius: 999px; background: var(--border); margin-top: 4px; overflow: hidden; }
+    .pt-barra > i { display: block; height: 100%; background: var(--brand-600); border-radius: 999px; }
 
     .fontes-nota {
         font-size: 0.72rem;
@@ -437,6 +594,39 @@
             <option value="250–400 km">250–400 km</option>
             <option value="400+ km">400+ km</option>
         </select>
+        <select id="f-lic" class="input">
+            <option value="">Qualquer licitação</option>
+            <option value="aberta">⚡ Licitação ABERTA agora</option>
+            <option value="ja">Já licitou antes</option>
+            <option value="nunca">Nunca licitou (ou não achado)</option>
+        </select>
+        <select id="f-aniv" class="input">
+            <option value="">Qualquer aniversário</option>
+            <option value="60">Aniversário em até 60 dias</option>
+            <option value="90">Aniversário em até 90 dias</option>
+            <option value="120">Aniversário em até 4 meses</option>
+        </select>
+        <select id="f-retorno" class="input">
+            <option value="">Qualquer retorno</option>
+            <option value="vencendo">Retorno hoje ou atrasado</option>
+            <option value="agendado">Com retorno agendado</option>
+            <option value="sem">Sem retorno agendado</option>
+        </select>
+        <select id="f-porte" class="input">
+            <option value="">Qualquer porte</option>
+            <option value="Pequeno I">Pequeno I (até 20 mil)</option>
+            <option value="Pequeno II">Pequeno II (20–50 mil)</option>
+            <option value="Médio">Médio (50–100 mil)</option>
+            <option value="Grande">Grande (100–900 mil)</option>
+            <option value="Metrópole">Metrópole (900 mil+)</option>
+        </select>
+        <select id="f-dado" class="input">
+            <option value="">Qualquer contato</option>
+            <option value="com">Com telefone</option>
+            <option value="sem">Sem contato coletado</option>
+            <option value="problema">Com problema de contato</option>
+            <option value="cliente">Já atendemos</option>
+        </select>
         <select id="f-perfil" class="input">
             <option value="">Qualquer perfil de praça</option>
             <option value="intermediario">Polo regional (sede de região)</option>
@@ -470,6 +660,9 @@
             <option value="pop">Ordenar: população</option>
             <option value="dist">Ordenar: distância</option>
             <option value="orc">Ordenar: orçamento AS</option>
+            <option value="percapita">Ordenar: orçamento por habitante</option>
+            <option value="retorno">Ordenar: retorno mais próximo</option>
+            <option value="aniversario">Ordenar: aniversário mais próximo</option>
         </select>
     </div>
     <p class="result-count" id="contagem"></p>
@@ -567,6 +760,67 @@ function canaisDe(cod) {
     try { return JSON.parse(a.canais) || []; } catch (e) { return []; }
 }
 
+// Por que NÃO alcançamos a prefeitura — distingue "ainda não tentei" de
+// "tentei e o telefone está morto". Aparece como alerta vermelho no card.
+const PROBLEMAS = [
+    { chave: 'tel_nao_encontrado',  label: 'Telefone não encontrado', icon: 'fa-phone-slash' },
+    { chave: 'tel_desatualizado',   label: 'Telefone desatualizado',  icon: 'fa-triangle-exclamation' },
+    { chave: 'nao_atende',          label: 'Não atende',              icon: 'fa-phone-volume' },
+    { chave: 'whats_sem_resposta',  label: 'WhatsApp sem resposta',   icon: 'fa-comment-slash' },
+    { chave: 'email_sem_resposta',  label: 'E-mail sem resposta',     icon: 'fa-envelope-open' },
+    { chave: 'sem_retorno',         label: 'Prometeu e não retornou',  icon: 'fa-hourglass-end' }
+];
+
+function problemasDe(cod) {
+    const a = andamento.get(cod);
+    if (!a || !a.problemas) return [];
+    try { return JSON.parse(a.problemas) || []; } catch (e) { return []; }
+}
+
+function jaAtendemosDe(cod) {
+    const a = andamento.get(cod);
+    return !!(a && a.jaAtendemos);
+}
+
+const MESES = ['', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+               'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+// Aniversário da cidade: prefeituras fazem festa pública na data e costumam
+// licitar estrutura ~2 meses antes. Devolve quantos dias faltam (ciclo anual).
+function aniversarioDe(m) {
+    if (!m.aniversario || !m.aniversario.mes) return null;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    let alvo = new Date(hoje.getFullYear(), m.aniversario.mes - 1, m.aniversario.dia);
+    if (alvo < hoje) alvo = new Date(hoje.getFullYear() + 1, m.aniversario.mes - 1, m.aniversario.dia);
+    const dias = Math.round((alvo - hoje) / 86400000);
+    return {
+        dia: m.aniversario.dia,
+        mes: m.aniversario.mes,
+        texto: `${m.aniversario.dia} de ${MESES[m.aniversario.mes]}`,
+        dias,
+        // janela de licitação: prefeitura contrata de 30 a 90 dias antes
+        naJanela: dias <= 90
+    };
+}
+
+// Data de retorno combinada. Devolve { iso, texto, atrasado, hoje } ou null.
+function retornoDe(cod) {
+    const a = andamento.get(cod);
+    if (!a || !a.proximoContato) return null;
+    const d = new Date(a.proximoContato);
+    if (isNaN(d.getTime())) return null;
+    const hojeMeiaNoite = new Date(); hojeMeiaNoite.setHours(0, 0, 0, 0);
+    const alvo = new Date(d); alvo.setHours(0, 0, 0, 0);
+    const dias = Math.round((alvo - hojeMeiaNoite) / 86400000);
+    return {
+        iso: d.toISOString().slice(0, 10),
+        texto: alvo.toLocaleDateString('pt-BR'),
+        atrasado: dias < 0,
+        hoje: dias === 0,
+        dias
+    };
+}
+
 const CAMPOS_CONTATO = [
     { chave: 'telPrefeitura',      rotulo: 'Telefone da prefeitura' },
     { chave: 'secretaria',         rotulo: 'Nome da secretaria' },
@@ -623,10 +877,25 @@ function filtrados() {
     const perfil = $('#f-perfil').value;
     const canal = $('#f-canal').value;
     const conc = $('#f-conc').value;
+    const licF = $('#f-lic').value;
+    const anivF = $('#f-aniv').value;
+    const retornoF = $('#f-retorno').value;
+    const porte = $('#f-porte').value;
+    const dado = $('#f-dado').value;
     const ordem = $('#f-ordem').value;
 
     let lista = DATA.municipios.filter(m => {
-        if (busca && !m.nome.toLowerCase().includes(busca)) return false;
+        // Busca casa com nome do município OU do secretário (o vendedor lembra de
+        // quem atendeu). Só monta os contatos completos se o nome não bastou —
+        // com 1.877 itens por tecla, o JSON.parse de todos custaria caro no celular.
+        if (busca) {
+            let achou = m.nome.toLowerCase().includes(busca);
+            if (!achou) {
+                const sec = andamento.has(m.cod) ? contatosDe(m).valores.secretario : m.secretario;
+                achou = !!sec && sec.toLowerCase().includes(busca);
+            }
+            if (!achou) return false;
+        }
         if (uf && m.uf !== uf) return false;
         if (tier && m.tier !== tier) return false;
         if (st && statusDe(m.cod) !== st) return false;
@@ -642,13 +911,48 @@ function filtrados() {
             if (canal !== 'nenhum' && canal !== 'algum' && !cs.includes(canal)) return false;
         }
         if (conc && (conc === 'nm' ? !!m.concNivel : m.concNivel !== conc)) return false;
+        if (retornoF) {
+            const r = retornoDe(m.cod);
+            if (retornoF === 'vencendo' && !(r && (r.atrasado || r.hoje))) return false;
+            if (retornoF === 'agendado' && !r) return false;
+            if (retornoF === 'sem' && r) return false;
+        }
+        if (porte && m.porte !== porte) return false;
+        if (licF) {
+            if (licF === 'aberta' && !m.licitacaoAberta) return false;
+            if (licF === 'ja' && !m.jaLicitou) return false;
+            if (licF === 'nunca' && (m.jaLicitou || m.licitacaoAberta)) return false;
+        }
+        if (anivF) {
+            const a = aniversarioDe(m);
+            if (!a || a.dias > Number(anivF)) return false;
+        }
+        if (dado) {
+            const v = contatosDe(m).valores;
+            const temTel = !!(v.telPrefeitura || v.contatoSecretaria);
+            if (dado === 'com' && !temTel) return false;
+            if (dado === 'sem' && temTel) return false;
+            if (dado === 'problema' && !problemasDe(m.cod).length) return false;
+            if (dado === 'cliente' && !jaAtendemosDe(m.cod)) return false;
+        }
         return true;
     });
     const ord = {
         score: (a, b) => b.score - a.score,
         pop:   (a, b) => (b.pop || 0) - (a.pop || 0),
         dist:  (a, b) => (a.distKm ?? 1e9) - (b.distKm ?? 1e9),
-        orc:   (a, b) => (b.asMelhor || 0) - (a.asMelhor || 0)
+        orc:   (a, b) => (b.asMelhor || 0) - (a.asMelhor || 0),
+        percapita: (a, b) => (b.asPerCapita || 0) - (a.asPerCapita || 0),
+        // aniversário mais próximo primeiro (quem não tem data vai para o fim)
+        aniversario: (a, b) => {
+            const aa = aniversarioDe(a), ab = aniversarioDe(b);
+            return (aa ? aa.dias : 1e9) - (ab ? ab.dias : 1e9);
+        },
+        // retorno mais próximo primeiro; quem não tem lembrete vai para o fim
+        retorno: (a, b) => {
+            const ra = retornoDe(a.cod), rb = retornoDe(b.cod);
+            return (ra ? ra.dias : 1e9) - (rb ? rb.dias : 1e9);
+        }
     };
     lista.sort(ord[ordem] || ord.score);
     return lista;
@@ -660,11 +964,35 @@ function renderKpis() {
     const contatados = ms.filter(m => !['nao_contatado', 'descartado'].includes(statusDe(m.cod))).length;
     const propostas = ms.filter(m => ['proposta_enviada', 'negociacao', 'fechado'].includes(statusDe(m.cod))).length;
     const fechados = ms.filter(m => statusDe(m.cod) === 'fechado').length;
+    // Retornos vencidos/de hoje são o que MAIS importa no dia a dia — vêm primeiro
+    const retornos = ms.map(m => retornoDe(m.cod)).filter(Boolean);
+    const vencendo = retornos.filter(r => r.atrasado || r.hoje).length;
+    const editais = ms.filter(m => m.licitacaoAberta).length;
+
     $('#kpis').innerHTML = `
+        ${editais ? `<div class="surface kpi" data-acao="filtrar-edital" style="cursor:pointer;border:1.5px solid var(--danger);">
+            <div class="kpi-label" style="color:var(--danger)"><i class="fas fa-gavel"></i> Licitação aberta</div>
+            <div class="kpi-value" style="color:var(--danger)">${editais}</div></div>` : ''}
+        <div class="surface kpi${vencendo ? ' kpi-urgente' : ''}" ${vencendo ? 'data-acao="filtrar-retorno" style="cursor:pointer"' : ''}>
+            <div class="kpi-label"><i class="fas fa-calendar-day"></i> Retornos hoje/atrasados</div>
+            <div class="kpi-value">${vencendo}</div></div>
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-bullseye"></i> Tier A a contatar</div><div class="kpi-value">${tierAPend}</div></div>
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-phone"></i> Contatados</div><div class="kpi-value">${contatados}</div></div>
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-paper-plane"></i> Com proposta</div><div class="kpi-value">${propostas}</div></div>
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-circle-check"></i> Fechados</div><div class="kpi-value">${fechados}</div></div>`;
+
+    const irPara = (seletor, campo, valor) => {
+        const btn = $(seletor);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            $(campo).value = valor;
+            visivel = PAGINA;
+            renderLista();
+            $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    };
+    irPara('#kpis [data-acao="filtrar-retorno"]', '#f-retorno', 'vencendo');
+    irPara('#kpis [data-acao="filtrar-edital"]', '#f-lic', 'aberta');
 }
 
 function cardHtml(m) {
@@ -673,6 +1001,10 @@ function cardHtml(m) {
     const a = andamento.get(m.cod);
     const aberto = abertos.has(m.cod);
     const canais = canaisDe(m.cod);
+    const problemas = problemasDe(m.cod);
+    const retorno = retornoDe(m.cod);
+    const cliente = jaAtendemosDe(m.cod);
+    const aniv = aniversarioDe(m);
     const orc2024 = fmtReais(m.asLiq2024), orc2025 = fmtReais(m.asLiq2025);
 
     let detalhes = '';
@@ -717,9 +1049,34 @@ function cardHtml(m) {
         <div class="mun-detalhes">
             <div>
                 ${blocoContatos}
-                <div class="det-linha" style="margin-top:10px;"><span class="rotulo">Orçamento AS:</span> 2024: ${orc2024} · 2025: ${orc2025} · per capita: ${m.asPerCapita != null ? 'R$ ' + m.asPerCapita.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '/hab' : '—'}</div>
+                ${m.pt ? `<div class="det-titulo" style="margin-top:12px;"><i class="fas fa-calculator"></i> De onde vêm os ${m.score} pontos</div>
+                <div class="pt-grid">
+                    ${[['capacidade','Financeiro',25],['concorrencia','Concorrência',25],['eventos','Eventos',15],
+                       ['ticket','Ticket',15],['logistica','Logística',10],['decisor','Decisor',5],['polo','Polo',5]]
+                      .map(([k,rot,max]) => `<div class="pt-item">
+                        <div class="pt-nome">${rot}</div>
+                        <div><span class="pt-val">${m.pt[k]}</span><span class="pt-max">/${max}</span></div>
+                        <div class="pt-barra"><i style="width:${Math.round((m.pt[k]/max)*100)}%"></i></div>
+                      </div>`).join('')}
+                </div>
+                ${(m.perfil === 'capital' || m.perfil === 'orbita') ? `<div class="det-obs" style="margin-top:6px;"><i class="fas fa-triangle-exclamation"></i> Pontuação reduzida em ${m.perfil === 'capital' ? '50%' : '35%'}: ${esc(m.perfilRotulo)} — concorrência já consolidada.</div>` : ''}` : ''}
+                <div class="det-linha" style="margin-top:10px;"><span class="rotulo">Receita do município:</span> ${m.receitaTotal ? fmtReais(m.receitaTotal) + (m.receitaAno ? ` (${m.receitaAno})` : '') + (m.pop ? ` · ${fmtReais(m.receitaTotal / m.pop)}/hab` : '') : '—'}${m.crescimentoPop != null ? ` · população ${m.crescimentoPop >= 0 ? '+' : ''}${m.crescimentoPop}% desde 2022` : ''}</div>
+                ${m.maiorTicket ? `<div class="det-linha"><span class="rotulo">Maior contrato já pago no ramo:</span> <strong>${fmtReais(m.maiorTicket)}</strong></div>` : ''}
+                ${m.horasViagem != null ? `<div class="det-linha"><span class="rotulo">Viagem de Goiânia:</span> ${m.horasViagem}h de estrada${m.distKm ? ` (${m.distKm} km)` : ''}</div>` : ''}
+                <div class="det-linha"><span class="rotulo">Orçamento AS:</span> 2024: ${orc2024} · 2025: ${orc2025} · per capita: ${m.asPerCapita != null ? 'R$ ' + m.asPerCapita.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '/hab' : '—'}</div>
                 <div class="det-linha"><span class="rotulo">Concorrência:</span> ${m.concNivel ? `<strong>${esc(m.concNivel)}</strong>${m.concN != null ? ' — ' + m.concN + ' locadora(s) visível(is)' : ''}${m.concObs ? '. ' + esc(m.concObs) : ''}` : 'não medida (varredura pendente)'}</div>
                 <div class="det-linha"><span class="rotulo">Perfil da praça:</span> ${esc(m.perfilRotulo) || '—'}${m.distCapitalKm != null ? ` · capital mais próxima: ${esc(m.capitalMaisProxima)} a ${m.distCapitalKm} km` : ''}</div>
+                ${(m.licAbertas && m.licAbertas.length) ? `<div class="bloco-edital">
+                    <div class="tit"><i class="fas fa-gavel"></i> Licitação aberta</div>
+                    ${m.licAbertas.map(l => `<div>• ${esc(l.objeto || 'objeto não detalhado')}${l.prazo ? ` — <strong>prazo: ${esc(l.prazo)}</strong>` : ''}${l.valorEstimado ? ` · ${esc(l.valorEstimado)}` : ''}${l.link ? ` <a href="${esc(l.link)}" target="_blank" rel="noopener">abrir</a>` : ''}</div>`).join('')}
+                </div>` : ''}
+                ${(m.licHistorico && m.licHistorico.length) ? `<div class="det-linha"><span class="rotulo">Já contratou antes:</span><br>
+                    ${m.licHistorico.map(h => `• ${h.ano ? esc(h.ano) + ' — ' : ''}${esc(h.objeto || '')}${h.valor ? ' · ' + esc(h.valor) : ''}${h.modalidade ? ' (' + esc(h.modalidade) + ')' : ''}`).join('<br>')}</div>` : ''}
+                ${m.licObs ? `<div class="det-linha"><span class="rotulo">Sobre as compras:</span> ${esc(m.licObs)}</div>` : ''}
+                ${aniv ? `<div class="det-linha"><span class="rotulo">Aniversário da cidade:</span> <strong>${aniv.texto}</strong> (em ${aniv.dias} dias)${m.festaTradicional ? `<br><span class="rotulo">Festa tradicional:</span> ${esc(m.festaTradicional)}` : ''}</div>` : ''}
+                ${(m.vizinhos && m.vizinhos.length) ? `<div class="det-linha"><span class="rotulo">Na mesma viagem:</span><br>
+                    ${m.vizinhos.map(v => `<span class="viz-chip" data-acao="ir-vizinho" data-nome="${esc(v.nome)}" title="Tier ${v.tier} — clique para abrir">
+                        <i class="fas fa-route"></i>${esc(v.nome)}/${v.uf} · ${v.km} km</span>`).join('')}</div>` : ''}
                 <div class="det-obs"><strong>Qualidade do dado:</strong> ${esc(m.statusDado) || '—'}${m.obsDado ? '<br>' + esc(m.obsDado) : ''}</div>
             </div>
             <div class="andamento-form">
@@ -737,7 +1094,28 @@ function cardHtml(m) {
                     ${Object.entries(STATUS_META).map(([k, v]) =>
                         `<option value="${k}" ${k === st ? 'selected' : ''}>${v.label}</option>`).join('')}
                 </select>
+                <div class="canais-label">Não conseguimos falar? Marque o motivo:</div>
+                <div class="canais-toggle">
+                    ${PROBLEMAS.map(p => `
+                        <button type="button" class="prob-btn${problemas.includes(p.chave) ? ' on' : ''}"
+                                data-acao="toggle-problema" data-cod="${m.cod}" data-problema="${p.chave}"
+                                ${apiOk ? '' : 'disabled'} title="${p.label}">
+                            <i class="fas ${p.icon}"></i> ${p.label}
+                        </button>`).join('')}
+                </div>
+
+                <div class="canais-label">Retornar em:</div>
+                <div class="linha-retorno">
+                    <input type="date" class="input" data-campo="retorno" data-cod="${m.cod}"
+                           value="${retorno ? retorno.iso : ''}" ${apiOk ? '' : 'disabled'}>
+                    ${retorno ? `<button type="button" class="btn btn-ghost btn-sm" data-acao="limpar-retorno" data-cod="${m.cod}" title="Remover lembrete"><i class="fas fa-xmark"></i></button>` : ''}
+                </div>
+
                 <textarea class="input" data-campo="nota" data-cod="${m.cod}" placeholder="Anotações: com quem falou, retorno combinado..." ${apiOk ? '' : 'disabled'}>${esc(a && a.nota || '')}</textarea>
+                <label style="display:flex;align-items:center;gap:7px;font-size:0.8rem;margin-bottom:9px;cursor:pointer;">
+                    <input type="checkbox" data-campo="cliente" data-cod="${m.cod}" ${cliente ? 'checked' : ''} ${apiOk ? '' : 'disabled'}>
+                    <span><i class="fas fa-award" style="color:var(--success)"></i> Já fizemos evento para esta prefeitura</span>
+                </label>
                 <button type="button" class="btn btn-primary btn-sm" data-acao="salvar" data-cod="${m.cod}" ${apiOk ? '' : 'disabled'}>
                     <i class="fas fa-floppy-disk"></i> Salvar andamento
                 </button>
@@ -759,6 +1137,15 @@ function cardHtml(m) {
                 ${canais.map(k => { const c = CANAIS.find(x => x.chave === k); return c
                     ? `<span class="canal-chip c-${c.chave}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i></span>` : ''; }).join('')}
             </span>` : ''}
+            ${m.licitacaoAberta ? '<span class="badge-edital" title="Há edital aberto agora para brinquedos/recreação — ver detalhes no card"><i class="fas fa-gavel"></i>LICITAÇÃO ABERTA</span>' : ''}
+            ${(m.jaLicitou && !m.licitacaoAberta) ? '<span class="badge-jalicitou" title="A prefeitura já contratou esse tipo de serviço antes"><i class="fas fa-file-contract"></i>Já licitou</span>' : ''}
+            ${cliente ? '<span class="badge-cliente" title="Já fizemos evento para esta prefeitura"><i class="fas fa-award"></i>Já atendemos</span>' : ''}
+            ${aniv && aniv.naJanela ? `<span class="badge-aniversario" title="Aniversário da cidade em ${aniv.texto} — a prefeitura costuma licitar estrutura 1 a 3 meses antes">
+                <i class="fas fa-cake-candles"></i>${aniv.dias === 0 ? 'Aniversário hoje' : 'Aniversário em ' + aniv.dias + 'd'}</span>` : ''}
+            ${problemas.length ? `<span class="badge-alerta" title="${problemas.map(k => (PROBLEMAS.find(p => p.chave === k) || {}).label).join(' · ')}">
+                <i class="fas fa-phone-slash"></i>${problemas.length === 1 ? (PROBLEMAS.find(p => p.chave === problemas[0]) || {}).label : problemas.length + ' problemas'}</span>` : ''}
+            ${retorno ? `<span class="badge-retorno${retorno.atrasado ? ' venceu' : retorno.hoje ? ' hoje' : ''}" title="Retorno combinado">
+                <i class="fas fa-calendar-day"></i>${retorno.atrasado ? 'Atrasado ' + retorno.texto : retorno.hoje ? 'Retornar hoje' : 'Retorno ' + retorno.texto}</span>` : ''}
             <span class="badge-status st-${st}"><i class="fas ${stMeta.icon}"></i>${stMeta.label}</span>
             <i class="fas fa-chevron-${aberto ? 'up' : 'down'}" style="color:var(--text-faint);margin-left:6px;"></i>
         </div>
@@ -868,9 +1255,11 @@ async function salvar(cod) {
     const card = document.querySelector(`.mun-card[data-cod="${cod}"]`);
     const status = card.querySelector('[data-campo="status"]').value;
     const nota = card.querySelector('[data-campo="nota"]').value;
+    const proximoContato = card.querySelector('[data-campo="retorno"]').value || null;
+    const jaAtendemos = card.querySelector('[data-campo="cliente"]').checked;
     const btn = card.querySelector('[data-acao="salvar"]');
     btn.disabled = true;
-    const r = await api.salvarProspeccao(cod, { nome: m.nome, status, nota });
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, status, nota, proximoContato, jaAtendemos });
     btn.disabled = false;
     if (r.ok) {
         andamento.set(cod, r.data);
@@ -897,6 +1286,25 @@ async function toggleCanal(cod, canal) {
         if (btn) btn.disabled = false;
         window.UI.toast(r.error || 'Não foi possível registrar o canal.', 'error');
     }
+}
+
+// Marca/desmarca o motivo de não termos alcançado a prefeitura (salva na hora)
+async function toggleProblema(cod, problema) {
+    const m = DATA.municipios.find(x => x.cod === cod);
+    const atuais = problemasDe(cod);
+    const novos = atuais.includes(problema) ? atuais.filter(p => p !== problema) : [...atuais, problema];
+    const btn = document.querySelector(`[data-acao="toggle-problema"][data-cod="${cod}"][data-problema="${problema}"]`);
+    if (btn) btn.disabled = true;
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, problemas: novos });
+    if (r.ok) { andamento.set(cod, r.data); render(); }
+    else { if (btn) btn.disabled = false; window.UI.toast(r.error || 'Não foi possível registrar.', 'error'); }
+}
+
+async function limparRetorno(cod) {
+    const m = DATA.municipios.find(x => x.cod === cod);
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, proximoContato: null });
+    if (r.ok) { andamento.set(cod, r.data); window.UI.toast(`${m.nome}: lembrete removido`); render(); }
+    else window.UI.toast(r.error || 'Não foi possível remover.', 'error');
 }
 
 // Grava só os campos que DIFEREM do snapshot: assim, quando a planilha for
@@ -955,7 +1363,7 @@ async function restaurarContatos(cod) {
 }
 
 function initEventos() {
-    ['#f-busca', '#f-uf', '#f-tier', '#f-status', '#f-dist', '#f-perfil', '#f-canal', '#f-conc', '#f-ordem'].forEach(sel => {
+    ['#f-busca', '#f-uf', '#f-tier', '#f-status', '#f-dist', '#f-lic', '#f-aniv', '#f-retorno', '#f-porte', '#f-dado', '#f-perfil', '#f-canal', '#f-conc', '#f-ordem'].forEach(sel => {
         $(sel).addEventListener('input', () => { visivel = PAGINA; renderPlacarCanais(); renderLista(); });
     });
 
@@ -984,6 +1392,17 @@ function initEventos() {
             salvar(cod);
         } else if (alvo.dataset.acao === 'toggle-canal') {
             toggleCanal(cod, alvo.dataset.canal);
+        } else if (alvo.dataset.acao === 'toggle-problema') {
+            toggleProblema(cod, alvo.dataset.problema);
+        } else if (alvo.dataset.acao === 'limpar-retorno') {
+            limparRetorno(cod);
+        } else if (alvo.dataset.acao === 'ir-vizinho') {
+            $('#f-busca').value = alvo.dataset.nome;
+            ['#f-uf','#f-tier','#f-status','#f-dist','#f-perfil','#f-canal','#f-conc'].forEach(s => $(s).value = '');
+            visivel = PAGINA;
+            renderPlacarCanais();
+            renderLista();
+            $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else if (alvo.dataset.acao === 'editar-contatos') {
             editando.add(cod);
             renderLista();

@@ -892,6 +892,9 @@ model ProspeccaoPrefeitura {
   status       String   @default("nao_contatado") // nao_contatado | contatado | proposta_enviada | negociacao | fechado | descartado
   nota         String? // anotações livres (com quem falou, retorno combinado, data prometida)
   canais       String? // POR ONDE já falamos com a prefeitura: JSON array com valores da whitelist (whatsapp, ligacao, email, oficio, presencial, instagram). Acumulativo — mostra a evolução do esforço no card.
+  problemas    String? // POR QUE não alcançamos: JSON array da whitelist (tel_nao_encontrado, tel_desatualizado, nao_atende, whats_sem_resposta, email_sem_resposta, sem_retorno). Distingue "não liguei ainda" de "liguei e o número está morto".
+  proximoContato DateTime? // data combinada de retorno — alimenta o painel "vence hoje / atrasados"
+  jaAtendemos  Boolean  @default(false) // marcação MANUAL do gestor: já fizemos evento para esta prefeitura (histórico fora do CRM)
   contatosEdit String? // correções do gestor POR CIMA do snapshot: JSON re-serializado por whitelist (telPrefeitura, secretaria, secretario, contatoSecretaria, enderecoSecretaria, site, obs); null = usa o snapshot original
   updatedBy    String?
   createdAt    DateTime @default(now())
