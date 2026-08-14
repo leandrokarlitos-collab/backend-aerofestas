@@ -323,11 +323,13 @@ router.put('/:cod', authenticate, async (req, res, next) => {
     try {
         const cod = String(req.params.cod || '').trim();
         // Código municipal de 7 dígitos começando pela UF. No radar hoje:
-        //   Centro-Oeste/Sudeste: 52=GO, 53=DF, 51=MT, 50=MS, 31=MG, 35=SP
-        //   Norte: 17=TO, 15=PA
+        //   Centro-Oeste (completo): 50=MS, 51=MT, 52=GO, 53=DF
+        //   Sudeste (completo): 31=MG, 32=ES, 33=RJ, 35=SP
+        //   Sul (completo): 41=PR, 42=SC, 43=RS
         //   Nordeste (completo): 21=MA, 22=PI, 23=CE, 24=RN, 25=PB, 26=PE, 27=AL, 28=SE, 29=BA
+        //   Norte (parcial): 15=PA, 17=TO
         // Ao acrescentar uma UF nova ao pipeline, libere o prefixo aqui.
-        if (!/^(15|17|21|22|23|24|25|26|27|28|29|31|35|50|51|52|53)\d{5}$/.test(cod)) throw erro(400, 'Código IBGE inválido (esperado município de uma das UFs do radar, 7 dígitos).');
+        if (!/^(15|17|21|22|23|24|25|26|27|28|29|31|32|33|35|41|42|43|50|51|52|53)\d{5}$/.test(cod)) throw erro(400, 'Código IBGE inválido (esperado município de uma das UFs do radar, 7 dígitos).');
 
         const body = req.body || {};
         const nome = String(body.nome || '').trim();
