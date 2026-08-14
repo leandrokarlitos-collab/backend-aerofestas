@@ -52,6 +52,16 @@ const TABLES = [
     { model: 'FixedExpenseCategory', delegate: 'fixedExpenseCategory' },
     { model: 'PropostaTemplate', delegate: 'propostaTemplate' },
     { model: 'WhatsAppInstance', delegate: 'whatsAppInstance' },
+    // Prospecção de prefeituras (sem FK entre si nem com as demais):
+    // ProspeccaoPrefeitura é TRABALHO MANUAL do gestor (funil, notas, retornos,
+    // correções de contato) — irrecuperável se o banco cair. LicitacaoTermo
+    // guarda edições de termos feitas pela tela. LicitacaoPncp/Varredura são
+    // re-deriváveis da API do PNCP, mas preservam descartes e histórico de
+    // notificação — baratos de incluir, chatos de perder.
+    { model: 'ProspeccaoPrefeitura', delegate: 'prospeccaoPrefeitura' },
+    { model: 'LicitacaoTermo', delegate: 'licitacaoTermo' },
+    { model: 'LicitacaoPncp', delegate: 'licitacaoPncp' },
+    { model: 'LicitacaoVarredura', delegate: 'licitacaoVarredura' },
     // --- Nível 1 ---
     { model: 'Event', delegate: 'event' },                    // → Company
     { model: 'ToyUnit', delegate: 'toyUnit' },                // → Toy

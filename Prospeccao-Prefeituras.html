@@ -796,10 +796,10 @@
         </select>
         <select id="f-dist" class="input">
             <option value="">Qualquer distância</option>
-            <option value="até 100 km">Até 100 km</option>
-            <option value="100–250 km">100–250 km</option>
-            <option value="250–400 km">250–400 km</option>
-            <option value="400+ km">400+ km</option>
+            <option value="até 250 km">Até 250 km (bate-volta)</option>
+            <option value="250–1.000 km">250–1.000 km</option>
+            <option value="1.000–2.000 km">1.000–2.000 km (limite do Tier A/B)</option>
+            <option value="2.000+ km">2.000+ km (mala direta)</option>
         </select>
         <select id="f-lic" class="input">
             <option value="">Qualquer licitação</option>
@@ -1189,6 +1189,8 @@ function renderKpis() {
     const contatados = ms.filter(m => !['nao_contatado', 'descartado'].includes(statusDe(m.cod))).length;
     const propostas = ms.filter(m => ['proposta_enviada', 'negociacao', 'fechado'].includes(statusDe(m.cod))).length;
     const fechados = ms.filter(m => statusDe(m.cod) === 'fechado').length;
+    // Soma dos contratos fechados — é o número que mede se o módulo se paga
+    const valorTotal = [...andamento.values()].reduce((s, a) => s + (a.valorFechado || 0), 0);
     // Retornos vencidos/de hoje são o que MAIS importa no dia a dia — vêm primeiro
     const retornos = ms.map(m => retornoDe(m.cod)).filter(Boolean);
     const vencendo = retornos.filter(r => r.atrasado || r.hoje).length;
@@ -1205,7 +1207,7 @@ function renderKpis() {
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-bullseye"></i> Tier A a contatar</div><div class="kpi-value">${tierAPend}</div></div>
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-phone"></i> Contatados</div><div class="kpi-value">${contatados}</div></div>
         <div class="surface kpi"><div class="kpi-label"><i class="fas fa-paper-plane"></i> Com proposta</div><div class="kpi-value">${propostas}</div></div>
-        <div class="surface kpi"><div class="kpi-label"><i class="fas fa-circle-check"></i> Fechados</div><div class="kpi-value">${fechados}</div></div>`;
+        <div class="surface kpi"><div class="kpi-label"><i class="fas fa-circle-check"></i> Fechados</div><div class="kpi-value">${fechados}${valorTotal ? ` <small style="font-size:0.85rem;color:var(--success);">${fmtReais(valorTotal)}</small>` : ''}</div></div>`;
 
     const irPara = (seletor, campo, valor) => {
         const btn = $(seletor);
@@ -1358,7 +1360,7 @@ function cardHtml(m) {
                 ${m.horasViagem != null ? `<div class="det-linha"><span class="rotulo">Viagem de Goiânia:</span> ${m.horasViagem}h de estrada${m.distKm ? ` (${m.distKm} km)` : ''}</div>` : ''}
                 ${semEstrada(m) ? `<div class="det-obs" style="border-left:3px solid #b45309;"><i class="fas fa-triangle-exclamation" style="color:#b45309"></i> <strong>Sem rota rodoviária.</strong> O roteador não encontrou caminho por estrada até este município; os ${m.distKm} km são estimativa em linha reta (${esc(m.distFonte)}). Acesso provavelmente fluvial ou aéreo — o custo real de levar equipamento não se parece com o de uma viagem de caminhão.</div>` : ''}
                 <div class="det-linha"><span class="rotulo">Orçamento AS:</span> 2024: ${orc2024} · 2025: ${orc2025} · per capita: ${m.asPerCapita != null ? 'R$ ' + m.asPerCapita.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '/hab' : '—'}</div>
-                <div class="det-linha"><span class="rotulo">Concorrência:</span> ${m.concNivel ? `<strong>${esc(m.concNivel)}</strong>${m.concN != null ? ' — ' + m.concN + ' locadora(s) visível(is)' : ''}${m.concObs ? '. ' + esc(m.concObs) : ''}` : 'não medida (varredura pendente)'}</div>
+                <div class="det-linha"><span class="rotulo">Concorrência:</span> ${m.concNivel ? `<strong>${esc(m.concNivel)}</strong>${m.concN != null ? ' — ' + m.concN + ' locadora(s) visível(is)' : ''}${m.concMedidaEm ? ` <small style="color:var(--text-faint)">(medida em ${esc(m.concMedidaEm.split('-').reverse().join('/'))})</small>` : ''}${m.concObs ? '. ' + esc(m.concObs) : ''}` : 'não medida (varredura pendente)'}</div>
                 <div class="det-linha"><span class="rotulo">Perfil da praça:</span> ${esc(m.perfilRotulo) || '—'}${m.distCapitalKm != null ? ` · capital mais próxima: ${esc(m.capitalMaisProxima)} a ${m.distCapitalKm} km` : ''}</div>
                 ${blocoEditais(m.cod)}
                 ${(m.licHistorico && m.licHistorico.length) ? `<div class="det-linha"><span class="rotulo">Já contratou antes:</span><br>
@@ -1405,6 +1407,9 @@ function cardHtml(m) {
                     ${retorno ? `<button type="button" class="btn btn-ghost btn-sm" data-acao="limpar-retorno" data-cod="${m.cod}" title="Remover lembrete"><i class="fas fa-xmark"></i></button>` : ''}
                 </div>
 
+                <div class="canais-label">Contrato fechado (R$) — preencha ao marcar "Fechado":</div>
+                <input type="number" class="input" data-campo="valor-fechado" data-cod="${m.cod}" min="0" step="100"
+                       placeholder="ex.: 18000" value="${a && a.valorFechado != null ? a.valorFechado : ''}" ${apiOk ? '' : 'disabled'}>
                 <textarea class="input" data-campo="nota" data-cod="${m.cod}" placeholder="Anotações: com quem falou, retorno combinado..." ${apiOk ? '' : 'disabled'}>${esc(a && a.nota || '')}</textarea>
                 <label style="display:flex;align-items:center;gap:7px;font-size:0.8rem;margin-bottom:9px;cursor:pointer;">
                     <input type="checkbox" data-campo="cliente" data-cod="${m.cod}" ${cliente ? 'checked' : ''} ${apiOk ? '' : 'disabled'}>
@@ -1811,9 +1816,11 @@ async function salvar(cod) {
     const nota = card.querySelector('[data-campo="nota"]').value;
     const proximoContato = card.querySelector('[data-campo="retorno"]').value || null;
     const jaAtendemos = card.querySelector('[data-campo="cliente"]').checked;
+    const valorBruto = card.querySelector('[data-campo="valor-fechado"]').value.trim();
+    const valorFechado = valorBruto === '' ? null : Number(valorBruto);
     const btn = card.querySelector('[data-acao="salvar"]');
     btn.disabled = true;
-    const r = await api.salvarProspeccao(cod, { nome: m.nome, status, nota, proximoContato, jaAtendemos });
+    const r = await api.salvarProspeccao(cod, { nome: m.nome, status, nota, proximoContato, jaAtendemos, valorFechado });
     btn.disabled = false;
     if (r.ok) {
         andamento.set(cod, r.data);

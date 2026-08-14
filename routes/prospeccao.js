@@ -354,6 +354,16 @@ router.put('/:cod', authenticate, async (req, res, next) => {
         if (body.jaAtendemos !== undefined) {
             dados.jaAtendemos = body.jaAtendemos === true || body.jaAtendemos === 'true';
         }
+        if (body.valorFechado !== undefined) {
+            // null/'' limpa; senão precisa ser um valor monetário plausível
+            if (body.valorFechado === null || body.valorFechado === '') {
+                dados.valorFechado = null;
+            } else {
+                const v = Number(body.valorFechado);
+                if (!Number.isFinite(v) || v < 0 || v > 100_000_000) throw erro(400, 'Valor fechado inválido.');
+                dados.valorFechado = v;
+            }
+        }
         if (body.contatosEdit !== undefined) {
             dados.contatosEdit = validarContatosEdit(body.contatosEdit);
         }
@@ -373,6 +383,7 @@ router.put('/:cod', authenticate, async (req, res, next) => {
                 problemas: dados.problemas !== undefined ? dados.problemas : null,
                 proximoContato: dados.proximoContato !== undefined ? dados.proximoContato : null,
                 jaAtendemos: dados.jaAtendemos === true,
+                valorFechado: dados.valorFechado !== undefined ? dados.valorFechado : null,
                 contatosEdit: dados.contatosEdit !== undefined ? dados.contatosEdit : null,
                 updatedBy: dados.updatedBy
             },

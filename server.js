@@ -441,9 +441,54 @@ async function checkDueDatesAndNotify() {
             }
         });
 
-        if (expensesToNotify.length === 0) return;
+        // --- Retornos combinados na Prospecção de prefeituras ---
+        // O gestor marca "retornar em <data>" no funil; o KPI da tela mostra os
+        // vencidos, mas só para quem abrir a tela. Aqui o lembrete vira push no
+        // mesmo ciclo das contas (12/12h): retornos de HOJE ou atrasados, de
+        // municípios ainda em jogo (fechado/descartado não recebem lembrete).
+        let retornosProspeccao = [];
+        try {
+            const fimDeHoje = new Date();
+            fimDeHoje.setHours(23, 59, 59, 999);
+            retornosProspeccao = await prisma.prospeccaoPrefeitura.findMany({
+                where: {
+                    proximoContato: { lte: fimDeHoje },
+                    status: { notIn: ['fechado', 'descartado'] }
+                },
+                orderBy: { proximoContato: 'asc' },
+                take: 20
+            });
+        } catch (e) {
+            console.error('Erro ao buscar retornos de prospecção:', e.message);
+        }
+
+        if (expensesToNotify.length === 0 && retornosProspeccao.length === 0) return;
 
         const subscriptions = await prisma.pushSubscription.findMany();
+
+        if (retornosProspeccao.length > 0 && subscriptions.length > 0) {
+            const nomes = retornosProspeccao.slice(0, 3).map(r => r.nome);
+            const extra = retornosProspeccao.length > 3 ? ` e mais ${retornosProspeccao.length - 3}` : '';
+            const payloadProspec = JSON.stringify({
+                title: retornosProspeccao.length === 1
+                    ? '📞 Retorno de prospecção combinado para hoje'
+                    : `📞 ${retornosProspeccao.length} retornos de prospecção vencendo`,
+                body: nomes.join(', ') + extra,
+                url: '/Prospeccao-Prefeituras.html'
+            });
+            for (const sub of subscriptions) {
+                try {
+                    await webpush.sendNotification(
+                        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                        payloadProspec
+                    );
+                } catch (err) {
+                    if (err.statusCode === 410 || err.statusCode === 404 || err.statusCode === 403) {
+                        try { await prisma.pushSubscription.delete({ where: { id: sub.id } }); } catch (e) { /* já foi */ }
+                    }
+                }
+            }
+        }
 
         for (const expense of expensesToNotify) {
             const isToday = expense.dueDay === currentDay;
@@ -516,9 +561,12 @@ setTimeout(async () => {
 // Roda bem depois do cron das 03:00: se o último backup bem-sucedido tiver
 // mais de 26h (ou nunca tiver rodado), alerta os admins por e-mail e push.
 cron.schedule('0 12 * * *', async () => {
-    console.log('🕵️ Executando watchdog de backup...');
-    const { checkBackupWatchdog } = require('./services/AlertService');
+    console.log('🕵️ Executando watchdogs (backup + varredura de licitações)...');
+    const { checkBackupWatchdog, checkVarreduraWatchdog } = require('./services/AlertService');
     await checkBackupWatchdog();
+    // Roda 3h depois do cron das 09:00 UTC da varredura: se ela falhou hoje E
+    // ontem (>48h sem sucesso), os admins são avisados sem precisar abrir a tela.
+    await checkVarreduraWatchdog();
 });
 
 // O frontend é servido pelo Firebase Hosting — este backend expõe SOMENTE /api.

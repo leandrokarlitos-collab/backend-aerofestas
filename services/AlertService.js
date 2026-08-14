@@ -137,4 +137,58 @@ async function checkBackupWatchdog() {
     }
 }
 
-module.exports = { sendAdminAlert, checkBackupWatchdog };
+/** Limite do watchdog da varredura de licitações: cron roda 1x/dia às 6h BRT,
+ *  então 48h sem sucesso = duas execuções seguidas perdidas. */
+const VARREDURA_MAX_HOURS = 48;
+
+/**
+ * Watchdog da varredura de licitações (PNCP): a tela mostra a data do último
+ * sucesso, mas só para quem ABRIR a tela. Se o PNCP (ou o cron) morrer em
+ * silêncio, este check avisa os admins ativamente — o mesmo raciocínio do
+ * watchdog de backup: robô morto não pode parecer robô sem novidades.
+ * Retorna { ok, hoursAgo } (hoursAgo = null se nunca houve sucesso ou em erro).
+ */
+async function checkVarreduraWatchdog() {
+    try {
+        // Se nunca houve NENHUMA varredura, o módulo pode simplesmente ainda não
+        // ter estreado — não alarma; o alarme é para robô que JÁ funcionou e parou.
+        const total = await prisma.licitacaoVarredura.count();
+        if (total === 0) return { ok: true, hoursAgo: null };
+
+        const last = await prisma.licitacaoVarredura.findFirst({
+            where: { status: 'sucesso' },
+            orderBy: { concluidoEm: 'desc' }
+        });
+
+        if (!last) {
+            await sendAdminAlert(
+                '🚨 Varredura de licitações nunca concluiu',
+                `Há ${total} tentativa(s) de varredura do PNCP registradas e NENHUMA completa com sucesso. ` +
+                'O PNCP pode estar fora do ar há dias — os editais da tela de Prospecção podem estar desatualizados. ' +
+                'Abra a Prospecção e use "Buscar novas licitações" para testar.'
+            );
+            return { ok: false, hoursAgo: null };
+        }
+
+        const hoursAgo = (Date.now() - new Date(last.concluidoEm).getTime()) / (1000 * 60 * 60);
+        const rounded = Math.round(hoursAgo * 10) / 10;
+
+        if (hoursAgo > VARREDURA_MAX_HOURS) {
+            await sendAdminAlert(
+                '🚨 Varredura de licitações atrasada',
+                `A última varredura bem-sucedida do PNCP foi há ${rounded}h ` +
+                `(${new Date(last.concluidoEm).toLocaleString('pt-BR')}) — limite de ${VARREDURA_MAX_HOURS}h excedido. ` +
+                'Sem varredura, edital novo NÃO aparece e a ausência de licitações na tela vira silêncio enganoso. ' +
+                'Verifique os logs do Railway e o estado do PNCP (pncp.gov.br).'
+            );
+            return { ok: false, hoursAgo: rounded };
+        }
+
+        return { ok: true, hoursAgo: rounded };
+    } catch (err) {
+        console.error('[alert] checkVarreduraWatchdog falhou:', err.message);
+        return { ok: false, hoursAgo: null };
+    }
+}
+
+module.exports = { sendAdminAlert, checkBackupWatchdog, checkVarreduraWatchdog };

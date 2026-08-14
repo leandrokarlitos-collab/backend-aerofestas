@@ -392,7 +392,17 @@ function paraRegistro(item, alvo, classe) {
 // Push
 // ---------------------------------------------------------------------------
 
-/** Best-effort: nunca lança, nunca deixa a varredura falhar por causa de push. */
+/**
+ * Best-effort: nunca lança, nunca deixa a varredura falhar por causa de push.
+ *
+ * RETRY-SAFE por decisão: `notificadoEm` só é carimbado quando o push foi
+ * ENTREGUE a pelo menos uma inscrição. Antes, o carimbo acontecia mesmo com
+ * todas as entregas falhando (ex.: VAPID indisponível) — o edital ficava
+ * marcado como notificado sem ninguém ter sido acordado, e a varredura
+ * seguinte não tentava de novo. Quem decide o que ainda precisa de push é a
+ * consulta em `executar()` (forte + não notificado + prazo aberto), não a
+ * memória de "o que era novo nesta rodada".
+ */
 async function notificar(novosFortes) {
     if (!novosFortes.length) return 0;
     try {
@@ -414,12 +424,14 @@ async function notificar(novosFortes) {
             url: '/Prospeccao-Prefeituras.html'
         });
 
+        let entregues = 0;
         for (const sub of inscricoes) {
             try {
                 await webpush.sendNotification(
                     { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
                     payload
                 );
+                entregues++;
             } catch (err) {
                 // 410/404 inscrição morta; 403 chave VAPID antiga (rotação)
                 if ([410, 404, 403].includes(err.statusCode)) {
@@ -428,6 +440,11 @@ async function notificar(novosFortes) {
                     console.warn('[pncp] push falhou:', err.message);
                 }
             }
+        }
+
+        if (entregues === 0) {
+            console.warn(`[pncp] nenhum push entregue (${inscricoes.length} inscrição(ões)) — editais ficam sem carimbo para a próxima varredura tentar de novo`);
+            return 0;
         }
 
         await prisma.licitacaoPncp.updateMany({
@@ -495,7 +512,6 @@ async function executar(run, alvos, teto, t0) {
         municipiosOk: 0, municipiosFalha: 0, consultas: 0, itensLidos: 0,
         novos: 0, atualizados: 0, sumidos: 0
     };
-    const novosFortes = [];
     let falhasSeguidas = 0, abortou = null, pausaMs = PAUSA_BASE_MS;
     const dataFinal = dataFinalConsulta();
 
@@ -567,7 +583,7 @@ async function executar(run, alvos, teto, t0) {
                     select: { id: true, notificadoEm: true }
                 });
 
-                const salvo = await prisma.licitacaoPncp.upsert({
+                await prisma.licitacaoPncp.upsert({
                     where: { numeroControlePNCP: registro.numeroControlePNCP },
                     create: { ...registro, vistoEm: new Date() },
                     // descartado/descartadoPor NÃO entram no update: a marcação de
@@ -577,7 +593,6 @@ async function executar(run, alvos, teto, t0) {
 
                 if (!antes) {
                     acc.novos++;
-                    if (salvo.forca === 'forte') novosFortes.push(salvo);
                 } else {
                     acc.atualizados++;
                     // Reapareceu depois de já ter sido notificado? Não notifica de novo.
@@ -605,7 +620,23 @@ async function executar(run, alvos, teto, t0) {
             await dormir(pausaMs);
         }
 
-        acc.notificados = await notificar(novosFortes);
+        // O que precisa de push é o estado no BANCO, não a memória desta rodada:
+        // todo edital FORTE, aberto, não descartado e ainda sem notificadoEm.
+        // Cobre também os que uma varredura anterior achou mas não conseguiu
+        // notificar (push fora do ar, primeira carga feita por ambiente sem VAPID).
+        const pendentesDePush = await prisma.licitacaoPncp.findMany({
+            where: {
+                forca: 'forte',
+                descartado: false,
+                notificadoEm: null,
+                sumiuEm: null,
+                OR: [
+                    { dataEncerramentoProposta: { gt: new Date() } },
+                    { dataEncerramentoProposta: null }
+                ]
+            }
+        });
+        acc.notificados = await notificar(pendentesDePush);
 
         // "sucesso" exige a varredura INTEIRA: qualquer município perdido vira
         // "parcial", para a tela nunca exibir uma data de sucesso que mentiu.
