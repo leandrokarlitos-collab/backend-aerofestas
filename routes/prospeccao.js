@@ -324,8 +324,8 @@ router.put('/:cod', authenticate, async (req, res, next) => {
         const cod = String(req.params.cod || '').trim();
         // Código municipal de 7 dígitos começando pela UF:
         // 52=GO, 53=DF, 17=TO, 31=MG, 29=BA, 51=MT, 50=MS (GO e fronteiriços),
-        // 22=PI e 35=SP. Ao acrescentar uma UF nova ao pipeline, libere o prefixo aqui.
-        if (!/^(52|53|17|31|29|51|50|22|35)\d{5}$/.test(cod)) throw erro(400, 'Código IBGE inválido (esperado município de uma das UFs do radar, 7 dígitos).');
+        // 22=PI, 35=SP e 15=PA. Ao acrescentar uma UF nova ao pipeline, libere o prefixo aqui.
+        if (!/^(52|53|17|31|29|51|50|22|35|15)\d{5}$/.test(cod)) throw erro(400, 'Código IBGE inválido (esperado município de uma das UFs do radar, 7 dígitos).');
 
         const body = req.body || {};
         const nome = String(body.nome || '').trim();
