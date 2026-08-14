@@ -488,6 +488,30 @@ cron.schedule('0 3 * * *', async () => {
 // Executa backup 2 minutos após iniciar o servidor
 setTimeout(() => runBackup('startup'), 120000);
 
+// --- VARREDURA DIÁRIA DE LICITAÇÕES NO PNCP (09:00 UTC = 06:00 BRT) ---
+// Cedo de propósito: o gestor abre a Prospecção de manhã já com os editais do
+// dia. Roda longe do backup das 03:00 e do watchdog das 12:00 UTC para os três
+// não disputarem CPU/rede do mesmo contêiner.
+// A função NUNCA lança: o PNCP passa longos períodos em 504/429, e a data do
+// último SUCESSO fica registrada em LicitacaoVarredura para a tela exibir.
+const PncpService = require('./services/PncpService');
+cron.schedule('0 9 * * *', async () => {
+    console.log('⏰ Varredura diária de licitações (PNCP)...');
+    const run = await PncpService.varrer({ origem: 'cron' });
+    if (run) {
+        console.log(`[pncp] ${run.status} — ${run.municipiosOk}/${run.municipiosAlvo} municípios, `
+            + `${run.novos} novo(s), ${run.notificados} notificado(s)${run.erro ? ` — ${run.erro}` : ''}`);
+    }
+});
+// Ao subir: fecha varreduras penduradas num restart do Railway (senão a trava
+// de "já em andamento" bloquearia o botão manual para sempre) e garante que os
+// termos de fábrica existam no banco (idempotente — não mexe no que o gestor
+// já editou pela tela).
+setTimeout(async () => {
+    await PncpService.limparPenduradas();
+    await PncpService.semearTermos();
+}, 15000);
+
 // --- WATCHDOG DE BACKUP (12:00 UTC = 09:00 BRT) ---
 // Roda bem depois do cron das 03:00: se o último backup bem-sucedido tiver
 // mais de 26h (ou nunca tiver rodado), alerta os admins por e-mail e push.

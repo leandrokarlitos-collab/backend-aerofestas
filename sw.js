@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.19.0';
+const CACHE_NAME = 'aero-festas-v3.20.0';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -32,8 +32,8 @@ const ASSETS_TO_CACHE = [
     '/js/charts-financeiro.js',
     '/js/charts-init.js',
     '/js/profile.js',
-    // Snapshot dos 1.877 municípios de GO e UFs vizinhas (população, distância,
-    // orçamento, contatos) — dependência de Prospeccao-Prefeituras.html; sem
+    // Snapshot dos 2.746 municípios de 9 UFs (GO, DF, TO, MG, BA, MT, MS, PI, SP) —
+    // população, distância, orçamento e contatos. Dependência de Prospeccao-Prefeituras.html; sem
     // ele no precache a página abre offline mas a lista fica vazia.
     '/js/data/prospeccao-municipios.js',
     // qrcode 1.5.1 vendorizada (o CDN virou 404): é a dependência do botão

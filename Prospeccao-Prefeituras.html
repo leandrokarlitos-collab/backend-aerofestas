@@ -364,6 +364,23 @@
         gap: 4px;
         white-space: nowrap;
     }
+    /* Achado FRACO: casou só com termo ambíguo ("parque", "lazer"). Na validação
+       contra dados reais isso trouxe pavimentação, rodeio e show de artista —
+       por isso tem cor de aviso, não de urgência, e não gera push. */
+    .badge-edital-fraco {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(245,158,11,.16);
+        color: #b45309;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .dark .badge-edital-fraco { color: #fbbf24; }
+
     .bloco-edital {
         margin-top: 8px;
         padding: 10px 12px;
@@ -373,7 +390,155 @@
         font-size: 0.78rem;
         line-height: 1.5;
     }
+    .bloco-edital.fraco { background: rgba(245,158,11,.07); border-color: rgba(245,158,11,.3); }
     .bloco-edital .tit { font-weight: 700; color: var(--danger); margin-bottom: 4px; }
+    .bloco-edital.fraco .tit { color: #b45309; }
+    .dark .bloco-edital.fraco .tit { color: #fbbf24; }
+    .edital-item { padding: 7px 0; border-top: 1px dashed var(--border); }
+    .edital-item:first-of-type { border-top: 0; }
+    .edital-obj { color: var(--text); }
+    .edital-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-top: 3px;
+        align-items: center;
+    }
+    .edital-prazo { font-weight: 700; color: var(--danger); }
+    .edital-termo {
+        font-size: 0.64rem;
+        font-weight: 700;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--surface-inset);
+        color: var(--text-muted);
+    }
+
+    /* ---- Radar de licitações: estado do robô que varre o PNCP ---- */
+    #lic-card { padding: 16px 18px; margin-bottom: 18px; }
+    #lic-topo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    #lic-estado { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
+    #lic-estado strong { color: var(--text); }
+    .lic-selo {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+    .lic-ok      { background: var(--success-soft, rgba(16,185,129,.15)); color: var(--success); }
+    .lic-parcial { background: rgba(245,158,11,.16); color: #b45309; }
+    .lic-falha   { background: rgba(239,68,68,.13); color: var(--danger); }
+    .dark .lic-parcial { color: #fbbf24; }
+
+    #lic-progresso { margin-top: 12px; display: none; }
+    #lic-progresso.on { display: block; }
+    .lic-barra {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--surface-inset);
+        overflow: hidden;
+        margin-top: 6px;
+    }
+    .lic-barra > i {
+        display: block;
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--brand-600), #8b5cf6);
+        transition: width 0.4s ease;
+    }
+    .lic-passo { font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; gap: 10px; }
+    .lic-aviso {
+        font-size: 0.72rem;
+        color: var(--text-faint);
+        line-height: 1.5;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+    }
+
+    /* ---- Palavras-chave da busca (editáveis sem deploy) ---- */
+    #lic-termos-box { margin-top: 12px; }
+    #lic-termos-box > summary {
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 0;
+        list-style: none;
+    }
+    #lic-termos-box > summary::-webkit-details-marker { display: none; }
+    #lic-termos-box > summary::before {
+        content: '\f105';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        transition: transform 0.15s ease;
+    }
+    #lic-termos-box[open] > summary::before { transform: rotate(90deg); }
+    #lic-termos-box > summary:hover { color: var(--brand-600); }
+    #lic-termos-resumo { font-weight: 600; color: var(--text-faint); }
+    .termos-ajuda {
+        font-size: 0.74rem;
+        color: var(--text-muted);
+        line-height: 1.55;
+        background: var(--surface-inset);
+        border-radius: var(--radius-sm);
+        padding: 9px 11px;
+        margin: 4px 0 10px;
+    }
+    .termos-add { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .termos-add #lic-termo-novo { flex: 1; min-width: 190px; }
+    .termos-add select.input { width: auto; }
+    .termos-grupo { margin-bottom: 10px; }
+    .termos-grupo > h4 {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
+    .termos-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .termo-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 6px 3px 11px;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: var(--surface-inset);
+        color: var(--text);
+    }
+    .termo-chip.forte { border-color: rgba(239,68,68,.4); }
+    .termo-chip.fraco { border-color: rgba(245,158,11,.45); }
+    .termo-chip.off { opacity: 0.45; border-style: dashed; }
+    .termo-chip button {
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-faint);
+        padding: 2px 4px;
+        border-radius: 50%;
+        font-size: 0.72rem;
+        line-height: 1;
+    }
+    .termo-chip button:hover { color: var(--brand-600); background: var(--surface); }
+    .termo-chip button.rm:hover { color: var(--danger); }
+    .termo-fabrica { font-size: 0.62rem; color: var(--text-faint); font-weight: 700; }
     .badge-aniversario {
         font-size: 0.66rem;
         font-weight: 700;
@@ -544,6 +709,48 @@
 
     <div class="kpi-grid" id="kpis"></div>
 
+    <section class="surface" id="lic-card">
+        <div id="lic-topo">
+            <div>
+                <div class="det-titulo" style="margin-bottom:6px;"><i class="fas fa-gavel"></i> Licitações abertas — PNCP</div>
+                <div id="lic-estado">Carregando…</div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="lic-varrer">
+                <i class="fas fa-rotate"></i> Buscar novas licitações
+            </button>
+        </div>
+        <div id="lic-progresso">
+            <div class="lic-passo"><span id="lic-passo-txt">Iniciando…</span><span id="lic-passo-num"></span></div>
+            <div class="lic-barra"><i id="lic-barra-fill"></i></div>
+        </div>
+        <details id="lic-termos-box">
+            <summary><i class="fas fa-tags"></i> Palavras-chave da busca <span id="lic-termos-resumo"></span></summary>
+            <div id="lic-termos-corpo">
+                <p class="termos-ajuda">
+                    <strong>Forte</strong> = achado inequívoco do nosso ramo: aparece em vermelho e
+                    <strong>dispara notificação</strong>. <strong>Fraco</strong> = termo ambíguo:
+                    entra na tela em amarelo, para conferência, sem notificar — é o caso de
+                    "parque", que na prática também traz pavimentação, rodeio e show.
+                    A mudança vale a partir da próxima varredura.
+                </p>
+                <div class="termos-add">
+                    <input type="text" id="lic-termo-novo" class="input" placeholder="Nova palavra-chave (ex.: colchão inflável)" maxlength="60">
+                    <select id="lic-termo-forca" class="input">
+                        <option value="forte">Forte (notifica)</option>
+                        <option value="fraco">Fraco (só aparece)</option>
+                    </select>
+                    <button type="button" class="btn btn-primary btn-sm" id="lic-termo-add"><i class="fas fa-plus"></i> Adicionar</button>
+                </div>
+                <div id="lic-termos-lista"></div>
+            </div>
+        </details>
+        <div class="lic-aviso">
+            O PNCP <strong>não publica dispensa de baixo valor</strong> — que é justamente como
+            Araguaína, Gurupi e Jacobina compram. Nenhum edital aqui não quer dizer que a
+            prefeitura não esteja comprando: essas praças continuam sendo relacionamento, não robô.
+        </div>
+    </section>
+
     <section class="surface" id="canais-card">
         <div class="det-titulo"><i class="fas fa-bullhorn"></i> Esforço por canal — clique para filtrar</div>
         <div id="canais-placar"></div>
@@ -597,6 +804,7 @@
         <select id="f-lic" class="input">
             <option value="">Qualquer licitação</option>
             <option value="aberta">⚡ Licitação ABERTA agora</option>
+            <option value="possivel">Possível edital (termo ambíguo)</option>
             <option value="ja">Já licitou antes</option>
             <option value="nunca">Nunca licitou (ou não achado)</option>
         </select>
@@ -711,8 +919,23 @@ const andamento = new Map();
 let apiOk = false;         // false = API indisponível → edição bloqueada
 const abertos = new Set();  // cards expandidos (persistem entre re-renders)
 const editando = new Set(); // cards com o formulário de contatos aberto
-const PAGINA = 150;        // cards renderizados por vez (1.877 de uma vez trava o celular)
+const PAGINA = 150;        // cards renderizados por vez (2.746 de uma vez trava o celular)
 let visivel = PAGINA;
+
+// --- Licitações abertas (varredura diária do PNCP) ---
+// Vêm do BANCO, não do snapshot. O snapshot congelado de 12/08 mostrava edital
+// vencido como aberto e nunca ganhava entrada nova; aqui "aberto" é o backend
+// derivando do prazo de encerramento a cada leitura.
+const editaisPorCod = new Map(); // cod -> [edital, ...] (fortes antes de fracos)
+let licApiOk = null;             // null = ainda não tentou; false = API fora
+let licEstado = null;            // { ultimoSucesso, ultima, rodando }
+let licPolling = null;           // timer do acompanhamento da varredura
+
+function editaisDe(cod) { return editaisPorCod.get(cod) || []; }
+// Só achado FORTE conta como "licitação aberta": termo ambíguo ("parque",
+// "lazer") trouxe pavimentação e rodeio na validação contra dados reais.
+function temEditalForte(cod) { return editaisDe(cod).some(e => e.forca === 'forte'); }
+function temEditalFraco(cod) { return editaisDe(cod).some(e => e.forca === 'fraco'); }
 
 function esc(s) {
     return String(s == null ? '' : s)
@@ -887,7 +1110,7 @@ function filtrados() {
     let lista = DATA.municipios.filter(m => {
         // Busca casa com nome do município OU do secretário (o vendedor lembra de
         // quem atendeu). Só monta os contatos completos se o nome não bastou —
-        // com 1.877 itens por tecla, o JSON.parse de todos custaria caro no celular.
+        // com 2.746 itens por tecla, o JSON.parse de todos custaria caro no celular.
         if (busca) {
             let achou = m.nome.toLowerCase().includes(busca);
             if (!achou) {
@@ -919,9 +1142,11 @@ function filtrados() {
         }
         if (porte && m.porte !== porte) return false;
         if (licF) {
-            if (licF === 'aberta' && !m.licitacaoAberta) return false;
+            const forte = temEditalForte(m.cod);
+            if (licF === 'aberta' && !forte) return false;
+            if (licF === 'possivel' && !temEditalFraco(m.cod)) return false;
             if (licF === 'ja' && !m.jaLicitou) return false;
-            if (licF === 'nunca' && (m.jaLicitou || m.licitacaoAberta)) return false;
+            if (licF === 'nunca' && (m.jaLicitou || forte)) return false;
         }
         if (anivF) {
             const a = aniversarioDe(m);
@@ -967,7 +1192,8 @@ function renderKpis() {
     // Retornos vencidos/de hoje são o que MAIS importa no dia a dia — vêm primeiro
     const retornos = ms.map(m => retornoDe(m.cod)).filter(Boolean);
     const vencendo = retornos.filter(r => r.atrasado || r.hoje).length;
-    const editais = ms.filter(m => m.licitacaoAberta).length;
+    // Conta municípios com edital ABERTO AGORA segundo o banco (não o snapshot)
+    const editais = ms.filter(m => temEditalForte(m.cod)).length;
 
     $('#kpis').innerHTML = `
         ${editais ? `<div class="surface kpi" data-acao="filtrar-edital" style="cursor:pointer;border:1.5px solid var(--danger);">
@@ -993,6 +1219,66 @@ function renderKpis() {
     };
     irPara('#kpis [data-acao="filtrar-retorno"]', '#f-retorno', 'vencendo');
     irPara('#kpis [data-acao="filtrar-edital"]', '#f-lic', 'aberta');
+}
+
+const fmtData = (iso) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.toLocaleDateString('pt-BR');
+};
+
+// Quantos dias faltam para o prazo de proposta encerrar (negativo = já venceu)
+function diasAte(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const alvo = new Date(d); alvo.setHours(0, 0, 0, 0);
+    return Math.round((alvo - hoje) / 86400000);
+}
+
+// Editais ABERTOS deste município, do banco. Fortes e fracos em blocos separados:
+// misturar os dois faria o vendedor perder tempo com pavimentação e rodeio.
+function blocoEditais(cod) {
+    const lista = editaisDe(cod);
+    if (!lista.length) return '';
+
+    const item = (e) => {
+        const dias = diasAte(e.prazo);
+        const prazoTxt = e.prazo
+            ? `<span class="edital-prazo">prazo ${fmtData(e.prazo)}${dias != null ? (dias === 0 ? ' (hoje!)' : dias > 0 ? ` (${dias}d)` : '') : ''}</span>`
+            : '<span>prazo não informado</span>';
+        return `<div class="edital-item">
+            <div class="edital-obj">${esc(e.objeto || 'objeto não detalhado')}</div>
+            <div class="edital-meta">
+                ${prazoTxt}
+                ${e.valorEstimado ? `<span><i class="fas fa-coins"></i> ${fmtReais(e.valorEstimado)}</span>` : ''}
+                ${e.modalidade ? `<span><i class="fas fa-scale-balanced"></i> ${esc(e.modalidade)}</span>` : ''}
+                ${e.unidade ? `<span><i class="fas fa-building-columns"></i> ${esc(e.unidade)}</span>` : ''}
+                ${(e.termos || []).map(t => `<span class="edital-termo">${esc(t)}</span>`).join('')}
+                ${e.link ? `<a href="${esc(e.link)}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> abrir no PNCP</a>` : ''}
+                ${apiOk ? `<button type="button" class="btn btn-ghost btn-sm" data-acao="descartar-edital" data-edital="${esc(e.id)}" title="Não é do nosso ramo — tira da tela sem apagar do banco"><i class="fas fa-xmark"></i> descartar</button>` : ''}
+            </div>
+            ${e.sumiuEm ? `<div class="det-obs" style="margin-top:5px;"><i class="fas fa-triangle-exclamation"></i> Deixou de aparecer no PNCP em ${fmtData(e.sumiuEm)} antes do prazo vencer — pode ter sido cancelado ou suspenso.</div>` : ''}
+        </div>`;
+    };
+
+    const fortes = lista.filter(e => e.forca === 'forte');
+    const fracos = lista.filter(e => e.forca !== 'forte');
+    let html = '';
+    if (fortes.length) {
+        html += `<div class="bloco-edital">
+            <div class="tit"><i class="fas fa-gavel"></i> Licitação aberta agora (${fortes.length})</div>
+            ${fortes.map(item).join('')}
+        </div>`;
+    }
+    if (fracos.length) {
+        html += `<div class="bloco-edital fraco">
+            <div class="tit"><i class="fas fa-circle-question"></i> Possíveis editais — confira antes de agir (${fracos.length})</div>
+            ${fracos.map(item).join('')}
+        </div>`;
+    }
+    return html;
 }
 
 function cardHtml(m) {
@@ -1066,12 +1352,12 @@ function cardHtml(m) {
                 <div class="det-linha"><span class="rotulo">Orçamento AS:</span> 2024: ${orc2024} · 2025: ${orc2025} · per capita: ${m.asPerCapita != null ? 'R$ ' + m.asPerCapita.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '/hab' : '—'}</div>
                 <div class="det-linha"><span class="rotulo">Concorrência:</span> ${m.concNivel ? `<strong>${esc(m.concNivel)}</strong>${m.concN != null ? ' — ' + m.concN + ' locadora(s) visível(is)' : ''}${m.concObs ? '. ' + esc(m.concObs) : ''}` : 'não medida (varredura pendente)'}</div>
                 <div class="det-linha"><span class="rotulo">Perfil da praça:</span> ${esc(m.perfilRotulo) || '—'}${m.distCapitalKm != null ? ` · capital mais próxima: ${esc(m.capitalMaisProxima)} a ${m.distCapitalKm} km` : ''}</div>
-                ${(m.licAbertas && m.licAbertas.length) ? `<div class="bloco-edital">
-                    <div class="tit"><i class="fas fa-gavel"></i> Licitação aberta</div>
-                    ${m.licAbertas.map(l => `<div>• ${esc(l.objeto || 'objeto não detalhado')}${l.prazo ? ` — <strong>prazo: ${esc(l.prazo)}</strong>` : ''}${l.valorEstimado ? ` · ${esc(l.valorEstimado)}` : ''}${l.link ? ` <a href="${esc(l.link)}" target="_blank" rel="noopener">abrir</a>` : ''}</div>`).join('')}
-                </div>` : ''}
+                ${blocoEditais(m.cod)}
                 ${(m.licHistorico && m.licHistorico.length) ? `<div class="det-linha"><span class="rotulo">Já contratou antes:</span><br>
                     ${m.licHistorico.map(h => `• ${h.ano ? esc(h.ano) + ' — ' : ''}${esc(h.objeto || '')}${h.valor ? ' · ' + esc(h.valor) : ''}${h.modalidade ? ' (' + esc(h.modalidade) + ')' : ''}`).join('<br>')}</div>` : ''}
+                ${(m.licAbertas && m.licAbertas.length) ? `<div class="det-linha"><span class="rotulo">Achados da varredura manual de ${esc(DATA.geradoEm)}:</span><br>
+                    ${m.licAbertas.map(l => `• ${esc(l.objeto || 'objeto não detalhado')}${l.prazo ? ` — prazo declarado: ${esc(l.prazo)}` : ''}${l.valorEstimado ? ` · ${esc(l.valorEstimado)}` : ''}${l.link ? ` <a href="${esc(l.link)}" target="_blank" rel="noopener">abrir</a>` : ''}`).join('<br>')}
+                    <div class="det-obs" style="margin-top:6px;">Registro histórico daquela data — o que está aberto <em>agora</em> aparece no bloco acima, vindo da varredura diária.</div></div>` : ''}
                 ${m.licObs ? `<div class="det-linha"><span class="rotulo">Sobre as compras:</span> ${esc(m.licObs)}</div>` : ''}
                 ${aniv ? `<div class="det-linha"><span class="rotulo">Aniversário da cidade:</span> <strong>${aniv.texto}</strong> (em ${aniv.dias} dias)${m.festaTradicional ? `<br><span class="rotulo">Festa tradicional:</span> ${esc(m.festaTradicional)}` : ''}</div>` : ''}
                 ${(m.vizinhos && m.vizinhos.length) ? `<div class="det-linha"><span class="rotulo">Na mesma viagem:</span><br>
@@ -1137,8 +1423,9 @@ function cardHtml(m) {
                 ${canais.map(k => { const c = CANAIS.find(x => x.chave === k); return c
                     ? `<span class="canal-chip c-${c.chave}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i></span>` : ''; }).join('')}
             </span>` : ''}
-            ${m.licitacaoAberta ? '<span class="badge-edital" title="Há edital aberto agora para brinquedos/recreação — ver detalhes no card"><i class="fas fa-gavel"></i>LICITAÇÃO ABERTA</span>' : ''}
-            ${(m.jaLicitou && !m.licitacaoAberta) ? '<span class="badge-jalicitou" title="A prefeitura já contratou esse tipo de serviço antes"><i class="fas fa-file-contract"></i>Já licitou</span>' : ''}
+            ${temEditalForte(m.cod) ? `<span class="badge-edital" title="Edital aberto AGORA no PNCP para brinquedos/recreação — ver detalhes no card"><i class="fas fa-gavel"></i>LICITAÇÃO ABERTA</span>` : ''}
+            ${(!temEditalForte(m.cod) && temEditalFraco(m.cod)) ? `<span class="badge-edital-fraco" title="Edital aberto que casou só com termo ambíguo (parque, lazer) — confira antes de agir"><i class="fas fa-circle-question"></i>Possível edital</span>` : ''}
+            ${(m.jaLicitou && !temEditalForte(m.cod)) ? '<span class="badge-jalicitou" title="A prefeitura já contratou esse tipo de serviço antes"><i class="fas fa-file-contract"></i>Já licitou</span>' : ''}
             ${cliente ? '<span class="badge-cliente" title="Já fizemos evento para esta prefeitura"><i class="fas fa-award"></i>Já atendemos</span>' : ''}
             ${aniv && aniv.naJanela ? `<span class="badge-aniversario" title="Aniversário da cidade em ${aniv.texto} — a prefeitura costuma licitar estrutura 1 a 3 meses antes">
                 <i class="fas fa-cake-candles"></i>${aniv.dias === 0 ? 'Aniversário hoje' : 'Aniversário em ' + aniv.dias + 'd'}</span>` : ''}
@@ -1248,6 +1535,261 @@ function renderRadar() {
         .map(([s, n]) => `<span class="radar-chip">${s} · ${n.toLocaleString('pt-BR')}</span>`).join('');
     $('#radar-info').innerHTML =
         `<strong>${noRadar.size} de 27 UFs</strong> no radar — expandindo gradativamente até cobrir todo o território nacional.`;
+}
+
+// ---------------------------------------------------------------------------
+// Licitações: leitura do banco, estado da varredura e disparo manual
+// ---------------------------------------------------------------------------
+
+function agruparEditais(editais) {
+    editaisPorCod.clear();
+    // Fortes primeiro dentro de cada município: é o que o vendedor precisa ver.
+    const ordem = { forte: 0, fraco: 1 };
+    [...editais]
+        .sort((a, b) => (ordem[a.forca] - ordem[b.forca]) || (new Date(a.prazo || 0) - new Date(b.prazo || 0)))
+        .forEach(e => {
+            if (!editaisPorCod.has(e.cod)) editaisPorCod.set(e.cod, []);
+            editaisPorCod.get(e.cod).push(e);
+        });
+}
+
+async function carregarLicitacoes() {
+    const r = await api.listarLicitacoes();
+    if (r === null) {
+        licApiOk = false;
+        editaisPorCod.clear();
+        renderLicCard();
+        return;
+    }
+    licApiOk = true;
+    licEstado = r;
+    agruparEditais(r.editais || []);
+    renderLicCard();
+    // Uma varredura pode ter ficado rodando desde antes de abrirmos a página
+    if (r.rodando && r.rodando.id) acompanharVarredura(r.rodando.id);
+}
+
+function renderLicCard() {
+    const alvo = $('#lic-estado');
+    const btn = $('#lic-varrer');
+    if (!alvo) return;
+
+    if (licApiOk === false) {
+        alvo.innerHTML = '<span class="lic-selo lic-falha">API fora do ar</span> '
+            + 'Não foi possível ler os editais. <strong>A ausência de licitação na tela agora não significa nada</strong> — é falha de conexão, não silêncio do PNCP.';
+        btn.disabled = true;
+        return;
+    }
+    if (!licEstado) { alvo.textContent = 'Carregando…'; return; }
+
+    const total = [...editaisPorCod.values()].reduce((n, l) => n + l.length, 0);
+    const fortes = [...editaisPorCod.values()].reduce((n, l) => n + l.filter(e => e.forca === 'forte').length, 0);
+    const ok = licEstado.ultimoSucesso;
+    const ult = licEstado.ultima;
+
+    let selo, quando;
+    if (ok) {
+        const d = new Date(ok.concluidoEm);
+        const horas = (Date.now() - d.getTime()) / 3600000;
+        // Cron roda 1x/dia: mais de 36 h sem sucesso é sinal de PNCP fora do ar
+        selo = horas <= 36
+            ? '<span class="lic-selo lic-ok"><i class="fas fa-circle-check"></i> em dia</span>'
+            : `<span class="lic-selo lic-parcial"><i class="fas fa-triangle-exclamation"></i> ${Math.floor(horas / 24)} dia(s) sem varrer</span>`;
+        quando = `Última varredura completa: <strong>${d.toLocaleString('pt-BR')}</strong> `
+            + `(${ok.municipiosOk} municípios, ${ok.itensLidos} contratações lidas).`;
+    } else {
+        selo = '<span class="lic-selo lic-falha"><i class="fas fa-circle-exclamation"></i> nunca concluída</span>';
+        quando = 'Nenhuma varredura completa registrada ainda.';
+    }
+
+    // Se a última tentativa não foi um sucesso, o gestor precisa saber POR QUÊ —
+    // senão vai ler "nenhum edital" como "nenhuma oportunidade".
+    let ressalva = '';
+    if (ult && ult.status !== 'sucesso' && (!ok || new Date(ult.iniciadoEm) > new Date(ok.concluidoEm))) {
+        ressalva = `<br><span class="lic-selo lic-${ult.status === 'falha' ? 'falha' : 'parcial'}">`
+            + `${ult.status === 'falha' ? 'última tentativa falhou' : 'última tentativa parcial'}</span> `
+            + `${new Date(ult.iniciadoEm).toLocaleString('pt-BR')}${ult.erro ? ` — ${esc(ult.erro)}` : ''}`;
+    }
+
+    alvo.innerHTML = `${selo} ${quando}${ressalva}<br>`
+        + `<strong>${fortes}</strong> edital(is) do nosso ramo aberto(s) agora`
+        + (total > fortes ? ` · ${total - fortes} possível(is) (termo ambíguo)` : '')
+        + ` · varre os ${licEstado.ultimoSucesso ? licEstado.ultimoSucesso.municipiosAlvo : (licEstado.ultima ? licEstado.ultima.municipiosAlvo : '—')} municípios do Tier A/B, todo dia às 6h.`;
+}
+
+function mostrarProgresso(v) {
+    const box = $('#lic-progresso');
+    if (!v || v.status !== 'executando') { box.classList.remove('on'); return; }
+    box.classList.add('on');
+    const feito = (v.municipiosOk || 0) + (v.municipiosFalha || 0);
+    const total = v.municipiosAlvo || 1;
+    const pct = Math.min(100, Math.round((feito / total) * 100));
+    $('#lic-barra-fill').style.width = pct + '%';
+    $('#lic-passo-txt').textContent = v.municipioAtual ? `Consultando ${v.municipioAtual}…` : 'Iniciando…';
+    $('#lic-passo-num').textContent = `${feito}/${total} · ${v.novos || 0} novo(s)`
+        + (v.municipiosFalha ? ` · ${v.municipiosFalha} sem resposta` : '');
+}
+
+// Acompanha uma varredura até ela terminar. Pesquisa a cada 2,5 s — a varredura
+// leva minutos (pausa de 1,5 s entre municípios para não tomar 429 do PNCP).
+function acompanharVarredura(id) {
+    if (licPolling) clearInterval(licPolling);
+    $('#lic-varrer').disabled = true;
+    let semResposta = 0;
+
+    const tick = async () => {
+        const v = await api.progressoVarredura(id);
+        if (!v) {
+            // Rede oscilando não pode travar a tela para sempre
+            if (++semResposta >= 5) { pararAcompanhamento(); }
+            return;
+        }
+        semResposta = 0;
+        mostrarProgresso(v);
+        if (v.status !== 'executando') {
+            pararAcompanhamento();
+            const msg = v.status === 'sucesso'
+                ? `Varredura concluída: ${v.novos} edital(is) novo(s) em ${v.municipiosOk} municípios.`
+                : v.status === 'parcial'
+                    ? `Varredura parcial: ${v.municipiosOk} municípios lidos, ${v.municipiosFalha} sem resposta do PNCP. ${v.novos} novo(s).`
+                    : `Varredura falhou: ${v.erro || 'PNCP não respondeu'}.`;
+            window.UI.toast(msg, v.status === 'sucesso' ? 'success' : v.status === 'parcial' ? 'warning' : 'error');
+            await carregarLicitacoes();
+            render();
+        }
+    };
+
+    licPolling = setInterval(tick, 2500);
+    tick();
+}
+
+function pararAcompanhamento() {
+    if (licPolling) clearInterval(licPolling);
+    licPolling = null;
+    $('#lic-progresso').classList.remove('on');
+    $('#lic-varrer').disabled = licApiOk === false;
+}
+
+async function varrerAgora() {
+    const btn = $('#lic-varrer');
+    btn.disabled = true;
+    const r = await api.varrerLicitacoes();
+    if (r.ok) {
+        window.UI.toast('Varredura iniciada — pode levar alguns minutos.');
+        acompanharVarredura(r.varredura.id);
+    } else if (r.status === 409 && r.varredura) {
+        window.UI.toast('Já existe uma varredura em andamento — acompanhando.', 'warning');
+        acompanharVarredura(r.varredura.id);
+    } else {
+        btn.disabled = false;
+        window.UI.toast(r.error || 'Não foi possível iniciar a varredura.', 'error');
+    }
+}
+
+// --- Palavras-chave: o gestor edita o que a varredura procura, sem deploy ---
+
+let termos = [];
+
+async function carregarTermos() {
+    const r = await api.listarTermosLicitacao();
+    if (r === null) { termos = []; renderTermos(); return; }
+    termos = r;
+    renderTermos();
+}
+
+function renderTermos() {
+    const lista = $('#lic-termos-lista');
+    const resumo = $('#lic-termos-resumo');
+    if (!lista) return;
+
+    if (licApiOk === false || !termos.length) {
+        resumo.textContent = '';
+        lista.innerHTML = '<p class="termos-ajuda">Não foi possível carregar as palavras-chave.</p>';
+        return;
+    }
+
+    const ativos = termos.filter(t => t.ativo);
+    resumo.textContent = `(${ativos.filter(t => t.forca === 'forte').length} fortes · `
+        + `${ativos.filter(t => t.forca === 'fraco').length} fracos`
+        + (termos.length - ativos.length ? ` · ${termos.length - ativos.length} desativados` : '') + ')';
+
+    const chip = (t) => `<span class="termo-chip ${t.forca}${t.ativo ? '' : ' off'}"
+            title="${t.ativo ? 'Ativo' : 'Desativado'}${t.deFabrica ? ' · termo de fábrica' : (t.criadoPor ? ' · criado por ' + esc(t.criadoPor) : '')}">
+        ${esc(t.termo)}${t.deFabrica ? ' <span class="termo-fabrica">fábrica</span>' : ''}
+        <button type="button" data-acao="termo-forca" data-id="${t.id}" title="Trocar para ${t.forca === 'forte' ? 'fraco (não notifica)' : 'forte (notifica)'}">
+            <i class="fas fa-arrows-rotate"></i></button>
+        <button type="button" data-acao="termo-ativo" data-id="${t.id}" title="${t.ativo ? 'Desativar' : 'Reativar'}">
+            <i class="fas fa-${t.ativo ? 'toggle-on' : 'toggle-off'}"></i></button>
+        ${t.deFabrica ? '' : `<button type="button" class="rm" data-acao="termo-apagar" data-id="${t.id}" title="Apagar"><i class="fas fa-trash"></i></button>`}
+    </span>`;
+
+    const grupo = (titulo, arr) => arr.length
+        ? `<div class="termos-grupo"><h4>${titulo} (${arr.length})</h4><div class="termos-chips">${arr.map(chip).join('')}</div></div>`
+        : '';
+
+    lista.innerHTML =
+        grupo('Fortes — disparam notificação', termos.filter(t => t.ativo && t.forca === 'forte')) +
+        grupo('Fracos — só aparecem na tela', termos.filter(t => t.ativo && t.forca === 'fraco')) +
+        grupo('Desativados', termos.filter(t => !t.ativo));
+}
+
+async function adicionarTermo() {
+    const inp = $('#lic-termo-novo');
+    const termo = inp.value.trim();
+    if (termo.length < 3) { window.UI.toast('Escreva pelo menos 3 letras.', 'warning'); return; }
+    const btn = $('#lic-termo-add');
+    btn.disabled = true;
+    const r = await api.criarTermoLicitacao(termo, $('#lic-termo-forca').value);
+    btn.disabled = false;
+    if (r.ok) {
+        inp.value = '';
+        window.UI.toast(`"${termo}" entra na próxima varredura.`);
+        await carregarTermos();
+    } else {
+        window.UI.toast(r.error || 'Não foi possível adicionar.', 'error');
+    }
+}
+
+async function mexerNoTermo(id, acao) {
+    const t = termos.find(x => x.id === id);
+    if (!t) return;
+
+    if (acao === 'termo-apagar') {
+        const ok = await window.UI.confirm({
+            title: 'Apagar palavra-chave',
+            message: `Remover "${t.termo}" da busca? Os editais já encontrados por ela continuam na tela.`,
+            confirmText: 'Apagar'
+        });
+        if (!ok) return;
+        const r = await api.apagarTermoLicitacao(id);
+        if (r.ok) { window.UI.toast(`"${t.termo}" removido.`); await carregarTermos(); }
+        else window.UI.toast(r.error || 'Não foi possível apagar.', 'error');
+        return;
+    }
+
+    const dados = acao === 'termo-forca'
+        ? { forca: t.forca === 'forte' ? 'fraco' : 'forte' }
+        : { ativo: !t.ativo };
+    const r = await api.atualizarTermoLicitacao(id, dados);
+    if (r.ok) await carregarTermos();
+    else window.UI.toast(r.error || 'Não foi possível atualizar.', 'error');
+}
+
+async function descartarEdital(id) {
+    const ok = await window.UI.confirm({
+        title: 'Descartar edital',
+        message: 'Marcar como falso positivo? Ele sai da tela mas continua no banco, e a varredura de amanhã não o traz de volta.',
+        confirmText: 'Descartar'
+    });
+    if (!ok) return;
+    const r = await api.descartarLicitacao(id, true);
+    if (r.ok) {
+        window.UI.toast('Edital descartado.');
+        await carregarLicitacoes();
+        render();
+    } else {
+        window.UI.toast(r.error || 'Não foi possível descartar.', 'error');
+    }
 }
 
 async function salvar(cod) {
@@ -1413,10 +1955,24 @@ function initEventos() {
             salvarContatos(cod);
         } else if (alvo.dataset.acao === 'restaurar-contatos') {
             restaurarContatos(cod);
+        } else if (alvo.dataset.acao === 'descartar-edital') {
+            descartarEdital(alvo.dataset.edital);
         } else if (alvo.dataset.acao === 'mais') {
             visivel += PAGINA;
             renderLista();
         }
+    });
+
+    $('#lic-varrer').addEventListener('click', varrerAgora);
+    $('#lic-termo-add').addEventListener('click', adicionarTermo);
+    $('#lic-termo-novo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') adicionarTermo(); });
+    $('#lic-termos-lista').addEventListener('click', (ev) => {
+        const alvo = ev.target.closest('[data-acao]');
+        if (alvo) mexerNoTermo(alvo.dataset.id, alvo.dataset.acao);
+    });
+    // Só busca a lista quando o gestor abre a seção — a tela já carrega bastante
+    $('#lic-termos-box').addEventListener('toggle', (ev) => {
+        if (ev.target.open && !termos.length) carregarTermos();
     });
 }
 
@@ -1443,7 +1999,12 @@ async function init() {
     initEventos();
     render(); // primeiro paint com o snapshot (offline-first)
 
-    const rows = await api.listarProspeccao();
+    // Andamento do funil e editais abertos vêm juntos: os dois moram na API e
+    // nenhum dos dois pode segurar o primeiro paint (que já saiu do snapshot).
+    const [rows] = await Promise.all([
+        api.listarProspeccao(),
+        carregarLicitacoes()
+    ]);
     if (rows === null) {
         apiOk = false;
         window.UI.toast('API indisponível — mostrando dados sem andamento.', 'warning');

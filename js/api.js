@@ -1670,6 +1670,107 @@ export const api = {
         } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
     },
 
+    // --- Licitações abertas (varredura diária do PNCP) ---
+    // Estes editais vêm do BANCO, não do snapshot: "aberto agora" é derivado do
+    // prazo de encerramento, então edital vencido some sozinho da tela.
+
+    listarLicitacoes: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            // null em erro (≠ lista vazia): a tela precisa distinguir "API fora" de
+            // "nenhum edital aberto", senão anuncia silêncio como boa notícia.
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao listar licitações:', e); return null; }
+    },
+
+    varrerLicitacoes: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/varrer`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
+    progressoVarredura: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/varredura/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
+    // --- Palavras-chave da varredura (editáveis sem deploy) ---
+
+    listarTermosLicitacao: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/termos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { console.error('Erro ao listar termos:', e); return null; }
+    },
+
+    criarTermoLicitacao: async (termo, forca) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/termos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ termo, forca })
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
+    atualizarTermoLicitacao: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/termos/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
+    apagarTermoLicitacao: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/termos/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
+    descartarLicitacao: async (id, descartado) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/prospeccao/licitacoes/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ descartado })
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) { return { ok: false, status: 0, error: 'Erro de rede' }; }
+    },
+
     // 📋 AUDITORIA
     getEntityHistory: async (entityType, entityId) => {
         try {

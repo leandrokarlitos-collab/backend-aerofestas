@@ -266,15 +266,15 @@ model Event {
 // Fica numa tabela própria (não é campo do Event) para NÃO ser afetada por saves
 // parciais do evento — diferente do campo texto-livre legado Event.monitor.
 model EventAssignment {
-  id        Int      @id @default(autoincrement())
-  eventId   Float
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  monitorId String
-  monitor   Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  papel     String   @default("monitor") // monitor | motorista
-  dia       String? // YYYY-MM-DD para eventos multi-dia; null = vale para o evento todo
+  id                Int      @id @default(autoincrement())
+  eventId           Float
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  monitorId         String
+  monitor           Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  papel             String   @default("monitor") // monitor | motorista
+  dia               String? // YYYY-MM-DD para eventos multi-dia; null = vale para o evento todo
   horaChegadaGalpao String? // HH:MM — horário INDIVIDUAL de apresentação no galpão (o que o monitor vê)
-  createdAt DateTime @default(now())
+  createdAt         DateTime @default(now())
 
   @@index([eventId])
   @@index([monitorId])
@@ -887,16 +887,139 @@ model TrackedLinkHit {
 // estático em js/data/prospeccao-municipios.js — aqui vive apenas o ANDAMENTO
 // do contato registrado pelo gestor.
 model ProspeccaoPrefeitura {
-  cod          String   @id // código IBGE de 7 dígitos do município
-  nome         String // nome do município (denormalizado, facilita consultas diretas no banco)
-  status       String   @default("nao_contatado") // nao_contatado | contatado | proposta_enviada | negociacao | fechado | descartado
-  nota         String? // anotações livres (com quem falou, retorno combinado, data prometida)
-  canais       String? // POR ONDE já falamos com a prefeitura: JSON array com valores da whitelist (whatsapp, ligacao, email, oficio, presencial, instagram). Acumulativo — mostra a evolução do esforço no card.
-  problemas    String? // POR QUE não alcançamos: JSON array da whitelist (tel_nao_encontrado, tel_desatualizado, nao_atende, whats_sem_resposta, email_sem_resposta, sem_retorno). Distingue "não liguei ainda" de "liguei e o número está morto".
+  cod            String    @id // código IBGE de 7 dígitos do município
+  nome           String // nome do município (denormalizado, facilita consultas diretas no banco)
+  status         String    @default("nao_contatado") // nao_contatado | contatado | proposta_enviada | negociacao | fechado | descartado
+  nota           String? // anotações livres (com quem falou, retorno combinado, data prometida)
+  canais         String? // POR ONDE já falamos com a prefeitura: JSON array com valores da whitelist (whatsapp, ligacao, email, oficio, presencial, instagram). Acumulativo — mostra a evolução do esforço no card.
+  problemas      String? // POR QUE não alcançamos: JSON array da whitelist (tel_nao_encontrado, tel_desatualizado, nao_atende, whats_sem_resposta, email_sem_resposta, sem_retorno). Distingue "não liguei ainda" de "liguei e o número está morto".
   proximoContato DateTime? // data combinada de retorno — alimenta o painel "vence hoje / atrasados"
-  jaAtendemos  Boolean  @default(false) // marcação MANUAL do gestor: já fizemos evento para esta prefeitura (histórico fora do CRM)
-  contatosEdit String? // correções do gestor POR CIMA do snapshot: JSON re-serializado por whitelist (telPrefeitura, secretaria, secretario, contatoSecretaria, enderecoSecretaria, site, obs); null = usa o snapshot original
-  updatedBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  jaAtendemos    Boolean   @default(false) // marcação MANUAL do gestor: já fizemos evento para esta prefeitura (histórico fora do CRM)
+  contatosEdit   String? // correções do gestor POR CIMA do snapshot: JSON re-serializado por whitelist (telPrefeitura, secretaria, secretario, contatoSecretaria, enderecoSecretaria, site, obs); null = usa o snapshot original
+  updatedBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// --- LICITAÇÕES ABERTAS (PNCP) ---
+// Editais com recebimento de proposta em aberto, capturados diariamente da API
+// oficial do PNCP (/api/consulta/v1/contratacoes/proposta) para os municípios
+// do Tier A/B da prospecção. Substitui o snapshot congelado que existia antes:
+// "aberto agora" passa a ser derivado de dataEncerramentoProposta, não de um
+// booleano gravado uma vez — edital vencido some da tela sozinho.
+//
+// ATENÇÃO: o PNCP NÃO cobre dispensa de baixo valor (a forma como Araguaína,
+// Gurupi e Jacobina compram). Ausência aqui não significa que a prefeitura não
+// esteja comprando — significa que ela não publica no PNCP. Isso continua sendo
+// trabalho de relacionamento, não de robô.
+model LicitacaoPncp {
+  id                 String @id @default(uuid())
+  numeroControlePNCP String @unique // chave natural do PNCP (ex.: "04786328000136-1-000163/2025")
+
+  // Município: liga ao snapshot da prospecção pelo código IBGE de 7 dígitos
+  codMunicipio  String
+  municipioNome String
+  uf            String
+
+  orgaoCnpj   String?
+  orgaoNome   String?
+  unidadeNome String?
+  esfera      String? // "M" municipal | "E" estadual | "F" federal — só gravamos M
+
+  modalidadeId   Int?
+  modalidadeNome String?
+  objeto         String  @db.Text
+  informacao     String? @db.Text // informacaoComplementar
+  valorEstimado  Float?
+  situacaoNome   String?
+  srp            Boolean @default(false) // sistema de registro de preços
+
+  dataPublicacao           DateTime?
+  dataAberturaProposta     DateTime?
+  dataEncerramentoProposta DateTime? // é ELE que define "aberto agora"
+
+  anoCompra         Int?
+  sequencialCompra  Int?
+  numeroCompra      String?
+  processo          String?
+  linkSistemaOrigem String?
+  linkPncp          String? // montado a partir de cnpj/ano/sequencial (o link de origem vem vazio na maioria)
+
+  // Por que este edital entrou: JSON array dos termos que casaram.
+  termos String?
+  // forte = termo inequívoco (inflável, brinquedo, recreação, dia das crianças...)
+  // fraco = termo ambíguo que só isolado casou (parque, lazer). Fracos NÃO geram push:
+  // na validação contra dados reais "parque" trouxe pavimentação, rodeio e show.
+  forca  String  @default("fraco")
+
+  // Marcação do gestor: falso positivo some da tela sem sumir do banco
+  descartado    Boolean @default(false)
+  descartadoPor String?
+
+  notificadoEm DateTime? // quando o push foi disparado (evita notificar duas vezes)
+  vistoEm      DateTime  @default(now()) // última varredura BEM-SUCEDIDA que ainda o listou
+  sumiuEm      DateTime? // varredura OK deixou de listá-lo antes do prazo vencer (cancelado/suspenso)
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  @@index([codMunicipio])
+  @@index([descartado, dataEncerramentoProposta])
+  @@index([dataEncerramentoProposta])
+}
+
+// Palavras-chave que definem o que é "edital do nosso ramo".
+// Ficam no banco (e não como constante no código) para o gestor conseguir
+// acrescentar um termo — "colchão inflável", "festa junina" — sem deploy.
+// Os termos de fábrica são semeados na subida do servidor e não podem ser
+// apagados, só desativados: apagar o conjunto inteiro por engano cegaria a
+// varredura, e um robô que não acha nada parece um robô que está funcionando.
+model LicitacaoTermo {
+  id    String @id @default(uuid())
+  termo String @unique // texto exibido e casado (ex.: "pula-pula")
+
+  // forte = achado inequívoco, gera push. fraco = ambíguo, entra na tela sem
+  // acordar ninguém (é o caso de "parque", que traz pavimentação e rodeio).
+  forca String  @default("forte")
+  ativo Boolean @default(true)
+
+  // Regex dos termos de fábrica, que precisam pegar variações ("INFLAVEL|INFLAVEIS").
+  // Termo criado pela tela NÃO define regex: casa por texto, com acento e hífen
+  // flexíveis. Expressão escrita à mão em produção é ferimento auto-infligido.
+  padrao    String?
+  deFabrica Boolean @default(false)
+
+  criadoPor    String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([ativo])
+}
+
+// Uma linha por varredura. A tela lê daqui a data da última varredura
+// BEM-SUCEDIDA — sem isso, um mês de 504 do PNCP passaria despercebido e o
+// gestor acharia que simplesmente não saiu edital novo.
+model LicitacaoVarredura {
+  id     String @id @default(uuid())
+  origem String // "cron" | "manual" | "startup"
+  status String @default("executando") // executando | sucesso | parcial | falha
+
+  municipiosAlvo  Int @default(0)
+  municipiosOk    Int @default(0)
+  municipiosFalha Int @default(0)
+  consultas       Int @default(0)
+  itensLidos      Int @default(0)
+  novos           Int @default(0)
+  atualizados     Int @default(0)
+  sumidos         Int @default(0)
+  notificados     Int @default(0)
+
+  municipioAtual String? // alimenta o rótulo da barra de progresso
+  erro           String?
+  iniciadoPor    String?
+  iniciadoEm     DateTime  @default(now())
+  concluidoEm    DateTime?
+  duracaoMs      Int       @default(0)
+
+  @@index([status, concluidoEm])
+  @@index([iniciadoEm])
 }
