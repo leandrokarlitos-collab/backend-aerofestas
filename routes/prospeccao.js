@@ -75,8 +75,8 @@ router.put('/:cod', authenticate, async (req, res, next) => {
     try {
         const cod = String(req.params.cod || '').trim();
         // Código municipal de 7 dígitos começando pela UF:
-        // 52=GO, 53=DF, 17=TO, 31=MG, 29=BA, 51=MT, 50=MS (GO e fronteiriços)
-        if (!/^(52|53|17|31|29|51|50)\d{5}$/.test(cod)) throw erro(400, 'Código IBGE inválido (esperado município de GO ou UF vizinha, 7 dígitos).');
+        // 52=GO, 53=DF, 17=TO, 31=MG, 29=BA, 51=MT, 50=MS (GO e fronteiriços) e 22=PI
+        if (!/^(52|53|17|31|29|51|50|22)\d{5}$/.test(cod)) throw erro(400, 'Código IBGE inválido (esperado município de GO, UF vizinha ou PI, 7 dígitos).');
 
         const body = req.body || {};
         const nome = String(body.nome || '').trim();
