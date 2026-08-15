@@ -259,6 +259,79 @@
         margin-bottom: 5px;
     }
 
+    /* ---- Calendário de oportunidades: aniversários e padroeiras chegando ---- */
+    #calendario-card { padding: 16px 18px; margin-bottom: 18px; }
+    #calendario-placar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+        gap: 10px;
+    }
+    .cal-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--border);
+        background: var(--surface-inset);
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .cal-item:hover { border-color: var(--brand-600); transform: translateY(-1px); }
+    .cal-item.on { border-color: var(--brand-600); box-shadow: 0 0 0 2px var(--brand-soft, rgba(79,70,229,.18)); }
+    .cal-item.cal-aniv { border-left: 3px solid #7c3aed; }
+    .cal-item.cal-padr { border-left: 3px solid #0891b2; }
+    .cal-item.cal-festa { border-left: 3px solid var(--success); }
+    .cal-num {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 1.15rem;
+        color: var(--text);
+        line-height: 1.1;
+    }
+    .cal-txt { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+    #calendario-proximas { margin-top: 12px; }
+    .prox-titulo {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
+    .prox-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--surface-inset);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 11px;
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: var(--text);
+        margin: 2px 4px 2px 0;
+        cursor: pointer;
+    }
+    .prox-chip:hover { border-color: var(--brand-600); color: var(--brand-600); }
+    .prox-chip .dias { color: var(--danger); font-weight: 700; }
+    .prox-chip .tipo { color: var(--text-faint); }
+
+    .badge-padroeira {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(8,145,178,.14);
+        color: #0891b2;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .dark .badge-padroeira { color: #22d3ee; }
+
     /* ---- Placar de canais: quanto esforço já foi feito por meio de contato ---- */
     #canais-card { padding: 16px 18px; margin-bottom: 18px; }
     #canais-placar {
@@ -751,6 +824,12 @@
         </div>
     </section>
 
+    <section class="surface" id="calendario-card">
+        <div class="det-titulo"><i class="fas fa-calendar-days"></i> Calendário de oportunidades — clique para filtrar</div>
+        <div id="calendario-placar"></div>
+        <div id="calendario-proximas"></div>
+    </section>
+
     <section class="surface" id="canais-card">
         <div class="det-titulo"><i class="fas fa-bullhorn"></i> Esforço por canal — clique para filtrar</div>
         <div id="canais-placar"></div>
@@ -810,9 +889,19 @@
         </select>
         <select id="f-aniv" class="input">
             <option value="">Qualquer aniversário</option>
+            <option value="30">Aniversário em até 30 dias</option>
             <option value="60">Aniversário em até 60 dias</option>
             <option value="90">Aniversário em até 90 dias</option>
-            <option value="120">Aniversário em até 4 meses</option>
+        </select>
+        <select id="f-padroeira" class="input">
+            <option value="">Qualquer padroeira</option>
+            <option value="30">Padroeira em até 30 dias</option>
+            <option value="60">Padroeira em até 60 dias</option>
+            <option value="90">Padroeira em até 90 dias</option>
+        </select>
+        <select id="f-festa" class="input">
+            <option value="">Festa tradicional: tanto faz</option>
+            <option value="com">Com festa tradicional mapeada</option>
         </select>
         <select id="f-retorno" class="input">
             <option value="">Qualquer retorno</option>
@@ -871,6 +960,8 @@
             <option value="percapita">Ordenar: orçamento por habitante</option>
             <option value="retorno">Ordenar: retorno mais próximo</option>
             <option value="aniversario">Ordenar: aniversário mais próximo</option>
+            <option value="padroeira">Ordenar: padroeira mais próxima</option>
+            <option value="calendario">Ordenar: qualquer data festiva</option>
         </select>
     </div>
     <p class="result-count" id="contagem"></p>
@@ -1008,22 +1099,31 @@ function jaAtendemosDe(cod) {
 const MESES = ['', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
                'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
+// Data anual cíclica (aniversário, padroeira): devolve quantos dias faltam para
+// a próxima ocorrência. Prefeituras licitam estrutura de 30 a 90 dias antes.
+function proximaData(dia, mes) {
+    if (!mes) return null;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    let alvo = new Date(hoje.getFullYear(), mes - 1, dia);
+    if (alvo < hoje) alvo = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+    const dias = Math.round((alvo - hoje) / 86400000);
+    return { dia, mes, texto: `${dia} de ${MESES[mes]}`, dias, naJanela: dias <= 90 };
+}
+
 // Aniversário da cidade: prefeituras fazem festa pública na data e costumam
-// licitar estrutura ~2 meses antes. Devolve quantos dias faltam (ciclo anual).
+// licitar estrutura ~2 meses antes.
 function aniversarioDe(m) {
     if (!m.aniversario || !m.aniversario.mes) return null;
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    let alvo = new Date(hoje.getFullYear(), m.aniversario.mes - 1, m.aniversario.dia);
-    if (alvo < hoje) alvo = new Date(hoje.getFullYear() + 1, m.aniversario.mes - 1, m.aniversario.dia);
-    const dias = Math.round((alvo - hoje) / 86400000);
-    return {
-        dia: m.aniversario.dia,
-        mes: m.aniversario.mes,
-        texto: `${m.aniversario.dia} de ${MESES[m.aniversario.mes]}`,
-        dias,
-        // janela de licitação: prefeitura contrata de 30 a 90 dias antes
-        naJanela: dias <= 90
-    };
+    return proximaData(m.aniversario.dia, m.aniversario.mes);
+}
+
+// Festa do padroeiro(a): feriado municipal de santo com DATA FIXA — janela de
+// compra tão boa quanto o aniversário (procissão + festa + estrutura + recreação).
+function padroeiraDe(m) {
+    if (!m.padroeira || !m.padroeira.mes) return null;
+    const p = proximaData(m.padroeira.dia, m.padroeira.mes);
+    if (p) p.nome = m.padroeira.nome || 'Padroeiro(a)';
+    return p;
 }
 
 // Data de retorno combinada. Devolve { iso, texto, atrasado, hoje } ou null.
@@ -1102,6 +1202,8 @@ function filtrados() {
     const conc = $('#f-conc').value;
     const licF = $('#f-lic').value;
     const anivF = $('#f-aniv').value;
+    const padroeiraF = $('#f-padroeira').value;
+    const festaF = $('#f-festa').value;
     const retornoF = $('#f-retorno').value;
     const porte = $('#f-porte').value;
     const dado = $('#f-dado').value;
@@ -1152,6 +1254,11 @@ function filtrados() {
             const a = aniversarioDe(m);
             if (!a || a.dias > Number(anivF)) return false;
         }
+        if (padroeiraF) {
+            const p = padroeiraDe(m);
+            if (!p || p.dias > Number(padroeiraF)) return false;
+        }
+        if (festaF === 'com' && !m.festaTradicional) return false;
         if (dado) {
             const v = contatosDe(m).valores;
             const temTel = !!(v.telPrefeitura || v.contatoSecretaria);
@@ -1172,6 +1279,15 @@ function filtrados() {
         aniversario: (a, b) => {
             const aa = aniversarioDe(a), ab = aniversarioDe(b);
             return (aa ? aa.dias : 1e9) - (ab ? ab.dias : 1e9);
+        },
+        padroeira: (a, b) => {
+            const pa = padroeiraDe(a), pb = padroeiraDe(b);
+            return (pa ? pa.dias : 1e9) - (pb ? pb.dias : 1e9);
+        },
+        // qualquer data (aniversário OU padroeira) mais próxima primeiro
+        calendario: (a, b) => {
+            const d = m => Math.min(...[aniversarioDe(m), padroeiraDe(m)].filter(Boolean).map(x => x.dias), 1e9);
+            return d(a) - d(b);
         },
         // retorno mais próximo primeiro; quem não tem lembrete vai para o fim
         retorno: (a, b) => {
@@ -1300,6 +1416,7 @@ function cardHtml(m) {
     const retorno = retornoDe(m.cod);
     const cliente = jaAtendemosDe(m.cod);
     const aniv = aniversarioDe(m);
+    const padr = padroeiraDe(m);
     const orc2024 = fmtReais(m.asLiq2024), orc2025 = fmtReais(m.asLiq2025);
 
     let detalhes = '';
@@ -1369,7 +1486,9 @@ function cardHtml(m) {
                     ${m.licAbertas.map(l => `• ${esc(l.objeto || 'objeto não detalhado')}${l.prazo ? ` — prazo declarado: ${esc(l.prazo)}` : ''}${l.valorEstimado ? ` · ${esc(l.valorEstimado)}` : ''}${l.link ? ` <a href="${esc(l.link)}" target="_blank" rel="noopener">abrir</a>` : ''}`).join('<br>')}
                     <div class="det-obs" style="margin-top:6px;">Registro histórico daquela data — o que está aberto <em>agora</em> aparece no bloco acima, vindo da varredura diária.</div></div>` : ''}
                 ${m.licObs ? `<div class="det-linha"><span class="rotulo">Sobre as compras:</span> ${esc(m.licObs)}</div>` : ''}
-                ${aniv ? `<div class="det-linha"><span class="rotulo">Aniversário da cidade:</span> <strong>${aniv.texto}</strong> (em ${aniv.dias} dias)${m.festaTradicional ? `<br><span class="rotulo">Festa tradicional:</span> ${esc(m.festaTradicional)}` : ''}</div>` : ''}
+                ${aniv ? `<div class="det-linha"><span class="rotulo">Aniversário da cidade:</span> <strong>${aniv.texto}</strong> (em ${aniv.dias} dias)</div>` : ''}
+                ${padr ? `<div class="det-linha"><span class="rotulo">Padroeiro(a):</span> <strong>${esc(padr.nome)}</strong> — ${padr.texto} (em ${padr.dias} dias, feriado municipal)</div>` : ''}
+                ${m.festaTradicional ? `<div class="det-linha"><span class="rotulo">Festa tradicional:</span> ${esc(m.festaTradicional)}</div>` : ''}
                 ${(m.vizinhos && m.vizinhos.length) ? `<div class="det-linha"><span class="rotulo">Na mesma viagem:</span><br>
                     ${m.vizinhos.map(v => `<span class="viz-chip" data-acao="ir-vizinho" data-nome="${esc(v.nome)}" title="Tier ${v.tier} — clique para abrir">
                         <i class="fas fa-route"></i>${esc(v.nome)}/${v.uf} · ${v.km} km</span>`).join('')}</div>` : ''}
@@ -1427,7 +1546,7 @@ function cardHtml(m) {
     return `
     <article class="surface mun-card" data-cod="${m.cod}">
         <div class="mun-head" data-acao="toggle" data-cod="${m.cod}">
-            <span class="mun-rank">#${m.rank}</span>
+            <span class="mun-rank" title="Rank geral #${m.rank} — ${m.posTier ? m.posTier + 'º do Tier ' + m.tier : ''}">#${m.rank}${m.posTier ? ` <small style="color:var(--text-faint);font-weight:600;">${m.tier}-${m.posTier}</small>` : ''}</span>
             <span class="mun-nome">${esc(m.nome)} <small style="color:var(--text-faint);font-weight:600;">${m.uf}</small></span>
             <span class="badge-tier tier-${m.tier}">Tier ${m.tier}</span>
             ${PERFIL_META[m.perfil] && m.perfil !== 'comum' ? `<span class="badge-perfil perfil-${m.perfil}" title="${esc(m.perfilRotulo)}">
@@ -1442,6 +1561,8 @@ function cardHtml(m) {
             ${cliente ? '<span class="badge-cliente" title="Já fizemos evento para esta prefeitura"><i class="fas fa-award"></i>Já atendemos</span>' : ''}
             ${aniv && aniv.naJanela ? `<span class="badge-aniversario" title="Aniversário da cidade em ${aniv.texto} — a prefeitura costuma licitar estrutura 1 a 3 meses antes">
                 <i class="fas fa-cake-candles"></i>${aniv.dias === 0 ? 'Aniversário hoje' : 'Aniversário em ' + aniv.dias + 'd'}</span>` : ''}
+            ${padr && padr.naJanela ? `<span class="badge-padroeira" title="Festa de ${esc(padr.nome)} em ${padr.texto} — feriado municipal com festa e procissão">
+                <i class="fas fa-church"></i>${padr.dias === 0 ? 'Padroeira hoje' : 'Padroeira em ' + padr.dias + 'd'}</span>` : ''}
             ${problemas.length ? `<span class="badge-alerta" title="${problemas.map(k => (PROBLEMAS.find(p => p.chave === k) || {}).label).join(' · ')}">
                 <i class="fas fa-phone-slash"></i>${problemas.length === 1 ? (PROBLEMAS.find(p => p.chave === problemas[0]) || {}).label : problemas.length + ' problemas'}</span>` : ''}
             ${retorno ? `<span class="badge-retorno${retorno.atrasado ? ' venceu' : retorno.hoje ? ' hoje' : ''}" title="Retorno combinado">
@@ -1480,6 +1601,51 @@ function renderLista() {
     $('#lista').innerHTML = html;
 }
 
+// Calendário de oportunidades: QUANTOS municípios têm aniversário/padroeira
+// chegando em 30/60/90 dias — e QUAIS (clicar no chip filtra a lista; os chips
+// de "próximas datas" levam direto ao município). Conta A/B/C — o D é ruído aqui.
+function renderCalendario() {
+    const ms = DATA.municipios.filter(m => ['A', 'B', 'C'].includes(m.tier));
+    const cont = (fn, teto) => ms.filter(m => { const d = fn(m); return d && d.dias <= teto; }).length;
+    const aniv30 = cont(aniversarioDe, 30), aniv60 = cont(aniversarioDe, 60), aniv90 = cont(aniversarioDe, 90);
+    const pad30 = cont(padroeiraDe, 30), pad60 = cont(padroeiraDe, 60), pad90 = cont(padroeiraDe, 90);
+    const comFesta = ms.filter(m => m.festaTradicional).length;
+    const anivF = $('#f-aniv').value, padF = $('#f-padroeira').value, festaF = $('#f-festa').value;
+
+    const item = (classe, on, num, rotulo, acao, valor) => `
+        <button type="button" class="cal-item ${classe}${on ? ' on' : ''}" data-acao="${acao}" data-valor="${valor}"
+                title="${num} município(s) A/B/C — clique para filtrar">
+            <span class="cal-num">${num}</span>
+            <span class="cal-txt">${rotulo}</span>
+        </button>`;
+
+    $('#calendario-placar').innerHTML =
+        item('cal-aniv', anivF === '30', aniv30, 'Aniversário ≤ 30 dias', 'cal-aniv', '30') +
+        item('cal-aniv', anivF === '60', aniv60, 'Aniversário ≤ 60 dias', 'cal-aniv', '60') +
+        item('cal-aniv', anivF === '90', aniv90, 'Aniversário ≤ 90 dias', 'cal-aniv', '90') +
+        item('cal-padr', padF === '30', pad30, 'Padroeira ≤ 30 dias', 'cal-padroeira', '30') +
+        item('cal-padr', padF === '60', pad60, 'Padroeira ≤ 60 dias', 'cal-padroeira', '60') +
+        item('cal-padr', padF === '90', pad90, 'Padroeira ≤ 90 dias', 'cal-padroeira', '90') +
+        item('cal-festa', festaF === 'com', comFesta, 'Festa tradicional mapeada', 'cal-festa', 'com');
+
+    // Próximas 12 datas do A/B/C — o "quais" imediato, sem precisar filtrar
+    const eventos = [];
+    ms.forEach(m => {
+        const a = aniversarioDe(m);
+        if (a && a.dias <= 90) eventos.push({ m, dias: a.dias, texto: a.texto, tipo: 'aniversário' });
+        const p = padroeiraDe(m);
+        if (p && p.dias <= 90) eventos.push({ m, dias: p.dias, texto: p.texto, tipo: p.nome });
+    });
+    eventos.sort((x, y) => x.dias - y.dias);
+    $('#calendario-proximas').innerHTML = eventos.length
+        ? `<div class="prox-titulo">Próximas datas (90 dias, Tier A/B/C)</div>` +
+          eventos.slice(0, 12).map(e => `<span class="prox-chip" data-acao="ir-municipio" data-nome="${esc(e.m.nome)}">
+              <span class="dias">${e.dias === 0 ? 'HOJE' : e.dias + 'd'}</span> ${esc(e.m.nome)}/${e.m.uf}
+              <span class="tipo">${esc(e.tipo)} · ${esc(e.texto)} · ${e.m.tier}</span></span>`).join('') +
+          (eventos.length > 12 ? `<span class="prox-chip" style="cursor:default">e mais ${eventos.length - 12}…</span>` : '')
+        : '<div class="prox-titulo">Nenhuma data festiva nos próximos 90 dias no A/B/C</div>';
+}
+
 // Placar de canais: quantos municípios já receberam cada tipo de contato.
 // Conta sobre a lista INTEIRA (não a filtrada) — é o total do esforço acumulado.
 function renderPlacarCanais() {
@@ -1512,7 +1678,7 @@ function renderPlacarCanais() {
         )).join('');
 }
 
-function render() { renderKpis(); renderPlacarCanais(); renderLista(); }
+function render() { renderKpis(); renderCalendario(); renderPlacarCanais(); renderLista(); }
 
 // Mapa do Brasil: pinta as UFs presentes no snapshot ("no radar"); clicar filtra a lista.
 // Novas UFs adicionadas ao pipeline acendem sozinhas — o mapa lê os dados, não uma lista fixa.
@@ -1924,8 +2090,29 @@ async function restaurarContatos(cod) {
 }
 
 function initEventos() {
-    ['#f-busca', '#f-uf', '#f-tier', '#f-status', '#f-dist', '#f-lic', '#f-aniv', '#f-retorno', '#f-porte', '#f-dado', '#f-perfil', '#f-canal', '#f-conc', '#f-ordem'].forEach(sel => {
-        $(sel).addEventListener('input', () => { visivel = PAGINA; renderPlacarCanais(); renderLista(); });
+    ['#f-busca', '#f-uf', '#f-tier', '#f-status', '#f-dist', '#f-lic', '#f-aniv', '#f-padroeira', '#f-festa', '#f-retorno', '#f-porte', '#f-dado', '#f-perfil', '#f-canal', '#f-conc', '#f-ordem'].forEach(sel => {
+        $(sel).addEventListener('input', () => { visivel = PAGINA; renderCalendario(); renderPlacarCanais(); renderLista(); });
+    });
+
+    // Calendário: clicar num chip aplica/remove o filtro; clicar numa data vai ao município
+    $('#calendario-card').addEventListener('click', (ev) => {
+        const alvo = ev.target.closest('[data-acao]');
+        if (!alvo) return;
+        const acao = alvo.dataset.acao;
+        if (acao === 'cal-aniv') {
+            $('#f-aniv').value = ($('#f-aniv').value === alvo.dataset.valor) ? '' : alvo.dataset.valor;
+        } else if (acao === 'cal-padroeira') {
+            $('#f-padroeira').value = ($('#f-padroeira').value === alvo.dataset.valor) ? '' : alvo.dataset.valor;
+        } else if (acao === 'cal-festa') {
+            $('#f-festa').value = ($('#f-festa').value === 'com') ? '' : 'com';
+        } else if (acao === 'ir-municipio') {
+            $('#f-busca').value = alvo.dataset.nome;
+            ['#f-uf','#f-tier','#f-status','#f-dist','#f-aniv','#f-padroeira','#f-festa'].forEach(s => $(s).value = '');
+        } else return;
+        visivel = PAGINA;
+        renderCalendario();
+        renderLista();
+        $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     // Placar de canais: clicar aplica (ou remove) o filtro daquele canal
