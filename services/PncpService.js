@@ -161,8 +161,18 @@ let cacheTermos = null; // { em, lista: [{ nome, re, forca }] }
  * escrita à mão em produção convidaria erro de sintaxe e ReDoS.
  */
 function regexDoTexto(termo) {
-    const escapado = semAcento(termo).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(escapado.replace(/[\s-]+/g, '[ -]?'));
+    const norm = semAcento(termo);
+    const escapado = norm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[\s-]+/g, '[ -]?');
+    // FRONTEIRA DE PALAVRA (corrigido em 2026-08-15 com dado de produção):
+    // sem ela, o termo "Natal" cadastrado pelo gestor casou dentro de
+    // "kit NATALidade" — kit de recém-nascido virou edital de festa.
+    // O sufixo opcional S/ES preserva o plural: "brinquedo" segue pegando
+    // "BRINQUEDOS", que é como a prefeitura escreve na prática.
+    // A fronteira só entra quando a ponta é alfanumérica: \b depois de ")"
+    // exige transição palavra/não-palavra e nunca casaria "festa (junina) do".
+    const ini = /^[A-Z0-9]/.test(norm) ? '\\b' : '';
+    const fim = /[A-Z0-9]$/.test(norm) ? '(?:S|ES)?\\b' : '';
+    return new RegExp(ini + escapado + fim);
 }
 
 function compilar(linhas) {
@@ -228,6 +238,21 @@ async function carregarTermos(forcar = false) {
 
 function invalidarCacheTermos() { cacheTermos = null; }
 
+// COMPRA/OBRA NÃO É LOCAÇÃO (regra criada em 2026-08-15 com a 1ª safra real).
+// Dos 10 achados "fortes" da estreia, 7 eram compra de equipamento ou obra:
+// "AQUISIÇÃO DE PLAYGROUND INFANTIL", "CONSTRUÇÃO DE PRAÇA COM ... PLAYGROUND
+// (OBRA COMUM DE ENGENHARIA)", "AQUISIÇÃO DE MATERIAIS ESPORTIVOS". A prefeitura
+// comprando brinquedo para instalar na praça não é cliente de locação — é
+// concorrente do fornecedor de playground. Sem esta regra o gestor recebe push
+// de obra e precisa descartar na mão (ele descartou 3 no primeiro dia).
+const CTX_COMPRA_OBRA = /AQUISI[CÇ]|COMPRA DE|CONSTRU[CÇ][AÃ]O|REFORMA|REVITALIZA|OBRA|ENGENHARIA|EMPREITADA|PAVIMENTA/;
+// Escapes de segurança: se o edital fala em LOCAR ou em prestar SERVIÇO, é do
+// nosso jogo mesmo que a palavra "aquisição" apareça — o PNCP chama até
+// contratação de serviço de "aquisição de serviços recreativos" (Angra dos Reis).
+// "SERVIÇOS recreativos" salva; "EQUIPAMENTOS recreativos" não — a diferença
+// entre contratar quem anima a festa e comprar o brinquedo que fica na praça.
+const CTX_LOCACAO = /LOCA[CÇ][AÃ]O|LOCAR|ALUGU|ALUGAR|SERVI[CÇ]OS? (DE )?(RECREA|ENTRETEN|ANIMA|LAZER)|EVENTO/;
+
 /**
  * Devolve { forca: 'forte'|'fraco', termos: [...] } ou null se não interessa.
  * `termos` é a lista já compilada; sem ela, usa a de fábrica (caminho de teste).
@@ -237,10 +262,16 @@ function classificar(item, termos = null) {
     const texto = semAcento(`${item.objetoCompra || ''} ${item.informacaoComplementar || ''}`);
     const casaram = lista.filter(t => t.re.test(texto));
     if (!casaram.length) return null;
+
     const fortes = casaram.filter(t => t.forca === 'forte');
-    return fortes.length
-        ? { forca: 'forte', termos: fortes.map(t => t.nome) }
-        : { forca: 'fraco', termos: casaram.map(t => t.nome) };
+    if (!fortes.length) return { forca: 'fraco', termos: casaram.map(t => t.nome) };
+
+    // Achado forte em contexto de compra/obra, sem sinal de locação ou serviço:
+    // continua na tela (pode ser sinal comercial), mas não acorda ninguém.
+    if (CTX_COMPRA_OBRA.test(texto) && !CTX_LOCACAO.test(texto)) {
+        return { forca: 'fraco', termos: fortes.map(t => t.nome), motivoFraco: 'compra/obra, não locação' };
+    }
+    return { forca: 'forte', termos: fortes.map(t => t.nome) };
 }
 
 // ---------------------------------------------------------------------------
