@@ -734,6 +734,8 @@
 
     /* ---- Radar de expansão: mapa do Brasil por UF ---- */
     #radar-card { padding: 18px 20px; margin-bottom: 18px; }
+    #radar-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    #radar-voltar[hidden] { display: none; }
     #mapa-brasil svg {
         width: 100%;
         height: auto;
@@ -750,6 +752,18 @@
     }
     #mapa-brasil path.uf-on { fill: var(--brand-600); cursor: pointer; }
     #mapa-brasil path.uf-on:hover { fill: #8b5cf6; }
+    #mapa-brasil.modo-goias path {
+        fill: var(--surface-inset);
+        stroke: var(--border-strong);
+        stroke-width: 0.7;
+        cursor: pointer;
+        transition: fill 0.15s ease, opacity 0.15s ease;
+    }
+    #mapa-brasil.modo-goias path:hover,
+    #mapa-brasil.modo-goias path:focus-visible { fill: #c4b5fd; outline: none; }
+    #mapa-brasil.modo-goias path.mun-visitado { fill: var(--success); }
+    #mapa-brasil.modo-goias path.mun-visitado:hover,
+    #mapa-brasil.modo-goias path.mun-visitado:focus-visible { fill: #059669; }
     #radar-legenda { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
     .radar-chip {
         font-size: 0.72rem;
@@ -759,6 +773,10 @@
         background: var(--brand-soft, rgba(79,70,229,.12));
         color: var(--brand-600);
     }
+    .radar-chip.visitado { background: rgba(16,185,129,.14); color: #047857; }
+    .dark .radar-chip.visitado { color: #6ee7b7; }
+    .radar-chip.pendente { background: var(--surface-inset); color: var(--text-muted); }
+    .dark .radar-chip.pendente { color: var(--text-muted); }
     .dark .radar-chip { color: var(--brand-400); }
     .radar-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
 </style>
@@ -836,7 +854,12 @@
     </section>
 
     <section class="surface" id="radar-card">
-        <div class="det-titulo"><i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil</div>
+        <div id="radar-topo">
+            <div class="det-titulo" id="radar-titulo"><i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil</div>
+            <button type="button" class="btn btn-ghost btn-sm" id="radar-voltar" aria-label="Voltar ao Brasil" hidden>
+                <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Brasil
+            </button>
+        </div>
         <div id="mapa-brasil" aria-label="Mapa do Brasil com as UFs no radar de prospecção"></div>
         <div id="radar-legenda"></div>
         <div class="radar-info" id="radar-info"></div>
@@ -1012,6 +1035,13 @@ const abertos = new Set();  // cards expandidos (persistem entre re-renders)
 const editando = new Set(); // cards com o formulário de contatos aberto
 const PAGINA = 150;        // cards renderizados por vez (2.746 de uma vez trava o celular)
 let visivel = PAGINA;
+
+// A visão municipal começa por Goiás. A malha oficial do IBGE é carregada do
+// próprio projeto e fica em cache para as próximas aberturas do estado.
+const MUNICIPIOS_POR_COD = new Map((DATA && DATA.municipios || []).map(m => [m.cod, m]));
+let radarModo = 'brasil';
+let mapaGoiasSvg = null;
+let carregandoMapaGoias = null;
 
 // --- Licitações abertas (varredura diária do PNCP) ---
 // Vêm do BANCO, não do snapshot. O snapshot congelado de 12/08 mostrava edital
@@ -1678,14 +1708,117 @@ function renderPlacarCanais() {
         )).join('');
 }
 
-function render() { renderKpis(); renderCalendario(); renderPlacarCanais(); renderLista(); }
+function render() {
+    renderKpis();
+    renderCalendario();
+    renderPlacarCanais();
+    renderLista();
+    atualizarRadarVisitas();
+}
 
 // Mapa do Brasil: pinta as UFs presentes no snapshot ("no radar"); clicar filtra a lista.
 // Novas UFs adicionadas ao pipeline acendem sozinhas — o mapa lê os dados, não uma lista fixa.
+function filtrarPeloMapa(uf, municipio = '') {
+    $('#f-uf').value = uf;
+    $('#f-busca').value = municipio;
+    visivel = PAGINA;
+    renderCalendario();
+    renderPlacarCanais();
+    renderLista();
+}
+
+function atualizarRadarVisitas() {
+    if (radarModo !== 'goias') return;
+    const cont = $('#mapa-brasil');
+    let visitados = 0;
+
+    cont.querySelectorAll('path[id]').forEach(p => {
+        const m = MUNICIPIOS_POR_COD.get(p.id);
+        if (!m) return;
+        const visitado = canaisDe(m.cod).includes('presencial');
+        p.classList.toggle('mun-visitado', visitado);
+        if (visitado) visitados++;
+        const title = p.querySelector('title');
+        if (title) title.textContent = `${m.nome} — ${visitado ? 'visita presencial realizada' : 'visita ainda não marcada'}. Clique para abrir na lista.`;
+        p.setAttribute('aria-label', `${m.nome}: ${visitado ? 'visitado' : 'não visitado'}`);
+    });
+
+    const total = DATA.municipios.filter(m => m.uf === 'GO').length;
+    $('#radar-legenda').innerHTML = `
+        <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip pendente">A visitar · ${(total - visitados).toLocaleString('pt-BR')}</span>`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')}</strong> municípios de Goiás visitados presencialmente. Clique em um município para localizá-lo na lista.`;
+}
+
+function mostrarMapaGoias(svg) {
+    radarModo = 'goias';
+    const cont = $('#mapa-brasil');
+    cont.classList.add('modo-goias');
+    cont.innerHTML = svg;
+    cont.setAttribute('aria-label', 'Mapa dos municípios de Goiás; municípios visitados aparecem em verde');
+    $('#radar-titulo').innerHTML = '<i class="fas fa-satellite-dish"></i> Radar de expansão — Goiás';
+    $('#radar-voltar').hidden = false;
+
+    cont.querySelectorAll('path[id]').forEach(p => {
+        const m = MUNICIPIOS_POR_COD.get(p.id);
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = m ? m.nome : `Município IBGE ${p.id}`;
+        p.appendChild(title);
+        if (!m) return;
+        p.setAttribute('role', 'button');
+        p.setAttribute('tabindex', '0');
+        const abrir = () => {
+            filtrarPeloMapa('GO', m.nome);
+            $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        p.addEventListener('click', abrir);
+        p.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(); }
+        });
+    });
+    atualizarRadarVisitas();
+}
+
+async function abrirMapaGoias() {
+    filtrarPeloMapa('GO');
+    if (mapaGoiasSvg) { mostrarMapaGoias(mapaGoiasSvg); return; }
+    if (carregandoMapaGoias) return carregandoMapaGoias;
+
+    const btn = $('#radar-voltar');
+    btn.hidden = false;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo Goiás…';
+    carregandoMapaGoias = fetch('./js/vendor/mapa-goias-municipios.svg', { cache: 'force-cache' })
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.text();
+        })
+        .then(svg => {
+            mapaGoiasSvg = svg.replace(/^<\?xml[^>]*>\s*/, '');
+            mostrarMapaGoias(mapaGoiasSvg);
+        })
+        .catch(e => {
+            console.error('Erro ao carregar a malha municipal de Goiás:', e);
+            btn.hidden = true;
+            window.UI.toast('Não foi possível abrir o mapa municipal de Goiás.', 'error');
+        })
+        .finally(() => {
+            carregandoMapaGoias = null;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Brasil';
+        });
+    return carregandoMapaGoias;
+}
+
 function renderRadar() {
     if (!window.MAPA_BRASIL_SVG) return;
+    radarModo = 'brasil';
     const cont = $('#mapa-brasil');
+    cont.classList.remove('modo-goias');
     cont.innerHTML = window.MAPA_BRASIL_SVG;
+    cont.setAttribute('aria-label', 'Mapa do Brasil com as UFs no radar de prospecção');
+    $('#radar-titulo').innerHTML = '<i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil';
+    $('#radar-voltar').hidden = true;
 
     const noRadar = new Map(); // sigla -> qtde de municípios
     DATA.municipios.forEach(m => noRadar.set(m.uf, (noRadar.get(m.uf) || 0) + 1));
@@ -1697,12 +1830,13 @@ function renderRadar() {
         const t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         if (noRadar.has(sigla)) {
             p.classList.add('uf-on');
-            t.textContent = `${nome} — ${noRadar.get(sigla).toLocaleString('pt-BR')} municípios no radar. Clique para filtrar.`;
+            t.textContent = `${nome} — ${noRadar.get(sigla).toLocaleString('pt-BR')} municípios no radar.${sigla === 'GO' ? ' Clique para ver os municípios.' : ' Clique para filtrar.'}`;
             p.addEventListener('click', () => {
-                $('#f-uf').value = sigla;
-                visivel = PAGINA;
-                renderLista();
-                $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (sigla === 'GO') abrirMapaGoias();
+                else {
+                    filtrarPeloMapa(sigla);
+                    $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             });
         } else {
             t.textContent = `${nome} — ainda fora do radar`;
@@ -2170,6 +2304,7 @@ function initEventos() {
     });
 
     $('#lic-varrer').addEventListener('click', varrerAgora);
+    $('#radar-voltar').addEventListener('click', renderRadar);
     $('#lic-termo-add').addEventListener('click', adicionarTermo);
     $('#lic-termo-novo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') adicionarTermo(); });
     $('#lic-termos-lista').addEventListener('click', (ev) => {
