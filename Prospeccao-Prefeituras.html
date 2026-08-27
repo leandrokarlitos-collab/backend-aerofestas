@@ -734,7 +734,7 @@
     }
 
     /* ---- Radar de expansão: mapa do Brasil por UF ---- */
-    #radar-card { padding: 18px 20px; margin-bottom: 18px; }
+    #radar-card { position: relative; padding: 18px 20px; margin-bottom: 18px; }
     #radar-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     #radar-acoes { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
     #radar-acoes[hidden], #radar-voltar[hidden] { display: none; }
@@ -783,16 +783,69 @@
         stroke: none;
         pointer-events: none;
     }
-    #mapa-brasil .oficio-pin { cursor: pointer; outline: none; }
-    #mapa-brasil .oficio-pin .pin-corpo {
-        fill: #dc2626;
+    #mapa-brasil .canal-pin { cursor: pointer; outline: none; }
+    #mapa-brasil .canal-pin .pin-corpo {
+        fill: var(--pin-cor, #b45309);
         stroke: #fff;
         stroke-width: 1.5;
         vector-effect: non-scaling-stroke;
     }
-    #mapa-brasil .oficio-pin .pin-centro { fill: #fff; stroke: none; }
-    #mapa-brasil .oficio-pin:hover .pin-corpo,
-    #mapa-brasil .oficio-pin:focus-visible .pin-corpo { fill: #991b1b; }
+    #mapa-brasil .canal-pin .pin-icone {
+        fill: #fff;
+        stroke: none;
+        font-family: "Font Awesome 6 Free";
+        font-size: 760px;
+        font-weight: 900;
+        text-anchor: middle;
+        dominant-baseline: central;
+        pointer-events: none;
+    }
+    #mapa-brasil .canal-pin .pin-icone.brand {
+        font-family: "Font Awesome 6 Brands";
+        font-weight: 400;
+    }
+    #mapa-brasil .canal-pin .pin-contagem {
+        fill: #fff;
+        stroke: none;
+        font-family: var(--font-display);
+        font-size: 760px;
+        font-weight: 800;
+        text-anchor: middle;
+        dominant-baseline: central;
+        pointer-events: none;
+    }
+    #mapa-brasil .canal-pin:hover .pin-corpo,
+    #mapa-brasil .canal-pin:focus-visible .pin-corpo { filter: brightness(.78); }
+    #radar-pin-descritivo {
+        position: absolute;
+        z-index: 4;
+        top: 58px;
+        right: 20px;
+        width: min(300px, calc(100% - 40px));
+        padding: 14px;
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 12px 30px rgba(15,23,42,.18);
+    }
+    #radar-pin-descritivo[hidden] { display: none; }
+    .radar-pin-fechar { position: absolute; top: 6px; right: 6px; }
+    .radar-pin-titulo { padding-right: 28px; font-weight: 800; color: var(--text); }
+    .radar-pin-subtitulo { margin: 2px 0 9px; font-size: .72rem; color: var(--text-muted); }
+    .radar-pin-canais { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .radar-pin-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 8px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-inset);
+        color: var(--text-muted);
+        font-size: .7rem;
+        font-weight: 700;
+    }
+    .radar-pin-item i { color: var(--canal-cor); }
     #radar-legenda { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
     .radar-chip {
         font-size: 0.72rem;
@@ -806,8 +859,8 @@
     .dark .radar-chip.visitado { color: #6ee7b7; }
     .radar-chip.envelope { background: rgba(245,158,11,.16); color: #b45309; }
     .dark .radar-chip.envelope { color: #fbbf24; }
-    .radar-chip.oficio { background: rgba(220,38,38,.12); color: #dc2626; }
-    .dark .radar-chip.oficio { color: #f87171; }
+    .radar-chip.canal { background: var(--surface-inset); color: var(--text-muted); border: 1px solid var(--border); }
+    .radar-chip.canal i { color: var(--canal-cor); }
     .radar-chip.pendente { background: var(--surface-inset); color: var(--text-muted); }
     .dark .radar-chip.pendente { color: var(--text-muted); }
     .dark .radar-chip { color: var(--brand-400); }
@@ -905,6 +958,7 @@
             </div>
         </div>
         <div id="mapa-brasil" aria-label="Mapa do Brasil com as UFs no radar de prospecção"></div>
+        <div id="radar-pin-descritivo" role="status" aria-live="polite" hidden></div>
         <div id="radar-legenda"></div>
         <div class="radar-info" id="radar-info"></div>
     </section>
@@ -1134,13 +1188,13 @@ function statusDe(cod) {
 
 // Por onde já falamos com a prefeitura. A ordem aqui é a ordem exibida nos chips.
 const CANAIS = [
-    { chave: 'whatsapp',   label: 'WhatsApp',   icon: 'fa-whatsapp',      brand: true },
-    { chave: 'ligacao',    label: 'Ligação',    icon: 'fa-phone' },
-    { chave: 'email',      label: 'E-mail',     icon: 'fa-envelope' },
-    { chave: 'oficio',     label: 'Ofício',     icon: 'fa-file-signature' },
-    { chave: 'envelope',   label: 'Envelope deixado', icon: 'fa-envelope' },
-    { chave: 'presencial', label: 'Visita',     icon: 'fa-handshake' },
-    { chave: 'instagram',  label: 'Instagram',  icon: 'fa-instagram',     brand: true }
+    { chave: 'whatsapp',   label: 'WhatsApp',         icon: 'fa-whatsapp',       glyph: '\uf232', cor: '#25d366', brand: true },
+    { chave: 'ligacao',    label: 'Ligação',          icon: 'fa-phone',          glyph: '\uf095', cor: '#2563eb' },
+    { chave: 'email',      label: 'E-mail',           icon: 'fa-envelope',       glyph: '\uf0e0', cor: '#7c3aed' },
+    { chave: 'oficio',     label: 'Ofício',           icon: 'fa-file-signature', glyph: '\uf573', cor: '#b45309' },
+    { chave: 'envelope',   label: 'Envelope deixado', icon: 'fa-envelope',       glyph: '\uf0e0', cor: '#f59e0b' },
+    { chave: 'presencial', label: 'Visita',           icon: 'fa-handshake',      glyph: '\uf2b5', cor: '#10b981' },
+    { chave: 'instagram',  label: 'Instagram',        icon: 'fa-instagram',      glyph: '\uf16d', cor: '#d946a6', brand: true }
 ];
 
 // Perfil da praça (IBGE — Regiões Geográficas Imediatas/Intermediárias).
@@ -1749,17 +1803,12 @@ function renderPlacarCanais() {
             </span>
         </button>`;
 
-    const CORES = {
-        whatsapp: '#25d366', ligacao: '#2563eb', email: '#7c3aed',
-        oficio: '#b45309', envelope: '#f59e0b', presencial: '#10b981', instagram: '#d946a6'
-    };
-
     $('#canais-placar').innerHTML =
         item('nenhum', semContato, 'Sem contato', 'fa-hourglass-half', 'var(--text-faint)', false) +
         CANAIS.map(c => item(
             c.chave,
             ms.filter(m => canaisDe(m.cod).includes(c.chave)).length,
-            c.label, c.icon, CORES[c.chave], c.brand
+            c.label, c.icon, c.cor, c.brand
         )).join('');
 }
 
@@ -1783,12 +1832,12 @@ function filtrarPeloMapa(uf, municipio = '') {
 }
 
 function statusMunicipioRadar(m) {
-    const canais = canaisDe(m.cod);
-    const visitado = canais.includes('presencial');
+    const chaves = canaisDe(m.cod);
+    const visitado = chaves.includes('presencial');
     return {
         visitado,
-        envelope: !visitado && canais.includes('envelope'),
-        oficio: canais.includes('oficio')
+        envelope: !visitado && chaves.includes('envelope'),
+        canais: CANAIS.filter(c => chaves.includes(c.chave))
     };
 }
 
@@ -1798,26 +1847,53 @@ function abrirMunicipioNoRadar(m) {
 }
 
 function descricaoMunicipioRadar(m, status) {
-    const canais = canaisDe(m.cod);
-    const itens = [];
-    if (status.visitado) itens.push('visita presencial realizada');
-    if (canais.includes('envelope')) itens.push('envelope deixado');
-    if (status.oficio) itens.push('ofício enviado');
-    return itens.length ? itens.join(' · ') : 'sem visita ou entrega marcada';
+    return status.canais.length
+        ? status.canais.map(c => c.label).join(' · ')
+        : 'sem canal marcado';
 }
 
-function criarPinOficio(m, x, y, escala = 1) {
+function ocultarDescritivoPin() {
+    const painel = $('#radar-pin-descritivo');
+    painel.hidden = true;
+    painel.innerHTML = '';
+}
+
+function mostrarDescritivoPin(m, canais) {
+    const painel = $('#radar-pin-descritivo');
+    painel.innerHTML = `
+        <button type="button" class="btn btn-ghost btn-icon btn-sm radar-pin-fechar" aria-label="Fechar descritivo"><i class="fas fa-xmark"></i></button>
+        <div class="radar-pin-titulo">${esc(m.nome)}/${esc(m.uf)}</div>
+        <div class="radar-pin-subtitulo">${canais.length === 1 ? '1 canal registrado' : `${canais.length} canais registrados`}</div>
+        <div class="radar-pin-canais">
+            ${canais.map(c => `<span class="radar-pin-item" style="--canal-cor:${c.cor}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${c.label}</span>`).join('')}
+        </div>
+        <button type="button" class="btn btn-primary btn-sm radar-pin-abrir"><i class="fas fa-list"></i> Localizar na lista</button>`;
+    painel.hidden = false;
+    painel.querySelector('.radar-pin-fechar').addEventListener('click', ocultarDescritivoPin);
+    painel.querySelector('.radar-pin-abrir').addEventListener('click', () => {
+        ocultarDescritivoPin();
+        abrirMunicipioNoRadar(m);
+    });
+}
+
+function criarPinCanais(m, canais, x, y, escala = 1) {
     const ns = 'http://www.w3.org/2000/svg';
+    const multiplo = canais.length > 1;
+    const canal = canais[0];
+    const descricao = canais.map(c => c.label).join(', ');
     const pin = document.createElementNS(ns, 'g');
-    pin.classList.add('oficio-pin');
+    pin.classList.add('canal-pin');
+    if (multiplo) pin.classList.add('multiplo');
     pin.dataset.cod = m.cod;
+    pin.dataset.canal = multiplo ? 'multiplo' : canal.chave;
+    pin.style.setProperty('--pin-cor', multiplo ? '#111827' : canal.cor);
     pin.setAttribute('transform', `translate(${x} ${y}) scale(${escala} ${-escala})`);
     pin.setAttribute('role', 'button');
     pin.setAttribute('tabindex', '0');
-    pin.setAttribute('aria-label', `${m.nome}: ofício enviado. Abrir na lista.`);
+    pin.setAttribute('aria-label', `${m.nome}: ${descricao}. Mostrar descritivo.`);
 
     const title = document.createElementNS(ns, 'title');
-    title.textContent = `${m.nome} — ofício enviado. Clique para abrir na lista.`;
+    title.textContent = `${m.nome} — ${descricao}. Clique para ver o descritivo.`;
     pin.appendChild(title);
 
     const corpo = document.createElementNS(ns, 'path');
@@ -1825,22 +1901,43 @@ function criarPinOficio(m, x, y, escala = 1) {
     corpo.setAttribute('d', 'M0 1250C-260 780-900 130-900-650C-900-1450-500-1950 0-1950C500-1950 900-1450 900-650C900 130 260 780 0 1250Z');
     pin.appendChild(corpo);
 
-    const centro = document.createElementNS(ns, 'circle');
-    centro.classList.add('pin-centro');
-    centro.setAttribute('cx', '0');
-    centro.setAttribute('cy', '-700');
-    centro.setAttribute('r', '330');
-    pin.appendChild(centro);
+    const conteudo = document.createElementNS(ns, 'text');
+    conteudo.setAttribute('x', '0');
+    conteudo.setAttribute('y', '-700');
+    if (multiplo) {
+        conteudo.classList.add('pin-contagem');
+        conteudo.textContent = `+${canais.length - 1}`;
+    } else {
+        conteudo.classList.add('pin-icone');
+        if (canal.brand) conteudo.classList.add('brand');
+        conteudo.textContent = canal.glyph;
+    }
+    pin.appendChild(conteudo);
 
-    const abrir = ev => {
+    const mostrar = ev => {
         ev.stopPropagation();
-        abrirMunicipioNoRadar(m);
+        mostrarDescritivoPin(m, canais);
     };
-    pin.addEventListener('click', abrir);
+    pin.addEventListener('click', mostrar);
     pin.addEventListener('keydown', ev => {
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(ev); }
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); mostrar(ev); }
     });
     return pin;
+}
+
+function adicionarPinsCanais(camada, m, canais, box, escala = 1) {
+    if (!canais.length) return;
+    const centroX = box.x + box.width / 2;
+    const centroY = box.y + box.height / 2;
+    camada.appendChild(criarPinCanais(m, canais, centroX, centroY, escala));
+}
+
+function legendaPinsCanais(municipios) {
+    return CANAIS.map(c => {
+        const total = municipios.filter(m => canaisDe(m.cod).includes(c.chave)).length;
+        if (!total) return '';
+        return `<span class="radar-chip canal" style="--canal-cor:${c.cor}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${c.label} · ${total.toLocaleString('pt-BR')}</span>`;
+    }).join('');
 }
 
 function atualizarRadarEstado() {
@@ -1856,7 +1953,7 @@ function atualizarRadarEstado() {
     camadaPins.id = 'radar-pins-estado';
     let visitados = 0;
     let envelopes = 0;
-    let oficios = 0;
+    const municipiosEstado = DATA.municipios.filter(m => m.uf === radarUf);
 
     cont.querySelectorAll('path[id]').forEach(p => {
         const m = MUNICIPIOS_POR_COD.get(p.id);
@@ -1866,10 +1963,9 @@ function atualizarRadarEstado() {
         p.classList.toggle('mun-envelope', status.envelope);
         if (status.visitado) visitados++;
         if (status.envelope) envelopes++;
-        if (status.oficio) {
-            oficios++;
+        if (status.canais.length) {
             const box = p.getBBox();
-            camadaPins.appendChild(criarPinOficio(m, box.x + box.width / 2, box.y + box.height / 2));
+            adicionarPinsCanais(camadaPins, m, status.canais, box);
         }
         const descricao = descricaoMunicipioRadar(m, status);
         const title = p.querySelector('title');
@@ -1878,14 +1974,14 @@ function atualizarRadarEstado() {
     });
     grupoMunicipios.appendChild(camadaPins);
 
-    const total = DATA.municipios.filter(m => m.uf === radarUf).length;
+    const total = municipiosEstado.length;
     const pendentes = Math.max(0, total - visitados - envelopes);
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
         <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip oficio"><i class="fas fa-thumbtack"></i> Ofícios · ${oficios.toLocaleString('pt-BR')}</span>
+        ${legendaPinsCanais(municipiosEstado)}
         <span class="radar-chip pendente">Sem visita/entrega · ${pendentes.toLocaleString('pt-BR')}</span>`;
-    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; envelopes aparecem em âmbar e ofícios têm PIN vermelho. Clique no município ou no PIN para localizá-lo na lista.`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; um canal usa a cor e o ícone do item, enquanto vários canais usam um único PIN preto com +N. Clique no PIN para ver o descritivo.`;
 }
 
 function atualizarLegendaBrasil() {
@@ -1893,17 +1989,15 @@ function atualizarLegendaBrasil() {
     const municipios = DATA.municipios.filter(m => RADAR_ESTADOS[m.uf]);
     let visitados = 0;
     let envelopes = 0;
-    let oficios = 0;
     municipios.forEach(m => {
         const status = statusMunicipioRadar(m);
         if (status.visitado) visitados++;
         if (status.envelope) envelopes++;
-        if (status.oficio) oficios++;
     });
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
         <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip oficio"><i class="fas fa-thumbtack"></i> Ofícios · ${oficios.toLocaleString('pt-BR')}</span>
+        ${legendaPinsCanais(municipios)}
         ${radarLegendaBrasilBase}`;
 }
 
@@ -1934,7 +2028,7 @@ function desenharDestaquesBrasil() {
             const m = MUNICIPIOS_POR_COD.get(p.id);
             if (!m || m.uf !== uf) return;
             const status = statusMunicipioRadar(m);
-            if (!status.visitado && !status.envelope && !status.oficio) return;
+            if (!status.canais.length) return;
             const clone = document.createElementNS(ns, 'path');
             clone.dataset.cod = m.cod;
             clone.setAttribute('d', p.getAttribute('d'));
@@ -1944,13 +2038,13 @@ function desenharDestaquesBrasil() {
                 clone.classList.add('radar-municipio-base');
             }
             grupo.appendChild(clone);
-            if (status.oficio) tarefasPin.push({ grupo, clone, m });
+            tarefasPin.push({ grupo, clone, m, canais: status.canais });
         });
     });
 
-    tarefasPin.forEach(({ grupo, clone, m }) => {
+    tarefasPin.forEach(({ grupo, clone, m, canais }) => {
         const box = clone.getBBox();
-        grupo.appendChild(criarPinOficio(m, box.x + box.width / 2, box.y + box.height / 2, 1.75));
+        adicionarPinsCanais(grupo, m, canais, box, 5);
     });
 }
 
@@ -2016,10 +2110,11 @@ function mostrarMapaEstado(uf, svg) {
     if (!config) return;
     radarModo = 'estado';
     radarUf = uf;
+    ocultarDescritivoPin();
     const cont = $('#mapa-brasil');
     cont.classList.add('modo-estado');
     cont.innerHTML = svg;
-    cont.setAttribute('aria-label', `Mapa dos municípios de ${config.nome}; visitas em verde, envelopes em âmbar e ofícios com PIN vermelho`);
+    cont.setAttribute('aria-label', `Mapa dos municípios de ${config.nome}; visitas em verde, envelopes em âmbar e canais de contato identificados por PINs coloridos`);
     $('#radar-titulo').innerHTML = `<i class="fas fa-satellite-dish"></i> Radar de expansão — ${config.nome}`;
     $('#radar-acoes').hidden = false;
 
@@ -2073,6 +2168,7 @@ async function abrirMapaEstado(uf) {
 
 function renderRadar() {
     if (!window.MAPA_BRASIL_SVG) return;
+    ocultarDescritivoPin();
     radarModo = 'brasil';
     radarUf = null;
     radarViewBoxBase = null;
@@ -2115,7 +2211,7 @@ function renderRadar() {
     const totalMun = DATA.municipios.length;
     $('#radar-info').innerHTML = noRadar.size >= 27
         ? `<strong>Brasil inteiro no radar</strong> — 27 UFs e ${totalMun.toLocaleString('pt-BR')} municípios. `
-          + `Visitas, envelopes e ofícios de GO/MG também aparecem nesta visão. O Tier A/B continua limitado ao raio de 2.000 km: fora dele a praça entra como mala direta, não como visita.`
+          + `Visitas, envelopes e canais marcados em GO/MG também aparecem nesta visão. O Tier A/B continua limitado ao raio de 2.000 km: fora dele a praça entra como mala direta, não como visita.`
         : `<strong>${noRadar.size} de 27 UFs</strong> no radar — expandindo gradativamente até cobrir todo o território nacional.`;
 }
 
