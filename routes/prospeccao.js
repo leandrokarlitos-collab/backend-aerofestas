@@ -17,7 +17,7 @@ const STATUS_VALIDOS = ['nao_contatado', 'contatado', 'proposta_enviada', 'negoc
 const CAMPOS_CONTATO = ['telPrefeitura', 'secretaria', 'secretario', 'contatoSecretaria', 'enderecoSecretaria', 'site', 'obs'];
 
 // Por onde já falamos com a prefeitura (acumulativo)
-const CANAIS_VALIDOS = ['whatsapp', 'ligacao', 'email', 'oficio', 'presencial', 'instagram'];
+const CANAIS_VALIDOS = ['whatsapp', 'ligacao', 'email', 'oficio', 'envelope', 'presencial', 'instagram'];
 // Por que NÃO alcançamos — separa "ainda não tentei" de "tentei e não deu"
 const PROBLEMAS_VALIDOS = ['tel_nao_encontrado', 'tel_desatualizado', 'nao_atende', 'whats_sem_resposta', 'email_sem_resposta', 'sem_retorno'];
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.29.2';
+const CACHE_NAME = 'aero-festas-v3.29.3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -57,9 +57,10 @@ const ASSETS_TO_CACHE = [
     // Malha do Brasil por UF (IBGE, vendorizada): mapa "radar de expansão" de
     // Prospeccao-Prefeituras.html — sem ela no precache o mapa some offline.
     '/js/vendor/mapa-brasil-uf.js',
-    // Malha municipal de Goiás (IBGE, vendorizada): primeiro nível de zoom do
-    // radar e base visual para pintar de verde as cidades visitadas.
+    // Malhas municipais de GO e MG (IBGE, vendorizadas): primeiro nível de zoom
+    // do radar e base visual para pintar de verde as cidades visitadas.
     '/js/vendor/mapa-goias-municipios.svg',
+    '/js/vendor/mapa-minas-gerais-municipios.svg',
     // Pacifico vendorizada (SIL OFL): fonte cursiva da assinatura "Aero" no QR
     // de Links-Rastreados.html. Mora no projeto (mesma lição do qrcode: CDN em
     // runtime já quebrou produção) e precisa do precache para funcionar offline.

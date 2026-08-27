@@ -227,6 +227,7 @@
     .canal-chip.c-ligacao    { background: #2563eb; }
     .canal-chip.c-email      { background: #7c3aed; }
     .canal-chip.c-oficio     { background: #b45309; }
+    .canal-chip.c-envelope   { background: #f59e0b; }
     .canal-chip.c-presencial { background: var(--success); }
     .canal-chip.c-instagram  { background: #d946a6; }
 
@@ -735,7 +736,12 @@
     /* ---- Radar de expansão: mapa do Brasil por UF ---- */
     #radar-card { padding: 18px 20px; margin-bottom: 18px; }
     #radar-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-    #radar-voltar[hidden] { display: none; }
+    #radar-acoes { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+    #radar-acoes[hidden], #radar-voltar[hidden] { display: none; }
+    .radar-zoom { display: inline-flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-inset); }
+    .radar-zoom .btn { min-width: 34px; padding-left: 8px; padding-right: 8px; }
+    #radar-zoom-nivel { min-width: 44px; text-align: center; font-size: 0.7rem; font-weight: 800; color: var(--text-muted); }
+    #mapa-brasil.modo-estado { overflow: hidden; }
     #mapa-brasil svg {
         width: 100%;
         height: auto;
@@ -752,18 +758,41 @@
     }
     #mapa-brasil path.uf-on { fill: var(--brand-600); cursor: pointer; }
     #mapa-brasil path.uf-on:hover { fill: #8b5cf6; }
-    #mapa-brasil.modo-goias path {
+    #mapa-brasil.modo-estado path {
         fill: var(--surface-inset);
         stroke: var(--border-strong);
         stroke-width: 0.7;
         cursor: pointer;
         transition: fill 0.15s ease, opacity 0.15s ease;
     }
-    #mapa-brasil.modo-goias path:hover,
-    #mapa-brasil.modo-goias path:focus-visible { fill: #c4b5fd; outline: none; }
-    #mapa-brasil.modo-goias path.mun-visitado { fill: var(--success); }
-    #mapa-brasil.modo-goias path.mun-visitado:hover,
-    #mapa-brasil.modo-goias path.mun-visitado:focus-visible { fill: #059669; }
+    #mapa-brasil.modo-estado path:hover,
+    #mapa-brasil.modo-estado path:focus-visible { fill: #c4b5fd; outline: none; }
+    #mapa-brasil.modo-estado path.mun-visitado { fill: var(--success); }
+    #mapa-brasil.modo-estado path.mun-visitado:hover,
+    #mapa-brasil.modo-estado path.mun-visitado:focus-visible { fill: #059669; }
+    #mapa-brasil path.mun-envelope { fill: #f59e0b; }
+    #mapa-brasil.modo-estado path.mun-envelope:hover,
+    #mapa-brasil.modo-estado path.mun-envelope:focus-visible { fill: #d97706; }
+    #mapa-brasil path.radar-municipio-destaque {
+        stroke: #fff;
+        stroke-width: 0.7;
+        pointer-events: none;
+    }
+    #mapa-brasil path.radar-municipio-base {
+        fill: transparent;
+        stroke: none;
+        pointer-events: none;
+    }
+    #mapa-brasil .oficio-pin { cursor: pointer; outline: none; }
+    #mapa-brasil .oficio-pin .pin-corpo {
+        fill: #dc2626;
+        stroke: #fff;
+        stroke-width: 1.5;
+        vector-effect: non-scaling-stroke;
+    }
+    #mapa-brasil .oficio-pin .pin-centro { fill: #fff; stroke: none; }
+    #mapa-brasil .oficio-pin:hover .pin-corpo,
+    #mapa-brasil .oficio-pin:focus-visible .pin-corpo { fill: #991b1b; }
     #radar-legenda { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
     .radar-chip {
         font-size: 0.72rem;
@@ -775,6 +804,10 @@
     }
     .radar-chip.visitado { background: rgba(16,185,129,.14); color: #047857; }
     .dark .radar-chip.visitado { color: #6ee7b7; }
+    .radar-chip.envelope { background: rgba(245,158,11,.16); color: #b45309; }
+    .dark .radar-chip.envelope { color: #fbbf24; }
+    .radar-chip.oficio { background: rgba(220,38,38,.12); color: #dc2626; }
+    .dark .radar-chip.oficio { color: #f87171; }
     .radar-chip.pendente { background: var(--surface-inset); color: var(--text-muted); }
     .dark .radar-chip.pendente { color: var(--text-muted); }
     .dark .radar-chip { color: var(--brand-400); }
@@ -856,9 +889,20 @@
     <section class="surface" id="radar-card">
         <div id="radar-topo">
             <div class="det-titulo" id="radar-titulo"><i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil</div>
-            <button type="button" class="btn btn-ghost btn-sm" id="radar-voltar" aria-label="Voltar ao Brasil" hidden>
-                <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Brasil
-            </button>
+            <div id="radar-acoes" hidden>
+                <div class="radar-zoom" aria-label="Controles de zoom do mapa">
+                    <button type="button" class="btn btn-ghost btn-sm" id="radar-zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">
+                        <i class="fas fa-magnifying-glass-minus" aria-hidden="true"></i>
+                    </button>
+                    <span id="radar-zoom-nivel" aria-live="polite">100%</span>
+                    <button type="button" class="btn btn-ghost btn-sm" id="radar-zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">
+                        <i class="fas fa-magnifying-glass-plus" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="radar-voltar" aria-label="Voltar ao Brasil">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Brasil
+                </button>
+            </div>
         </div>
         <div id="mapa-brasil" aria-label="Mapa do Brasil com as UFs no radar de prospecção"></div>
         <div id="radar-legenda"></div>
@@ -964,6 +1008,7 @@
             <option value="ligacao">Falamos por ligação</option>
             <option value="email">Falamos por e-mail</option>
             <option value="oficio">Enviamos ofício</option>
+            <option value="envelope">Envelope deixado</option>
             <option value="presencial">Visita presencial</option>
             <option value="instagram">Falamos por Instagram</option>
         </select>
@@ -1036,12 +1081,21 @@ const editando = new Set(); // cards com o formulário de contatos aberto
 const PAGINA = 150;        // cards renderizados por vez (2.746 de uma vez trava o celular)
 let visivel = PAGINA;
 
-// A visão municipal começa por Goiás. A malha oficial do IBGE é carregada do
-// próprio projeto e fica em cache para as próximas aberturas do estado.
+// Estados com visão municipal disponível. As malhas oficiais do IBGE ficam
+// vendorizadas e alimentam tanto os destaques do Brasil quanto o zoom da UF.
+const RADAR_ESTADOS = {
+    GO: { nome: 'Goiás', arquivo: './js/vendor/mapa-goias-municipios.svg' },
+    MG: { nome: 'Minas Gerais', arquivo: './js/vendor/mapa-minas-gerais-municipios.svg' }
+};
 const MUNICIPIOS_POR_COD = new Map((DATA && DATA.municipios || []).map(m => [m.cod, m]));
 let radarModo = 'brasil';
-let mapaGoiasSvg = null;
-let carregandoMapaGoias = null;
+let radarUf = null;
+const mapasEstadoSvg = new Map();
+const carregamentosMapaEstado = new Map();
+const RADAR_ZOOM_NIVEIS = [1, 1.35, 1.8, 2.5, 3.5];
+let radarZoomIndice = 0;
+let radarViewBoxBase = null;
+let radarLegendaBrasilBase = '';
 
 // --- Licitações abertas (varredura diária do PNCP) ---
 // Vêm do BANCO, não do snapshot. O snapshot congelado de 12/08 mostrava edital
@@ -1084,6 +1138,7 @@ const CANAIS = [
     { chave: 'ligacao',    label: 'Ligação',    icon: 'fa-phone' },
     { chave: 'email',      label: 'E-mail',     icon: 'fa-envelope' },
     { chave: 'oficio',     label: 'Ofício',     icon: 'fa-file-signature' },
+    { chave: 'envelope',   label: 'Envelope deixado', icon: 'fa-envelope' },
     { chave: 'presencial', label: 'Visita',     icon: 'fa-handshake' },
     { chave: 'instagram',  label: 'Instagram',  icon: 'fa-instagram',     brand: true }
 ];
@@ -1696,7 +1751,7 @@ function renderPlacarCanais() {
 
     const CORES = {
         whatsapp: '#25d366', ligacao: '#2563eb', email: '#7c3aed',
-        oficio: '#b45309', presencial: '#10b981', instagram: '#d946a6'
+        oficio: '#b45309', envelope: '#f59e0b', presencial: '#10b981', instagram: '#d946a6'
     };
 
     $('#canais-placar').innerHTML =
@@ -1713,7 +1768,7 @@ function render() {
     renderCalendario();
     renderPlacarCanais();
     renderLista();
-    atualizarRadarVisitas();
+    atualizarRadarMapas();
 }
 
 // Mapa do Brasil: pinta as UFs presentes no snapshot ("no radar"); clicar filtra a lista.
@@ -1727,37 +1782,252 @@ function filtrarPeloMapa(uf, municipio = '') {
     renderLista();
 }
 
-function atualizarRadarVisitas() {
-    if (radarModo !== 'goias') return;
+function statusMunicipioRadar(m) {
+    const canais = canaisDe(m.cod);
+    const visitado = canais.includes('presencial');
+    return {
+        visitado,
+        envelope: !visitado && canais.includes('envelope'),
+        oficio: canais.includes('oficio')
+    };
+}
+
+function abrirMunicipioNoRadar(m) {
+    filtrarPeloMapa(m.uf, m.nome);
+    $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function descricaoMunicipioRadar(m, status) {
+    const canais = canaisDe(m.cod);
+    const itens = [];
+    if (status.visitado) itens.push('visita presencial realizada');
+    if (canais.includes('envelope')) itens.push('envelope deixado');
+    if (status.oficio) itens.push('ofício enviado');
+    return itens.length ? itens.join(' · ') : 'sem visita ou entrega marcada';
+}
+
+function criarPinOficio(m, x, y, escala = 1) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const pin = document.createElementNS(ns, 'g');
+    pin.classList.add('oficio-pin');
+    pin.dataset.cod = m.cod;
+    pin.setAttribute('transform', `translate(${x} ${y}) scale(${escala} ${-escala})`);
+    pin.setAttribute('role', 'button');
+    pin.setAttribute('tabindex', '0');
+    pin.setAttribute('aria-label', `${m.nome}: ofício enviado. Abrir na lista.`);
+
+    const title = document.createElementNS(ns, 'title');
+    title.textContent = `${m.nome} — ofício enviado. Clique para abrir na lista.`;
+    pin.appendChild(title);
+
+    const corpo = document.createElementNS(ns, 'path');
+    corpo.classList.add('pin-corpo');
+    corpo.setAttribute('d', 'M0 1250C-260 780-900 130-900-650C-900-1450-500-1950 0-1950C500-1950 900-1450 900-650C900 130 260 780 0 1250Z');
+    pin.appendChild(corpo);
+
+    const centro = document.createElementNS(ns, 'circle');
+    centro.classList.add('pin-centro');
+    centro.setAttribute('cx', '0');
+    centro.setAttribute('cy', '-700');
+    centro.setAttribute('r', '330');
+    pin.appendChild(centro);
+
+    const abrir = ev => {
+        ev.stopPropagation();
+        abrirMunicipioNoRadar(m);
+    };
+    pin.addEventListener('click', abrir);
+    pin.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(ev); }
+    });
+    return pin;
+}
+
+function atualizarRadarEstado() {
+    if (radarModo !== 'estado' || !radarUf) return;
+    const config = RADAR_ESTADOS[radarUf];
     const cont = $('#mapa-brasil');
+    const svg = cont.querySelector('svg');
+    const grupoMunicipios = svg && (svg.querySelector(':scope > g[transform]') || svg.querySelector('g[transform]'));
+    if (!grupoMunicipios) return;
+
+    grupoMunicipios.querySelector('#radar-pins-estado')?.remove();
+    const camadaPins = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    camadaPins.id = 'radar-pins-estado';
     let visitados = 0;
+    let envelopes = 0;
+    let oficios = 0;
 
     cont.querySelectorAll('path[id]').forEach(p => {
         const m = MUNICIPIOS_POR_COD.get(p.id);
         if (!m) return;
-        const visitado = canaisDe(m.cod).includes('presencial');
-        p.classList.toggle('mun-visitado', visitado);
-        if (visitado) visitados++;
+        const status = statusMunicipioRadar(m);
+        p.classList.toggle('mun-visitado', status.visitado);
+        p.classList.toggle('mun-envelope', status.envelope);
+        if (status.visitado) visitados++;
+        if (status.envelope) envelopes++;
+        if (status.oficio) {
+            oficios++;
+            const box = p.getBBox();
+            camadaPins.appendChild(criarPinOficio(m, box.x + box.width / 2, box.y + box.height / 2));
+        }
+        const descricao = descricaoMunicipioRadar(m, status);
         const title = p.querySelector('title');
-        if (title) title.textContent = `${m.nome} — ${visitado ? 'visita presencial realizada' : 'visita ainda não marcada'}. Clique para abrir na lista.`;
-        p.setAttribute('aria-label', `${m.nome}: ${visitado ? 'visitado' : 'não visitado'}`);
+        if (title) title.textContent = `${m.nome} — ${descricao}. Clique para abrir na lista.`;
+        p.setAttribute('aria-label', `${m.nome}: ${descricao}`);
     });
+    grupoMunicipios.appendChild(camadaPins);
 
-    const total = DATA.municipios.filter(m => m.uf === 'GO').length;
+    const total = DATA.municipios.filter(m => m.uf === radarUf).length;
+    const pendentes = Math.max(0, total - visitados - envelopes);
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip pendente">A visitar · ${(total - visitados).toLocaleString('pt-BR')}</span>`;
-    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')}</strong> municípios de Goiás visitados presencialmente. Clique em um município para localizá-lo na lista.`;
+        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip oficio"><i class="fas fa-thumbtack"></i> Ofícios · ${oficios.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip pendente">Sem visita/entrega · ${pendentes.toLocaleString('pt-BR')}</span>`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; envelopes aparecem em âmbar e ofícios têm PIN vermelho. Clique no município ou no PIN para localizá-lo na lista.`;
 }
 
-function mostrarMapaGoias(svg) {
-    radarModo = 'goias';
+function atualizarLegendaBrasil() {
+    if (radarModo !== 'brasil') return;
+    const municipios = DATA.municipios.filter(m => RADAR_ESTADOS[m.uf]);
+    let visitados = 0;
+    let envelopes = 0;
+    let oficios = 0;
+    municipios.forEach(m => {
+        const status = statusMunicipioRadar(m);
+        if (status.visitado) visitados++;
+        if (status.envelope) envelopes++;
+        if (status.oficio) oficios++;
+    });
+    $('#radar-legenda').innerHTML = `
+        <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip oficio"><i class="fas fa-thumbtack"></i> Ofícios · ${oficios.toLocaleString('pt-BR')}</span>
+        ${radarLegendaBrasilBase}`;
+}
+
+function desenharDestaquesBrasil() {
+    if (radarModo !== 'brasil') return;
+    const svgBrasil = $('#mapa-brasil').querySelector('svg');
+    if (!svgBrasil) return;
+    svgBrasil.querySelector('#radar-brasil-destaques')?.remove();
+
+    const ns = 'http://www.w3.org/2000/svg';
+    const raiz = document.createElementNS(ns, 'g');
+    raiz.id = 'radar-brasil-destaques';
+    svgBrasil.appendChild(raiz);
+    const tarefasPin = [];
+
+    Object.keys(RADAR_ESTADOS).forEach(uf => {
+        const texto = mapasEstadoSvg.get(uf);
+        if (!texto) return;
+        const doc = new DOMParser().parseFromString(texto, 'image/svg+xml');
+        const origem = doc.querySelector('svg > g[transform], svg g[transform]');
+        if (!origem) return;
+        const grupo = document.createElementNS(ns, 'g');
+        grupo.dataset.uf = uf;
+        grupo.setAttribute('transform', origem.getAttribute('transform'));
+        raiz.appendChild(grupo);
+
+        origem.querySelectorAll('path[id]').forEach(p => {
+            const m = MUNICIPIOS_POR_COD.get(p.id);
+            if (!m || m.uf !== uf) return;
+            const status = statusMunicipioRadar(m);
+            if (!status.visitado && !status.envelope && !status.oficio) return;
+            const clone = document.createElementNS(ns, 'path');
+            clone.dataset.cod = m.cod;
+            clone.setAttribute('d', p.getAttribute('d'));
+            if (status.visitado || status.envelope) {
+                clone.classList.add('radar-municipio-destaque', status.visitado ? 'mun-visitado' : 'mun-envelope');
+            } else {
+                clone.classList.add('radar-municipio-base');
+            }
+            grupo.appendChild(clone);
+            if (status.oficio) tarefasPin.push({ grupo, clone, m });
+        });
+    });
+
+    tarefasPin.forEach(({ grupo, clone, m }) => {
+        const box = clone.getBBox();
+        grupo.appendChild(criarPinOficio(m, box.x + box.width / 2, box.y + box.height / 2, 1.75));
+    });
+}
+
+function carregarMalhaEstado(uf) {
+    const config = RADAR_ESTADOS[uf];
+    if (!config) return Promise.reject(new Error(`UF ${uf} sem malha municipal`));
+    if (mapasEstadoSvg.has(uf)) return Promise.resolve(mapasEstadoSvg.get(uf));
+    if (carregamentosMapaEstado.has(uf)) return carregamentosMapaEstado.get(uf);
+
+    const carregamento = fetch(config.arquivo, { cache: 'force-cache' })
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.text();
+        })
+        .then(svg => {
+            const limpo = svg.replace(/^<\?xml[^>]*>\s*/, '');
+            mapasEstadoSvg.set(uf, limpo);
+            return limpo;
+        })
+        .finally(() => carregamentosMapaEstado.delete(uf));
+    carregamentosMapaEstado.set(uf, carregamento);
+    return carregamento;
+}
+
+function atualizarRadarBrasil() {
+    if (radarModo !== 'brasil') return;
+    atualizarLegendaBrasil();
+    Promise.all(Object.keys(RADAR_ESTADOS).map(carregarMalhaEstado))
+        .then(desenharDestaquesBrasil)
+        .catch(e => console.error('Erro ao montar os destaques municipais do Brasil:', e));
+}
+
+function atualizarRadarMapas() {
+    if (radarModo === 'estado') atualizarRadarEstado();
+    else atualizarRadarBrasil();
+}
+
+function aplicarZoomRadar() {
+    if (radarModo !== 'estado' || !radarViewBoxBase) return;
+    const svg = $('#mapa-brasil').querySelector('svg');
+    if (!svg) return;
+    const fator = RADAR_ZOOM_NIVEIS[radarZoomIndice];
+    const [x, y, largura, altura] = radarViewBoxBase;
+    const novaLargura = largura / fator;
+    const novaAltura = altura / fator;
+    const novoX = x + (largura - novaLargura) / 2;
+    const novoY = y + (altura - novaAltura) / 2;
+    svg.setAttribute('viewBox', `${novoX} ${novoY} ${novaLargura} ${novaAltura}`);
+    $('#radar-zoom-nivel').textContent = `${Math.round(fator * 100)}%`;
+    $('#radar-zoom-out').disabled = radarZoomIndice === 0;
+    $('#radar-zoom-in').disabled = radarZoomIndice === RADAR_ZOOM_NIVEIS.length - 1;
+}
+
+function mudarZoomRadar(delta) {
+    const proximo = Math.max(0, Math.min(RADAR_ZOOM_NIVEIS.length - 1, radarZoomIndice + delta));
+    if (proximo === radarZoomIndice) return;
+    radarZoomIndice = proximo;
+    aplicarZoomRadar();
+}
+
+function mostrarMapaEstado(uf, svg) {
+    const config = RADAR_ESTADOS[uf];
+    if (!config) return;
+    radarModo = 'estado';
+    radarUf = uf;
     const cont = $('#mapa-brasil');
-    cont.classList.add('modo-goias');
+    cont.classList.add('modo-estado');
     cont.innerHTML = svg;
-    cont.setAttribute('aria-label', 'Mapa dos municípios de Goiás; municípios visitados aparecem em verde');
-    $('#radar-titulo').innerHTML = '<i class="fas fa-satellite-dish"></i> Radar de expansão — Goiás';
-    $('#radar-voltar').hidden = false;
+    cont.setAttribute('aria-label', `Mapa dos municípios de ${config.nome}; visitas em verde, envelopes em âmbar e ofícios com PIN vermelho`);
+    $('#radar-titulo').innerHTML = `<i class="fas fa-satellite-dish"></i> Radar de expansão — ${config.nome}`;
+    $('#radar-acoes').hidden = false;
+
+    const svgEl = cont.querySelector('svg');
+    const viewBox = svgEl && String(svgEl.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+    radarViewBoxBase = viewBox && viewBox.length === 4 && viewBox.every(Number.isFinite) ? viewBox : null;
+    radarZoomIndice = 0;
+    aplicarZoomRadar();
 
     cont.querySelectorAll('path[id]').forEach(p => {
         const m = MUNICIPIOS_POR_COD.get(p.id);
@@ -1767,58 +2037,52 @@ function mostrarMapaGoias(svg) {
         if (!m) return;
         p.setAttribute('role', 'button');
         p.setAttribute('tabindex', '0');
-        const abrir = () => {
-            filtrarPeloMapa('GO', m.nome);
-            $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        };
+        const abrir = () => abrirMunicipioNoRadar(m);
         p.addEventListener('click', abrir);
         p.addEventListener('keydown', ev => {
             if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(); }
         });
     });
-    atualizarRadarVisitas();
+    atualizarRadarEstado();
 }
 
-async function abrirMapaGoias() {
-    filtrarPeloMapa('GO');
-    if (mapaGoiasSvg) { mostrarMapaGoias(mapaGoiasSvg); return; }
-    if (carregandoMapaGoias) return carregandoMapaGoias;
+async function abrirMapaEstado(uf) {
+    const config = RADAR_ESTADOS[uf];
+    if (!config) return;
+    filtrarPeloMapa(uf);
+    if (mapasEstadoSvg.has(uf)) { mostrarMapaEstado(uf, mapasEstadoSvg.get(uf)); return; }
 
     const btn = $('#radar-voltar');
-    btn.hidden = false;
+    $('#radar-acoes').hidden = false;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo Goiás…';
-    carregandoMapaGoias = fetch('./js/vendor/mapa-goias-municipios.svg', { cache: 'force-cache' })
-        .then(r => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.text();
-        })
-        .then(svg => {
-            mapaGoiasSvg = svg.replace(/^<\?xml[^>]*>\s*/, '');
-            mostrarMapaGoias(mapaGoiasSvg);
-        })
-        .catch(e => {
-            console.error('Erro ao carregar a malha municipal de Goiás:', e);
-            btn.hidden = true;
-            window.UI.toast('Não foi possível abrir o mapa municipal de Goiás.', 'error');
-        })
-        .finally(() => {
-            carregandoMapaGoias = null;
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Brasil';
-        });
-    return carregandoMapaGoias;
+    $('#radar-zoom-out').disabled = true;
+    $('#radar-zoom-in').disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Abrindo ${config.nome}…`;
+    try {
+        const svg = await carregarMalhaEstado(uf);
+        mostrarMapaEstado(uf, svg);
+    } catch (e) {
+        console.error(`Erro ao carregar a malha municipal de ${config.nome}:`, e);
+        $('#radar-acoes').hidden = true;
+        window.UI.toast(`Não foi possível abrir o mapa municipal de ${config.nome}.`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Brasil';
+    }
 }
 
 function renderRadar() {
     if (!window.MAPA_BRASIL_SVG) return;
     radarModo = 'brasil';
+    radarUf = null;
+    radarViewBoxBase = null;
+    radarZoomIndice = 0;
     const cont = $('#mapa-brasil');
-    cont.classList.remove('modo-goias');
+    cont.classList.remove('modo-estado');
     cont.innerHTML = window.MAPA_BRASIL_SVG;
     cont.setAttribute('aria-label', 'Mapa do Brasil com as UFs no radar de prospecção');
     $('#radar-titulo').innerHTML = '<i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil';
-    $('#radar-voltar').hidden = true;
+    $('#radar-acoes').hidden = true;
 
     const noRadar = new Map(); // sigla -> qtde de municípios
     DATA.municipios.forEach(m => noRadar.set(m.uf, (noRadar.get(m.uf) || 0) + 1));
@@ -1830,9 +2094,9 @@ function renderRadar() {
         const t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
         if (noRadar.has(sigla)) {
             p.classList.add('uf-on');
-            t.textContent = `${nome} — ${noRadar.get(sigla).toLocaleString('pt-BR')} municípios no radar.${sigla === 'GO' ? ' Clique para ver os municípios.' : ' Clique para filtrar.'}`;
+            t.textContent = `${nome} — ${noRadar.get(sigla).toLocaleString('pt-BR')} municípios no radar.${RADAR_ESTADOS[sigla] ? ' Clique para ver os municípios.' : ' Clique para filtrar.'}`;
             p.addEventListener('click', () => {
-                if (sigla === 'GO') abrirMapaGoias();
+                if (RADAR_ESTADOS[sigla]) abrirMapaEstado(sigla);
                 else {
                     filtrarPeloMapa(sigla);
                     $('#lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1844,13 +2108,14 @@ function renderRadar() {
         p.appendChild(t);
     });
 
-    $('#radar-legenda').innerHTML = [...noRadar.entries()]
+    radarLegendaBrasilBase = [...noRadar.entries()]
         .sort((a, b) => (a[0] === 'GO' ? -1 : b[0] === 'GO' ? 1 : b[1] - a[1]))
         .map(([s, n]) => `<span class="radar-chip">${s} · ${n.toLocaleString('pt-BR')}</span>`).join('');
+    atualizarRadarBrasil();
     const totalMun = DATA.municipios.length;
     $('#radar-info').innerHTML = noRadar.size >= 27
         ? `<strong>Brasil inteiro no radar</strong> — 27 UFs e ${totalMun.toLocaleString('pt-BR')} municípios. `
-          + `O Tier A/B continua limitado ao raio de 2.000 km: fora dele a praça entra como mala direta, não como visita.`
+          + `Visitas, envelopes e ofícios de GO/MG também aparecem nesta visão. O Tier A/B continua limitado ao raio de 2.000 km: fora dele a praça entra como mala direta, não como visita.`
         : `<strong>${noRadar.size} de 27 UFs</strong> no radar — expandindo gradativamente até cobrir todo o território nacional.`;
 }
 
@@ -2305,6 +2570,8 @@ function initEventos() {
 
     $('#lic-varrer').addEventListener('click', varrerAgora);
     $('#radar-voltar').addEventListener('click', renderRadar);
+    $('#radar-zoom-out').addEventListener('click', () => mudarZoomRadar(-1));
+    $('#radar-zoom-in').addEventListener('click', () => mudarZoomRadar(1));
     $('#lic-termo-add').addEventListener('click', adicionarTermo);
     $('#lic-termo-novo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') adicionarTermo(); });
     $('#lic-termos-lista').addEventListener('click', (ev) => {
