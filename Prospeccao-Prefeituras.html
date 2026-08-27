@@ -767,6 +767,7 @@
     }
     #mapa-brasil.modo-estado path:hover,
     #mapa-brasil.modo-estado path:focus-visible { fill: #c4b5fd; outline: none; }
+    #mapa-brasil path.mun-visitado { fill: var(--success); }
     #mapa-brasil.modo-estado path.mun-visitado { fill: var(--success); }
     #mapa-brasil.modo-estado path.mun-visitado:hover,
     #mapa-brasil.modo-estado path.mun-visitado:focus-visible { fill: #059669; }
@@ -1834,10 +1835,14 @@ function filtrarPeloMapa(uf, municipio = '') {
 function statusMunicipioRadar(m) {
     const chaves = canaisDe(m.cod);
     const visitado = chaves.includes('presencial');
+    const canais = CANAIS.filter(c => chaves.includes(c.chave));
     return {
         visitado,
         envelope: !visitado && chaves.includes('envelope'),
-        canais: CANAIS.filter(c => chaves.includes(c.chave))
+        canais,
+        // A visita já é representada pela pintura verde. Quando ela existe,
+        // o município não recebe PIN, mesmo que haja outros canais registrados.
+        canaisPin: visitado ? [] : canais.filter(c => c.chave !== 'presencial')
     };
 }
 
@@ -1933,8 +1938,11 @@ function adicionarPinsCanais(camada, m, canais, box, escala = 1) {
 }
 
 function legendaPinsCanais(municipios) {
-    return CANAIS.map(c => {
-        const total = municipios.filter(m => canaisDe(m.cod).includes(c.chave)).length;
+    return CANAIS.filter(c => c.chave !== 'presencial').map(c => {
+        const total = municipios.filter(m => {
+            const chaves = canaisDe(m.cod);
+            return !chaves.includes('presencial') && chaves.includes(c.chave);
+        }).length;
         if (!total) return '';
         return `<span class="radar-chip canal" style="--canal-cor:${c.cor}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${c.label} · ${total.toLocaleString('pt-BR')}</span>`;
     }).join('');
@@ -1963,9 +1971,9 @@ function atualizarRadarEstado() {
         p.classList.toggle('mun-envelope', status.envelope);
         if (status.visitado) visitados++;
         if (status.envelope) envelopes++;
-        if (status.canais.length) {
+        if (status.canaisPin.length) {
             const box = p.getBBox();
-            adicionarPinsCanais(camadaPins, m, status.canais, box);
+            adicionarPinsCanais(camadaPins, m, status.canaisPin, box);
         }
         const descricao = descricaoMunicipioRadar(m, status);
         const title = p.querySelector('title');
@@ -1981,7 +1989,7 @@ function atualizarRadarEstado() {
         <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
         ${legendaPinsCanais(municipiosEstado)}
         <span class="radar-chip pendente">Sem visita/entrega · ${pendentes.toLocaleString('pt-BR')}</span>`;
-    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; um canal usa a cor e o ícone do item, enquanto vários canais usam um único PIN preto com +N. Clique no PIN para ver o descritivo.`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; visitados aparecem somente pintados de verde. Nas demais cidades, um canal usa a cor e o ícone do item e vários canais usam um PIN preto com +N.`;
 }
 
 function atualizarLegendaBrasil() {
@@ -2028,7 +2036,7 @@ function desenharDestaquesBrasil() {
             const m = MUNICIPIOS_POR_COD.get(p.id);
             if (!m || m.uf !== uf) return;
             const status = statusMunicipioRadar(m);
-            if (!status.canais.length) return;
+            if (!status.visitado && !status.envelope && !status.canaisPin.length) return;
             const clone = document.createElementNS(ns, 'path');
             clone.dataset.cod = m.cod;
             clone.setAttribute('d', p.getAttribute('d'));
@@ -2038,7 +2046,7 @@ function desenharDestaquesBrasil() {
                 clone.classList.add('radar-municipio-base');
             }
             grupo.appendChild(clone);
-            tarefasPin.push({ grupo, clone, m, canais: status.canais });
+            if (status.canaisPin.length) tarefasPin.push({ grupo, clone, m, canais: status.canaisPin });
         });
     });
 
