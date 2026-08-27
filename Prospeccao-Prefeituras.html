@@ -1840,9 +1840,9 @@ function statusMunicipioRadar(m) {
         visitado,
         envelope: !visitado && chaves.includes('envelope'),
         canais,
-        // A visita já é representada pela pintura verde. Quando ela existe,
-        // o município não recebe PIN, mesmo que haja outros canais registrados.
-        canaisPin: visitado ? [] : canais.filter(c => c.chave !== 'presencial')
+        // A visita é representada somente pela pintura verde; os demais canais
+        // continuam gerando PINs normalmente, inclusive em municípios visitados.
+        canaisPin: canais.filter(c => c.chave !== 'presencial')
     };
 }
 
@@ -1941,7 +1941,7 @@ function legendaPinsCanais(municipios) {
     return CANAIS.filter(c => c.chave !== 'presencial').map(c => {
         const total = municipios.filter(m => {
             const chaves = canaisDe(m.cod);
-            return !chaves.includes('presencial') && chaves.includes(c.chave);
+            return chaves.includes(c.chave);
         }).length;
         if (!total) return '';
         return `<span class="radar-chip canal" style="--canal-cor:${c.cor}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${c.label} · ${total.toLocaleString('pt-BR')}</span>`;
@@ -1989,7 +1989,7 @@ function atualizarRadarEstado() {
         <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
         ${legendaPinsCanais(municipiosEstado)}
         <span class="radar-chip pendente">Sem visita/entrega · ${pendentes.toLocaleString('pt-BR')}</span>`;
-    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; visitados aparecem somente pintados de verde. Nas demais cidades, um canal usa a cor e o ícone do item e vários canais usam um PIN preto com +N.`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; a visita aparece somente na pintura verde. Os outros canais continuam em PINs: um canal usa a cor e o ícone do item e vários canais usam um PIN preto com +N.`;
 }
 
 function atualizarLegendaBrasil() {
