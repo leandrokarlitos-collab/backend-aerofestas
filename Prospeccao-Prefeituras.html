@@ -1840,9 +1840,9 @@ function statusMunicipioRadar(m) {
         visitado,
         envelope: !visitado && chaves.includes('envelope'),
         canais,
-        // A visita é representada somente pela pintura verde; os demais canais
-        // continuam gerando PINs normalmente, inclusive em municípios visitados.
-        canaisPin: canais.filter(c => c.chave !== 'presencial')
+        // Visita e envelope são representados somente pelas pinturas do mapa;
+        // os demais canais continuam gerando PINs normalmente.
+        canaisPin: canais.filter(c => !['presencial', 'envelope'].includes(c.chave))
     };
 }
 
@@ -1938,7 +1938,7 @@ function adicionarPinsCanais(camada, m, canais, box, escala = 1) {
 }
 
 function legendaPinsCanais(municipios) {
-    return CANAIS.filter(c => c.chave !== 'presencial').map(c => {
+    return CANAIS.filter(c => !['presencial', 'envelope'].includes(c.chave)).map(c => {
         const total = municipios.filter(m => {
             const chaves = canaisDe(m.cod);
             return chaves.includes(c.chave);
@@ -1986,10 +1986,10 @@ function atualizarRadarEstado() {
     const pendentes = Math.max(0, total - visitados - envelopes);
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Envelope deixado · ${envelopes.toLocaleString('pt-BR')}</span>
         ${legendaPinsCanais(municipiosEstado)}
         <span class="radar-chip pendente">Sem visita/entrega · ${pendentes.toLocaleString('pt-BR')}</span>`;
-    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; a visita aparece somente na pintura verde. Os outros canais continuam em PINs: um canal usa a cor e o ícone do item e vários canais usam um PIN preto com +N.`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; visita e envelope aparecem somente nas pinturas verde e âmbar. Os outros canais continuam em PINs: um canal usa a cor e o ícone do item e vários canais usam um PIN preto com +N.`;
 }
 
 function atualizarLegendaBrasil() {
@@ -2004,7 +2004,7 @@ function atualizarLegendaBrasil() {
     });
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Só envelope · ${envelopes.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Envelope deixado · ${envelopes.toLocaleString('pt-BR')}</span>
         ${legendaPinsCanais(municipios)}
         ${radarLegendaBrasilBase}`;
 }
