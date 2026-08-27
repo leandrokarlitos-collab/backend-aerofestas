@@ -129,7 +129,16 @@
       "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; \"===== BACKUP VERIFICATION =====\"; $j.backupVerification; \"`n===== VISUAL VERIFICATION =====\"; $j.visualVerification)",
       "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; $j.backupDesign)",
       "PowerShell($j = \\(Get-Content \"C:\\\\Users\\\\USURIO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas\\\\7a8f2714-eb62-45e0-a742-f41f295ac015\\\\tasks\\\\wi5slyxnx.output\" -Raw -Encoding UTF8 | ConvertFrom-Json\\).result; $j.visualDesign)",
-      "Bash(rm -f \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2.json.gz\" \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2-ruim.json.gz\" /tmp/out.txt /tmp/err.txt)"
+      "Bash(rm -f \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2.json.gz\" \"C:/Users/USURIO~1/AppData/Local/Temp/claude/teste-v2-ruim.json.gz\" /tmp/out.txt /tmp/err.txt)",
+      "Bash(awk 'NR>=7938 && NR<=8240' \"Agenda de eventos.html\")",
+      "Bash(awk 'NR>=8405 && NR<=8560' \"Agenda de eventos.html\")",
+      "Bash(awk 'NR>=944 && NR<=1010' \"Agenda de eventos.html\")",
+      "Bash(git commit *)",
+      "Bash(awk 'NR>=3033 && NR<=3077 && \\(/\\\\/\\\\*/ || /\\\\*\\\\//\\)' \"Agenda de eventos.html\")",
+      "Bash(awk 'NR<=3075 && /\\\\/\\\\*/ {last=NR\": \"$0} END{print last}' \"Agenda de eventos.html\")",
+      "Bash(node test-rateio.js)",
+      "Bash(node \"C:/Users/USURIO~1/AppData/Local/Temp/claude/C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas/52829767-63f9-4d6b-aa7d-5a404a9c4915/scratchpad/check-inline-scripts.js\" \"Agenda de eventos.html\")",
+      "Bash(node \"C:/Users/USURIO~1/AppData/Local/Temp/claude/C--Users-Usu-rio-OneDrive-Desktop-Sistema-Operante---Aero-Festas/52829767-63f9-4d6b-aa7d-5a404a9c4915/scratchpad/check-inline-scripts.js\" \"Dashboard.html\")"
     ]
   }
 }

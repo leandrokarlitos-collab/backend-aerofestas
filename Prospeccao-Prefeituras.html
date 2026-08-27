@@ -742,6 +742,15 @@
     .radar-zoom .btn { min-width: 34px; padding-left: 8px; padding-right: 8px; }
     #radar-zoom-nivel { min-width: 44px; text-align: center; font-size: 0.7rem; font-weight: 800; color: var(--text-muted); }
     #mapa-brasil.modo-estado { overflow: hidden; }
+    #mapa-brasil.modo-estado.pode-arrastar svg {
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+    }
+    #mapa-brasil.modo-estado.pode-arrastar.arrastando svg { cursor: grabbing; }
+    #mapa-brasil.modo-estado.pode-arrastar path { cursor: grab; }
+    #mapa-brasil.modo-estado.pode-arrastar .canal-pin,
+    #mapa-brasil.modo-estado.pode-arrastar .canal-pin path { cursor: pointer; }
     #mapa-brasil svg {
         width: 100%;
         height: auto;
@@ -758,15 +767,15 @@
     }
     #mapa-brasil path.uf-on { fill: var(--brand-600); cursor: pointer; }
     #mapa-brasil path.uf-on:hover { fill: #8b5cf6; }
-    #mapa-brasil.modo-estado path {
+    #mapa-brasil.modo-estado path[id] {
         fill: var(--surface-inset);
         stroke: var(--border-strong);
         stroke-width: 0.7;
         cursor: pointer;
         transition: fill 0.15s ease, opacity 0.15s ease;
     }
-    #mapa-brasil.modo-estado path:hover,
-    #mapa-brasil.modo-estado path:focus-visible { fill: #c4b5fd; outline: none; }
+    #mapa-brasil.modo-estado path[id]:hover,
+    #mapa-brasil.modo-estado path[id]:focus-visible { fill: #c4b5fd; outline: none; }
     #mapa-brasil path.mun-visitado { fill: var(--success); }
     #mapa-brasil.modo-estado path.mun-visitado { fill: var(--success); }
     #mapa-brasil.modo-estado path.mun-visitado:hover,
@@ -1150,6 +1159,9 @@ const carregamentosMapaEstado = new Map();
 const RADAR_ZOOM_NIVEIS = [1, 1.35, 1.8, 2.5, 3.5];
 let radarZoomIndice = 0;
 let radarViewBoxBase = null;
+let radarCentro = null;
+let radarArraste = null;
+let radarBloquearClique = false;
 let radarLegendaBrasilBase = '';
 
 // --- Licitações abertas (varredura diária do PNCP) ---
@@ -1840,9 +1852,9 @@ function statusMunicipioRadar(m) {
         visitado,
         envelope: !visitado && chaves.includes('envelope'),
         canais,
-        // Visita e envelope são representados somente pelas pinturas do mapa;
-        // os demais canais continuam gerando PINs normalmente.
-        canaisPin: canais.filter(c => !['presencial', 'envelope'].includes(c.chave))
+        // Visita nunca gera PIN. Envelope só gera PIN quando a visita deixa o
+        // município verde; sem visita, ele já é representado pela pintura âmbar.
+        canaisPin: canais.filter(c => c.chave !== 'presencial' && (c.chave !== 'envelope' || visitado))
     };
 }
 
@@ -1938,13 +1950,14 @@ function adicionarPinsCanais(camada, m, canais, box, escala = 1) {
 }
 
 function legendaPinsCanais(municipios) {
-    return CANAIS.filter(c => !['presencial', 'envelope'].includes(c.chave)).map(c => {
+    return CANAIS.filter(c => c.chave !== 'presencial').map(c => {
         const total = municipios.filter(m => {
             const chaves = canaisDe(m.cod);
-            return chaves.includes(c.chave);
+            return chaves.includes(c.chave) && (c.chave !== 'envelope' || chaves.includes('presencial'));
         }).length;
         if (!total) return '';
-        return `<span class="radar-chip canal" style="--canal-cor:${c.cor}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${c.label} · ${total.toLocaleString('pt-BR')}</span>`;
+        const label = c.chave === 'envelope' ? 'Envelope em visitado' : c.label;
+        return `<span class="radar-chip canal" style="--canal-cor:${c.cor}"><i class="${c.brand ? 'fab' : 'fas'} ${c.icon}"></i> ${label} · ${total.toLocaleString('pt-BR')}</span>`;
     }).join('');
 }
 
@@ -1986,10 +1999,10 @@ function atualizarRadarEstado() {
     const pendentes = Math.max(0, total - visitados - envelopes);
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Envelope deixado · ${envelopes.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Envelope pintado · ${envelopes.toLocaleString('pt-BR')}</span>
         ${legendaPinsCanais(municipiosEstado)}
         <span class="radar-chip pendente">Sem visita/entrega · ${pendentes.toLocaleString('pt-BR')}</span>`;
-    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; visita e envelope aparecem somente nas pinturas verde e âmbar. Os outros canais continuam em PINs: um canal usa a cor e o ícone do item e vários canais usam um PIN preto com +N.`;
+    $('#radar-info').innerHTML = `<strong>${visitados.toLocaleString('pt-BR')} visitados</strong> em ${config.nome}; visita fica na pintura verde e envelope na pintura âmbar. Quando os dois coincidem, o município fica verde e o envelope vira PIN. Amplie e arraste o mapa para reposicionar.`;
 }
 
 function atualizarLegendaBrasil() {
@@ -2004,7 +2017,7 @@ function atualizarLegendaBrasil() {
     });
     $('#radar-legenda').innerHTML = `
         <span class="radar-chip visitado"><i class="fas fa-location-dot"></i> Visitados · ${visitados.toLocaleString('pt-BR')}</span>
-        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Envelope deixado · ${envelopes.toLocaleString('pt-BR')}</span>
+        <span class="radar-chip envelope"><i class="fas fa-envelope"></i> Envelope pintado · ${envelopes.toLocaleString('pt-BR')}</span>
         ${legendaPinsCanais(municipios)}
         ${radarLegendaBrasilBase}`;
 }
@@ -2098,12 +2111,74 @@ function aplicarZoomRadar() {
     const [x, y, largura, altura] = radarViewBoxBase;
     const novaLargura = largura / fator;
     const novaAltura = altura / fator;
-    const novoX = x + (largura - novaLargura) / 2;
-    const novoY = y + (altura - novaAltura) / 2;
+    if (!radarCentro) radarCentro = [x + largura / 2, y + altura / 2];
+    const limiteX = x + largura - novaLargura;
+    const limiteY = y + altura - novaAltura;
+    const novoX = Math.max(x, Math.min(limiteX, radarCentro[0] - novaLargura / 2));
+    const novoY = Math.max(y, Math.min(limiteY, radarCentro[1] - novaAltura / 2));
+    radarCentro = [novoX + novaLargura / 2, novoY + novaAltura / 2];
     svg.setAttribute('viewBox', `${novoX} ${novoY} ${novaLargura} ${novaAltura}`);
+    $('#mapa-brasil').classList.toggle('pode-arrastar', radarZoomIndice > 0);
     $('#radar-zoom-nivel').textContent = `${Math.round(fator * 100)}%`;
     $('#radar-zoom-out').disabled = radarZoomIndice === 0;
     $('#radar-zoom-in').disabled = radarZoomIndice === RADAR_ZOOM_NIVEIS.length - 1;
+}
+
+function configurarArrasteRadar(svg) {
+    const cont = $('#mapa-brasil');
+
+    svg.addEventListener('pointerdown', ev => {
+        if (radarModo !== 'estado' || radarZoomIndice === 0 || !radarViewBoxBase) return;
+        if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+        if (ev.target.closest && ev.target.closest('.canal-pin')) return;
+        const viewBox = String(svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+        if (viewBox.length !== 4 || !viewBox.every(Number.isFinite)) return;
+        radarArraste = {
+            pointerId: ev.pointerId,
+            inicioX: ev.clientX,
+            inicioY: ev.clientY,
+            viewBox,
+            moveu: false
+        };
+        ocultarDescritivoPin();
+        cont.classList.add('arrastando');
+        try { svg.setPointerCapture(ev.pointerId); } catch (e) { /* sem suporte */ }
+    });
+
+    svg.addEventListener('pointermove', ev => {
+        if (!radarArraste || ev.pointerId !== radarArraste.pointerId) return;
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const dxTela = ev.clientX - radarArraste.inicioX;
+        const dyTela = ev.clientY - radarArraste.inicioY;
+        if (Math.hypot(dxTela, dyTela) > 4) radarArraste.moveu = true;
+        const [inicioX, inicioY, largura, altura] = radarArraste.viewBox;
+        const [baseX, baseY, baseLargura, baseAltura] = radarViewBoxBase;
+        const x = Math.max(baseX, Math.min(baseX + baseLargura - largura, inicioX - dxTela * largura / rect.width));
+        const y = Math.max(baseY, Math.min(baseY + baseAltura - altura, inicioY - dyTela * altura / rect.height));
+        svg.setAttribute('viewBox', `${x} ${y} ${largura} ${altura}`);
+        radarCentro = [x + largura / 2, y + altura / 2];
+        ev.preventDefault();
+    });
+
+    const finalizar = ev => {
+        if (!radarArraste || ev.pointerId !== radarArraste.pointerId) return;
+        const moveu = radarArraste.moveu;
+        radarArraste = null;
+        cont.classList.remove('arrastando');
+        try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* sem suporte */ }
+        if (moveu) {
+            radarBloquearClique = true;
+            setTimeout(() => { radarBloquearClique = false; }, 0);
+        }
+    };
+    svg.addEventListener('pointerup', finalizar);
+    svg.addEventListener('pointercancel', finalizar);
+    svg.addEventListener('click', ev => {
+        if (!radarBloquearClique) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+    }, true);
 }
 
 function mudarZoomRadar(delta) {
@@ -2122,15 +2197,17 @@ function mostrarMapaEstado(uf, svg) {
     const cont = $('#mapa-brasil');
     cont.classList.add('modo-estado');
     cont.innerHTML = svg;
-    cont.setAttribute('aria-label', `Mapa dos municípios de ${config.nome}; visitas em verde, envelopes em âmbar e canais de contato identificados por PINs coloridos`);
+    cont.setAttribute('aria-label', `Mapa dos municípios de ${config.nome}; visitas em verde, envelopes em âmbar e canais de contato identificados por PINs coloridos. Após ampliar, arraste para reposicionar.`);
     $('#radar-titulo').innerHTML = `<i class="fas fa-satellite-dish"></i> Radar de expansão — ${config.nome}`;
     $('#radar-acoes').hidden = false;
 
     const svgEl = cont.querySelector('svg');
     const viewBox = svgEl && String(svgEl.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
     radarViewBoxBase = viewBox && viewBox.length === 4 && viewBox.every(Number.isFinite) ? viewBox : null;
+    radarCentro = radarViewBoxBase ? [radarViewBoxBase[0] + radarViewBoxBase[2] / 2, radarViewBoxBase[1] + radarViewBoxBase[3] / 2] : null;
     radarZoomIndice = 0;
     aplicarZoomRadar();
+    if (svgEl) configurarArrasteRadar(svgEl);
 
     cont.querySelectorAll('path[id]').forEach(p => {
         const m = MUNICIPIOS_POR_COD.get(p.id);
@@ -2140,7 +2217,7 @@ function mostrarMapaEstado(uf, svg) {
         if (!m) return;
         p.setAttribute('role', 'button');
         p.setAttribute('tabindex', '0');
-        const abrir = () => abrirMunicipioNoRadar(m);
+        const abrir = () => { if (!radarBloquearClique) abrirMunicipioNoRadar(m); };
         p.addEventListener('click', abrir);
         p.addEventListener('keydown', ev => {
             if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(); }
@@ -2180,9 +2257,12 @@ function renderRadar() {
     radarModo = 'brasil';
     radarUf = null;
     radarViewBoxBase = null;
+    radarCentro = null;
+    radarArraste = null;
+    radarBloquearClique = false;
     radarZoomIndice = 0;
     const cont = $('#mapa-brasil');
-    cont.classList.remove('modo-estado');
+    cont.classList.remove('modo-estado', 'pode-arrastar', 'arrastando');
     cont.innerHTML = window.MAPA_BRASIL_SVG;
     cont.setAttribute('aria-label', 'Mapa do Brasil com as UFs no radar de prospecção');
     $('#radar-titulo').innerHTML = '<i class="fas fa-satellite-dish"></i> Radar de expansão — Brasil';
