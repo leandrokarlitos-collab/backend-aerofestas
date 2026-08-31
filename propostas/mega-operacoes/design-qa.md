@@ -8,7 +8,7 @@
   - `.codex-artifacts/mega-operacoes-source/source-aero-dimensions.png`
   - `.codex-artifacts/mega-operacoes-source/source-jurassic-v2.png`
   - `.codex-artifacts/mega-operacoes-source/source-lobinho-v2.jpg`
-- Estado final: quatro atrações, preço-base de `R$ 14.999,00`, aviso de variação por operação e imagens atualizadas do Jurassic Play e do Parque do Lobinho.
+- Estado final: quatro atrações, preços específicos (Jurassic Play R$ 26.900, Aero Jump R$ 24.500, Girafa Gigi e Parque do Lobinho R$ 23.450), 40 mil+ bolinhas, aviso de variação por operação e imagens atualizadas do Jurassic Play e do Parque do Lobinho.
 
 ## Evidências comparativas
 
