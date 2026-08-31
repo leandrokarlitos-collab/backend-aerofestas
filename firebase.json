@@ -45,6 +45,10 @@
                 "destination": "/propostas/maple-bear-macae/index.html"
             },
             {
+                "source": "/p/mega-operacoes",
+                "destination": "/propostas/mega-operacoes/index.html"
+            },
+            {
                 "source": "/p/crescer-mais",
                 "destination": "/propostas/crescer-mais/index.html"
             },
