@@ -1083,31 +1083,31 @@ h1, h2, h3, h4, p { margin: 0; }
   isolation: isolate;
 }
 
-/* Efeito Suave de Neve Caindo (Snowfall) */
+/* Efeito de Neve com Flocos Maiores e Bem Visíveis (Snowfall) */
 .mega-page .toy-card-ice .ice-snow-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 3;
   background-image: 
-    radial-gradient(2.5px 2.5px at 30px 25px, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0)),
-    radial-gradient(3.5px 3.5px at 90px 75px, rgba(224, 242, 254, 0.9), rgba(255, 255, 255, 0)),
-    radial-gradient(2px 2px at 150px 35px, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0)),
-    radial-gradient(4px 4px at 220px 110px, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0)),
-    radial-gradient(2.5px 2.5px at 290px 60px, rgba(224, 242, 254, 0.9), rgba(255, 255, 255, 0)),
-    radial-gradient(3px 3px at 360px 130px, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0)),
-    radial-gradient(2px 2px at 430px 45px, rgba(224, 242, 254, 0.9), rgba(255, 255, 255, 0)),
-    radial-gradient(4px 4px at 500px 90px, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  background-size: 540px 180px;
-  animation: iceSnowfall 12s linear infinite;
-  opacity: 0.85;
+    radial-gradient(7px 7px at 35px 30px, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.2) 60%, transparent 100%),
+    radial-gradient(11px 11px at 120px 90px, rgba(224, 242, 254, 0.95), rgba(224, 242, 254, 0.2) 65%, transparent 100%),
+    radial-gradient(6px 6px at 210px 45px, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.2) 60%, transparent 100%),
+    radial-gradient(13px 13px at 310px 140px, rgba(255, 255, 255, 0.92), rgba(224, 242, 254, 0.25) 70%, transparent 100%),
+    radial-gradient(8px 8px at 410px 70px, rgba(224, 242, 254, 0.98), rgba(224, 242, 254, 0.2) 60%, transparent 100%),
+    radial-gradient(10px 10px at 490px 150px, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.2) 65%, transparent 100%),
+    radial-gradient(6px 6px at 570px 55px, rgba(224, 242, 254, 0.98), rgba(224, 242, 254, 0.2) 60%, transparent 100%),
+    radial-gradient(12px 12px at 650px 110px, rgba(255, 255, 255, 0.92), rgba(224, 242, 254, 0.25) 70%, transparent 100%);
+  background-size: 680px 240px;
+  animation: iceSnowfall 14s linear infinite;
+  opacity: 0.95;
 }
 @keyframes iceSnowfall {
   0% {
     background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
   }
   100% {
-    background-position: 40px 180px, 25px 180px, 50px 180px, 35px 180px, 45px 180px, 30px 180px, 40px 180px, 20px 180px;
+    background-position: 60px 240px, 35px 240px, 75px 240px, 45px 240px, 65px 240px, 40px 240px, 55px 240px, 30px 240px;
   }
 }
 
@@ -1205,31 +1205,32 @@ h1, h2, h3, h4, p { margin: 0; }
   color: #0369A1;
   text-transform: uppercase;
 }
-/* Brilho laminado que passa rápido de tempos em tempos */
+/* Brilho laminado suave que passa a cada 7.5s */
 .mega-page .ice-spotlight-badge::after {
   content: "";
   position: absolute;
   top: 0;
-  left: -130%;
-  width: 70%;
+  left: -140%;
+  width: 75%;
   height: 100%;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.9) 50%,
-    rgba(186, 230, 253, 0.8) 75%,
+    rgba(255, 255, 255, 0.7) 40%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(186, 230, 253, 0.75) 65%,
     transparent 100%
   );
-  transform: skewX(-25deg);
-  animation: iceShineSweep 4.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  transform: skewX(-22deg);
+  animation: iceShineSweep 7.5s infinite ease-in-out;
   pointer-events: none;
 }
 @keyframes iceShineSweep {
   0%, 75% {
-    left: -130%;
+    left: -140%;
   }
-  85%, 100% {
-    left: 200%;
+  92%, 100% {
+    left: 220%;
   }
 }
 
