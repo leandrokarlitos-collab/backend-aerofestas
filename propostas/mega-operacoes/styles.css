@@ -1064,62 +1064,93 @@ h1, h2, h3, h4, p { margin: 0; }
   }
 }
 
-/* ===== ICE SKATING RINK CARD (Pista de Patinação no Gelo) ===== */
+/* ===== ICE SKATING RINK CARD (Pista de Patinação no Gelo) - GLASSMORPHISM ===== */
 .mega-page .toy-card-ice {
   grid-column: 1 / -1 !important;
-  background: linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 50%, #F4FAFD 100%);
-  border: 2px solid #38BDF8;
-  border-top: 6px solid #0284C7;
-  box-shadow: 0 16px 48px rgba(14, 165, 233, 0.22), 0 4px 16px rgba(15, 27, 45, 0.08);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(224, 242, 254, 0.52) 50%, rgba(255, 255, 255, 0.8) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  backdrop-filter: blur(20px) saturate(190%);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-top: 4px solid #0284C7;
+  border-radius: var(--radius);
+  box-shadow: 0 20px 50px rgba(14, 165, 233, 0.22), 
+              0 4px 16px rgba(15, 27, 45, 0.06), 
+              inset 0 1px 3px rgba(255, 255, 255, 0.9), 
+              inset 0 -1px 2px rgba(56, 189, 248, 0.2);
   position: relative;
   overflow: hidden;
-  margin-top: 12px;
+  margin-top: 16px;
+  isolation: isolate;
 }
 .mega-page .toy-card-ice::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0; height: 160px;
-  background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.25), transparent 70%);
+  top: 0; left: 0; right: 0; height: 180px;
+  background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.35), transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+.mega-page .toy-card-ice::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%);
   pointer-events: none;
   z-index: 1;
 }
 .mega-page .toy-card-ice .ice-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0369A1 0%, #0284C7 50%, #0EA5E9 100%);
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(3, 105, 161, 0.92) 0%, rgba(2, 132, 199, 0.88) 50%, rgba(14, 165, 233, 0.85) 100%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   color: #FFFFFF;
-  padding: 12px 22px;
+  padding: 13px 24px;
   font-family: 'Outfit', sans-serif;
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 4px 14px rgba(3, 105, 161, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(3, 105, 161, 0.25);
+  position: relative;
+  z-index: 2;
 }
 .mega-page .toy-card-ice .ice-badge-icon {
-  font-size: 17px;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+  font-size: 18px;
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.9));
 }
 .mega-page .toy-card-ice .ice-img {
   aspect-ratio: 16 / 10;
-  background: #0b1c2d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #061322;
   position: relative;
   overflow: hidden;
+  display: block;
 }
-.mega-page .toy-card-ice .ice-img img {
-  object-fit: cover;
+.mega-page .toy-card-ice .ice-img picture {
+  display: block;
   width: 100%;
   height: 100%;
+}
+.mega-page .toy-card-ice .ice-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important;
+  object-position: center;
   padding: 0;
-  transition: transform 0.6s var(--ease-out);
+  transition: transform 0.7s var(--ease-out);
 }
 .mega-page .toy-card-ice:hover .ice-img img {
-  transform: scale(1.03);
+  transform: scale(1.04);
+}
+.mega-page .toy-card-ice .ice-meta {
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 2;
 }
 .mega-page .toy-card-ice .ice-name {
   font-size: clamp(22px, 3vw, 30px);
@@ -1137,8 +1168,11 @@ h1, h2, h3, h4, p { margin: 0; }
   padding: 6px 14px;
 }
 .mega-page .toy-card-ice .ice-tags span {
-  background: rgba(14, 165, 233, 0.1);
+  background: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid rgba(14, 165, 233, 0.35);
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08);
   color: #0369A1;
   font-size: 12px;
   font-weight: 700;
@@ -1146,10 +1180,12 @@ h1, h2, h3, h4, p { margin: 0; }
 }
 .mega-page .toy-card-ice .ice-price {
   padding-top: 24px;
+  border-top: 1px solid rgba(14, 165, 233, 0.2);
 }
 .mega-page .toy-card-ice .ice-price strong {
   font-size: clamp(26px, 3.2vw, 36px);
   color: #0284C7;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 @media (min-width: 768px) {
@@ -1164,7 +1200,7 @@ h1, h2, h3, h4, p { margin: 0; }
   .mega-page .toy-card-ice .ice-img {
     aspect-ratio: auto;
     height: 100%;
-    min-height: 380px;
+    min-height: 100%;
   }
   .mega-page .toy-card-ice .ice-meta {
     padding: 28px 26px;
