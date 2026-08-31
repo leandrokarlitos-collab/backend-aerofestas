@@ -976,6 +976,93 @@ h1, h2, h3, h4, p { margin: 0; }
   padding: 0;
 }
 .mega-page .toy-card:nth-child(2) .toy-img img { object-position: center 64%; }
+
+/* ===== FLAGSHIP POPZONE ===== */
+.mega-page .toy-card-flagship {
+  grid-column: 1 / -1;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+  border: 2px solid #E31837;
+  border-top: 6px solid #E31837;
+  box-shadow: 0 14px 44px rgba(227, 24, 55, 0.18), 0 4px 14px rgba(15, 27, 45, 0.08);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.mega-page .toy-card-flagship .flagship-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0F1B2D 0%, #1B2A44 100%);
+  color: #FFFFFF;
+  padding: 12px 22px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.mega-page .toy-card-flagship .flagship-badge-icon {
+  font-size: 16px;
+}
+.mega-page .toy-card-flagship .flagship-img {
+  aspect-ratio: 16 / 10;
+  background: #f7f9fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mega-page .toy-card-flagship .flagship-img img {
+  object-fit: contain;
+  padding: 16px;
+  background: #f7f9fc;
+  width: 100%;
+  height: 100%;
+}
+.mega-page .toy-card-flagship .flagship-name {
+  font-size: clamp(22px, 3vw, 30px);
+  color: var(--navy);
+}
+.mega-page .toy-card-flagship .flagship-num {
+  background: linear-gradient(135deg, #E31837, #B81026);
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  padding: 6px 14px;
+}
+.mega-page .toy-card-flagship .flagship-tags span {
+  background: rgba(227, 24, 55, 0.09);
+  border: 1px solid rgba(227, 24, 55, 0.28);
+  color: var(--red-deep);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+.mega-page .toy-card-flagship .flagship-price {
+  padding-top: 24px;
+}
+.mega-page .toy-card-flagship .flagship-price strong {
+  font-size: clamp(26px, 3.2vw, 36px);
+  color: #E31837;
+}
+
+@media (min-width: 768px) {
+  .mega-page .toy-card-flagship {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .mega-page .toy-card-flagship .flagship-badge {
+    grid-column: 1 / -1;
+  }
+  .mega-page .toy-card-flagship .flagship-img {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 380px;
+  }
+  .mega-page .toy-card-flagship .flagship-meta {
+    padding: 28px 26px;
+  }
+}
 .mega-page .toy-meta {
   align-items: flex-start;
   flex: 1;
