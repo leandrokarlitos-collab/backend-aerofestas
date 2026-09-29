@@ -652,6 +652,28 @@
             background: linear-gradient(to top right, rgba(245, 158, 11, 0.95), rgba(251, 146, 60, 0.95)) !important;
         }
 
+        .municipality-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 6px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            white-space: normal; line-height: 1.3;
+        }
+        .municipality-confirmed { background: #6b21a8; color: #fff; border: 1px solid #6b21a8; }
+        .municipality-quote { background: #fce7f3; color: #9d174d; border: 1px dashed #be185d; }
+        .day-cell.has-municipality-confirmed { background: #f3e8ff !important; border-color: #9333ea !important; }
+        .day-cell.has-municipality-quote { background: #fce7f3 !important; border-color: #be185d !important; }
+        .day-cell.has-municipality-confirmed.has-municipality-quote { background: linear-gradient(135deg, #f3e8ff 50%, #fce7f3 50%) !important; }
+        .day-cell.has-municipality-confirmed, .day-cell.has-municipality-quote { animation: none; }
+        .day-cell.has-municipality-confirmed::after { background: #6b21a8 !important; box-shadow: none !important; }
+        .day-cell.has-municipality-quote::after { background: #be185d !important; box-shadow: none !important; }
+        .day-cell.has-municipality-confirmed .event-count-container { background: #6b21a8 !important; }
+        .day-cell.has-municipality-quote .event-count-container { background: #9d174d !important; }
+        .day-cell.has-municipality-confirmed.has-municipality-quote .event-count-container { background: linear-gradient(135deg, #6b21a8, #9d174d) !important; }
+        .day-cell:hover .municipality-day-labels { opacity: 0; }
+        .event-municipality-confirmed { border: 2px solid #9333ea !important; }
+        .event-municipality-quote { border: 2px dashed #be185d !important; }
+        .municipality-day-labels { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+        @media (max-width: 480px) { .municipality-day-labels .municipality-badge { font-size: 9px; padding: 2px 3px; } }
+
         .rotate-180 {
             transform: rotate(180deg);
         }
@@ -1581,6 +1603,10 @@
                         <div>Sáb</div>
                     </div>
                     <div id="calendar-body" class="grid calendar-grid gap-1.5"></div>
+                    <div class="flex flex-wrap gap-2 mt-3" aria-label="Legenda de prefeituras">
+                        <span class="municipality-badge municipality-confirmed">Prefeitura confirmada</span>
+                        <span class="municipality-badge municipality-quote">Prefeitura em orçamento</span>
+                    </div>
                 </div>
             </div>
         </main>
@@ -1655,6 +1681,18 @@
                     <!-- =================== ETAPA 1: CLIENTE =================== -->
                     <div id="step-1" class="step-content space-y-4">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Informações do Cliente</h3>
+                        <div class="mb-3">
+                            <label for="municipality-status" class="block text-sm font-medium text-gray-700 mb-1">É um evento de prefeitura? <span class="text-red-500">*</span></label>
+                            <select id="municipality-status" class="form-input w-full px-3 py-2 rounded-md">
+                                <option value="">Selecione</option>
+                                <option value="common">Não — evento comum</option>
+                                <option value="quote">Sim — prefeitura</option>
+                            </select>
+                            <label id="municipality-status-confirmation" class="hidden mt-2 text-sm font-medium text-gray-700">
+                                <input type="checkbox" id="municipality-status-confirmed" class="mr-1"> Evento confirmado
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">Prefeituras entram em orçamento. Marque “Evento confirmado” somente quando o evento estiver fechado.</p>
+                        </div>
                         <!-- START: NEW CLIENT SECTION -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Cliente</label>
@@ -2499,6 +2537,18 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
                     <input type="text" id="link-cadastro-client-name" class="form-input w-full px-3 py-2 rounded-md" placeholder="Ex: Maria Oliveira">
                 </div>
+                <div class="mb-3">
+                            <label for="link-municipality-status" class="block text-sm font-medium text-gray-700 mb-1">É um evento de prefeitura? <span class="text-red-500">*</span></label>
+                            <select id="link-municipality-status" class="form-input w-full px-3 py-2 rounded-md">
+                                <option value="">Selecione</option>
+                                <option value="common">Não — evento comum</option>
+                                <option value="quote">Sim — prefeitura</option>
+                            </select>
+                            <label id="link-municipality-status-confirmation" class="hidden mt-2 text-sm font-medium text-gray-700">
+                                <input type="checkbox" id="link-municipality-status-confirmed" class="mr-1"> Evento confirmado
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">Prefeituras entram em orçamento. Marque “Evento confirmado” somente quando o evento estiver fechado.</p>
+                        </div>
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Início</label>
@@ -3454,6 +3504,10 @@
              */
             const validateStep = (step) => {
                 if (step === 1) {
+                    if (!document.getElementById('municipality-status').value) {
+                        showToast('Informe se o evento é de prefeitura.', true);
+                        return false;
+                    }
                     const clientType = document.querySelector('input[name="client-type"]:checked').value;
                     if (clientType === 'PF') {
                         const clientName = document.getElementById('client-name').value.trim();
@@ -4332,6 +4386,28 @@
                 return !excluded.includes(dateStr);
             };
 
+            const readMunicipalityStatus = (id) => document.getElementById(id).value === 'quote'
+                ? (document.getElementById(`${id}-confirmed`).checked ? 'confirmed' : 'quote') : null;
+            const setMunicipalityForm = (id, event, disabled = false) => {
+                const select = document.getElementById(id);
+                select.value = event ? (event.municipalityStatus ? 'quote' : 'common') : '';
+                select.disabled = disabled;
+                const confirmed = document.getElementById(`${id}-confirmed`);
+                confirmed.checked = event?.municipalityStatus === 'confirmed';
+                confirmed.disabled = disabled;
+                document.getElementById(`${id}-confirmation`).classList.toggle('hidden', select.value !== 'quote');
+            };
+            ['municipality-status', 'link-municipality-status'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    document.getElementById(`${id}-confirmed`).checked = false;
+                    document.getElementById(`${id}-confirmation`).classList.toggle('hidden', document.getElementById(id).value !== 'quote');
+                });
+            });
+
+            const municipalityKind = (event) => event.eventType !== 'meeting' && event.status !== 'cancelado' && event.paymentStatus !== 'Cancelado'
+                && ['confirmed', 'quote'].includes(event.municipalityStatus) ? event.municipalityStatus : null;
+            const municipalityBadge = (kind, label) => `<span class="municipality-badge municipality-${kind}"><i class="fas fa-landmark" aria-hidden="true"></i>${label}</span>`;
+
             const renderCalendar = () => {
                 calendarBody.innerHTML = '';
 
@@ -4357,6 +4433,8 @@
                     const meetingsOnDay = dayItems.filter(e => e.eventType === 'meeting').length;
                     const eventsOnDay = dayItems.length - meetingsOnDay;
                     const pendingOnDay = dayItems.filter(e => e.status === 'pendente_cadastro').length;
+                    const municipalConfirmed = dayItems.filter(e => municipalityKind(e) === 'confirmed').length;
+                    const municipalQuotes = dayItems.filter(e => municipalityKind(e) === 'quote').length;
 
                     const dayCell = document.createElement('div');
                     const classes = ['day-cell', 'p-1.5', 'border', 'border-transparent', 'flex', 'flex-col', 'items-start', 'cursor-pointer', 'text-gray-700'];
@@ -4365,6 +4443,8 @@
                     if (eventsOnDay > 0) classes.push('has-event');
                     if (meetingsOnDay > 0) classes.push('has-meeting');
                     if (pendingOnDay > 0) classes.push('has-pending-cadastro');
+                    if (municipalConfirmed) classes.push('has-municipality-confirmed');
+                    if (municipalQuotes) classes.push('has-municipality-quote');
                     dayCell.className = classes.join(' ');
                     dayCell.dataset.date = dateStr;
 
@@ -4396,6 +4476,10 @@
                         }
                     }
 
+                    if (municipalConfirmed || municipalQuotes) {
+                        eventInfoHtml += `<div class="municipality-day-labels">${municipalConfirmed ? municipalityBadge('confirmed', `${municipalConfirmed} pref. conf.`) : ''}${municipalQuotes ? municipalityBadge('quote', `${municipalQuotes} pref. orç.`) : ''}</div>`;
+                        dayCell.title = `${municipalConfirmed} prefeitura(s) confirmada(s); ${municipalQuotes} em orçamento`;
+                    }
                     dayCell.innerHTML = `<span class="day-number text-xs font-medium">${day}</span>${eventInfoHtml}`;
                     dayCell.addEventListener('click', () => handleDayClick(dateStr));
                     calendarBody.appendChild(dayCell);
@@ -4712,6 +4796,9 @@
                             : (event.status === 'cadastro_completo'
                                 ? 'bg-green-50/60 p-3 rounded-lg border-2 border-green-400'
                                 : 'bg-white/50 p-3 rounded-lg border border-gray-200');
+                        const municipalKind = municipalityKind(event);
+                        if (municipalKind) eventDiv.classList.add(`event-municipality-${municipalKind}`);
+                        const municipalBadge = municipalKind ? `<div class="mb-2">${municipalityBadge(municipalKind, municipalKind === 'confirmed' ? 'Prefeitura — confirmada' : 'Prefeitura — em orçamento')}</div>` : '';
                         const cancelledBadge = isCancelled
                             ? `<div class="mb-2 px-3 py-1.5 rounded-md bg-red-100 border border-red-300 text-red-800 text-xs font-bold flex items-center gap-1.5"><i class="fas fa-ban"></i> EVENTO CANCELADO</div>`
                             : '';
@@ -4719,6 +4806,7 @@
                     <div class="flex justify-between items-start">
                         <div class="${isCancelled ? 'opacity-60' : ''}">
                             ${cancelledBadge}
+                            ${municipalBadge}
                             ${cadastroStatusBadge}
                             ${changeNoteBadge}
                             ${multiDayBadge}
@@ -6134,6 +6222,7 @@
             const buildEventPayload = (event, overrides = {}) => ({
                 id: event.id,
                 eventType: event.eventType || 'event',
+                municipalityStatus: event.municipalityStatus || null,
                 date: event.date,
                 endDate: event.endDate || null,
                 excludedDates: event.excludedDates,
@@ -7830,6 +7919,7 @@
                 const eventData = {
                     id: eventId, // Se for nulo, a API cria novo. Se tiver ID, a API atualiza.
                     eventType: 'event',
+                    municipalityStatus: readMunicipalityStatus('municipality-status'),
                     date: finalDate,
                     endDate: finalEndDate, // null = evento de um único dia
                     excludedDates: excludedDates, // dias removidos do intervalo (eventos em dias alternados)
@@ -8071,6 +8161,7 @@
                 document.getElementById('meeting-location').value = '';
                 document.getElementById('meeting-observations').value = '';
                 setAgendamentoType('event');
+                setMunicipalityForm('municipality-status', eventToEdit, !!dayEditContext);
                 // Limpa campos do form de locação externa
                 ['external-rental-desc', 'external-rental-supplier', 'external-rental-cost'].forEach(id => {
                     const el = document.getElementById(id);
@@ -9029,6 +9120,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                 endInput.value = '';
                 endInput.min = dateStr;
                 document.getElementById('link-cadastro-client-name').value = '';
+                setMunicipalityForm('link-municipality-status', null);
                 document.getElementById('link-cadastro-start-time').value = '';
                 document.getElementById('link-cadastro-end-time').value = '';
                 document.getElementById('link-discount-type').value = 'fixed';
@@ -9254,6 +9346,10 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     showToast('As condições falam em pagamento integral/sem antecipação, mas há entrada preenchida — o contrato vai se contradizer.', true);
                 }
 
+                if (!document.getElementById('link-municipality-status').value) {
+                    showToast('Informe se o evento é de prefeitura.', true);
+                    return;
+                }
                 const eventId = Date.now();
                 const clientNameInput = document.getElementById('link-cadastro-client-name').value.trim();
                 const startTimeInput = document.getElementById('link-cadastro-start-time').value;
@@ -9275,7 +9371,8 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     signalAmount: signalAmount || null,
                     pixKey: pixKey || null,
                     contractPaymentTerms: paymentTerms || null,
-                    status: 'pendente_cadastro'
+                    status: 'pendente_cadastro',
+                    municipalityStatus: readMunicipalityStatus('link-municipality-status')
                 };
                 try {
                     const response = await api.salvarEvento(eventData);

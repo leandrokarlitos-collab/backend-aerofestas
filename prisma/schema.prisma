@@ -247,6 +247,7 @@ model Event {
 
   // Tipo de agendamento: "event" (default) ou "meeting" (reunião — sem cliente/equipamentos/financeiro)
   eventType String? @default("event")
+  municipalityStatus String? // null = comum; confirmed = prefeitura confirmada; quote = em orçamento
 
   // Auditoria
   createdBy String?

@@ -23,7 +23,7 @@ const CONTRACT_ALLOWED_MIME = [
 const TRACKED_FIELDS = [
     'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
-    'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType',
+    'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType', 'municipalityStatus',
     'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems',
     // Texto que o cliente assina: alteração precisa deixar o "de → para" no histórico, senão não
     // há como reconstruir o que ele leu se contestar a condição depois.
@@ -142,7 +142,13 @@ function normalizeExternalRentals(rawList) {
 }
 
 function buildEventFields(evt, userId) {
+    if (evt.municipalityStatus != null && !['confirmed', 'quote'].includes(evt.municipalityStatus)) {
+        const err = new Error('Situação da prefeitura inválida.');
+        err.status = 400;
+        throw err;
+    }
     return {
+        municipalityStatus: evt.eventType === 'meeting' ? null : evt.municipalityStatus,
         date: evt.date,
         endDate: evt.endDate || null,
         excludedDates: evt.excludedDates !== undefined ? serializeJsonField(evt.excludedDates) : undefined,
