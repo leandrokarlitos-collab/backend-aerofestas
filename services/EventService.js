@@ -1,3 +1,4 @@
+const reservations = require('../js/eventReservations');
 const prisma = require('../prisma/client');
 const { logAudit, computeChanges } = require('./audit');
 const webpush = require('../config/webpush');
@@ -21,7 +22,7 @@ const CONTRACT_ALLOWED_MIME = [
 ];
 
 const TRACKED_FIELDS = [
-    'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
+    'departureAt', 'availableAt', 'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType', 'municipalityStatus',
     'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems',
@@ -149,6 +150,8 @@ function buildEventFields(evt, userId) {
     }
     return {
         municipalityStatus: evt.eventType === 'meeting' ? null : evt.municipalityStatus,
+        departureAt: evt.departureAt,
+        availableAt: evt.availableAt,
         date: evt.date,
         endDate: evt.endDate || null,
         excludedDates: evt.excludedDates !== undefined ? serializeJsonField(evt.excludedDates) : undefined,
@@ -275,7 +278,7 @@ async function upsertEvent(evt, user) {
     const isUpdate = !!evt.id;
 
     const existingEvent = isUpdate
-        ? await prisma.event.findUnique({ where: { id: eventId } })
+        ? await prisma.event.findUnique({ where: { id: eventId }, include: { items: true } })
         : null;
 
     const items = normalizeItems(evt.items || evt.toys);
@@ -285,6 +288,17 @@ async function upsertEvent(evt, user) {
     // deleteMany abaixo não estão em transação — se a ordem se invertesse, um payload inválido
     // apagaria os brinquedos e as locações do evento e devolveria erro sem regravar nada.
     const fields = buildEventFields(evt, user.id);
+
+    const proposed = { ...existingEvent, ...evt, items };
+    const travelError = reservations.validate(proposed);
+    if (travelError) { const err = new Error(travelError); err.status = 400; throw err; }
+    const [otherEvents, inventory] = await Promise.all([
+        prisma.event.findMany({ where: { id: { not: eventId }, status: { not: 'cancelado' } }, include: { items: true } }),
+        prisma.toy.findMany({ select: { id: true, name: true, quantity: true } })
+    ]);
+    const reservationChanged = JSON.stringify(reservations.intervals(proposed)) !== JSON.stringify(reservations.intervals(existingEvent || {}));
+    const stockError = reservationChanged && reservations.conflict(proposed, otherEvents, inventory);
+    if (stockError) { const err = new Error(stockError); err.status = 409; throw err; }
 
     if (isUpdate) {
         await prisma.eventItem.deleteMany({ where: { eventId } });
@@ -515,11 +529,7 @@ async function updatePublicEvent(id, d, meta = {}) {
     // Estado atual — precisa vir antes para validar a faixa de datas e detectar
     // o que o cliente mudou em relação ao que o vendedor combinou.
     const before = await prisma.event.findUnique({
-        where: { id: eventId },
-        select: {
-            date: true, endDate: true, startTime: true, endTime: true,
-            excludedDates: true, signedAt: true, clientChangeNote: true
-        }
+        where: { id: eventId }, include: { items: true }
     });
     if (!before) {
         const err = new Error('Evento não encontrado');
@@ -559,6 +569,17 @@ async function updatePublicEvent(id, d, meta = {}) {
         endTime: updateData.endTime || before.endTime
     });
     if (changeNote) updateData.clientChangeNote = changeNote;
+
+    const proposed = { ...before, ...updateData, items: [...before.items, ...normalizeItems(d.newItems)] };
+    const travelError = reservations.validate(proposed);
+    if (travelError) { const err = new Error(travelError + ' Entre em contato com a equipe para ajustar o deslocamento.'); err.status = 400; throw err; }
+    const [otherEvents, inventory] = await Promise.all([
+        prisma.event.findMany({ where: { id: { not: eventId }, status: { not: 'cancelado' } }, include: { items: true } }),
+        prisma.toy.findMany({ select: { id: true, name: true, quantity: true } })
+    ]);
+    const reservationChanged = JSON.stringify(reservations.intervals(proposed)) !== JSON.stringify(reservations.intervals(before));
+    const stockError = reservationChanged && reservations.conflict(proposed, otherEvents, inventory);
+    if (stockError) { const err = new Error(stockError); err.status = 409; throw err; }
 
     // Assinatura simples: só registra se chegou signed=true E ainda não foi assinado.
     if (d.signed === true && !before.signedAt) {
@@ -685,80 +706,25 @@ async function checkAvailability({ date, endDate, startTime, endTime, excludeEve
     // endDate é null em evento de 1 dia, por isso o OR.
     const candidates = await prisma.event.findMany({
         where: {
-            date: { lte: rangeEnd },
-            OR: [{ endDate: { gte: rangeStart } }, { date: { gte: rangeStart } }],
+            OR: [
+                { date: { lte: rangeEnd }, OR: [{ endDate: { gte: rangeStart } }, { date: { gte: rangeStart } }] },
+                { departureAt: { lte: rangeEnd + 'T24:00' }, availableAt: { gt: rangeStart + 'T00:00' } }
+            ],
             status: { not: 'cancelado' },
             ...(excludeEventId ? { id: { not: parseFloat(excludeEventId) } } : {})
         },
         select: {
             id: true, date: true, endDate: true, excludedDates: true,
-            startTime: true, endTime: true, eventType: true
+            startTime: true, endTime: true, eventType: true, departureAt: true, availableAt: true, dateOverrides: true, paymentStatus: true
         }
     });
 
-    const requestedSet = new Set(requested);
-    // Dias em que existe algum outro evento, com os eventos daquele dia.
-    const byDate = new Map();
-    for (const ev of candidates) {
-        // Recorta cada candidato à janela pedida — evento longo não vira array gigante.
-        for (const iso of eventActiveDates(ev, rangeStart, rangeEnd)) {
-            if (!requestedSet.has(iso)) continue;
-            if (!byDate.has(iso)) byDate.set(iso, []);
-            byDate.get(iso).push(ev);
-        }
-    }
-
-    if (byDate.size === 0) return { available: true };
-
-    const fmtDays = (isos) => isos.slice(0, 3).map(isoToBR).join(', ')
-        + (isos.length > 3 ? ` e mais ${isos.length - 3}` : '');
-
-    // Sem horário informado — qualquer evento nos dias pedidos bloqueia.
-    if (!startTime || !endTime) {
-        const days = [...byDate.keys()].sort();
-        return {
-            available: false,
-            conflictDates: days,
-            reason: requested.length > 1
-                ? `Já existem outros eventos em ${fmtDays(days)}`
-                : 'Já existem outros eventos neste dia'
-        };
-    }
-
-    const toMin = (t) => {
-        const [h, m] = String(t || '').split(':').map(Number);
-        return (h || 0) * 60 + (m || 0);
-    };
-    const reqStart = toMin(startTime);
-    const reqEnd = toMin(endTime);
-
-    const conflicts = [];
-    let semHorario = false;
-    for (const [iso, evs] of byDate) {
-        for (const ev of evs) {
-            if (!ev.startTime || !ev.endTime) {
-                semHorario = true;
-                conflicts.push(iso);
-                break;
-            }
-            if (reqStart < toMin(ev.endTime) && reqEnd > toMin(ev.startTime)) {
-                conflicts.push(iso);
-                break;
-            }
-        }
-    }
-
-    if (conflicts.length === 0) return { available: true };
-
-    conflicts.sort();
-    const ondeTxt = requested.length > 1 ? ` em ${fmtDays(conflicts)}` : '';
-    return {
-        available: false,
-        conflictDates: conflicts,
-        reason: semHorario
-            ? `Há outro evento sem horário definido${ondeTxt || ' no dia'}`
-            : `Horário sobrepõe outro evento${ondeTxt}`
-    };
+    const conflicts = requested.filter(iso => {
+        const request = { start: `${iso}T${startTime || '00:00'}`, end: `${iso}T${endTime || '24:00'}` };
+        return candidates.some(e => reservations.intervals(e).some(i => reservations.overlap(request, i)));
+    });
+    if (!conflicts.length) return { available: true };
+    return { available: false, conflictDates: conflicts, reason: 'Há eventos ou equipamentos em deslocamento no período solicitado. Consulte a equipe.' };
 }
 
 async function notifyAdminsCadastroCompleto(clientName) {

@@ -143,6 +143,8 @@ model Event {
   id            Float   @id
   date          String // Data de início
   endDate       String? // Data de término (para eventos multi-dia)
+  departureAt   String? // Saída do depósito, horário local YYYY-MM-DDTHH:mm
+  availableAt   String? // Liberação após retorno, horário local YYYY-MM-DDTHH:mm
   excludedDates String? // JSON: ["YYYY-MM-DD", ...] — dias removidos de um evento multi-dia
   dateOverrides String? // JSON: { "YYYY-MM-DD": { startTime, endTime } } — horários custom por dia
   revenueMode   String? // 'perDay' (rateio por dia entre os meses, padrão) | 'upfront' (valor inteiro no mês de início) — só afeta multi-dia que cruza meses

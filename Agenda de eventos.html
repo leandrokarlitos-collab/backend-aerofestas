@@ -2106,6 +2106,17 @@
                             </div>
                         </div>
 
+                        <div class="p-3 rounded-lg border border-amber-200 bg-amber-50">
+                            <label class="flex items-center gap-2 font-medium text-gray-800">
+                                <input type="checkbox" id="event-travel-enabled"> <i class="fas fa-truck" aria-hidden="true"></i> Reservar equipamentos para deslocamento
+                            </label>
+                            <div id="event-travel-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                                <div><label for="event-departure" class="block text-sm mb-1">Saída do depósito</label><input type="datetime-local" id="event-departure" class="form-input w-full px-3 py-2 rounded-md"></div>
+                                <div><label for="event-available" class="block text-sm mb-1">Disponíveis novamente em</label><input type="datetime-local" id="event-available" class="form-input w-full px-3 py-2 rounded-md"></div>
+                                <p class="text-xs text-gray-600 md:col-span-2">Os brinquedos ficam reservados continuamente entre a saída e a liberação, incluindo viagem, descarga e limpeza. Os valores do evento não são alterados.</p>
+                            </div>
+                        </div>
+
                         <div>
                             <label for="event-observations"
                                 class="block text-sm font-medium text-gray-700 mb-1">Observações Gerais</label>
@@ -2848,6 +2859,7 @@
     </div>
 
 
+    <script src="js/eventReservations.js"></script>
     <script type="module">
         import { api } from './js/api.js';
 
@@ -3437,63 +3449,19 @@
             // --- FUNÇÃO PARA GESTÃO DE INVENTÁRIO COM HORÁRIO ---
             const getToyAvailabilityForDateTime = (toyId, dateStr, startTime, endTime, eventIdToIgnore = null) => {
                 const toy = toys.find(t => t.id === toyId);
-                if (!toy) {
-                    console.warn('🚫 Brinquedo não encontrado:', toyId);
-                    return { total: 0, unavailable: 0, available: 0 };
-                }
-
-                const totalQuantity = toy.quantity;
-                console.log(`📦 Verificando disponibilidade para ${toy.name} (ID: ${toyId})`);
-                console.log(`   Total em estoque: ${totalQuantity}`);
-                console.log(`   Data: ${dateStr}, Horário: ${startTime} - ${endTime}`);
-
-                const eventsOnSameDate = events.filter(e => {
-                    return e.date === dateStr && e.id !== eventIdToIgnore;
-                });
-                console.log(`   Eventos na mesma data: ${eventsOnSameDate.length}`);
-
-                const timesOverlap = (startA, endA, startB, endB) => {
-                    if (!startA || !endA || !startB || !endB) return false;
-                    return startA < endB && startB < endA;
+                if (!toy) return { total: 0, unavailable: 0, available: 0 };
+                const travel = document.getElementById('event-travel-enabled').checked;
+                const request = {
+                    start: travel && document.getElementById('event-departure').value || `${dateStr}T${startTime || '00:00'}`,
+                    end: travel && document.getElementById('event-available').value || `${dateStr}T${endTime || '24:00'}`
                 };
-
-                const overlappingEvents = eventsOnSameDate.filter(event =>
-                    timesOverlap(startTime, endTime, event.startTime, event.endTime)
-                );
-                console.log(`   Eventos com horário conflitante: ${overlappingEvents.length}`);
-
-                let bookedInOverlap = 0;
-                overlappingEvents.forEach(event => {
-                    // CORRIGIDO: Verificar tanto 'toys' quanto 'items' (compatibilidade com API)
-                    const eventToys = event.toys || event.items || [];
-                    console.log(`     Evento ${event.id}: ${eventToys.length} itens`);
-
-                    eventToys.forEach(eventToy => {
-                        // CORRIGIDO: Ordem de prioridade correta!
-                        // 1. eventToy.toyId (formato API correto - ID do Toy)
-                        // 2. eventToy.toy.id (formato API com objeto aninhado)
-                        // 3. eventToy.id (formato antigo localStorage - ÚLTIMO porque pode ser ID do EventItem!)
-                        const eventToyId = eventToy.toyId || (eventToy.toy && eventToy.toy.id) || eventToy.id;
-
-                        console.log(`       Item: toyId=${eventToyId}, qty=${eventToy.quantity}`);
-
-                        if (eventToyId === toyId) {
-                            bookedInOverlap += eventToy.quantity;
-                            console.log(`       ✓ Match! Reservado: ${eventToy.quantity}`);
-                        }
-                    });
-                });
-
-                const availableQuantity = totalQuantity - bookedInOverlap;
-
-                console.log(`   📊 Resultado: ${bookedInOverlap} reservado(s), ${availableQuantity} disponível(is)`);
-
-                return {
-                    total: totalQuantity,
-                    unavailable: bookedInOverlap,
-                    available: availableQuantity
-                };
+                const unavailable = EventReservations.reserved(toyId, request, events.filter(e => e.id !== eventIdToIgnore));
+                return { total: toy.quantity, unavailable, available: Math.max(0, toy.quantity - unavailable) };
             };
+
+            document.getElementById('event-travel-enabled').addEventListener('change', (e) => {
+                document.getElementById('event-travel-fields').classList.toggle('hidden', !e.target.checked);
+            });
 
             // --- FUNÇÕES DO WIZARD (NOVAS) ---
 
@@ -4480,6 +4448,8 @@
                         eventInfoHtml += `<div class="municipality-day-labels">${municipalConfirmed ? municipalityBadge('confirmed', `${municipalConfirmed} pref. conf.`) : ''}${municipalQuotes ? municipalityBadge('quote', `${municipalQuotes} pref. orç.`) : ''}</div>`;
                         dayCell.title = `${municipalConfirmed} prefeitura(s) confirmada(s); ${municipalQuotes} em orçamento`;
                     }
+                    const travelCount = events.filter(e => EventReservations.travelOn(e, dateStr)).length;
+                    if (travelCount) eventInfoHtml += `<div class="text-amber-700 text-xs font-semibold" title="${travelCount} deslocamento(s) de equipamentos"><i class="fas fa-truck" aria-hidden="true"></i> <span>${travelCount} viagem${travelCount > 1 ? 's' : ''}</span></div>`;
                     dayCell.innerHTML = `<span class="day-number text-xs font-medium">${day}</span>${eventInfoHtml}`;
                     dayCell.addEventListener('click', () => handleDayClick(dateStr));
                     calendarBody.appendChild(dayCell);
@@ -4611,8 +4581,29 @@
             const renderDayEvents = (dateStr) => {
                 const dayEvents = events.filter(e => eventOccursOnDate(e, dateStr));
                 dayEventsList.innerHTML = '';
+                const travelEvents = events.filter(e => EventReservations.travelOn(e, dateStr));
+                for (const event of travelEvents) {
+                    const card = document.createElement('div');
+                    card.className = 'p-3 rounded-lg border border-amber-300 bg-amber-50 text-amber-900';
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-truck mr-2';
+                    icon.setAttribute('aria-hidden', 'true');
+                    card.appendChild(icon);
+                    const text = document.createElement('span');
+                    const fmt = value => value.slice(0, 10).split('-').reverse().join('/') + ' às ' + value.slice(11, 16);
+                    text.textContent = `Deslocamento — ${event.clientName || 'Evento'} · Saída: ${fmt(event.departureAt)} · Liberação: ${fmt(event.availableAt)}`;
+                    card.appendChild(text);
+                    const edit = document.createElement('button');
+                    edit.type = 'button';
+                    edit.className = 'block mt-2 underline text-sm';
+                    edit.textContent = 'Abrir evento';
+                    edit.addEventListener('click', () => showEventModal(event.date, event));
+                    card.appendChild(edit);
+                    dayEventsList.appendChild(card);
+                }
+
                 if (dayEvents.length === 0) {
-                    dayEventsList.innerHTML = '<p class="text-sm text-gray-500">Nada agendado para este dia.</p>';
+                    if (!travelEvents.length) dayEventsList.innerHTML = '<p class="text-sm text-gray-500">Nada agendado para este dia.</p>';
                 } else {
                     dayEvents.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).forEach(event => {
                         // === Card de REUNIÃO ===
@@ -6225,6 +6216,8 @@
                 municipalityStatus: event.municipalityStatus || null,
                 date: event.date,
                 endDate: event.endDate || null,
+                departureAt: event.departureAt || null,
+                availableAt: event.availableAt || null,
                 excludedDates: event.excludedDates,
                 dateOverrides: event.dateOverrides,
                 revenueMode: event.revenueMode,
@@ -7828,6 +7821,9 @@
                     price: totals.finalPrice
                 });
 
+                const reservationError = EventReservations.validate({ ...event, ...payload }) || EventReservations.conflict({ ...event, ...payload }, events.filter(e => e.id !== eventId), toys);
+                if (reservationError) { showToast(reservationError, true); return; }
+
                 const saveBtn = document.getElementById('save-step-btn');
                 const originalText = saveBtn.textContent;
                 saveBtn.textContent = 'Salvando...';
@@ -7844,7 +7840,7 @@
                     showToast(`Dia ${fmtDateBR(dateStr)} atualizado (somente este dia).`, false);
                 } catch (err) {
                     console.error('Erro ao salvar dia:', err);
-                    showToast('Erro ao salvar o dia. Verifique a conexão.', true);
+                    showToast(err.message || 'Erro ao salvar o dia. Verifique a conexão.', true);
                 } finally {
                     saveBtn.textContent = originalText;
                     saveBtn.disabled = false;
@@ -8051,6 +8047,12 @@
                     eventData.price = 0;
                 }
 
+                const travelEnabled = document.getElementById('event-travel-enabled').checked;
+                eventData.departureAt = travelEnabled ? document.getElementById('event-departure').value : null;
+                eventData.availableAt = travelEnabled ? document.getElementById('event-available').value : null;
+                const reservationError = EventReservations.validate(eventData) || EventReservations.conflict(eventData, events.filter(e => e.id !== eventId), toys);
+                if (reservationError) { showToast(reservationError, true); return; }
+
                 // Feedback visual imediato
                 const saveBtn = document.getElementById('save-step-btn');
                 const originalText = saveBtn.textContent;
@@ -8117,6 +8119,13 @@
                 // Padrão para novos eventos; sobrescrito abaixo ao editar um existente.
                 setRevenueMode('perDay');
                 eventForm.reset();
+                document.getElementById('event-travel-enabled').checked = !!eventToEdit?.departureAt;
+                document.getElementById('event-travel-enabled').disabled = !!dayEditDate;
+                document.getElementById('event-travel-fields').classList.toggle('hidden', !eventToEdit?.departureAt);
+                document.getElementById('event-departure').value = eventToEdit?.departureAt || '';
+                document.getElementById('event-available').value = eventToEdit?.availableAt || '';
+                document.getElementById('event-departure').disabled = !!dayEditDate;
+                document.getElementById('event-available').disabled = !!dayEditDate;
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
                 externalRentalsForCurrentEvent = [];
@@ -10073,7 +10082,7 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 const availability = getToyAvailabilityForDateTime(selectedToyId, eventDate, startTime, endTime,
                     eventId);
 
-                if (quantity > availability.available) {
+                if (totalQuantity > availability.available) {
                     const availableText = availability.available > 0 ? `Apenas ${availability.available} unidade(s)
         disponível(is)` : `Nenhuma unidade disponível`;
                     showToast(`Estoque insuficiente! ${availableText} para este horário.`, true);

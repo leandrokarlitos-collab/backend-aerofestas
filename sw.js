@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aero-festas-v3.29.8';
+const CACHE_NAME = 'aero-festas-v3.29.9';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -27,6 +27,7 @@ const ASSETS_TO_CACHE = [
     '/js/nav.js',
     '/js/auth.js',
     '/js/api.js',
+    '/js/eventReservations.js',
     '/js/protect.js',
     '/js/pwa-init.js',
     '/js/charts-financeiro.js',
