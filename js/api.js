@@ -180,6 +180,18 @@ export const api = {
         } catch (e) { return []; }
     },
 
+    getEventoPorCodigo: async (code) => {
+        try {
+            const cleaned = String(code || '').trim().replace(/^#+/, '').trim();
+            if (!cleaned) return null;
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/events/by-code/${encodeURIComponent(cleaned)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : null;
+        } catch (e) { return null; }
+    },
+
     getEmpresas: async () => {
         try {
             const token = getToken();

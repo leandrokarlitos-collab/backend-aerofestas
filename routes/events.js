@@ -21,6 +21,16 @@ adminRouter.get('/events-full', authenticate, async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+adminRouter.get('/events/by-code/:code', authenticate, async (req, res, next) => {
+    try {
+        const event = await EventService.getEventByCode(req.params.code);
+        if (!event || event.eventType === 'meeting') {
+            return res.status(404).json({ error: 'Nenhum evento encontrado com este código.' });
+        }
+        res.json(event);
+    } catch (err) { next(err); }
+});
+
 adminRouter.post('/events', authenticate, async (req, res, next) => {
     try {
         const saved = await EventService.upsertEvent(req.body, req.user);

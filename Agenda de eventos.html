@@ -1680,6 +1680,29 @@
 
                     <!-- =================== ETAPA 1: CLIENTE =================== -->
                     <div id="step-1" class="step-content space-y-4">
+                        <!-- Importar dados de evento anterior pelo código (apenas ao criar novo evento) -->
+                        <div id="import-previous-event-box" class="bg-indigo-50/70 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/50 rounded-lg p-3 space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <label for="import-event-code-input" class="text-sm font-semibold text-indigo-800 dark:text-indigo-200 flex items-center gap-1.5">
+                                    <i class="fas fa-wand-magic-sparkles text-indigo-600"></i> Puxar dados de evento anterior (opcional)
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-slate-400">
+                                Digite o código de um evento passado (ex.: <strong>1001</strong>) para preencher cliente, endereço, horários, brinquedos e valores mantendo a nova data.
+                            </p>
+                            <div class="flex gap-2">
+                                <input type="text" id="import-event-code-input" list="previous-events-code-suggestions"
+                                    class="form-input flex-1 px-3 py-2 rounded-md text-sm font-mono"
+                                    placeholder="Ex: 1001 ou #1001" autocomplete="off">
+                                <datalist id="previous-events-code-suggestions"></datalist>
+                                <button type="button" id="import-event-code-btn"
+                                    class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
+                                    <i class="fas fa-download"></i> Puxar dados
+                                </button>
+                            </div>
+                            <p id="import-event-code-feedback" class="hidden text-xs font-medium mt-1"></p>
+                        </div>
+
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Informações do Cliente</h3>
                         <div class="mb-3">
                             <label for="municipality-status" class="block text-sm font-medium text-gray-700 mb-1">É um evento de prefeitura? <span class="text-red-500">*</span></label>
@@ -2719,6 +2742,10 @@
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="bg-indigo-100">
+                            <th class="border border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors whitespace-nowrap"
+                                data-sort="code" data-sort-order="asc">
+                                Código <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            </th>
                             <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors"
                                 data-sort="name" data-sort-order="asc">
                                 Nome <i class="fas fa-sort ml-1 text-gray-400"></i>
@@ -4796,6 +4823,7 @@
                         eventDiv.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div class="${isCancelled ? 'opacity-60' : ''}">
+                            ${event.code != null ? `<div class="mb-1.5"><button type="button" class="copy-event-code-btn inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-mono font-bold transition-colors" data-code="${event.code}" title="Clique para copiar o código do evento"><i class="fas fa-hashtag text-[10px] opacity-70"></i>${event.code} <i class="far fa-copy text-[10px] ml-0.5 opacity-60"></i></button></div>` : ''}
                             ${cancelledBadge}
                             ${municipalBadge}
                             ${cadastroStatusBadge}
@@ -4902,6 +4930,17 @@
                     const ev = events.find(x => x.id === parseInt(e.currentTarget.dataset.id));
                     reopenShareForEvent(ev);
                 }));
+                document.querySelectorAll('.copy-event-code-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const code = e.currentTarget.dataset.code;
+                    if (!code) return;
+                    try {
+                        await navigator.clipboard.writeText(String(code));
+                        showToast(`Código #${code} copiado!`, false);
+                    } catch (_) {
+                        showToast(`Código do evento: #${code}`, false);
+                    }
+                }));
                 document.querySelectorAll('.edit-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleEditEvent(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date)));
                 document.querySelectorAll('.event-actions-btn').forEach(btn => btn.addEventListener('click', (e) => openEventActionsMenu(parseInt(e.currentTarget.dataset.id), e.currentTarget.dataset.date, e.currentTarget)));
                 document.querySelectorAll('.conclude-event-btn').forEach(btn => btn.addEventListener('click', (e) => handleConcludeEvent(parseInt(e.currentTarget.dataset.id))));
@@ -4949,6 +4988,10 @@
                     let aValue, bValue;
 
                     switch (currentSortColumn) {
+                        case 'code':
+                            aValue = a.code ?? 0;
+                            bValue = b.code ?? 0;
+                            return currentSortOrder === 'asc' ? aValue - bValue : bValue - aValue;
                         case 'name':
                             aValue = a.clientName || '';
                             bValue = b.clientName || '';
@@ -5001,6 +5044,7 @@
 
                     return `
                 <tr class="hover:bg-indigo-50 cursor-pointer transition-colors" data-event-id="${event.id}" data-event-date="${event.date}">
+                    <td class="border border-gray-300 px-3 py-3 text-sm font-mono font-bold text-indigo-700 whitespace-nowrap">${event.code != null ? `#${event.code}` : '—'}</td>
                     <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${event.clientName || 'Sem nome'}</td>
                     <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${formattedDate}</td>
                     <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${eventLocation}</td>
@@ -5088,6 +5132,10 @@
                         let aValue, bValue;
 
                         switch (currentSortColumn) {
+                            case 'code':
+                                aValue = a.code ?? 0;
+                                bValue = b.code ?? 0;
+                                return currentSortOrder === 'asc' ? aValue - bValue : bValue - aValue;
                             case 'name':
                                 aValue = a.clientName || '';
                                 bValue = b.clientName || '';
@@ -5130,7 +5178,7 @@
                     doc.text(`Total de ${sortedEvents.length} evento(s) cadastrado(s).`, 14, 29);
 
                     // Preparar dados da tabela
-                    const columns = ["Nome", "Data", "Local", "Valor"];
+                    const columns = ["Código", "Nome", "Data", "Local", "Valor"];
                     const rows = sortedEvents.map(event => {
                         const eventDate = new Date(event.date + 'T00:00:00');
                         const formattedDate = eventDate.toLocaleDateString('pt-BR', {
@@ -5150,6 +5198,7 @@
                             : formattedDate;
 
                         return [
+                            event.code != null ? `#${event.code}` : '—',
                             event.clientName || 'Sem nome',
                             dateCell,
                             eventLocation,
@@ -5159,14 +5208,15 @@
 
                     // Adicionar linha de total (rateado — bate com o faturamento do mês)
                     const totalValue = sortedEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
-                    rows.push(['TOTAL', '', '', formatCurrency(totalValue)]);
+                    rows.push(['TOTAL', '', '', '', formatCurrency(totalValue)]);
 
-                    // Calcular larguras das colunas (coluna de valor com o dobro)
+                    // Calcular larguras das colunas
                     const pageWidth = doc.internal.pageSize.getWidth();
                     const margin = 14 * 2; // margens esquerda e direita
                     const availableWidth = pageWidth - margin;
-                    // Dividir em 5 partes: 1 para nome, 1 para data, 1 para local, 2 para valor
-                    const baseWidth = availableWidth / 5;
+                    const codeWidth = availableWidth * 0.12;
+                    const restWidth = availableWidth - codeWidth;
+                    const baseWidth = restWidth / 5;
 
                     // Tabela
                     doc.autoTable({
@@ -5176,10 +5226,11 @@
                         theme: 'striped',
                         headStyles: { fillColor: [79, 70, 229] },
                         columnStyles: {
-                            0: { cellWidth: baseWidth }, // Nome
-                            1: { cellWidth: baseWidth }, // Data
-                            2: { cellWidth: baseWidth }, // Local
-                            3: { cellWidth: baseWidth * 2, halign: 'right', fontStyle: 'bold' } // Coluna de valor - o dobro da largura
+                            0: { cellWidth: codeWidth, fontStyle: 'bold' }, // Código
+                            1: { cellWidth: baseWidth }, // Nome
+                            2: { cellWidth: baseWidth }, // Data
+                            3: { cellWidth: baseWidth * 1.4 }, // Local
+                            4: { cellWidth: baseWidth * 1.6, halign: 'right', fontStyle: 'bold' } // Valor
                         },
                         didParseCell: (data) => {
                             // Estilizar linha de total
@@ -8097,7 +8148,7 @@
                     hideModal(eventModal);
                     renderAll();
                     checkBirthdayNotifications();
-                    showToast('Evento salvo na nuvem com sucesso!', false);
+                    showToast(savedEvent?.code != null ? `Evento #${savedEvent.code} salvo na nuvem com sucesso!` : 'Evento salvo na nuvem com sucesso!', false);
 
                 } catch (error) {
                     console.error("Erro ao salvar evento:", error);
@@ -8114,6 +8165,229 @@
                 const val = (mode === 'upfront') ? 'upfront' : 'perDay';
                 document.querySelectorAll('input[name="revenue-mode"]').forEach(r => { r.checked = (r.value === val); });
             };
+
+            const parseEventCodeInput = (raw) => {
+                const m = String(raw || '').trim().match(/^#?(\d+)\b/);
+                if (!m) return null;
+                const num = parseInt(m[1], 10);
+                return Number.isSafeInteger(num) && num > 0 ? num : null;
+            };
+
+            const setImportEventFeedback = (msg, isError = false) => {
+                const el = document.getElementById('import-event-code-feedback');
+                if (!el) return;
+                if (!msg) {
+                    el.textContent = '';
+                    el.classList.add('hidden');
+                    return;
+                }
+                el.textContent = msg;
+                el.className = `text-xs font-medium mt-1 ${isError ? 'text-red-600' : 'text-emerald-700'}`;
+            };
+
+            const populatePreviousEventCodeSuggestions = () => {
+                const datalist = document.getElementById('previous-events-code-suggestions');
+                if (!datalist) return;
+                datalist.innerHTML = '';
+                const withCodes = (events || [])
+                    .filter(ev => ev && ev.eventType !== 'meeting' && ev.code != null)
+                    .sort((a, b) => Number(b.code) - Number(a.code));
+                withCodes.forEach(ev => {
+                    const opt = document.createElement('option');
+                    opt.value = String(ev.code);
+                    const loc = [ev.bairro, ev.cidade].filter(Boolean).join(' - ');
+                    opt.label = `#${ev.code} — ${ev.clientName || 'Sem nome'} (${fmtDateBR(ev.date)}${loc ? ' · ' + loc : ''})`;
+                    datalist.appendChild(opt);
+                });
+            };
+
+            const applyTemplateFromEvent = (sourceEvent) => {
+                if (!sourceEvent) return;
+
+                // Garante que continua sendo um NOVO agendamento na data escolhida na agenda
+                document.getElementById('event-id').value = '';
+                document.getElementById('event-end-date').value = '';
+                renderMultiDaySelector([]);
+                document.getElementById('event-travel-enabled').checked = false;
+                document.getElementById('event-travel-fields').classList.add('hidden');
+                document.getElementById('event-departure').value = '';
+                document.getElementById('event-available').value = '';
+
+                // Etapa 1: Prefeitura + Cliente (PF / PJ)
+                setMunicipalityForm(
+                    'municipality-status',
+                    { municipalityStatus: sourceEvent.municipalityStatus ? 'quote' : null },
+                    false
+                );
+
+                // Limpa ambos os blocos antes de preencher o tipo correspondente
+                ['client-name', 'client-cpf', 'client-rg', 'client-dob', 'client-phone', 'client-phone-backup', 'client-social', 'client-social-checked', 'contract-address',
+                 'pj-company-name', 'pj-cnpj', 'pj-company-address', 'pj-rep-name', 'pj-rep-cpf', 'pj-rep-phone', 'pj-rep-phone-backup', 'pj-social', 'pj-social-checked'
+                ].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                document.getElementById('client-social-status')?.classList.add('hidden');
+                document.getElementById('pj-social-status')?.classList.add('hidden');
+
+                if (sourceEvent.clientType === 'PJ') {
+                    clientTypePjRadio.checked = true;
+                    document.getElementById('pj-company-name').value = sourceEvent.clientName || '';
+                    document.getElementById('pj-cnpj').value = sourceEvent.cnpj || '';
+                    document.getElementById('pj-company-address').value = sourceEvent.companyAddress || '';
+                    document.getElementById('pj-rep-name').value = sourceEvent.repName || '';
+                    document.getElementById('pj-rep-cpf').value = sourceEvent.repCpf || '';
+                    document.getElementById('pj-rep-phone').value = sourceEvent.repPhone || '';
+                    document.getElementById('pj-rep-phone-backup').value = sourceEvent.repPhoneBackup || '';
+                    document.getElementById('pj-social').value = sourceEvent.clientSocial || '';
+                    document.getElementById('pj-social-checked').value = sourceEvent.clientSocialChecked ? 'true' : '';
+                    document.getElementById('pj-social-status').classList.toggle('hidden', !sourceEvent.clientSocialChecked);
+                } else {
+                    clientTypePfRadio.checked = true;
+                    document.getElementById('client-name').value = sourceEvent.clientName || '';
+                    document.getElementById('client-cpf').value = sourceEvent.clientCpf || '';
+                    document.getElementById('client-rg').value = sourceEvent.clientRg || '';
+                    document.getElementById('client-dob').value = sourceEvent.clientDob || '';
+                    document.getElementById('client-phone').value = sourceEvent.clientPhone || '';
+                    document.getElementById('client-phone-backup').value = sourceEvent.clientPhoneBackup || '';
+                    document.getElementById('client-social').value = sourceEvent.clientSocial || '';
+                    document.getElementById('client-social-checked').value = sourceEvent.clientSocialChecked ? 'true' : '';
+                    document.getElementById('client-social-status').classList.toggle('hidden', !sourceEvent.clientSocialChecked);
+                    document.getElementById('contract-address').value = sourceEvent.contractAddress || '';
+                }
+                toggleClientTypeFields();
+
+                // Etapa 2: Empresa, local (com pino no mapa), horários, aniversariante e observações
+                setRevenueMode(sourceEvent.revenueMode);
+                document.getElementById('your-company-select').value = sourceEvent.yourCompanyId || '';
+                document.getElementById('event-monitor').value = sourceEvent.monitor || '';
+                document.getElementById('event-cep').value = sourceEvent.cep || '';
+                document.getElementById('client-address').value = sourceEvent.clientAddress || '';
+                document.getElementById('event-complemento').value = sourceEvent.complemento || '';
+                document.getElementById('event-bairro').value = sourceEvent.bairro || '';
+                document.getElementById('event-cidade').value = sourceEvent.cidade || '';
+                document.getElementById('event-uf').value = sourceEvent.uf || '';
+                document.getElementById('event-referencia').value = sourceEvent.referencia || '';
+                adminLoadLocationForEvent(sourceEvent);
+
+                document.getElementById('event-start-time').value = sourceEvent.startTime || '';
+                document.getElementById('event-end-time').value = sourceEvent.endTime || '';
+                document.getElementById('event-observations').value = sourceEvent.eventObservations || '';
+
+                isBirthdayCheckbox.checked = !!sourceEvent.isBirthday;
+                document.getElementById('birthday-person-name').value = sourceEvent.birthdayPersonName || '';
+                document.getElementById('birthday-person-dob').value = sourceEvent.birthdayPersonDob || '';
+                toggleBirthdayFields();
+
+                // Etapa 3: Brinquedos, locações externas e condições financeiras (zerando execução passada)
+                const rawItems = Array.isArray(sourceEvent.items) && sourceEvent.items.length
+                    ? sourceEvent.items
+                    : (Array.isArray(sourceEvent.toys) ? sourceEvent.toys : []);
+                let skippedToys = 0;
+                toysForCurrentEvent = rawItems.reduce((acc, item) => {
+                    const toyId = item.toyId || item.toy?.id || item.id;
+                    if (toyId == null) return acc;
+                    const catalogToy = Array.isArray(toys) && toys.length ? toys.find(t => t.id === toyId) : null;
+                    if (Array.isArray(toys) && toys.length > 0 && !catalogToy) {
+                        skippedToys++;
+                        return acc;
+                    }
+                    acc.push({
+                        id: toyId,
+                        name: catalogToy?.name || item.toy?.name || item.name || 'Brinquedo',
+                        quantity: parseInt(item.quantity, 10) || 1,
+                        price: parseFloat(item.price ?? item.valor ?? 0) || 0
+                    });
+                    return acc;
+                }, []);
+
+                externalRentalsForCurrentEvent = Array.isArray(sourceEvent.externalRentals)
+                    ? sourceEvent.externalRentals.map(r => ({
+                        description: r.description || '',
+                        supplier: r.supplier || null,
+                        quantity: parseInt(r.quantity, 10) || 1,
+                        cost: parseFloat(r.cost) || 0
+                    }))
+                    : [];
+
+                discountTypeEl.value = sourceEvent.discountType || 'fixed';
+                discountValueEl.value = sourceEvent.discountValue || 0;
+                deliveryFeeEl.value = sourceEvent.deliveryFee || 0;
+
+                if (isTicketSaleEl) isTicketSaleEl.checked = !!sourceEvent.isTicketSale;
+                if (estimatedValueEl) estimatedValueEl.value = sourceEvent.estimatedValue || 0;
+                document.getElementById('ticket-gross-sold').value = '';
+                document.getElementById('ticket-school-percent').value = '';
+                document.getElementById('ticket-net-total').value = '';
+                ticketItemsMainCtrl.setItems([]);
+
+                contractPaymentTermsTextarea.value = sourceEvent.contractPaymentTerms || '';
+                document.getElementById('contract-payment-signed-warning').classList.add('hidden');
+                updateContractPaymentCounter();
+                paymentDetailsTextarea.value = sourceEvent.paymentDetails || '';
+
+                document.getElementById('payment-status').value = 'Aguardando Sinal';
+                document.getElementById('signal-amount').value = sourceEvent.signalAmount || 0;
+                document.getElementById('signal-received').checked = false;
+                setupContractSection(null);
+
+                renderSelectedToysInModal();
+                renderSelectedExternalRentals();
+                updateFinalPrice();
+                applyTicketSaleMode();
+
+                const originLabel = `#${sourceEvent.code ?? ''} — ${sourceEvent.clientName || 'Sem nome'} (${fmtDateBR(sourceEvent.date)})`;
+                const skippedWarning = skippedToys > 0
+                    ? ` (${skippedToys} brinquedo(s) antigo(s) não estão mais no catálogo atual e foram ignorados.)`
+                    : '';
+                setImportEventFeedback(`✓ Dados preenchidos do evento ${originLabel}. Confira horários e brinquedos!${skippedWarning}`, false);
+                showToast(`Dados do evento #${sourceEvent.code} carregados!`, false);
+            };
+
+            const handleImportPreviousEvent = async () => {
+                const input = document.getElementById('import-event-code-input');
+                const btn = document.getElementById('import-event-code-btn');
+                if (!input || !btn) return;
+
+                const code = parseEventCodeInput(input.value);
+                if (!code) {
+                    setImportEventFeedback('Informe um código numérico válido (ex.: 1001).', true);
+                    input.focus();
+                    return;
+                }
+
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+                setImportEventFeedback('');
+
+                try {
+                    let sourceEvent = (events || []).find(ev => ev && ev.eventType !== 'meeting' && Number(ev.code) === code) || null;
+                    if (!sourceEvent) {
+                        sourceEvent = await api.getEventoPorCodigo(code);
+                    }
+                    if (!sourceEvent || sourceEvent.eventType === 'meeting') {
+                        setImportEventFeedback(`Nenhum evento encontrado com o código #${code}.`, true);
+                        showToast(`Evento #${code} não encontrado.`, true);
+                        return;
+                    }
+                    applyTemplateFromEvent(sourceEvent);
+                } catch (err) {
+                    console.error('Erro ao puxar evento por código:', err);
+                    setImportEventFeedback('Erro ao buscar o evento. Tente novamente.', true);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            };
+
+            document.getElementById('import-event-code-btn')?.addEventListener('click', handleImportPreviousEvent);
+            document.getElementById('import-event-code-input')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleImportPreviousEvent();
+                }
+            });
 
             const showEventModal = (dateStr, eventToEdit = null, dayEditDate = null) => {
                 // Padrão para novos eventos; sobrescrito abaixo ao editar um existente.
@@ -8190,8 +8464,16 @@
                 document.getElementById('contract-address').value = '';
                 // FIM DA MODIFICAÇÃO
 
+                const importBoxEl = document.getElementById('import-previous-event-box');
+                const importInputEl = document.getElementById('import-event-code-input');
+                if (importInputEl) importInputEl.value = '';
+                setImportEventFeedback('');
+
                 if (eventToEdit) {
-                    document.getElementById('modal-title').textContent = `Editar Agendamento`;
+                    importBoxEl?.classList.add('hidden');
+                    document.getElementById('modal-title').textContent = eventToEdit.code != null
+                        ? `Editar Agendamento #${eventToEdit.code}`
+                        : `Editar Agendamento`;
                     document.getElementById('event-id').value = eventToEdit.id;
                     // INÍCIO DA MODIFICAÇÃO: Preencher campo de data visível com a data do evento
                     document.getElementById('event-date-visible').value = eventToEdit.date;
@@ -8306,6 +8588,8 @@
                     }
 
                 } else {
+                    importBoxEl?.classList.remove('hidden');
+                    populatePreviousEventCodeSuggestions();
                     const dateObj = new Date(dateStr + 'T00:00:00');
                     document.getElementById('modal-title').textContent = `Agendar para ${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(dateObj)}`;
                     clientTypePfRadio.checked = true;
@@ -8702,7 +8986,7 @@
                 return `
             <div class="os-container">
                 <div class="header">
-                    <h1>Ordem de Serviço</h1>
+                    <h1>Ordem de Serviço${event.code != null ? ` #${event.code}` : ''}</h1>
                     <p>${yourCompany ? yourCompany.name : ''}</p>
                 </div>
                 
@@ -9421,7 +9705,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
 
                     document.getElementById('link-cadastro-config').classList.add('hidden');
                     document.getElementById('link-cadastro-share').classList.remove('hidden');
-                    showToast('Evento criado! Compartilhe o link com o cliente.', false);
+                    showToast(savedEvent?.code != null ? `Evento #${savedEvent.code} criado! Compartilhe o link com o cliente.` : 'Evento criado! Compartilhe o link com o cliente.', false);
                 } catch (err) {
                     console.error('Erro ao gerar link:', err);
                     showToast('Erro ao criar evento. Tente novamente.', true);

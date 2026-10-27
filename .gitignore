@@ -20,3 +20,7 @@ result_keys.txt
 data/users.json
 data/tokens.json
 data/user_history.json
+
+# Arquivos locais gerados e rascunhos temporários (notas fiscais, PDFs, caches)
+output/
+tmp/

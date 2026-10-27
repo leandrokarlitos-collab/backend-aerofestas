@@ -273,6 +273,32 @@ async function replaceAssignments(eventId, rawList) {
     }
 }
 
+const INITIAL_EVENT_CODE = 1001;
+
+function parseEventCodeInput(raw) {
+    if (raw === undefined || raw === null) return null;
+    const cleaned = String(raw).trim().replace(/^#+/, '').trim();
+    if (!/^\d+$/.test(cleaned)) return null;
+    const code = parseInt(cleaned, 10);
+    return Number.isSafeInteger(code) && code > 0 ? code : null;
+}
+
+async function nextEventCode() {
+    const agg = await prisma.event.aggregate({ _max: { code: true } });
+    const currentMax = agg && agg._max ? agg._max.code : null;
+    return (Number.isInteger(currentMax) && currentMax >= INITIAL_EVENT_CODE)
+        ? currentMax + 1
+        : INITIAL_EVENT_CODE;
+}
+
+function isCodeUniqueViolation(err) {
+    if (!err || err.code !== 'P2002') return false;
+    const target = err.meta && err.meta.target;
+    if (Array.isArray(target)) return target.includes('code');
+    if (typeof target === 'string') return target.includes('code');
+    return false;
+}
+
 async function upsertEvent(evt, user) {
     const eventId = evt.id ? parseFloat(evt.id) : Date.now();
     const isUpdate = !!evt.id;
@@ -305,30 +331,47 @@ async function upsertEvent(evt, user) {
         await prisma.eventExternalRental.deleteMany({ where: { eventId } });
     }
 
-    const saved = await prisma.event.upsert({
-        where: { id: eventId },
-        update: {
-            ...fields,
-            items: { create: items },
-            externalRentals: { create: externalRentals }
-        },
-        create: {
-            id: eventId,
-            ...fields,
-            createdBy: user.id,
-            // Carimba a redação do contrato vigente. Eventos criados antes desta coluna ficam
-            // NULL e continuam sendo renderizados com a redação antiga — um contrato assinado
-            // nunca pode mudar de texto por causa de um deploy.
-            contractTemplateVersion: CONTRACT_TEMPLATE_VERSION,
-            items: { create: items },
-            externalRentals: { create: externalRentals }
-        },
-        include: {
-            items: { include: { toy: true } },
-            externalRentals: true,
-            assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
+    const needsCode = fields.eventType !== 'meeting' && (!existingEvent || existingEvent.code == null);
+
+    let saved;
+    const maxAttempts = needsCode ? 5 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const codeField = needsCode ? { code: await nextEventCode() } : {};
+        try {
+            saved = await prisma.event.upsert({
+                where: { id: eventId },
+                update: {
+                    ...fields,
+                    ...codeField,
+                    items: { create: items },
+                    externalRentals: { create: externalRentals }
+                },
+                create: {
+                    id: eventId,
+                    ...fields,
+                    ...codeField,
+                    createdBy: user.id,
+                    // Carimba a redação do contrato vigente. Eventos criados antes desta coluna ficam
+                    // NULL e continuam sendo renderizados com a redação antiga — um contrato assinado
+                    // nunca pode mudar de texto por causa de um deploy.
+                    contractTemplateVersion: CONTRACT_TEMPLATE_VERSION,
+                    items: { create: items },
+                    externalRentals: { create: externalRentals }
+                },
+                include: {
+                    items: { include: { toy: true } },
+                    externalRentals: true,
+                    assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
+                }
+            });
+            break;
+        } catch (err) {
+            if (needsCode && attempt < maxAttempts && isCodeUniqueViolation(err)) {
+                continue;
+            }
+            throw err;
         }
-    });
+    }
 
     // Escala estruturada (F2): SÓ mexe quando o payload traz o array `assignments`.
     // Saves parciais (assinatura, rascunho) que não incluem o campo NÃO apagam a
@@ -341,7 +384,7 @@ async function upsertEvent(evt, user) {
         });
     }
 
-    const snapshot = { clientName: saved.clientName, date: saved.date, price: saved.price };
+    const snapshot = { code: saved.code, clientName: saved.clientName, date: saved.date, price: saved.price };
     if (isUpdate && existingEvent) {
         const changes = computeChanges(existingEvent, saved, TRACKED_FIELDS);
         safeAudit({ entityType: 'Event', entityId: eventId, action: 'UPDATE', user, changes, snapshot });
@@ -372,6 +415,7 @@ async function deleteEvent(id, user) {
             action: 'DELETE',
             user,
             snapshot: {
+                code: existingEvent.code,
                 clientName: existingEvent.clientName,
                 date: existingEvent.date,
                 price: existingEvent.price
@@ -408,6 +452,19 @@ async function listEventsFull() {
             assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
         },
         orderBy: { date: 'desc' }
+    });
+}
+
+async function getEventByCode(rawCode) {
+    const code = parseEventCodeInput(rawCode);
+    if (!code) return null;
+    return prisma.event.findUnique({
+        where: { code },
+        include: {
+            items: { include: { toy: true } },
+            company: true,
+            externalRentals: true
+        }
     });
 }
 
@@ -851,6 +908,8 @@ module.exports = {
     setEventAssignments,
     deleteEvent,
     listEventsFull,
+    getEventByCode,
+    parseEventCodeInput,
     getPublicEvent,
     updatePublicEvent,
     saveDraftPublicEvent,

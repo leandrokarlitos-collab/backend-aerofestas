@@ -141,6 +141,7 @@ model Company {
 
 model Event {
   id            Float   @id
+  code          Int?    @unique // Código sequencial amigável (#1001, #1002...) — null em reuniões
   date          String // Data de início
   endDate       String? // Data de término (para eventos multi-dia)
   departureAt   String? // Saída do depósito, horário local YYYY-MM-DDTHH:mm
