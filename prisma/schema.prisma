@@ -264,6 +264,60 @@ model Event {
 
   // Escala estruturada de monitores (F2) — em tabela própria, não tocada por saves parciais
   assignments EventAssignment[]
+
+  // Rota logística (agrupa 1 ou mais eventos que saem e retornam juntos ao galpão)
+  routeId Int?
+  route   EventRoute? @relation(fields: [routeId], references: [id], onDelete: SetNull)
+
+  @@index([routeId])
+}
+
+// Cadastro permanente da frota de veículos (selecionáveis nas Rotas da Agenda)
+model Vehicle {
+  id            Int                 @id @default(autoincrement())
+  name          String // Nome do veículo (ex.: "Hilux Branca", "HR Baú")
+  plate         String? // Placa (ex.: "RCN-4A12")
+  notes         String? // Observações opcionais
+  active        Boolean             @default(true)
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  routeVehicles EventRouteVehicle[]
+}
+
+// Rota logística: saída do galpão -> paradas (eventos) -> retorno/liberação no galpão
+model EventRoute {
+  id          Int                 @id @default(autoincrement())
+  baseCity    String              @default("Anápolis-GO")
+  departureAt String // YYYY-MM-DDTHH:mm
+  availableAt String // YYYY-MM-DDTHH:mm
+  notes       String?
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  events      Event[]
+  vehicles    EventRouteVehicle[]
+}
+
+// Veículos alocados em uma rota + dados de eventual carreta acoplada (trucada ou simples + metros)
+model EventRouteVehicle {
+  id                  Int        @id @default(autoincrement())
+  routeId             Int
+  route               EventRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  vehicleId           Int?
+  vehicle             Vehicle?   @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vehicleName         String // Snapshot anti-deleção do nome do veículo
+  vehiclePlate        String? // Snapshot anti-deleção da placa
+  hasTrailer          Boolean    @default(false)
+  trailerTrucada      Boolean    @default(false)
+  trailerLengthMeters Float?
+  order               Int        @default(0)
+  createdAt           DateTime   @default(now())
+
+  @@index([routeId])
+  @@index([vehicleId])
 }
 
 // Escala estruturada: quais monitores estão alocados a um evento e em que papel (F2).

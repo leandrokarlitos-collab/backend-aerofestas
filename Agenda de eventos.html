@@ -617,7 +617,12 @@
             border: none;
         }
 
+        .calendar-grid > * {
+            min-width: 0;
+        }
+
         .day-cell {
+            min-width: 0;
             min-height: 86px;
             height: 100%;
             position: relative;
@@ -668,21 +673,269 @@
             color: #a5b4fc;
         }
 
-        .agenda-travel-pill {
-            margin-top: 4px;
+        /* === Rotas na grade mensal (Texto Puro monocromático contido) === */
+        .agenda-routes-bar {
+            margin-top: auto;
+            padding-top: 3px;
+            width: 100%;
+            min-width: 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            column-gap: 1px;
+            row-gap: 2px;
+            position: relative;
+            z-index: 3;
+        }
+        .agenda-routes-bar .route-truck-icon {
+            font-size: 9px;
+            color: var(--text-muted);
+            opacity: 0.65;
+            margin-right: 2px;
+            flex-shrink: 0;
+        }
+        .route-num-btn {
+            appearance: none;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 10.5px;
+            font-weight: 600;
+            line-height: 1.15;
+            padding: 1px 3px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+            transition: color 0.14s ease, background-color 0.14s ease;
+        }
+        .route-num-btn:hover,
+        .route-num-btn.is-active {
+            color: var(--text);
+            background: rgba(15, 23, 42, 0.08);
+        }
+        .dark .route-num-btn:hover,
+        .dark .route-num-btn.is-active {
+            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .day-cell.has-routes .event-count-container {
+            bottom: 24px;
+        }
+        .day-cell.is-hovering-route .event-count-container {
+            opacity: 0 !important;
+            transform: scale(0.85) !important;
+        }
+        .day-cell.is-hovering-route .day-number {
+            opacity: 1 !important;
+            transform: none !important;
+        }
+        .day-cell.is-route-highlight {
+            background: rgba(15, 23, 42, 0.042);
+            box-shadow: inset 0 -2px 0 rgba(71, 85, 105, 0.48);
+        }
+        .dark .day-cell.is-route-highlight {
+            background: rgba(148, 163, 184, 0.09);
+            box-shadow: inset 0 -2px 0 rgba(148, 163, 184, 0.55);
+        }
+        @media (max-width: 768px) {
+            .route-num-btn { font-size: 9.5px; padding: 1px 2px; }
+            .agenda-routes-bar .route-truck-icon { font-size: 8px; margin-right: 1px; }
+            .day-cell.has-routes .event-count-container { bottom: 20px; }
+        }
+
+        /* === Formulário e Modal de Rota (sutil e monocromático) === */
+        .route-form-box {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface-inset);
+        }
+        .route-mode-seg {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 4px;
+            padding: 3px;
+            border-radius: 8px;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+        }
+        .route-mode-btn {
+            appearance: none;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .route-mode-btn:hover { color: var(--text); }
+        .route-mode-btn.is-active {
+            background: var(--surface-2);
+            color: var(--text);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+        }
+        .dark .route-mode-btn.is-active {
+            background: rgba(148, 163, 184, 0.16);
+            color: #f8fafc;
+        }
+
+        .route-veh-editor-row {
+            padding: 9px 10px;
+            border-radius: 8px;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .route-veh-editor-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .route-veh-trailer-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding-top: 7px;
+            border-top: 1px dashed var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .route-tabs-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+        .route-tab-pill {
+            appearance: none;
+            border: 1px solid var(--border);
+            background: var(--surface-inset);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 11px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .route-tab-pill:hover { color: var(--text); border-color: var(--border-strong); }
+        .route-tab-pill.is-active {
+            background: var(--text);
+            color: var(--surface-1);
+            border-color: var(--text);
+        }
+
+        .route-chain-box {
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 10px 8px;
+        }
+        .route-chain-step {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .route-chain-city {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.25;
+        }
+        .route-chain-city.is-base {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .route-chain-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+        .route-chain-arrow {
+            color: var(--text-faint);
+            font-size: 13px;
+            padding: 1px 4px 0;
+            user-select: none;
+        }
+
+        .route-section-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-1);
+            padding: 12px 14px;
+        }
+        .route-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .route-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+        .route-vehicle-saved-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .route-plate-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 5px;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.04em;
+            font-variant-numeric: tabular-nums;
+        }
+        .route-trailer-tag {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 1px 5px;
-            border-radius: 5px;
-            font-size: 10px;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            font-size: 11.5px;
             font-weight: 600;
-            background: rgba(245, 158, 11, 0.10);
-            color: #b45309;
-            transition: opacity 0.2s ease;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
         }
-        .dark .agenda-travel-pill { color: var(--warning); }
-        .day-cell:hover .agenda-travel-pill { opacity: 0; }
+        .route-trailer-tag.is-none {
+            font-weight: 500;
+            color: var(--text-faint);
+            border-color: transparent;
+            background: transparent;
+            padding-right: 0;
+        }
 
         /* [AAA] Skeleton Loading */
         .skeleton {
@@ -2434,14 +2687,74 @@
                             </div>
                         </div>
 
-                        <div class="p-3 rounded-lg border border-amber-200 bg-amber-50">
-                            <label class="flex items-center gap-2 font-medium text-gray-800">
-                                <input type="checkbox" id="event-travel-enabled"> <i class="fas fa-truck" aria-hidden="true"></i> Reservar equipamentos para deslocamento
-                            </label>
-                            <div id="event-travel-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                                <div><label for="event-departure" class="block text-sm mb-1">Saída do depósito</label><input type="datetime-local" id="event-departure" class="form-input w-full px-3 py-2 rounded-md"></div>
-                                <div><label for="event-available" class="block text-sm mb-1">Disponíveis novamente em</label><input type="datetime-local" id="event-available" class="form-input w-full px-3 py-2 rounded-md"></div>
-                                <p class="text-xs text-gray-600 md:col-span-2">Os brinquedos ficam reservados continuamente entre a saída e a liberação, incluindo viagem, descarga e limpeza. Os valores do evento não são alterados.</p>
+                        <div id="event-route-box" class="route-form-box">
+                            <div class="flex items-center justify-between gap-2 flex-wrap mb-2.5">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                    <i class="fas fa-truck text-[11px]" aria-hidden="true"></i> Logística / Rota
+                                </span>
+                                <a href="./Veiculos.html" target="_blank" rel="noopener" class="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 underline">
+                                    Cadastrar na aba Veículos
+                                </a>
+                            </div>
+                            <div class="route-mode-seg" id="event-route-mode-seg" role="tablist" aria-label="Modo de rota">
+                                <button type="button" class="route-mode-btn is-active" data-route-mode="local">Evento local</button>
+                                <button type="button" class="route-mode-btn" data-route-mode="join">Entrar em rota</button>
+                                <button type="button" class="route-mode-btn" data-route-mode="new">Nova rota</button>
+                            </div>
+
+                            <!-- Entrar em rota existente -->
+                            <div id="event-route-join-panel" class="hidden mt-3 space-y-3">
+                                <div>
+                                    <label for="event-route-select" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Selecione a rota</label>
+                                    <select id="event-route-select" class="form-input w-full px-3 py-2 rounded-md text-sm"></select>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="event-join-departure" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Saída do galpão</label>
+                                        <input type="datetime-local" id="event-join-departure" class="form-input w-full px-3 py-2 rounded-md text-sm">
+                                    </div>
+                                    <div>
+                                        <label for="event-join-available" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Liberação no galpão</label>
+                                        <input type="datetime-local" id="event-join-available" class="form-input w-full px-3 py-2 rounded-md text-sm">
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Os brinquedos já embarcados nesta rota são compartilhados entre as paradas sem conflito de estoque. Ajuste a liberação caso esta parada estique o retorno.
+                                </p>
+                            </div>
+
+                            <!-- Criar nova rota -->
+                            <div id="event-route-new-panel" class="hidden mt-3 space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label for="event-departure" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Saída do galpão</label>
+                                        <input type="datetime-local" id="event-departure" class="form-input w-full px-3 py-2 rounded-md text-sm">
+                                    </div>
+                                    <div>
+                                        <label for="event-available" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Liberação no galpão</label>
+                                        <input type="datetime-local" id="event-available" class="form-input w-full px-3 py-2 rounded-md text-sm">
+                                    </div>
+                                    <div>
+                                        <label for="event-route-base" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Cidade-base (retorno)</label>
+                                        <input type="text" id="event-route-base" value="Anápolis-GO" placeholder="Anápolis-GO" class="form-input w-full px-3 py-2 rounded-md text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="pt-2 border-t border-slate-200/80 dark:border-slate-700/70">
+                                    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                                        <span class="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                            Veículos na rota <span class="text-slate-400 font-normal">(selecione da aba Veículos ou deixe em branco)</span>
+                                        </span>
+                                        <button type="button" id="form-add-route-vehicle-btn" class="text-xs font-semibold text-slate-700 dark:text-slate-200 hover:underline">
+                                            + Adicionar veículo
+                                        </button>
+                                    </div>
+                                    <div id="form-route-vehicles-list" class="space-y-2"></div>
+                                </div>
+
+                                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Os equipamentos ficam reservados continuamente entre a saída e a liberação. Os valores do evento não são alterados.
+                                </p>
                             </div>
                         </div>
 
@@ -3206,6 +3519,25 @@
     </div>
 
 
+    <!-- Modal de Visualização e Gestão de Rota -->
+    <div id="route-detail-modal" class="fixed inset-0 bg-black/50 backdrop-blur-[2px] hidden items-center justify-center z-50 p-3 md:p-5">
+        <div class="surface-raised w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" style="background:var(--surface-1);color:var(--text);">
+            <div class="flex items-center justify-between gap-3 px-5 py-4 border-b" style="border-color:var(--border);">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-truck text-xs" style="color:var(--text-muted);" aria-hidden="true"></i>
+                        <h3 id="route-modal-title" class="text-base font-bold truncate" style="color:var(--text);">Rota</h3>
+                    </div>
+                    <p id="route-modal-subtitle" class="text-xs mt-0.5 tabular-nums" style="color:var(--text-muted);"></p>
+                </div>
+                <button type="button" id="close-route-modal-btn" class="btn btn-ghost btn-icon btn-sm" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div id="route-modal-body" class="p-5 overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
+
     <script src="js/eventReservations.js"></script>
     <script type="module">
         import { api } from './js/api.js';
@@ -3400,10 +3732,14 @@
             // FIM: Estado do Wizard
 
             // Carrega dados da API
-            let toys = await api.getBrinquedos();
-            let companies = await api.getEmpresas(); // CORRIGIDO: agora busca do banco de dados
-            let events = await api.getEventos();
-            let clients = await api.getClientes();
+            let [toys, companies, events, clients, fleetVehicles, eventRoutes] = await Promise.all([
+                api.getBrinquedos(),
+                api.getEmpresas(),
+                api.getEventos(),
+                api.getClientes(),
+                api.getVeiculos(),
+                api.getRotas()
+            ]);
 
             // Log de debug para verificação de carregamento
             console.log('📦 Dados carregados da API:', {
@@ -3904,22 +4240,390 @@
                 }
             };
 
-            // --- FUNÇÃO PARA GESTÃO DE INVENTÁRIO COM HORÁRIO ---
+            // --- SISTEMA DE ROTAS E FROTA DE VEÍCULOS ---
+            let currentFormRouteMode = 'local'; // 'local' | 'join' | 'new'
+            let formNewRouteVehicles = [];
+            let pendingPreselectedRouteId = null;
+
+            const escHtml = (str) => String(str == null ? '' : str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+            const fmtShortDateTime = (dtStr) => {
+                if (!dtStr || dtStr.length < 16) return '—';
+                const [d, t] = dtStr.split('T');
+                const [, m, day] = d.split('-');
+                return `${day}/${m} às ${t.slice(0, 5)}`;
+            };
+
+            const fmtShortDateOnly = (iso) => {
+                if (!iso || iso.length < 10) return '—';
+                const [, m, day] = iso.slice(0, 10).split('-');
+                return `${day}/${m}`;
+            };
+
+            const formatMetersBR = (val) => {
+                if (val === undefined || val === null || val === '') return null;
+                const n = Number(val);
+                if (!Number.isFinite(n) || n <= 0) return null;
+                return n.toLocaleString('pt-BR', { minimumFractionDigits: n % 1 === 0 ? 1 : 1, maximumFractionDigits: 2 }) + ' m';
+            };
+
+            const formatTrailerSummary = (veh) => {
+                if (!veh || !veh.hasTrailer) return 'Sem carreta';
+                const kind = veh.trailerTrucada ? 'Trucada' : 'Não trucada';
+                const meters = formatMetersBR(veh.trailerLengthMeters);
+                return meters
+                    ? `Carreta acoplada · ${kind} · ${meters}`
+                    : `Carreta acoplada · ${kind}`;
+            };
+
+            const stopCityLabel = (ev) => {
+                const city = String(ev?.cidade || '').trim();
+                const uf = String(ev?.uf || '').trim().toUpperCase();
+                if (city && uf) return `${city}-${uf}`;
+                if (city) return city;
+                return ev?.clientName || 'Evento';
+            };
+
+            const isEventActiveForRoute = (e) =>
+                !!e && e.eventType !== 'meeting' && e.status !== 'cancelado' && e.paymentStatus !== 'Cancelado';
+
+            const refreshFleetAndRoutes = async () => {
+                try {
+                    const [freshVehicles, freshRoutes] = await Promise.all([
+                        api.getVeiculos(),
+                        api.getRotas()
+                    ]);
+                    fleetVehicles = Array.isArray(freshVehicles) ? freshVehicles : fleetVehicles;
+                    eventRoutes = Array.isArray(freshRoutes) ? freshRoutes : eventRoutes;
+                } catch (err) {
+                    console.warn('Falha ao atualizar veículos/rotas:', err);
+                }
+            };
+
+            // Consolida todas as rotas ativas (EventRoute + eventuais deslocamentos legados sem routeId)
+            const getAllUnifiedRoutes = () => {
+                const list = [];
+                const activeEvts = events.filter(isEventActiveForRoute);
+
+                for (const r of (eventRoutes || [])) {
+                    const stops = activeEvts
+                        .filter(e => e.routeId != null && Number(e.routeId) === Number(r.id))
+                        .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.startTime || '').localeCompare(b.startTime || ''));
+                    if (!stops.length) continue;
+                    list.push({
+                        key: `route:${r.id}`,
+                        id: r.id,
+                        isLegacy: false,
+                        baseCity: r.baseCity || 'Anápolis-GO',
+                        departureAt: r.departureAt,
+                        availableAt: r.availableAt,
+                        notes: r.notes || null,
+                        vehicles: Array.isArray(r.vehicles) ? r.vehicles : [],
+                        stops
+                    });
+                }
+
+                // Caso algum evento já tenha route aninhado mas eventRoutes ainda não estivesse sincronizado
+                const knownIds = new Set(list.map(x => x.id));
+                const extraGroups = new Map();
+                for (const e of activeEvts) {
+                    if (e.routeId != null && !knownIds.has(Number(e.routeId))) {
+                        const rid = Number(e.routeId);
+                        if (!extraGroups.has(rid)) extraGroups.set(rid, []);
+                        extraGroups.get(rid).push(e);
+                    }
+                }
+                for (const [rid, stops] of extraGroups) {
+                    stops.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.startTime || '').localeCompare(b.startTime || ''));
+                    const routeRef = stops.find(s => s.route)?.route;
+                    list.push({
+                        key: `route:${rid}`,
+                        id: rid,
+                        isLegacy: false,
+                        baseCity: routeRef?.baseCity || 'Anápolis-GO',
+                        departureAt: routeRef?.departureAt || stops[0].departureAt,
+                        availableAt: routeRef?.availableAt || stops[stops.length - 1].availableAt,
+                        notes: routeRef?.notes || null,
+                        vehicles: Array.isArray(routeRef?.vehicles) ? routeRef.vehicles : [],
+                        stops
+                    });
+                }
+
+                // Eventos legados que já tinham departureAt/availableAt sem routeId
+                for (const e of activeEvts) {
+                    if (e.routeId == null && e.departureAt && e.availableAt) {
+                        list.push({
+                            key: `legacy:${e.id}`,
+                            id: null,
+                            legacyEventId: e.id,
+                            isLegacy: true,
+                            baseCity: 'Anápolis-GO',
+                            departureAt: e.departureAt,
+                            availableAt: e.availableAt,
+                            notes: null,
+                            vehicles: [],
+                            stops: [e]
+                        });
+                    }
+                }
+
+                list.sort((a, b) => (a.departureAt || '').localeCompare(b.departureAt || '') || String(a.key).localeCompare(String(b.key)));
+                return list;
+            };
+
+            const getMonthNumberedRoutes = (year, month) => {
+                const mStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                const mEnd = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                const inMonth = getAllUnifiedRoutes().filter(r => {
+                    if (!r.departureAt || !r.availableAt) return false;
+                    return r.departureAt.slice(0, 10) <= mEnd && r.availableAt.slice(0, 10) >= mStart;
+                });
+                return inMonth.map((r, idx) => ({ ...r, displayNum: idx + 1 }));
+            };
+
+            const formatRouteLinearLabel = (routeObj) => {
+                const stopNames = [];
+                for (const s of (routeObj.stops || [])) {
+                    const lbl = stopCityLabel(s);
+                    if (stopNames[stopNames.length - 1] !== lbl) stopNames.push(lbl);
+                }
+                stopNames.push(routeObj.baseCity || 'Anápolis-GO');
+                return stopNames.join(' → ');
+            };
+
+            // Renderizador reutilizável da lista editável de veículos + carreta (Trucada/Não trucada + Metros)
+            const renderVehicleRowsEditor = (containerEl, stateArray) => {
+                if (!containerEl) return;
+                if (!stateArray.length) {
+                    containerEl.innerHTML = `
+                        <div class="text-xs py-2 px-3 rounded-md border border-dashed" style="border-color:var(--border);color:var(--text-muted);">
+                            Nenhum veículo selecionado (em branco). Clique em <strong>+ Adicionar veículo</strong> para escolher um veículo cadastrado.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const activeCatalog = (fleetVehicles || []).filter(v => v.active !== false);
+
+                containerEl.innerHTML = stateArray.map((row, idx) => {
+                    const selectedId = row.vehicleId != null ? String(row.vehicleId) : '';
+                    const hasLegacyOnly = !selectedId && row.vehicleName;
+                    let optionsHtml = '<option value="">— Selecione um veículo cadastrado —</option>';
+                    if (hasLegacyOnly) {
+                        optionsHtml += `<option value="__legacy__" selected>${escHtml(row.vehicleName)}${row.vehiclePlate ? ' — ' + escHtml(row.vehiclePlate) : ''}</option>`;
+                    }
+                    const seenCurrent = activeCatalog.some(v => String(v.id) === selectedId);
+                    if (selectedId && !seenCurrent) {
+                        const inactiveVeh = (fleetVehicles || []).find(v => String(v.id) === selectedId);
+                        if (inactiveVeh) {
+                            optionsHtml += `<option value="${inactiveVeh.id}" selected>${escHtml(inactiveVeh.name)}${inactiveVeh.plate ? ' — ' + escHtml(inactiveVeh.plate) : ''}</option>`;
+                        }
+                    }
+                    for (const v of activeCatalog) {
+                        const sel = String(v.id) === selectedId ? 'selected' : '';
+                        optionsHtml += `<option value="${v.id}" ${sel}>${escHtml(v.name)}${v.plate ? ' — ' + escHtml(v.plate) : ''}</option>`;
+                    }
+
+                    const trailerOpen = !!row.hasTrailer;
+                    const lengthVal = row.trailerLengthMeters != null && row.trailerLengthMeters !== '' ? row.trailerLengthMeters : '';
+
+                    return `
+                        <div class="route-veh-editor-row" data-vrow="${idx}">
+                            <div class="route-veh-editor-main">
+                                <select data-vfield="vehicleId" data-vidx="${idx}" class="form-input flex-1 min-w-[180px] px-2.5 py-1.5 rounded-md text-xs">
+                                    ${optionsHtml}
+                                </select>
+                                <label class="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer select-none px-1" style="color:var(--text);">
+                                    <input type="checkbox" data-vfield="hasTrailer" data-vidx="${idx}" ${trailerOpen ? 'checked' : ''}>
+                                    <span>Carreta acoplada</span>
+                                </label>
+                                <button type="button" data-vremove="${idx}" class="btn btn-ghost btn-icon btn-sm" style="width:28px;height:28px;" title="Remover veículo">
+                                    <i class="fas fa-xmark text-xs"></i>
+                                </button>
+                            </div>
+                            ${trailerOpen ? `
+                                <div class="route-veh-trailer-box">
+                                    <span class="font-medium">Dados da carreta:</span>
+                                    <select data-vfield="trailerTrucada" data-vidx="${idx}" class="form-input px-2.5 py-1 rounded-md text-xs" style="width:auto;min-width:155px;">
+                                        <option value="false" ${!row.trailerTrucada ? 'selected' : ''}>Não trucada (Simples)</option>
+                                        <option value="true" ${row.trailerTrucada ? 'selected' : ''}>Trucada</option>
+                                    </select>
+                                    <div class="inline-flex items-center gap-1.5">
+                                        <label class="text-xs">Tamanho:</label>
+                                        <input type="number" step="0.1" min="0.5" max="40" placeholder="Ex.: 5,0"
+                                            data-vfield="trailerLengthMeters" data-vidx="${idx}"
+                                            value="${escHtml(lengthVal)}"
+                                            class="form-input px-2 py-1 rounded-md text-xs text-right" style="width:82px;">
+                                        <span class="text-xs font-semibold">m</span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('') + (!activeCatalog.length ? `
+                    <div class="text-xs mt-1" style="color:var(--text-muted);">
+                        Ainda não há veículos cadastrados. <a href="./Veiculos.html" target="_blank" rel="noopener" class="underline font-semibold">Abrir aba Veículos</a> para cadastrar.
+                    </div>
+                ` : '');
+
+                containerEl.querySelectorAll('[data-vfield]').forEach(el => {
+                    const field = el.getAttribute('data-vfield');
+                    const i = parseInt(el.getAttribute('data-vidx'), 10);
+                    el.addEventListener('change', () => {
+                        if (!stateArray[i]) return;
+                        if (field === 'vehicleId') {
+                            const val = el.value;
+                            if (val && val !== '__legacy__') {
+                                const found = (fleetVehicles || []).find(v => String(v.id) === val);
+                                stateArray[i].vehicleId = parseInt(val, 10);
+                                stateArray[i].vehicleName = found ? found.name : '';
+                                stateArray[i].vehiclePlate = found ? (found.plate || null) : null;
+                            } else if (!val) {
+                                stateArray[i].vehicleId = null;
+                                stateArray[i].vehicleName = '';
+                                stateArray[i].vehiclePlate = null;
+                            }
+                        } else if (field === 'hasTrailer') {
+                            stateArray[i].hasTrailer = el.checked;
+                            if (!el.checked) {
+                                stateArray[i].trailerTrucada = false;
+                                stateArray[i].trailerLengthMeters = '';
+                            }
+                            renderVehicleRowsEditor(containerEl, stateArray);
+                        } else if (field === 'trailerTrucada') {
+                            stateArray[i].trailerTrucada = el.value === 'true';
+                        } else if (field === 'trailerLengthMeters') {
+                            stateArray[i].trailerLengthMeters = el.value;
+                        }
+                    });
+                    if (field === 'trailerLengthMeters') {
+                        el.addEventListener('input', () => {
+                            if (stateArray[i]) stateArray[i].trailerLengthMeters = el.value;
+                        });
+                    }
+                });
+
+                containerEl.querySelectorAll('[data-vremove]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = parseInt(btn.getAttribute('data-vremove'), 10);
+                        stateArray.splice(i, 1);
+                        renderVehicleRowsEditor(containerEl, stateArray);
+                    });
+                });
+            };
+
+            const setFormRouteMode = (mode, disabled = false) => {
+                currentFormRouteMode = ['local', 'join', 'new'].includes(mode) ? mode : 'local';
+                document.querySelectorAll('#event-route-mode-seg .route-mode-btn').forEach(btn => {
+                    const active = btn.getAttribute('data-route-mode') === currentFormRouteMode;
+                    btn.classList.toggle('is-active', active);
+                    btn.disabled = !!disabled;
+                });
+                document.getElementById('event-route-join-panel')?.classList.toggle('hidden', currentFormRouteMode !== 'join');
+                document.getElementById('event-route-new-panel')?.classList.toggle('hidden', currentFormRouteMode !== 'new');
+                ['event-route-select', 'event-join-departure', 'event-join-available', 'event-departure', 'event-available', 'event-route-base', 'form-add-route-vehicle-btn'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.disabled = !!disabled;
+                });
+            };
+
+            const populateJoinRouteSelect = (selectedRouteId = null) => {
+                const selectEl = document.getElementById('event-route-select');
+                if (!selectEl) return;
+                const realRoutes = getAllUnifiedRoutes().filter(r => !r.isLegacy && r.id != null);
+                if (!realRoutes.length) {
+                    selectEl.innerHTML = '<option value="">Nenhuma rota ativa cadastrada — use "Nova rota"</option>';
+                    document.getElementById('event-join-departure').value = '';
+                    document.getElementById('event-join-available').value = '';
+                    return;
+                }
+                selectEl.innerHTML = realRoutes.map((r, idx) => {
+                    const sel = selectedRouteId != null && Number(r.id) === Number(selectedRouteId) ? 'selected' : '';
+                    return `<option value="${r.id}" ${sel}>Rota · ${escHtml(formatRouteLinearLabel(r))} (${fmtShortDateOnly(r.departureAt)} a ${fmtShortDateOnly(r.availableAt)})</option>`;
+                }).join('');
+
+                const chosen = realRoutes.find(r => selectedRouteId != null && Number(r.id) === Number(selectedRouteId)) || realRoutes[0];
+                if (chosen) {
+                    selectEl.value = String(chosen.id);
+                    document.getElementById('event-join-departure').value = chosen.departureAt || '';
+                    document.getElementById('event-join-available').value = chosen.availableAt || '';
+                }
+            };
+
+            document.querySelectorAll('#event-route-mode-seg .route-mode-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (btn.disabled) return;
+                    const nextMode = btn.getAttribute('data-route-mode');
+                    if (nextMode === 'new' || nextMode === 'join') {
+                        await refreshFleetAndRoutes();
+                    }
+                    if (nextMode === 'join') {
+                        populateJoinRouteSelect(document.getElementById('event-route-select')?.value || null);
+                    } else if (nextMode === 'new') {
+                        renderVehicleRowsEditor(document.getElementById('form-route-vehicles-list'), formNewRouteVehicles);
+                    }
+                    setFormRouteMode(nextMode, false);
+                });
+            });
+
+            document.getElementById('event-route-select')?.addEventListener('change', (e) => {
+                const rid = parseInt(e.target.value, 10);
+                const found = getAllUnifiedRoutes().find(r => !r.isLegacy && Number(r.id) === rid);
+                if (found) {
+                    document.getElementById('event-join-departure').value = found.departureAt || '';
+                    document.getElementById('event-join-available').value = found.availableAt || '';
+                }
+            });
+
+            document.getElementById('form-add-route-vehicle-btn')?.addEventListener('click', async () => {
+                await refreshFleetAndRoutes();
+                formNewRouteVehicles.push({
+                    vehicleId: null,
+                    vehicleName: '',
+                    vehiclePlate: null,
+                    hasTrailer: false,
+                    trailerTrucada: false,
+                    trailerLengthMeters: ''
+                });
+                renderVehicleRowsEditor(document.getElementById('form-route-vehicles-list'), formNewRouteVehicles);
+            });
+
+            // --- FUNÇÃO PARA GESTÃO DE INVENTÁRIO COM HORÁRIO E ROTAS ---
             const getToyAvailabilityForDateTime = (toyId, dateStr, startTime, endTime, eventIdToIgnore = null) => {
                 const toy = toys.find(t => t.id === toyId);
                 if (!toy) return { total: 0, unavailable: 0, available: 0 };
-                const travel = document.getElementById('event-travel-enabled').checked;
-                const request = {
-                    start: travel && document.getElementById('event-departure').value || `${dateStr}T${startTime || '00:00'}`,
-                    end: travel && document.getElementById('event-available').value || `${dateStr}T${endTime || '24:00'}`
+                const others = events.filter(e => e.id !== eventIdToIgnore);
+                const localReq = {
+                    start: `${dateStr}T${startTime || '00:00'}`,
+                    end: `${dateStr}T${endTime || '24:00'}`
                 };
-                const unavailable = EventReservations.reserved(toyId, request, events.filter(e => e.id !== eventIdToIgnore));
+
+                let unavailable = 0;
+                if (currentFormRouteMode === 'join') {
+                    const rid = parseInt(document.getElementById('event-route-select')?.value || '', 10);
+                    const dep = document.getElementById('event-join-departure')?.value || localReq.start;
+                    const avail = document.getElementById('event-join-available')?.value || localReq.end;
+                    if (Number.isInteger(rid) && rid > 0) {
+                        const sameRoute = others.filter(e => Number(e.routeId) === rid);
+                        const external = others.filter(e => Number(e.routeId) !== rid);
+                        const intra = EventReservations.reserved(toyId, { ...localReq, routeId: rid }, sameRoute, { routeId: rid });
+                        const ext = EventReservations.reserved(toyId, { start: dep, end: avail }, external);
+                        unavailable = Math.max(intra, ext);
+                    } else {
+                        unavailable = EventReservations.reserved(toyId, localReq, others);
+                    }
+                } else if (currentFormRouteMode === 'new') {
+                    const dep = document.getElementById('event-departure')?.value || localReq.start;
+                    const avail = document.getElementById('event-available')?.value || localReq.end;
+                    unavailable = EventReservations.reserved(toyId, { start: dep, end: avail }, others);
+                } else {
+                    unavailable = EventReservations.reserved(toyId, localReq, others);
+                }
                 return { total: toy.quantity, unavailable, available: Math.max(0, toy.quantity - unavailable) };
             };
-
-            document.getElementById('event-travel-enabled').addEventListener('change', (e) => {
-                document.getElementById('event-travel-fields').classList.toggle('hidden', !e.target.checked);
-            });
 
             // --- FUNÇÕES DO WIZARD (NOVAS) ---
 
@@ -4908,9 +5612,37 @@
                     if (municipalConfirmed || municipalQuotes) {
                         eventInfoHtml += `<i class="fas fa-landmark municipality-day-icon" aria-hidden="true"></i>`;
                     }
-                    const travelCount = events.filter(e => EventReservations.travelOn(e, dateStr)).length;
-                    if (travelCount) eventInfoHtml += `<div class="agenda-travel-pill" title="${travelCount} deslocamento(s) de equipamentos"><i class="fas fa-truck" aria-hidden="true"></i><span>${travelCount}</span></div>`;
+                    const monthRoutes = getMonthNumberedRoutes(year, month);
+                    const routesOnCell = monthRoutes.filter(r => EventReservations.routeSpanOn(r, dateStr));
+                    if (routesOnCell.length > 0) {
+                        dayCell.classList.add('has-routes');
+                        dayCell.dataset.routeKeys = routesOnCell.map(r => r.key).join(',');
+                        const numsHtml = routesOnCell.map(r =>
+                            `<button type="button" class="route-num-btn" data-route-key="${escHtml(r.key)}" title="Rota ${r.displayNum}: ${escHtml(formatRouteLinearLabel(r))}">${r.displayNum}</button>`
+                        ).join('');
+                        eventInfoHtml += `<div class="agenda-routes-bar"><i class="fas fa-truck route-truck-icon" aria-hidden="true"></i>${numsHtml}</div>`;
+                    }
                     dayCell.innerHTML = `<span class="day-number">${day}</span>${eventInfoHtml}`;
+                    dayCell.querySelectorAll('.route-num-btn').forEach(rBtn => {
+                        const rKey = rBtn.getAttribute('data-route-key');
+                        rBtn.addEventListener('mouseenter', () => {
+                            dayCell.classList.add('is-hovering-route');
+                            rBtn.classList.add('is-active');
+                            calendarBody.querySelectorAll('.day-cell[data-route-keys]').forEach(c => {
+                                const keys = (c.dataset.routeKeys || '').split(',');
+                                if (keys.includes(rKey)) c.classList.add('is-route-highlight');
+                            });
+                        });
+                        rBtn.addEventListener('mouseleave', () => {
+                            dayCell.classList.remove('is-hovering-route');
+                            rBtn.classList.remove('is-active');
+                            calendarBody.querySelectorAll('.day-cell.is-route-highlight').forEach(c => c.classList.remove('is-route-highlight'));
+                        });
+                        rBtn.addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            openRouteDetailModal(rKey, dateStr);
+                        });
+                    });
                     dayCell.addEventListener('click', () => handleDayClick(dateStr));
                     calendarBody.appendChild(dayCell);
                 }
@@ -5038,32 +5770,502 @@
                 showToast('Aviso removido.', false);
             });
 
+            const routeDetailModal = document.getElementById('route-detail-modal');
+            const closeRouteModalBtn = document.getElementById('close-route-modal-btn');
+            closeRouteModalBtn?.addEventListener('click', () => hideModal(routeDetailModal));
+            routeDetailModal?.addEventListener('click', (e) => {
+                if (e.target === routeDetailModal) hideModal(routeDetailModal);
+            });
+
+            // Promove um evento legado (departureAt/availableAt sem routeId) para EventRoute real quando necessário
+            const ensureRealRoute = async (routeObj, vehiclesOverride = null) => {
+                if (!routeObj.isLegacy && routeObj.id != null) return routeObj.id;
+                const legacyEv = events.find(e => e.id === routeObj.legacyEventId);
+                if (!legacyEv) throw new Error('Evento da rota não encontrado.');
+                const created = await api.criarRota({
+                    baseCity: routeObj.baseCity || 'Anápolis-GO',
+                    departureAt: routeObj.departureAt,
+                    availableAt: routeObj.availableAt,
+                    vehicles: vehiclesOverride || []
+                });
+                if (!created || !created.ok || !created.data) {
+                    throw new Error(created?.error || 'Não foi possível criar a rota.');
+                }
+                const newRouteId = created.data.id;
+                const linkRes = await api.salvarEvento(buildEventPayload(legacyEv, { routeId: newRouteId }));
+                if (!linkRes || !linkRes.success) {
+                    throw new Error(linkRes?.error || 'Não foi possível vincular o evento à rota.');
+                }
+                const idx = events.findIndex(e => e.id === legacyEv.id);
+                if (idx !== -1) events[idx] = { ...events[idx], ...linkRes.data, routeId: newRouteId };
+                await refreshFleetAndRoutes();
+                return newRouteId;
+            };
+
+            const openRouteDetailModal = async (initialRouteKey, refDateStr = null) => {
+                await refreshFleetAndRoutes();
+                const refYear = refDateStr ? parseInt(refDateStr.slice(0, 4), 10) : currentDate.getFullYear();
+                const refMonth = refDateStr ? (parseInt(refDateStr.slice(5, 7), 10) - 1) : currentDate.getMonth();
+
+                let activeKey = initialRouteKey;
+                let editingVehicles = false;
+                let editingWindow = false;
+                let modalVehiclesState = [];
+
+                const renderModalContent = () => {
+                    const monthRoutes = getMonthNumberedRoutes(refYear, refMonth);
+                    let routeObj = monthRoutes.find(r => r.key === activeKey);
+                    if (!routeObj && monthRoutes.length) {
+                        routeObj = monthRoutes[0];
+                        activeKey = routeObj.key;
+                    }
+                    if (!routeObj) {
+                        hideModal(routeDetailModal);
+                        renderAll();
+                        return;
+                    }
+
+                    const daysReserved = EventReservations.days(
+                        routeObj.departureAt.slice(0, 10),
+                        routeObj.availableAt.slice(0, 10)
+                    ).length;
+
+                    document.getElementById('route-modal-title').textContent = `Rota ${routeObj.displayNum}`;
+                    document.getElementById('route-modal-subtitle').textContent =
+                        `Saída (${routeObj.baseCity || 'Anápolis-GO'}): ${fmtShortDateTime(routeObj.departureAt)} · Liberação: ${fmtShortDateTime(routeObj.availableAt)} · ${daysReserved} ${daysReserved === 1 ? 'dia reservado' : 'dias reservados'}`;
+
+                    const tabsHtml = monthRoutes.length > 1
+                        ? `<div class="route-tabs-bar">${monthRoutes.map(r => `
+                            <button type="button" class="route-tab-pill ${r.key === routeObj.key ? 'is-active' : ''}" data-switch-route="${escHtml(r.key)}">
+                                Rota ${r.displayNum}
+                            </button>`).join('')}</div>`
+                        : '';
+
+                    // Trajeto linear sutil: Parada 1 -> Parada 2 -> Cidade-base (retorno)
+                    const chainParts = [];
+                    for (const s of routeObj.stops) {
+                        const cityLbl = stopCityLabel(s);
+                        const dateRange = s.endDate && s.endDate > s.date
+                            ? `${fmtShortDateOnly(s.date)} a ${fmtShortDateOnly(s.endDate)}`
+                            : fmtShortDateOnly(s.date);
+                        const timeRange = s.startTime && s.endTime
+                            ? `${s.startTime}–${s.endTime}`
+                            : (s.startTime || '');
+                        chainParts.push(`
+                            <div class="route-chain-step">
+                                <span class="route-chain-city">${escHtml(cityLbl)}</span>
+                                <span class="route-chain-sub">${escHtml(dateRange)}${timeRange ? ' · ' + escHtml(timeRange) : ''}</span>
+                            </div>
+                        `);
+                    }
+                    chainParts.push(`
+                        <div class="route-chain-step">
+                            <span class="route-chain-city is-base">${escHtml(routeObj.baseCity || 'Anápolis-GO')}</span>
+                            <span class="route-chain-sub">Retorno ${escHtml(fmtShortDateTime(routeObj.availableAt))}</span>
+                        </div>
+                    `);
+                    const chainHtml = `<div class="route-chain-box">${chainParts.join('<span class="route-chain-arrow">→</span>')}</div>`;
+
+                    // Editor opcional da janela de saída/liberação e cidade-base
+                    const windowSectionHtml = editingWindow ? `
+                        <div class="route-section-card space-y-3">
+                            <div class="route-section-head">
+                                <span class="route-section-title">Horários e cidade-base da rota</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs mb-1" style="color:var(--text-muted);">Saída do galpão</label>
+                                    <input type="datetime-local" id="rm-edit-dep" value="${escHtml(routeObj.departureAt)}" class="form-input w-full px-2.5 py-1.5 rounded-md text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs mb-1" style="color:var(--text-muted);">Liberação no galpão</label>
+                                    <input type="datetime-local" id="rm-edit-avail" value="${escHtml(routeObj.availableAt)}" class="form-input w-full px-2.5 py-1.5 rounded-md text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs mb-1" style="color:var(--text-muted);">Cidade-base (retorno)</label>
+                                    <input type="text" id="rm-edit-base" value="${escHtml(routeObj.baseCity || 'Anápolis-GO')}" class="form-input w-full px-2.5 py-1.5 rounded-md text-xs">
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" id="rm-cancel-window-btn" class="btn btn-ghost btn-sm">Cancelar</button>
+                                <button type="button" id="rm-save-window-btn" class="btn btn-primary btn-sm">Salvar horários</button>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="flex justify-end -mt-2">
+                            <button type="button" id="rm-open-window-btn" class="text-xs underline" style="color:var(--text-muted);">
+                                Ajustar saída, retorno ou cidade-base
+                            </button>
+                        </div>
+                    `;
+
+                    // Seção: Veículos na rota (visualização limpa com dados da carreta visíveis OU modo edição)
+                    let vehiclesSectionHtml = '';
+                    if (editingVehicles) {
+                        vehiclesSectionHtml = `
+                            <div class="route-section-card">
+                                <div class="route-section-head">
+                                    <span class="route-section-title">Veículos na rota</span>
+                                    <div class="flex items-center gap-3">
+                                        <a href="./Veiculos.html" target="_blank" rel="noopener" class="text-xs underline" style="color:var(--text-muted);">Aba Veículos</a>
+                                        <button type="button" id="rm-add-veh-btn" class="text-xs font-semibold hover:underline" style="color:var(--text);">+ Adicionar veículo</button>
+                                    </div>
+                                </div>
+                                <div id="rm-vehicles-editor" class="space-y-2 mb-3"></div>
+                                <div class="flex items-center justify-between gap-2 flex-wrap pt-2 border-t" style="border-color:var(--border);">
+                                    <button type="button" id="rm-clear-veh-btn" class="text-xs underline" style="color:var(--text-muted);">Deixar em branco</button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" id="rm-cancel-veh-btn" class="btn btn-ghost btn-sm">Cancelar</button>
+                                        <button type="button" id="rm-save-veh-btn" class="btn btn-primary btn-sm">Salvar veículos</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        const savedVehicles = routeObj.vehicles || [];
+                        const listHtml = savedVehicles.length
+                            ? `<div class="space-y-2">${savedVehicles.map(v => `
+                                <div class="route-vehicle-saved-row">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <i class="fas fa-truck text-xs" style="color:var(--text-muted);" aria-hidden="true"></i>
+                                        <span class="font-semibold truncate" style="color:var(--text);">${escHtml(v.vehicleName)}</span>
+                                        ${v.vehiclePlate ? `<span class="route-plate-tag">${escHtml(v.vehiclePlate)}</span>` : ''}
+                                    </div>
+                                    <span class="route-trailer-tag ${v.hasTrailer ? '' : 'is-none'}">
+                                        ${escHtml(formatTrailerSummary(v))}
+                                    </span>
+                                </div>
+                            `).join('')}</div>`
+                            : `<p class="text-xs" style="color:var(--text-muted);">Nenhum veículo informado.</p>`;
+
+                        vehiclesSectionHtml = `
+                            <div class="route-section-card">
+                                <div class="route-section-head">
+                                    <span class="route-section-title">Veículos na rota</span>
+                                    <button type="button" id="rm-edit-veh-btn" class="text-xs font-semibold hover:underline" style="color:var(--text);">
+                                        ${savedVehicles.length ? 'Editar' : 'Selecionar veículo'}
+                                    </button>
+                                </div>
+                                ${listHtml}
+                            </div>
+                        `;
+                    }
+
+                    // Seção: Eventos na rota + botão "+ Adicionar evento à rota"
+                    const stopsHtml = routeObj.stops.map((ev, idx) => {
+                        const codeTag = ev.code ? `#${ev.code} · ` : '';
+                        const dateTxt = ev.endDate && ev.endDate > ev.date
+                            ? `${fmtDateBR(ev.date)} a ${fmtDateBR(ev.endDate)}`
+                            : fmtDateBR(ev.date);
+                        const timeTxt = ev.startTime && ev.endTime ? ` · ${ev.startTime} às ${ev.endTime}` : '';
+                        return `
+                            <div class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg border" style="background:var(--surface-inset);border-color:var(--border);">
+                                <div class="min-w-0">
+                                    <div class="text-xs font-semibold truncate" style="color:var(--text);">
+                                        ${idx + 1}. ${escHtml(stopCityLabel(ev))} <span class="font-normal" style="color:var(--text-muted);">— ${escHtml(codeTag)}${escHtml(ev.clientName || 'Cliente')}</span>
+                                    </div>
+                                    <div class="text-[11px] tabular-nums" style="color:var(--text-muted);">${escHtml(dateTxt)}${escHtml(timeTxt)}</div>
+                                </div>
+                                <button type="button" data-open-stop="${ev.id}" class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:12px;">
+                                    Abrir
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+
+                    const eventsSectionHtml = `
+                        <div class="route-section-card">
+                            <div class="route-section-head">
+                                <span class="route-section-title">Eventos na rota (${routeObj.stops.length})</span>
+                                <button type="button" id="rm-add-stop-btn" class="text-xs font-semibold hover:underline" style="color:var(--text);">
+                                    + Adicionar evento à rota
+                                </button>
+                            </div>
+                            <div class="space-y-2">${stopsHtml}</div>
+                        </div>
+                    `;
+
+                    // Seção: Carga embarcada no veículo
+                    const cargoMap = EventReservations.routeCargo(routeObj.stops);
+                    const cargoItems = Object.entries(cargoMap)
+                        .map(([tid, qty]) => {
+                            const toyObj = toys.find(t => String(t.id) === String(tid));
+                            return { name: toyObj ? toyObj.name : `Item #${tid}`, qty };
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                    const cargoHtml = cargoItems.length
+                        ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">${cargoItems.map(it => `
+                            <div class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-md border text-xs" style="background:var(--surface-inset);border-color:var(--border);">
+                                <span class="truncate" style="color:var(--text);">${escHtml(it.name)}</span>
+                                <span class="font-bold tabular-nums shrink-0" style="color:var(--text-muted);">×${it.qty}</span>
+                            </div>
+                        `).join('')}</div>`
+                        : `<p class="text-xs" style="color:var(--text-muted);">Nenhum equipamento listado nos eventos desta rota.</p>`;
+
+                    const cargoSectionHtml = `
+                        <div class="route-section-card">
+                            <div class="route-section-head">
+                                <span class="route-section-title">Carga embarcada no veículo</span>
+                                <span class="text-[11px] tabular-nums" style="color:var(--text-muted);">${cargoItems.reduce((s, x) => s + x.qty, 0)} un.</span>
+                            </div>
+                            ${cargoHtml}
+                        </div>
+                    `;
+
+                    const footerHtml = `
+                        <div class="flex items-center justify-between pt-1">
+                            <button type="button" id="rm-dissolve-route-btn" class="text-xs underline" style="color:var(--danger);">
+                                Desfazer rota
+                            </button>
+                            <button type="button" id="rm-close-bottom-btn" class="btn btn-secondary btn-sm">
+                                Fechar
+                            </button>
+                        </div>
+                    `;
+
+                    const bodyEl = document.getElementById('route-modal-body');
+                    bodyEl.innerHTML = tabsHtml + chainHtml + windowSectionHtml + vehiclesSectionHtml + eventsSectionHtml + cargoSectionHtml + footerHtml;
+
+                    // Listeners internos do modal
+                    bodyEl.querySelectorAll('[data-switch-route]').forEach(b => {
+                        b.addEventListener('click', () => {
+                            activeKey = b.getAttribute('data-switch-route');
+                            editingVehicles = false;
+                            editingWindow = false;
+                            renderModalContent();
+                        });
+                    });
+
+                    bodyEl.querySelector('#rm-open-window-btn')?.addEventListener('click', () => {
+                        editingWindow = true;
+                        renderModalContent();
+                    });
+                    bodyEl.querySelector('#rm-cancel-window-btn')?.addEventListener('click', () => {
+                        editingWindow = false;
+                        renderModalContent();
+                    });
+                    bodyEl.querySelector('#rm-save-window-btn')?.addEventListener('click', async (ev) => {
+                        const btn = ev.currentTarget;
+                        const nextDep = bodyEl.querySelector('#rm-edit-dep')?.value || '';
+                        const nextAvail = bodyEl.querySelector('#rm-edit-avail')?.value || '';
+                        const nextBase = (bodyEl.querySelector('#rm-edit-base')?.value || '').trim() || 'Anápolis-GO';
+                        btn.disabled = true;
+                        try {
+                            const realId = await ensureRealRoute(routeObj);
+                            const res = await api.atualizarRota(realId, {
+                                departureAt: nextDep,
+                                availableAt: nextAvail,
+                                baseCity: nextBase
+                            });
+                            if (!res || !res.ok) throw new Error(res?.error || 'Erro ao salvar horários da rota.');
+                            await refreshFleetAndRoutes();
+                            events.forEach(e => {
+                                if (Number(e.routeId) === Number(realId)) {
+                                    e.departureAt = nextDep;
+                                    e.availableAt = nextAvail;
+                                }
+                            });
+                            activeKey = `route:${realId}`;
+                            editingWindow = false;
+                            renderAll();
+                            if (selectedDate) renderDayEvents(selectedDate);
+                            renderModalContent();
+                            showToast('Horários da rota atualizados!', false);
+                        } catch (err) {
+                            showToast(err.message || 'Erro ao atualizar rota.', true);
+                        } finally {
+                            btn.disabled = false;
+                        }
+                    });
+
+                    if (editingVehicles) {
+                        const editorContainer = bodyEl.querySelector('#rm-vehicles-editor');
+                        renderVehicleRowsEditor(editorContainer, modalVehiclesState);
+
+                        bodyEl.querySelector('#rm-add-veh-btn')?.addEventListener('click', async () => {
+                            await refreshFleetAndRoutes();
+                            modalVehiclesState.push({
+                                vehicleId: null,
+                                vehicleName: '',
+                                vehiclePlate: null,
+                                hasTrailer: false,
+                                trailerTrucada: false,
+                                trailerLengthMeters: ''
+                            });
+                            renderVehicleRowsEditor(editorContainer, modalVehiclesState);
+                        });
+                        bodyEl.querySelector('#rm-clear-veh-btn')?.addEventListener('click', () => {
+                            modalVehiclesState.length = 0;
+                            renderVehicleRowsEditor(editorContainer, modalVehiclesState);
+                        });
+                        bodyEl.querySelector('#rm-cancel-veh-btn')?.addEventListener('click', () => {
+                            editingVehicles = false;
+                            renderModalContent();
+                        });
+                        bodyEl.querySelector('#rm-save-veh-btn')?.addEventListener('click', async (ev) => {
+                            const btn = ev.currentTarget;
+                            btn.disabled = true;
+                            try {
+                                const realId = await ensureRealRoute(routeObj, modalVehiclesState);
+                                const res = await api.atualizarRota(realId, { vehicles: modalVehiclesState });
+                                if (!res || !res.ok) throw new Error(res?.error || 'Erro ao salvar veículos da rota.');
+                                await refreshFleetAndRoutes();
+                                activeKey = `route:${realId}`;
+                                editingVehicles = false;
+                                renderAll();
+                                if (selectedDate) renderDayEvents(selectedDate);
+                                renderModalContent();
+                                showToast('Veículos da rota salvos!', false);
+                            } catch (err) {
+                                showToast(err.message || 'Erro ao salvar veículos.', true);
+                            } finally {
+                                btn.disabled = false;
+                            }
+                        });
+                    } else {
+                        bodyEl.querySelector('#rm-edit-veh-btn')?.addEventListener('click', async () => {
+                            await refreshFleetAndRoutes();
+                            modalVehiclesState = (routeObj.vehicles || []).map(v => ({
+                                vehicleId: v.vehicleId ?? null,
+                                vehicleName: v.vehicleName || '',
+                                vehiclePlate: v.vehiclePlate || null,
+                                hasTrailer: !!v.hasTrailer,
+                                trailerTrucada: !!v.trailerTrucada,
+                                trailerLengthMeters: v.trailerLengthMeters ?? ''
+                            }));
+                            if (!modalVehiclesState.length) {
+                                modalVehiclesState.push({
+                                    vehicleId: null,
+                                    vehicleName: '',
+                                    vehiclePlate: null,
+                                    hasTrailer: false,
+                                    trailerTrucada: false,
+                                    trailerLengthMeters: ''
+                                });
+                            }
+                            editingVehicles = true;
+                            renderModalContent();
+                        });
+                    }
+
+                    bodyEl.querySelectorAll('[data-open-stop]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const evId = parseFloat(btn.getAttribute('data-open-stop'));
+                            const targetEv = events.find(e => e.id === evId);
+                            if (targetEv) {
+                                hideModal(routeDetailModal);
+                                showEventModal(targetEv.date, targetEv);
+                            }
+                        });
+                    });
+
+                    bodyEl.querySelector('#rm-add-stop-btn')?.addEventListener('click', async (ev) => {
+                        const btn = ev.currentTarget;
+                        btn.disabled = true;
+                        try {
+                            const realId = await ensureRealRoute(routeObj);
+                            hideModal(routeDetailModal);
+                            const defaultDate = refDateStr || routeObj.stops[routeObj.stops.length - 1]?.date || routeObj.departureAt.slice(0, 10);
+                            pendingPreselectedRouteId = realId;
+                            showEventModal(defaultDate, null);
+                        } catch (err) {
+                            showToast(err.message || 'Não foi possível preparar a rota.', true);
+                        } finally {
+                            btn.disabled = false;
+                        }
+                    });
+
+                    bodyEl.querySelector('#rm-dissolve-route-btn')?.addEventListener('click', async () => {
+                        const ok = window.UI?.confirm
+                            ? await window.UI.confirm({
+                                title: 'Desfazer rota',
+                                message: 'Deseja desfazer esta rota? Os eventos continuarão salvos normalmente na Agenda, apenas deixarão de reservar deslocamento em rota.',
+                                confirmText: 'Desfazer rota',
+                                cancelText: 'Cancelar',
+                                danger: true
+                            })
+                            : confirm('Deseja desfazer esta rota? Os eventos continuarão salvos na Agenda.');
+                        if (!ok) return;
+
+                        try {
+                            if (routeObj.isLegacy) {
+                                const legEv = events.find(e => e.id === routeObj.legacyEventId);
+                                if (legEv) {
+                                    const saved = await api.salvarEvento(buildEventPayload(legEv, { routeId: null, departureAt: null, availableAt: null }));
+                                    if (saved?.success && saved.data) {
+                                        const idx = events.findIndex(x => x.id === legEv.id);
+                                        if (idx !== -1) events[idx] = saved.data;
+                                    }
+                                }
+                            } else {
+                                const delRes = await api.deletarRota(routeObj.id, true);
+                                if (!delRes || !delRes.ok) throw new Error(delRes?.error || 'Erro ao desfazer rota.');
+                                events.forEach(e => {
+                                    if (Number(e.routeId) === Number(routeObj.id)) {
+                                        e.routeId = null;
+                                        e.route = null;
+                                        e.departureAt = null;
+                                        e.availableAt = null;
+                                    }
+                                });
+                            }
+                            await refreshFleetAndRoutes();
+                            hideModal(routeDetailModal);
+                            renderAll();
+                            if (selectedDate) renderDayEvents(selectedDate);
+                            showToast('Rota desfeita com sucesso.', false);
+                        } catch (err) {
+                            showToast(err.message || 'Erro ao desfazer rota.', true);
+                        }
+                    });
+
+                    bodyEl.querySelector('#rm-close-bottom-btn')?.addEventListener('click', () => hideModal(routeDetailModal));
+                };
+
+                renderModalContent();
+                showModal(routeDetailModal);
+            };
+
             const renderDayEvents = (dateStr) => {
                 const dayEvents = events.filter(e => eventOccursOnDate(e, dateStr));
                 dayEventsList.innerHTML = '';
-                const travelEvents = events.filter(e => EventReservations.travelOn(e, dateStr));
-                for (const event of travelEvents) {
+
+                const dYear = parseInt(dateStr.slice(0, 4), 10);
+                const dMonth = parseInt(dateStr.slice(5, 7), 10) - 1;
+                const routesOnDay = getMonthNumberedRoutes(dYear, dMonth).filter(r => EventReservations.routeSpanOn(r, dateStr));
+
+                for (const r of routesOnDay) {
                     const card = document.createElement('div');
-                    card.className = 'p-3 rounded-lg border border-amber-300 bg-amber-50 text-amber-900';
-                    const icon = document.createElement('i');
-                    icon.className = 'fas fa-truck mr-2';
-                    icon.setAttribute('aria-hidden', 'true');
-                    card.appendChild(icon);
-                    const text = document.createElement('span');
-                    const fmt = value => value.slice(0, 10).split('-').reverse().join('/') + ' às ' + value.slice(11, 16);
-                    text.textContent = `Deslocamento — ${event.clientName || 'Evento'} · Saída: ${fmt(event.departureAt)} · Liberação: ${fmt(event.availableAt)}`;
-                    card.appendChild(text);
-                    const edit = document.createElement('button');
-                    edit.type = 'button';
-                    edit.className = 'block mt-2 underline text-sm';
-                    edit.textContent = 'Abrir evento';
-                    edit.addEventListener('click', () => showEventModal(event.date, event));
-                    card.appendChild(edit);
+                    card.className = 'p-3 rounded-lg border flex items-center justify-between gap-3';
+                    card.style.background = 'var(--surface-inset)';
+                    card.style.borderColor = 'var(--border)';
+
+                    const vehSummary = (r.vehicles && r.vehicles.length)
+                        ? r.vehicles.map(v => `${v.vehicleName}${v.vehiclePlate ? ' (' + v.vehiclePlate + ')' : ''}`).join(', ')
+                        : null;
+
+                    card.innerHTML = `
+                        <div class="min-w-0 text-xs">
+                            <div class="font-semibold flex items-center gap-1.5" style="color:var(--text);">
+                                <i class="fas fa-truck text-[11px]" style="color:var(--text-muted);" aria-hidden="true"></i>
+                                <span>Rota ${r.displayNum}</span>
+                                <span class="font-normal truncate" style="color:var(--text-muted);">· ${escHtml(formatRouteLinearLabel(r))}</span>
+                            </div>
+                            <div class="mt-0.5 tabular-nums" style="color:var(--text-muted);">
+                                Saída ${escHtml(fmtShortDateTime(r.departureAt))} · Liberação ${escHtml(fmtShortDateTime(r.availableAt))}${vehSummary ? ' · ' + escHtml(vehSummary) : ''}
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm shrink-0" style="padding:4px 10px;font-size:12px;">
+                            Ver rota
+                        </button>
+                    `;
+                    card.querySelector('button').addEventListener('click', () => openRouteDetailModal(r.key, dateStr));
                     dayEventsList.appendChild(card);
                 }
 
                 if (dayEvents.length === 0) {
-                    if (!travelEvents.length) dayEventsList.innerHTML = '<p class="text-sm text-gray-500">Nada agendado para este dia.</p>';
+                    if (!routesOnDay.length) dayEventsList.innerHTML = '<p class="text-sm text-gray-500">Nada agendado para este dia.</p>';
                 } else {
                     dayEvents.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).forEach(event => {
                         // === Card de REUNIÃO ===
@@ -6771,6 +7973,7 @@
                 municipalityStatus: event.municipalityStatus || null,
                 date: event.date,
                 endDate: event.endDate || null,
+                routeId: event.routeId ?? null,
                 departureAt: event.departureAt || null,
                 availableAt: event.availableAt || null,
                 excludedDates: event.excludedDates,
@@ -8138,8 +9341,9 @@
                     // 1. Chama a API para deletar do banco de dados
                     await api.deletarEvento(eventId);
 
-                    // 2. Remove da lista local
+                    // 2. Remove da lista local e atualiza rotas
                     events = events.filter(e => e.id !== eventId);
+                    await refreshFleetAndRoutes();
 
                     // 3. Sync deletion with CRM
                     let crmClients = JSON.parse(localStorage.getItem('crmToyClients_v8')) || [];
@@ -8620,10 +9824,38 @@
                     eventData.price = 0;
                 }
 
-                const travelEnabled = document.getElementById('event-travel-enabled').checked;
-                eventData.departureAt = travelEnabled ? document.getElementById('event-departure').value : null;
-                eventData.availableAt = travelEnabled ? document.getElementById('event-available').value : null;
-                const reservationError = EventReservations.validate(eventData) || EventReservations.conflict(eventData, events.filter(e => e.id !== eventId), toys);
+                if (currentFormRouteMode === 'join') {
+                    const chosenRouteId = parseInt(document.getElementById('event-route-select')?.value || '', 10);
+                    if (!Number.isInteger(chosenRouteId) || chosenRouteId <= 0) {
+                        showToast('Selecione uma rota existente ou escolha "Nova rota".', true);
+                        return;
+                    }
+                    eventData.routeId = chosenRouteId;
+                    eventData.departureAt = document.getElementById('event-join-departure')?.value || null;
+                    eventData.availableAt = document.getElementById('event-join-available')?.value || null;
+                } else if (currentFormRouteMode === 'new') {
+                    eventData.routeId = null;
+                    eventData.departureAt = document.getElementById('event-departure')?.value || null;
+                    eventData.availableAt = document.getElementById('event-available')?.value || null;
+                    eventData.newRoute = {
+                        baseCity: (document.getElementById('event-route-base')?.value || '').trim() || 'Anápolis-GO',
+                        departureAt: eventData.departureAt,
+                        availableAt: eventData.availableAt,
+                        vehicles: formNewRouteVehicles
+                    };
+                } else {
+                    eventData.routeId = null;
+                    eventData.departureAt = null;
+                    eventData.availableAt = null;
+                }
+
+                const otherEvtsForCheck = events.filter(e => e.id !== eventId).map(oe => {
+                    if (eventData.routeId && Number(oe.routeId) === Number(eventData.routeId)) {
+                        return { ...oe, departureAt: eventData.departureAt, availableAt: eventData.availableAt };
+                    }
+                    return oe;
+                });
+                const reservationError = EventReservations.validate(eventData) || EventReservations.conflict(eventData, otherEvtsForCheck, toys);
                 if (reservationError) { showToast(reservationError, true); return; }
 
                 // Feedback visual imediato
@@ -8663,18 +9895,29 @@
                     } else {
                         events.push(eventForUI);
                     }
+                    // Se o evento entrou/atualizou janela de uma rota, sincroniza paradas irmãs e recarrega rotas
+                    if (eventForUI.routeId != null) {
+                        events.forEach(ev => {
+                            if (ev.id !== eventForUI.id && Number(ev.routeId) === Number(eventForUI.routeId)) {
+                                ev.departureAt = eventForUI.departureAt;
+                                ev.availableAt = eventForUI.availableAt;
+                            }
+                        });
+                    }
+                    await refreshFleetAndRoutes();
 
                     // Sincroniza com CRM (mantido local por enquanto)
                     syncEventToCRM(eventForUI);
 
                     hideModal(eventModal);
                     renderAll();
+                    if (selectedDate) renderDayEvents(selectedDate);
                     checkBirthdayNotifications();
                     showToast(savedEvent?.code != null ? `Evento #${savedEvent.code} salvo na nuvem com sucesso!` : 'Evento salvo na nuvem com sucesso!', false);
 
                 } catch (error) {
                     console.error("Erro ao salvar evento:", error);
-                    showToast('Erro ao salvar na nuvem. Verifique sua conexão e tente novamente.', true);
+                    showToast(error?.message || 'Erro ao salvar na nuvem. Verifique sua conexão e tente novamente.', true);
                 } finally {
                     saveBtn.textContent = originalText;
                     saveBtn.disabled = false;
@@ -8730,10 +9973,11 @@
                 document.getElementById('event-id').value = '';
                 document.getElementById('event-end-date').value = '';
                 renderMultiDaySelector([]);
-                document.getElementById('event-travel-enabled').checked = false;
-                document.getElementById('event-travel-fields').classList.add('hidden');
+                formNewRouteVehicles = [];
                 document.getElementById('event-departure').value = '';
                 document.getElementById('event-available').value = '';
+                document.getElementById('event-route-base').value = 'Anápolis-GO';
+                setFormRouteMode('local', false);
 
                 // Etapa 1: Prefeitura + Cliente (PF / PJ)
                 setMunicipalityForm(
@@ -8916,13 +10160,26 @@
                 // Padrão para novos eventos; sobrescrito abaixo ao editar um existente.
                 setRevenueMode('perDay');
                 eventForm.reset();
-                document.getElementById('event-travel-enabled').checked = !!eventToEdit?.departureAt;
-                document.getElementById('event-travel-enabled').disabled = !!dayEditDate;
-                document.getElementById('event-travel-fields').classList.toggle('hidden', !eventToEdit?.departureAt);
+                formNewRouteVehicles = [];
                 document.getElementById('event-departure').value = eventToEdit?.departureAt || '';
                 document.getElementById('event-available').value = eventToEdit?.availableAt || '';
-                document.getElementById('event-departure').disabled = !!dayEditDate;
-                document.getElementById('event-available').disabled = !!dayEditDate;
+                document.getElementById('event-route-base').value = eventToEdit?.route?.baseCity || 'Anápolis-GO';
+
+                if (pendingPreselectedRouteId != null && !eventToEdit) {
+                    populateJoinRouteSelect(pendingPreselectedRouteId);
+                    setFormRouteMode('join', false);
+                    pendingPreselectedRouteId = null;
+                } else if (eventToEdit?.routeId != null) {
+                    populateJoinRouteSelect(eventToEdit.routeId);
+                    document.getElementById('event-join-departure').value = eventToEdit.departureAt || '';
+                    document.getElementById('event-join-available').value = eventToEdit.availableAt || '';
+                    setFormRouteMode('join', !!dayEditDate);
+                } else if (eventToEdit?.departureAt && eventToEdit?.availableAt) {
+                    renderVehicleRowsEditor(document.getElementById('form-route-vehicles-list'), formNewRouteVehicles);
+                    setFormRouteMode('new', !!dayEditDate);
+                } else {
+                    setFormRouteMode('local', !!dayEditDate);
+                }
                 document.getElementById('event-id').value = '';
                 toysForCurrentEvent = [];
                 externalRentalsForCurrentEvent = [];
@@ -10317,7 +11574,7 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
             // Auto-atualização via Service Worker
             const reloadEventsFromServer = async () => {
                 try {
-                    const freshEvents = await api.getEventos();
+                    const [freshEvents] = await Promise.all([api.getEventos(), refreshFleetAndRoutes()]);
                     events.length = 0;
                     freshEvents.forEach(e => events.push(e));
                     renderAll();

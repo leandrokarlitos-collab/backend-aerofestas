@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./js/theme.js"></script>
+    <title>Veículos - Aero Festas</title>
+
+    <!-- PWA Config -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="js/pwa-init.js"></script>
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='10' fill='%234f46e5'/><circle cx='80' cy='30' r='8' fill='%234f46e5'/><circle cx='50' cy='70' r='12' fill='%234f46e5'/><line x1='20' y1='20' x2='80' y2='30' stroke='%234f46e5' stroke-width='5'/><line x1='80' y1='30' x2='50' y2='70' stroke='%234f46e5' stroke-width='5'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Outfit', 'sans-serif'] } } } };
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/aero.css">
+
+    <style>
+        body { overflow-x: hidden; }
+
+        .vehicles-wrap {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 28px 20px 48px;
+        }
+        @media (max-width: 768px) {
+            .vehicles-wrap { padding: 18px 14px 36px; }
+        }
+
+        .vehicles-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1 1 280px;
+            max-width: 420px;
+        }
+        .search-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-faint);
+            font-size: 13px;
+            pointer-events: none;
+        }
+        .search-wrap .input {
+            padding-left: 38px;
+        }
+
+        .summary-chip {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .vehicles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 14px;
+        }
+
+        .vehicle-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px;
+            box-shadow: var(--shadow-1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+        .vehicle-card:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow-2);
+        }
+        .vehicle-card.is-inactive {
+            opacity: 0.62;
+        }
+
+        .vehicle-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .vehicle-ident {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 0;
+        }
+
+        .vehicle-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .vehicle-title-wrap {
+            min-width: 0;
+        }
+
+        .vehicle-name {
+            font-family: var(--font-display);
+            font-size: 15.5px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .plate-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: var(--surface-inset);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            font-variant-numeric: tabular-nums;
+        }
+        .plate-pill.is-empty {
+            letter-spacing: 0;
+            font-weight: 500;
+            color: var(--text-faint);
+        }
+
+        .vehicle-notes {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.45;
+            border-top: 1px solid var(--border);
+            padding-top: 9px;
+        }
+
+        .vehicle-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .vehicle-status-tag {
+            font-size: 10.5px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: var(--surface-inset);
+            color: var(--text-faint);
+            border: 1px solid var(--border);
+            margin-left: 6px;
+        }
+
+        .empty-box {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 48px 20px;
+            background: var(--surface-1);
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--radius-lg);
+            color: var(--text-muted);
+        }
+        .empty-box i {
+            font-size: 28px;
+            color: var(--text-faint);
+            margin-bottom: 10px;
+        }
+        .empty-box h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .empty-box p {
+            font-size: 13px;
+            max-width: 420px;
+            margin: 0 auto 16px;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+        .field-hint {
+            font-size: 11.5px;
+            color: var(--text-faint);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+
+<body data-page="veiculos">
+    <main class="vehicles-wrap">
+        <header class="page-header">
+            <div>
+                <h1>Veículos</h1>
+                <p class="page-subtitle">Cadastre os veículos da frota para selecioná-los rapidamente nas rotas da Agenda.</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <a href="./Agenda de eventos.html" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-calendar-days"></i>
+                    <span>Agenda</span>
+                </a>
+                <button type="button" class="btn btn-primary" id="btn-new-vehicle">
+                    <i class="fas fa-plus"></i>
+                    <span>Novo Veículo</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="vehicles-toolbar">
+            <div class="search-wrap">
+                <i class="fas fa-magnifying-glass"></i>
+                <input type="search" id="vehicle-search" class="input" placeholder="Buscar por nome do veículo ou placa..." autocomplete="off">
+            </div>
+            <div class="summary-chip" id="vehicles-summary">Carregando frota...</div>
+        </div>
+
+        <section id="vehicles-grid" class="vehicles-grid" aria-live="polite"></section>
+    </main>
+
+    <script src="./js/ui.js"></script>
+    <script src="./js/nav.js"></script>
+    <script src="js/protect.js"></script>
+
+    <script type="module">
+        import { api } from './js/api.js';
+
+        const gridEl = document.getElementById('vehicles-grid');
+        const searchEl = document.getElementById('vehicle-search');
+        const summaryEl = document.getElementById('vehicles-summary');
+        const newBtn = document.getElementById('btn-new-vehicle');
+
+        let vehicles = [];
+
+        function esc(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function updateSummary(filteredCount) {
+            const total = vehicles.length;
+            const activeCount = vehicles.filter(v => v.active !== false).length;
+            if (!total) {
+                summaryEl.textContent = 'Nenhum veículo cadastrado';
+                return;
+            }
+            if (filteredCount !== total) {
+                summaryEl.textContent = `${filteredCount} de ${total} veículo(s)`;
+                return;
+            }
+            summaryEl.textContent = activeCount === total
+                ? `${total} ${total === 1 ? 'veículo cadastrado' : 'veículos cadastrados'}`
+                : `${activeCount} ativo(s) · ${total} no total`;
+        }
+
+        function renderVehicles() {
+            const q = (searchEl.value || '').trim().toLowerCase();
+            const list = q
+                ? vehicles.filter(v =>
+                    String(v.name || '').toLowerCase().includes(q) ||
+                    String(v.plate || '').toLowerCase().includes(q) ||
+                    String(v.notes || '').toLowerCase().includes(q))
+                : vehicles;
+
+            updateSummary(list.length);
+
+            if (!vehicles.length) {
+                gridEl.innerHTML = `
+                    <div class="empty-box">
+                        <i class="fas fa-truck"></i>
+                        <h3>Nenhum veículo cadastrado ainda</h3>
+                        <p>Adicione os veículos da empresa (nome e placa) para selecioná-los direto ao montar uma rota na Agenda.</p>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-empty-new">
+                            <i class="fas fa-plus"></i> Cadastrar primeiro veículo
+                        </button>
+                    </div>
+                `;
+                document.getElementById('btn-empty-new')?.addEventListener('click', () => openVehicleModal());
+                return;
+            }
+
+            if (!list.length) {
+                gridEl.innerHTML = `
+                    <div class="empty-box">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <h3>Nenhum resultado para "${esc(searchEl.value.trim())}"</h3>
+                        <p>Tente buscar por outro nome ou placa.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            gridEl.innerHTML = list.map(v => {
+                const inactive = v.active === false;
+                const plateHtml = v.plate
+                    ? `<span class="plate-pill">${esc(v.plate)}</span>`
+                    : `<span class="plate-pill is-empty">Placa não informada</span>`;
+                const inactiveBadge = inactive
+                    ? `<span class="vehicle-status-tag">Inativo</span>`
+                    : '';
+                const notesHtml = v.notes
+                    ? `<div class="vehicle-notes">${esc(v.notes)}</div>`
+                    : '';
+
+                return `
+                    <article class="vehicle-card ${inactive ? 'is-inactive' : ''}" data-id="${v.id}">
+                        <div class="vehicle-card-top">
+                            <div class="vehicle-ident">
+                                <span class="vehicle-icon"><i class="fas fa-truck"></i></span>
+                                <div class="vehicle-title-wrap">
+                                    <div class="vehicle-name" title="${esc(v.name)}">${esc(v.name)}${inactiveBadge}</div>
+                                    ${plateHtml}
+                                </div>
+                            </div>
+                            <div class="vehicle-actions">
+                                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-edit="${v.id}" title="Editar veículo" aria-label="Editar veículo">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" class="btn btn-ghost btn-icon btn-sm" data-delete="${v.id}" title="Excluir veículo" aria-label="Excluir veículo" style="color:var(--danger);">
+                                    <i class="fas fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${notesHtml}
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function openVehicleModal(vehicle = null) {
+            const isEdit = Boolean(vehicle && vehicle.id);
+            const m = window.UI.modal({
+                title: isEdit ? 'Editar Veículo' : 'Novo Veículo',
+                html: `
+                    <form id="vehicle-form" style="display:flex;flex-direction:column;gap:14px;">
+                        <div>
+                            <label class="field-label" for="vf-name">Nome do veículo *</label>
+                            <input type="text" id="vf-name" class="input" maxlength="120" required
+                                placeholder="Ex.: Hilux Branca, HR Baú, Caminhão 3/4"
+                                value="${esc(vehicle?.name || '')}">
+                        </div>
+                        <div>
+                            <label class="field-label" for="vf-plate">Placa</label>
+                            <input type="text" id="vf-plate" class="input" maxlength="20"
+                                placeholder="Ex.: RCN-4A12"
+                                style="text-transform:uppercase;letter-spacing:0.04em;"
+                                value="${esc(vehicle?.plate || '')}">
+                            <div class="field-hint">Ao usar este veículo em uma rota na Agenda, você poderá marcar se ele vai com ou sem carreta acoplada.</div>
+                        </div>
+                        <div>
+                            <label class="field-label" for="vf-notes">Observações (opcional)</label>
+                            <textarea id="vf-notes" class="textarea" rows="2" maxlength="500"
+                                placeholder="Observação interna opcional...">${esc(vehicle?.notes || '')}</textarea>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);cursor:pointer;">
+                            <input type="checkbox" id="vf-active" ${vehicle?.active === false ? '' : 'checked'}>
+                            <span>Disponível para seleção ao cadastrar rotas</span>
+                        </label>
+                    </form>
+                `,
+                footerHtml: `
+                    <button type="button" class="btn btn-ghost" data-aero-close>Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="vf-save-btn">
+                        <i class="fas fa-check"></i>
+                        <span>${isEdit ? 'Salvar alterações' : 'Cadastrar veículo'}</span>
+                    </button>
+                `
+            });
+
+            const form = m.box.querySelector('#vehicle-form');
+            const nameInput = m.box.querySelector('#vf-name');
+            const plateInput = m.box.querySelector('#vf-plate');
+            const notesInput = m.box.querySelector('#vf-notes');
+            const activeInput = m.box.querySelector('#vf-active');
+            const saveBtn = m.box.querySelector('#vf-save-btn');
+
+            setTimeout(() => nameInput?.focus(), 40);
+
+            async function submitForm(ev) {
+                if (ev) ev.preventDefault();
+                const name = (nameInput.value || '').trim();
+                if (!name) {
+                    window.UI.toast('Informe o nome do veículo.', 'error');
+                    nameInput.focus();
+                    return;
+                }
+                const payload = {
+                    ...(isEdit ? { id: vehicle.id } : {}),
+                    name,
+                    plate: (plateInput.value || '').trim().toUpperCase() || null,
+                    notes: (notesInput.value || '').trim() || null,
+                    active: activeInput.checked
+                };
+
+                saveBtn.disabled = true;
+                const res = await api.salvarVeiculo(payload);
+                saveBtn.disabled = false;
+
+                if (!res || !res.ok || !res.data) {
+                    window.UI.toast(res?.error || 'Não foi possível salvar o veículo.', 'error');
+                    return;
+                }
+
+                if (isEdit) {
+                    const idx = vehicles.findIndex(x => x.id === res.data.id);
+                    if (idx !== -1) vehicles[idx] = res.data;
+                } else {
+                    vehicles.push(res.data);
+                }
+                vehicles.sort((a, b) => (Number(b.active !== false) - Number(a.active !== false)) || String(a.name).localeCompare(String(b.name)));
+                renderVehicles();
+                m.close();
+                window.UI.toast(isEdit ? 'Veículo atualizado!' : 'Veículo cadastrado!');
+            }
+
+            form.addEventListener('submit', submitForm);
+            saveBtn.addEventListener('click', submitForm);
+        }
+
+        async function handleDeleteVehicle(id) {
+            const target = vehicles.find(v => v.id === id);
+            if (!target) return;
+
+            const confirmed = await window.UI.confirm({
+                title: 'Excluir veículo',
+                message: `Deseja excluir "${target.name}${target.plate ? ' (' + target.plate + ')' : ''}" da frota? As rotas antigas que já o utilizaram manterão o histórico salvo.`,
+                confirmText: 'Excluir',
+                cancelText: 'Cancelar',
+                danger: true
+            });
+            if (!confirmed) return;
+
+            const res = await api.deletarVeiculo(id);
+            if (!res || !res.ok) {
+                window.UI.toast(res?.error || 'Erro ao excluir veículo.', 'error');
+                return;
+            }
+            vehicles = vehicles.filter(v => v.id !== id);
+            renderVehicles();
+            window.UI.toast('Veículo removido da frota.');
+        }
+
+        gridEl.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('[data-edit]');
+            if (editBtn) {
+                const id = parseInt(editBtn.getAttribute('data-edit'), 10);
+                const veh = vehicles.find(v => v.id === id);
+                if (veh) openVehicleModal(veh);
+                return;
+            }
+            const delBtn = e.target.closest('[data-delete]');
+            if (delBtn) {
+                const id = parseInt(delBtn.getAttribute('data-delete'), 10);
+                handleDeleteVehicle(id);
+            }
+        });
+
+        newBtn.addEventListener('click', () => openVehicleModal());
+        searchEl.addEventListener('input', renderVehicles);
+
+        async function init() {
+            window.UI.skeleton(gridEl, 'cards', 3);
+            vehicles = await api.getVeiculos();
+            renderVehicles();
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

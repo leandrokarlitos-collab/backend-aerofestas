@@ -22,7 +22,7 @@ const CONTRACT_ALLOWED_MIME = [
 ];
 
 const TRACKED_FIELDS = [
-    'departureAt', 'availableAt', 'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
+    'routeId', 'departureAt', 'availableAt', 'date', 'endDate', 'excludedDates', 'dateOverrides', 'revenueMode', 'clientName', 'price', 'subtotal', 'paymentStatus',
     'monitor', 'clientAddress', 'cidade', 'uf', 'status', 'eventObservations',
     'discountValue', 'deliveryFee', 'signalAmount', 'signalReceived', 'eventType', 'municipalityStatus',
     'isTicketSale', 'estimatedValue', 'ticketGrossSold', 'ticketSchoolPercent', 'ticketNetTotal', 'ticketItems',
@@ -150,6 +150,13 @@ function buildEventFields(evt, userId) {
     }
     return {
         municipalityStatus: evt.eventType === 'meeting' ? null : evt.municipalityStatus,
+        ...(evt.routeId !== undefined
+            ? {
+                routeId: evt.eventType === 'meeting'
+                    ? null
+                    : (evt.routeId !== null && evt.routeId !== '' ? parseInt(evt.routeId, 10) : null)
+            }
+            : {}),
         departureAt: evt.departureAt,
         availableAt: evt.availableAt,
         date: evt.date,
@@ -315,16 +322,82 @@ async function upsertEvent(evt, user) {
     // apagaria os brinquedos e as locações do evento e devolveria erro sem regravar nada.
     const fields = buildEventFields(evt, user.id);
 
-    const proposed = { ...existingEvent, ...evt, items };
+    let targetRoute = null;
+    let routeWindowUpdated = false;
+    const creatingNewRoute = evt.eventType !== 'meeting' && evt.newRoute && typeof evt.newRoute === 'object';
+
+    if (creatingNewRoute) {
+        fields.departureAt = String(evt.newRoute.departureAt || evt.departureAt || '').trim();
+        fields.availableAt = String(evt.newRoute.availableAt || evt.availableAt || '').trim();
+    } else if (fields.routeId && Number.isInteger(fields.routeId) && fields.routeId > 0) {
+        targetRoute = await prisma.eventRoute.findUnique({ where: { id: fields.routeId } });
+        if (!targetRoute) {
+            const err = new Error('Rota selecionada não foi encontrada.');
+            err.status = 404;
+            throw err;
+        }
+        const nextDep = evt.departureAt ? String(evt.departureAt).trim() : targetRoute.departureAt;
+        const nextAvail = evt.availableAt ? String(evt.availableAt).trim() : targetRoute.availableAt;
+        fields.departureAt = nextDep;
+        fields.availableAt = nextAvail;
+        routeWindowUpdated = nextDep !== targetRoute.departureAt || nextAvail !== targetRoute.availableAt;
+    }
+
+    const effectiveRouteId = fields.routeId !== undefined
+        ? fields.routeId
+        : (existingEvent ? existingEvent.routeId : null);
+
+    const proposed = {
+        ...existingEvent,
+        ...evt,
+        routeId: creatingNewRoute ? null : effectiveRouteId,
+        departureAt: fields.departureAt,
+        availableAt: fields.availableAt,
+        items
+    };
     const travelError = reservations.validate(proposed);
     if (travelError) { const err = new Error(travelError); err.status = 400; throw err; }
-    const [otherEvents, inventory] = await Promise.all([
+    const [rawOtherEvents, inventory] = await Promise.all([
         prisma.event.findMany({ where: { id: { not: eventId }, status: { not: 'cancelado' } }, include: { items: true } }),
         prisma.toy.findMany({ select: { id: true, name: true, quantity: true } })
     ]);
-    const reservationChanged = JSON.stringify(reservations.intervals(proposed)) !== JSON.stringify(reservations.intervals(existingEvent || {}));
+
+    const otherEvents = routeWindowUpdated && targetRoute
+        ? rawOtherEvents.map(oe => (oe.routeId === targetRoute.id
+            ? { ...oe, departureAt: fields.departureAt, availableAt: fields.availableAt }
+            : oe))
+        : rawOtherEvents;
+
+    if (routeWindowUpdated && targetRoute) {
+        for (const sibling of otherEvents) {
+            if (sibling.routeId !== targetRoute.id) continue;
+            if (sibling.status === 'cancelado' || sibling.paymentStatus === 'Cancelado' || sibling.eventType === 'meeting') continue;
+            const sibErr = reservations.validate(sibling);
+            if (sibErr) {
+                const err = new Error(`${sibErr} (Parada existente na rota: ${sibling.clientName || sibling.cidade || '#' + (sibling.code || sibling.id)})`);
+                err.status = 400;
+                throw err;
+            }
+        }
+    }
+
+    const reservationChanged =
+        JSON.stringify(reservations.intervals(proposed)) !== JSON.stringify(reservations.intervals(existingEvent || {})) ||
+        (proposed.routeId || null) !== (existingEvent?.routeId || null) ||
+        creatingNewRoute ||
+        routeWindowUpdated;
     const stockError = reservationChanged && reservations.conflict(proposed, otherEvents, inventory);
     if (stockError) { const err = new Error(stockError); err.status = 409; throw err; }
+
+    if (creatingNewRoute) {
+        const EventRouteService = require('./EventRouteService');
+        const createdRoute = await EventRouteService.createEventRoute({
+            ...evt.newRoute,
+            departureAt: fields.departureAt,
+            availableAt: fields.availableAt
+        }, user);
+        fields.routeId = createdRoute.id;
+    }
 
     if (isUpdate) {
         await prisma.eventItem.deleteMany({ where: { eventId } });
@@ -361,6 +434,7 @@ async function upsertEvent(evt, user) {
                 include: {
                     items: { include: { toy: true } },
                     externalRentals: true,
+                    route: { include: { vehicles: { orderBy: [{ order: 'asc' }, { id: 'asc' }] } } },
                     assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
                 }
             });
@@ -371,6 +445,24 @@ async function upsertEvent(evt, user) {
             }
             throw err;
         }
+    }
+
+    if (routeWindowUpdated && targetRoute) {
+        await prisma.eventRoute.update({
+            where: { id: targetRoute.id },
+            data: {
+                departureAt: fields.departureAt,
+                availableAt: fields.availableAt,
+                updatedBy: user?.id ? String(user.id) : null
+            }
+        });
+        await prisma.event.updateMany({
+            where: { routeId: targetRoute.id, id: { not: eventId } },
+            data: {
+                departureAt: fields.departureAt,
+                availableAt: fields.availableAt
+            }
+        });
     }
 
     // Escala estruturada (F2): SÓ mexe quando o payload traz o array `assignments`.
@@ -385,6 +477,12 @@ async function upsertEvent(evt, user) {
     }
 
     const snapshot = { code: saved.code, clientName: saved.clientName, date: saved.date, price: saved.price };
+    if (existingEvent?.routeId && existingEvent.routeId !== saved.routeId && prisma.eventRoute) {
+        const remaining = await prisma.event.count({ where: { routeId: existingEvent.routeId } });
+        if (remaining === 0) {
+            await prisma.eventRoute.delete({ where: { id: existingEvent.routeId } }).catch(() => {});
+        }
+    }
     if (isUpdate && existingEvent) {
         const changes = computeChanges(existingEvent, saved, TRACKED_FIELDS);
         safeAudit({ entityType: 'Event', entityId: eventId, action: 'UPDATE', user, changes, snapshot });
@@ -407,6 +505,12 @@ async function deleteEvent(id, user) {
     await prisma.eventItem.deleteMany({ where: { eventId } });
     await prisma.eventExternalRental.deleteMany({ where: { eventId } });
     await prisma.event.delete({ where: { id: eventId } });
+    if (existingEvent?.routeId && prisma.eventRoute) {
+        const remaining = await prisma.event.count({ where: { routeId: existingEvent.routeId } });
+        if (remaining === 0) {
+            await prisma.eventRoute.delete({ where: { id: existingEvent.routeId } }).catch(() => {});
+        }
+    }
 
     if (existingEvent) {
         safeAudit({
@@ -449,6 +553,7 @@ async function listEventsFull() {
             items: { include: { toy: true } },
             company: true,
             externalRentals: true,
+            route: { include: { vehicles: { orderBy: [{ order: 'asc' }, { id: 'asc' }] } } },
             assignments: { include: { monitor: { select: { id: true, nome: true, cnh: true, cnhCategoria: true } } } }
         },
         orderBy: { date: 'desc' }

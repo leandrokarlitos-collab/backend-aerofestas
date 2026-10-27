@@ -549,12 +549,121 @@ export const api = {
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
                 console.error('Erro API ao salvar evento:', res.status, errorData);
-                return null;
+                return { success: false, status: res.status, error: errorData.error || 'Erro ao salvar evento' };
             }
             return await res.json();
         } catch (error) {
             console.error('Erro de rede ao salvar evento:', error);
-            return null;
+            return { success: false, status: 0, error: 'Erro de rede ao salvar evento' };
+        }
+    },
+
+    // ============ FROTA DE VEÍCULOS ============
+    getVeiculos: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/vehicles`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error('Erro ao buscar veículos:', e);
+            return [];
+        }
+    },
+
+    salvarVeiculo: async (veiculo) => {
+        try {
+            const token = getToken();
+            const isUpdate = veiculo && veiculo.id != null && veiculo.id !== '';
+            const url = isUpdate ? `${BASE_URL}/admin/vehicles/${veiculo.id}` : `${BASE_URL}/admin/vehicles`;
+            const method = isUpdate ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(veiculo)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (error) {
+            console.error('Erro ao salvar veículo:', error);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
+    },
+
+    deletarVeiculo: async (id) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/vehicles/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (error) {
+            console.error('Erro ao excluir veículo:', error);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
+    },
+
+    // ============ ROTAS LOGÍSTICAS DA AGENDA ============
+    getRotas: async () => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/event-routes`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? await res.json() : [];
+        } catch (e) {
+            console.error('Erro ao buscar rotas:', e);
+            return [];
+        }
+    },
+
+    criarRota: async (dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/event-routes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) {
+            console.error('Erro ao criar rota:', e);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
+    },
+
+    atualizarRota: async (id, dados) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/event-routes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(dados)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) {
+            console.error('Erro ao atualizar rota:', e);
+            return { ok: false, status: 0, error: 'Erro de rede' };
+        }
+    },
+
+    deletarRota: async (id, clearTravel = true) => {
+        try {
+            const token = getToken();
+            const res = await fetch(`${BASE_URL}/admin/event-routes/${id}?clearTravel=${clearTravel ? '1' : '0'}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json().catch(() => ({}));
+            return { ok: res.ok, status: res.status, ...json };
+        } catch (e) {
+            console.error('Erro ao excluir rota:', e);
+            return { ok: false, status: 0, error: 'Erro de rede' };
         }
     },
 

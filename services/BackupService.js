@@ -62,8 +62,11 @@ const TABLES = [
     { model: 'LicitacaoTermo', delegate: 'licitacaoTermo' },
     { model: 'LicitacaoPncp', delegate: 'licitacaoPncp' },
     { model: 'LicitacaoVarredura', delegate: 'licitacaoVarredura' },
+    { model: 'Vehicle', delegate: 'vehicle' },
+    { model: 'EventRoute', delegate: 'eventRoute' },
     // --- Nível 1 ---
-    { model: 'Event', delegate: 'event' },                    // → Company
+    { model: 'Event', delegate: 'event' },                    // → Company, EventRoute
+    { model: 'EventRouteVehicle', delegate: 'eventRouteVehicle' }, // → EventRoute, Vehicle
     { model: 'ToyUnit', delegate: 'toyUnit' },                // → Toy
     { model: 'ToyMaintenance', delegate: 'toyMaintenance' },  // → Toy, Monitor
     { model: 'Task', delegate: 'task' },                      // → User
@@ -89,7 +92,7 @@ const TABLES = [
 /** Tabelas com id Int autoincrement — sequences precisam de setval() pós-restore. */
 const AUTOINCREMENT_TABLES = [
     'ToyMaintenance', 'ToyUnit', 'ToyPhoto', 'EventExternalRental', 'EventItem', 'PropostaItem',
-    'EventAssignment',
+    'EventAssignment', 'Vehicle', 'EventRoute', 'EventRouteVehicle',
 ];
 
 const SCHEMA_VERSION = '2.0';

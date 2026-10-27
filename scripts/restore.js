@@ -51,7 +51,9 @@ const HOSTS_PRODUCAO = ['railway', 'rlwy.net'];
 
 /** Mapa explícito de dependências de FK — usado para fechar o subconjunto de --tables. */
 const DEPENDENCIAS = {
-    Event: ['Company'],
+    Event: ['Company', 'EventRoute'],
+    EventRouteVehicle: ['EventRoute', 'Vehicle'],
+    EventAssignment: ['Event', 'Monitor'],
     EventItem: ['Event', 'Toy'],
     ToyUnit: ['Toy'],
     ToyMaintenance: ['Toy', 'Monitor'],
