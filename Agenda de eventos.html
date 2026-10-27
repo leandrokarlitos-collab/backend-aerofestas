@@ -459,8 +459,122 @@
         }
         .dark .contract-pdf-preview-iframe { background: #1e293b; }
 
+        /* === Layout Otimizado da Agenda (Soft Depth Premium) === */
+        .agenda-shell {
+            max-width: 72rem;
+            margin: 0 auto;
+        }
+        .agenda-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .agenda-kpi-card {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 16px 20px;
+        }
+        .agenda-kpi-card.hidden { display: none !important; }
+        .agenda-kpi-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .agenda-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .agenda-nav-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .agenda-nav-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: calc(var(--radius) - 3px);
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+        .agenda-nav-btn:hover {
+            background: var(--surface-1);
+            color: var(--text);
+            box-shadow: var(--shadow-1);
+        }
+        .agenda-today-btn {
+            height: 34px;
+            padding: 0 12px;
+            border-radius: calc(var(--radius) - 3px);
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        }
+        .agenda-today-btn:hover {
+            background: var(--surface-1);
+            color: var(--brand-600);
+            box-shadow: var(--shadow-1);
+        }
+        .dark .agenda-today-btn:hover { color: var(--brand-400); }
+        .agenda-today-btn.is-current-month {
+            color: var(--text-faint);
+        }
+        .agenda-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .agenda-weekdays > div {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            padding: 4px 0;
+        }
+        .agenda-weekdays > div.is-weekend { color: var(--brand-600); }
+        .dark .agenda-weekdays > div.is-weekend { color: var(--brand-400); }
+
+        .agenda-empty-cell {
+            min-height: 94px;
+            border-radius: var(--radius);
+            border: 1px dashed var(--border);
+            background: transparent;
+            opacity: 0.45;
+        }
+
         .day-cell {
-            min-height: 120px;
+            min-height: 94px;
             height: 100%;
             position: relative;
             overflow: hidden;
@@ -471,21 +585,60 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            padding: 8px;
+            padding: 8px 10px;
+            color: var(--text);
+        }
+
+        .day-cell.is-weekend {
+            background: var(--surface-2);
+        }
+        .dark .day-cell.is-weekend {
+            background: rgba(26, 36, 56, 0.55);
         }
 
         .day-cell:hover {
-            transform: translateY(-4px) scale(1.02);
+            transform: translateY(-2px);
             box-shadow: var(--shadow-2);
+            background: var(--surface-1);
             border-color: var(--brand-400);
             z-index: 10;
         }
 
-        /* Célula "hoje" — recebe .bg-indigo-200/80 do JS; realça com anel da marca */
-        .day-cell.bg-indigo-200\/80 {
+        /* Célula "hoje" — anel sutil da marca + número em destaque */
+        .day-cell.is-today {
+            background: var(--brand-50);
             border-color: var(--brand-500);
-            box-shadow: 0 0 0 2px var(--brand-500) inset;
+            box-shadow: 0 0 0 1px var(--brand-500) inset;
         }
+        .day-cell.is-today .day-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: var(--grad-brand);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+        }
+
+        .agenda-travel-pill {
+            margin-top: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            background: var(--warning-soft);
+            color: #b45309;
+            transition: opacity 0.25s ease;
+        }
+        .dark .agenda-travel-pill { color: var(--warning); }
+        .day-cell:hover .agenda-travel-pill { opacity: 0; }
 
         /* [AAA] Skeleton Loading */
         .skeleton {
@@ -535,7 +688,12 @@
         .day-number {
             position: relative;
             z-index: 1;
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            line-height: 1.2;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+            transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
         .event-count-container {
@@ -586,7 +744,7 @@
         .has-event::after {
             content: '';
             position: absolute;
-            bottom: 4px;
+            bottom: 7px;
             left: 50%;
             transform: translateX(-50%);
             width: 6px;
@@ -599,7 +757,7 @@
         .has-meeting::before {
             content: '';
             position: absolute;
-            bottom: 4px;
+            bottom: 7px;
             left: 50%;
             transform: translateX(-50%);
             width: 6px;
@@ -652,27 +810,71 @@
             background: linear-gradient(to top right, rgba(245, 158, 11, 0.95), rgba(251, 146, 60, 0.95)) !important;
         }
 
+        /* Destaque Prefeitura — Estilo 1 (Superfície translúcida + micro-ícone silencioso, Ciano) */
         .municipality-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 3px 6px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
             white-space: normal; line-height: 1.3;
         }
-        .municipality-confirmed { background: #6b21a8; color: #fff; border: 1px solid #6b21a8; }
-        .municipality-quote { background: #fce7f3; color: #9d174d; border: 1px dashed #be185d; }
-        .day-cell.has-municipality-confirmed { background: #f3e8ff !important; border-color: #9333ea !important; }
-        .day-cell.has-municipality-quote { background: #fce7f3 !important; border-color: #be185d !important; }
-        .day-cell.has-municipality-confirmed.has-municipality-quote { background: linear-gradient(135deg, #f3e8ff 50%, #fce7f3 50%) !important; }
-        .day-cell.has-municipality-confirmed, .day-cell.has-municipality-quote { animation: none; }
-        .day-cell.has-municipality-confirmed::after { background: #6b21a8 !important; box-shadow: none !important; }
-        .day-cell.has-municipality-quote::after { background: #be185d !important; box-shadow: none !important; }
-        .day-cell.has-municipality-confirmed .event-count-container { background: #6b21a8 !important; }
-        .day-cell.has-municipality-quote .event-count-container { background: #9d174d !important; }
-        .day-cell.has-municipality-confirmed.has-municipality-quote .event-count-container { background: linear-gradient(135deg, #6b21a8, #9d174d) !important; }
-        .day-cell:hover .municipality-day-labels { opacity: 0; }
-        .event-municipality-confirmed { border: 2px solid #9333ea !important; }
-        .event-municipality-quote { border: 2px dashed #be185d !important; }
-        .municipality-day-labels { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
-        @media (max-width: 480px) { .municipality-day-labels .municipality-badge { font-size: 9px; padding: 2px 3px; } }
+        .municipality-confirmed { background: rgba(6, 182, 212, 0.14); color: #0e7490; border: 1px solid rgba(6, 182, 212, 0.55); }
+        .dark .municipality-confirmed { background: rgba(6, 182, 212, 0.20); color: #67e8f9; border-color: rgba(6, 182, 212, 0.55); }
+        .municipality-quote { background: rgba(6, 182, 212, 0.07); color: #0891b2; border: 1px dashed rgba(6, 182, 212, 0.50); }
+        .dark .municipality-quote { background: rgba(6, 182, 212, 0.10); color: #38bdf8; border-color: rgba(6, 182, 212, 0.45); }
+
+        .day-cell.has-municipality-quote,
+        .day-cell.has-municipality-confirmed { animation: none; }
+
+        /* Prefeitura em orçamento (borda tracejada + fundo leve + anel luminoso) */
+        .day-cell.has-municipality-quote {
+            background-color: rgba(6, 182, 212, 0.06) !important;
+            border: 1px dashed rgba(6, 182, 212, 0.50) !important;
+        }
+        .dark .day-cell.has-municipality-quote {
+            background-color: rgba(6, 182, 212, 0.07) !important;
+        }
+        .day-cell.has-municipality-quote.has-event::after {
+            width: 7px; height: 7px;
+            background-color: transparent !important;
+            border: 1.5px solid #06b6d4 !important;
+            box-shadow: 0 0 6px rgba(6, 182, 212, 0.50) !important;
+        }
+        .day-cell.has-municipality-quote .event-count-container {
+            background: linear-gradient(to top right, rgba(2, 132, 199, 0.88), rgba(56, 189, 248, 0.88)) !important;
+        }
+
+        /* Prefeitura confirmada (borda contínua + superfície translúcida + dot ciano luminoso) */
+        .day-cell.has-municipality-confirmed {
+            background-color: rgba(6, 182, 212, 0.12) !important;
+            border: 1px solid rgba(6, 182, 212, 0.55) !important;
+        }
+        .dark .day-cell.has-municipality-confirmed {
+            background-color: rgba(6, 182, 212, 0.16) !important;
+        }
+        .day-cell.has-municipality-confirmed.has-event::after {
+            width: 6px; height: 6px;
+            background-color: #06b6d4 !important;
+            border: none !important;
+            box-shadow: 0 0 8px #06b6d4 !important;
+        }
+        .day-cell.has-municipality-confirmed .event-count-container {
+            background: linear-gradient(to top right, rgba(8, 145, 178, 0.94), rgba(6, 182, 212, 0.92)) !important;
+        }
+
+        /* Micro-ícone silencioso no canto superior direito da célula */
+        .municipality-day-icon {
+            position: absolute; top: 8px; right: 8px;
+            font-size: 11px; line-height: 1;
+            color: #0891b2; opacity: 0.85;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .dark .municipality-day-icon { color: #06b6d4; }
+        .day-cell.has-municipality-quote:not(.has-municipality-confirmed) .municipality-day-icon { opacity: 0.55; }
+        .day-cell:hover .municipality-day-icon { opacity: 0; transform: scale(0.8); }
+
+        .event-municipality-confirmed { border: 1.5px solid rgba(6, 182, 212, 0.65) !important; }
+        .event-municipality-quote { border: 1.5px dashed rgba(6, 182, 212, 0.55) !important; }
+        @media (max-width: 480px) { .municipality-day-icon { top: 6px; right: 6px; font-size: 10px; } }
 
         .rotate-180 {
             transform: rotate(180deg);
@@ -1350,15 +1552,25 @@
         @media (max-width: 768px) {
             .container {
                 padding-bottom: 80px;
-                /* Espaço para a nav */
             }
 
             .day-cell {
-                min-height: 80px;
+                min-height: 74px;
+                padding: 6px 7px;
+            }
+
+            .agenda-empty-cell {
+                min-height: 74px;
             }
 
             .day-number {
-                font-size: 0.875rem;
+                font-size: 0.78rem;
+            }
+
+            .day-cell.is-today .day-number {
+                min-width: 21px;
+                height: 21px;
+                padding: 0 5px;
             }
         }
 
@@ -1536,80 +1748,98 @@
         }
     </script>
 
-    <div id="page-content-wrapper" class="container mx-auto p-4 md:p-8 relative z-10">
-        <header class="page-header fade-in">
-            <div>
-                <h1>Agenda</h1>
-                <p class="page-subtitle">Sistema de gestão de eventos</p>
-            </div>
-            <button id="notifications-btn" class="btn btn-secondary btn-icon relative" title="Notificações">
-                <i id="notifications-header-icon" class="fas fa-bell"></i>
-            </button>
-        </header>
-
-        <div class="mb-8 fade-in" style="animation-delay: 0.1s;">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                <div id="monthly-total-container" class="kpi-card">
-                    <span class="kpi-label"><i class="fas fa-sack-dollar"></i> Faturamento do Mês</span>
-                    <span id="monthly-total" class="kpi-value is-success">R$ 0,00</span>
+    <div id="page-content-wrapper" class="container mx-auto px-4 py-5 md:px-8 md:py-7 relative z-10">
+        <div class="agenda-shell">
+            <header class="page-header fade-in">
+                <div>
+                    <h1>Agenda</h1>
+                    <p class="page-subtitle">Gestão visual de eventos, reuniões e deslocamentos</p>
                 </div>
-                <div id="monthly-events-count-container" class="kpi-card">
-                    <span class="kpi-label"><i class="fas fa-clipboard-check" style="color: var(--brand-500)"></i> Eventos do Mês</span>
-                    <span id="monthly-events-count" class="kpi-value">—</span>
-                    <span class="kpi-delta" style="color: var(--text-faint)">executados · a executar</span>
-                </div>
-                <div id="monthly-estimated-container" class="kpi-card hidden">
-                    <span class="kpi-label"><i class="fas fa-chart-line" style="color: var(--warning)"></i> Valor Estimado do Mês</span>
-                    <span id="monthly-estimated" class="kpi-value" style="color: var(--warning)">R$ 0,00</span>
-                    <span class="kpi-delta" style="color: var(--text-faint)">Projeção de eventos vendidos por ingresso</span>
-                </div>
-            </div>
-        </div>
-
-        <main class="flex justify-center fade-in" style="animation-delay: 0.3s;">
-            <div class="w-full max-w-4xl space-y-4">
-                <div class="flex justify-end">
-                    <button id="catalog-settings-btn" class="btn btn-secondary" title="Catálogo de Brinquedos e Empresas">
-                        <i class="fas fa-cog"></i>
+                <div class="flex items-center gap-2">
+                    <button id="catalog-settings-btn" class="btn btn-secondary btn-sm" title="Catálogo de Brinquedos e Empresas">
+                        <i class="fas fa-boxes-stacked" style="color: var(--brand-500)"></i>
                         <span>Catálogo</span>
                     </button>
+                    <button id="settings-btn" class="btn btn-ghost btn-icon" title="Configurações da API">
+                        <i class="fas fa-key"></i>
+                    </button>
+                    <button id="notifications-btn" class="btn btn-secondary btn-icon relative" title="Notificações">
+                        <i id="notifications-header-icon" class="fas fa-bell"></i>
+                    </button>
                 </div>
-                <div class="glassmorphism p-4">
-                    <div class="flex items-center justify-between mb-4">
-                        <button id="prev-month-btn" class="btn btn-secondary btn-icon" title="Mês anterior">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <h2 id="month-year-header" class="text-lg md:text-xl font-bold font-display" style="color: var(--text)"></h2>
-                        <div class="flex items-center space-x-2">
-                            <button id="filter-events-btn" class="btn btn-secondary btn-sm" title="Filtrar Eventos do Mês">
-                                <i class="fas fa-filter"></i>
-                                <span class="hidden md:inline">Filtrar</span>
+            </header>
+
+            <div class="agenda-kpi-grid fade-in" style="animation-delay: 0.1s;">
+                <div id="monthly-total-container" class="kpi-card agenda-kpi-card">
+                    <div class="min-w-0">
+                        <span class="kpi-label">Faturamento do Mês</span>
+                        <span id="monthly-total" class="kpi-value is-success block mt-0.5">R$ 0,00</span>
+                    </div>
+                    <div class="agenda-kpi-icon" style="background: var(--success-soft); color: var(--success);">
+                        <i class="fas fa-sack-dollar"></i>
+                    </div>
+                </div>
+                <div id="monthly-events-count-container" class="kpi-card agenda-kpi-card">
+                    <div class="min-w-0">
+                        <span class="kpi-label">Eventos do Mês</span>
+                        <span id="monthly-events-count" class="kpi-value block mt-0.5">—</span>
+                        <span class="kpi-delta block mt-0.5" style="color: var(--text-faint)">executados · a executar</span>
+                    </div>
+                    <div class="agenda-kpi-icon" style="background: var(--brand-50); color: var(--brand-600);">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+                <div id="monthly-estimated-container" class="kpi-card agenda-kpi-card hidden">
+                    <div class="min-w-0">
+                        <span class="kpi-label">Valor Estimado do Mês</span>
+                        <span id="monthly-estimated" class="kpi-value block mt-0.5" style="color: var(--warning)">R$ 0,00</span>
+                        <span class="kpi-delta block mt-0.5" style="color: var(--text-faint)">Projeção de eventos vendidos por ingresso</span>
+                    </div>
+                    <div class="agenda-kpi-icon" style="background: var(--warning-soft); color: var(--warning);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+
+            <main class="fade-in" style="animation-delay: 0.2s;">
+                <div class="surface p-4 md:p-6">
+                    <div class="agenda-toolbar">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <div class="agenda-nav-group" role="group" aria-label="Navegação de mês">
+                                <button id="prev-month-btn" class="agenda-nav-btn" title="Mês anterior" aria-label="Mês anterior">
+                                    <i class="fas fa-chevron-left text-xs"></i>
+                                </button>
+                                <button id="today-month-btn" class="agenda-today-btn" title="Voltar para o mês atual">Hoje</button>
+                                <button id="next-month-btn" class="agenda-nav-btn" title="Próximo mês" aria-label="Próximo mês">
+                                    <i class="fas fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                            <h2 id="month-year-header" class="text-xl md:text-2xl font-bold font-display tracking-tight" style="color: var(--text)"></h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="filter-events-btn" class="btn btn-secondary btn-sm" title="Ver lista e filtrar eventos do mês">
+                                <i class="fas fa-list-ul"></i>
+                                <span>Lista do Mês</span>
                             </button>
-                            <button id="next-month-btn" class="btn btn-secondary btn-icon" title="Próximo mês">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                            <button id="settings-btn" class="btn btn-ghost btn-icon" title="Configurações da API">
-                                <i class="fas fa-key"></i>
+                            <button id="quick-new-event-btn" class="btn btn-primary btn-sm" title="Adicionar novo agendamento">
+                                <i class="fas fa-plus"></i>
+                                <span>Novo Evento</span>
                             </button>
                         </div>
                     </div>
-                    <div class="grid calendar-grid text-center text-xs font-semibold mb-1.5" style="color: var(--text-muted)">
-                        <div>Dom</div>
+                    <div class="agenda-weekdays">
+                        <div class="is-weekend">Dom</div>
                         <div>Seg</div>
                         <div>Ter</div>
                         <div>Qua</div>
                         <div>Qui</div>
                         <div>Sex</div>
-                        <div>Sáb</div>
+                        <div class="is-weekend">Sáb</div>
                     </div>
-                    <div id="calendar-body" class="grid calendar-grid gap-1.5"></div>
-                    <div class="flex flex-wrap gap-2 mt-3" aria-label="Legenda de prefeituras">
-                        <span class="municipality-badge municipality-confirmed">Prefeitura confirmada</span>
-                        <span class="municipality-badge municipality-quote">Prefeitura em orçamento</span>
-                    </div>
+                    <div id="calendar-body" class="grid calendar-grid gap-2"></div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
     </div> <!-- Fim de page-content-wrapper -->
 
     <div id="event-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
@@ -2521,17 +2751,18 @@
         </div>
     </div>
 
-    <div id="day-events-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50"
+    <div id="day-events-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50"
         role="dialog" aria-labelledby="day-events-modal-title" aria-modal="true">
-        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="day-events-modal-title" class="text-2xl font-bold text-gray-900">Eventos do Dia</h2>
-                <button id="close-day-events-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                    aria-label="Fechar modal">
-                    <i class="fas fa-times"></i>
+        <div class="modal-box glassmorphism p-6 md:p-7 rounded-2xl shadow-xl w-full max-w-2xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start gap-4 pb-4 mb-4" style="border-bottom: 1px solid var(--border)">
+                <div>
+                    <h2 id="day-events-modal-title" class="text-xl md:text-2xl font-bold font-display" style="color: var(--text)">Eventos do Dia</h2>
+                    <p id="selected-day-text" class="text-sm font-medium mt-0.5" style="color: var(--text-muted)">Selecione um dia no calendário</p>
+                </div>
+                <button id="close-day-events-modal-btn" class="btn btn-ghost btn-icon" aria-label="Fechar modal">
+                    <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
-            <p id="selected-day-text" class="text-gray-500 font-medium mb-4">Selecione um dia no calendário</p>
             <div id="day-events-list" class="space-y-3"></div>
         </div>
     </div>
@@ -2720,57 +2951,48 @@
         </div>
     </div>
 
-    <div id="filter-events-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50"
+    <div id="filter-events-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50"
         role="dialog" aria-labelledby="filter-events-modal-title" aria-modal="true">
-        <div class="modal-box glassmorphism p-8 rounded-lg shadow-xl w-full max-w-5xl m-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="filter-events-modal-title" class="text-2xl font-bold text-gray-900">Eventos do Mês</h2>
-                <div class="flex items-center space-x-3">
-                    <button id="export-filter-events-pdf-btn"
-                        class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2"
-                        title="Exportar PDF">
+        <div class="modal-box glassmorphism p-6 md:p-7 rounded-2xl shadow-xl w-full max-w-5xl m-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center gap-3 pb-4 mb-4" style="border-bottom: 1px solid var(--border)">
+                <h2 id="filter-events-modal-title" class="text-xl md:text-2xl font-bold font-display" style="color: var(--text)">Eventos do Mês</h2>
+                <div class="flex items-center gap-2">
+                    <button id="export-filter-events-pdf-btn" class="btn btn-danger btn-sm" title="Exportar PDF">
                         <i class="fas fa-file-pdf"></i>
                         <span>Exportar PDF</span>
                     </button>
-                    <button id="close-filter-events-modal-btn"
-                        class="text-gray-500 hover:text-gray-700 text-2xl font-bold" aria-label="Fechar modal">
-                        <i class="fas fa-times"></i>
+                    <button id="close-filter-events-modal-btn" class="btn btn-ghost btn-icon" aria-label="Fechar modal">
+                        <i class="fas fa-times text-lg"></i>
                     </button>
                 </div>
             </div>
-            <div id="filter-events-table-container" class="overflow-x-auto">
-                <table class="w-full border-collapse">
+            <div id="filter-events-table-container" class="table-wrap surface-inset">
+                <table class="table">
                     <thead>
-                        <tr class="bg-indigo-100">
-                            <th class="border border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors whitespace-nowrap"
-                                data-sort="code" data-sort-order="asc">
+                        <tr>
+                            <th class="cursor-pointer select-none whitespace-nowrap" data-sort="code" data-sort-order="asc">
                                 Código <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
-                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors"
-                                data-sort="name" data-sort-order="asc">
-                                Nome <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            <th class="cursor-pointer select-none" data-sort="name" data-sort-order="asc">
+                                Cliente / Evento <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
-                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors"
-                                data-sort="date" data-sort-order="asc">
+                            <th class="cursor-pointer select-none whitespace-nowrap" data-sort="date" data-sort-order="asc">
                                 Data <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
-                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors"
-                                data-sort="location" data-sort-order="asc">
+                            <th class="cursor-pointer select-none" data-sort="location" data-sort-order="asc">
                                 Local <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
-                            <th class="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-indigo-200 transition-colors"
-                                data-sort="value" data-sort-order="asc">
+                            <th class="cursor-pointer select-none text-right whitespace-nowrap" data-sort="value" data-sort-order="asc">
                                 Valor <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
                         </tr>
                     </thead>
-                    <tbody id="filter-events-table-body" class="bg-white">
+                    <tbody id="filter-events-table-body">
                         <!-- Eventos serão inseridos aqui via JavaScript -->
                     </tbody>
                 </table>
             </div>
-            <p id="filter-events-empty" class="text-center text-gray-500 py-8 hidden">Nenhum evento encontrado para este
-                mês.</p>
+            <p id="filter-events-empty" class="text-center py-10 hidden" style="color: var(--text-muted)">Nenhum evento encontrado para este mês.</p>
         </div>
     </div>
 
@@ -2901,6 +3123,8 @@
             const calendarBody = document.getElementById('calendar-body');
             const prevMonthBtn = document.getElementById('prev-month-btn');
             const nextMonthBtn = document.getElementById('next-month-btn');
+            const todayMonthBtn = document.getElementById('today-month-btn');
+            const quickNewEventBtn = document.getElementById('quick-new-event-btn');
             const toyListDiv = document.getElementById('toy-list');
             const addToyBtn = document.getElementById('add-toy-btn');
             const newToyNameInput = document.getElementById('new-toy-name');
@@ -4408,7 +4632,12 @@
 
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
-                monthYearHeader.textContent = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+                const rawMonthYear = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+                monthYearHeader.textContent = rawMonthYear.charAt(0).toUpperCase() + rawMonthYear.slice(1);
+                const nowRef = new Date();
+                if (todayMonthBtn) {
+                    todayMonthBtn.classList.toggle('is-current-month', year === nowRef.getFullYear() && month === nowRef.getMonth());
+                }
                 calculateAndDisplayMonthlyTotal();
 
                 const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -4416,14 +4645,15 @@
 
                 // Offset dias do mês anterior
                 for (let i = 0; i < firstDayOfMonth; i++) {
-                    calendarBody.innerHTML += `<div class="bg-gray-100/50 dark:bg-slate-800/20 rounded-xl"></div>`;
+                    calendarBody.innerHTML += `<div class="agenda-empty-cell" aria-hidden="true"></div>`;
                 }
 
                 // Dias do mês atual
                 for (let day = 1; day <= lastDateOfMonth; day++) {
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    const today = new Date();
-                    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+                    const isToday = day === nowRef.getDate() && month === nowRef.getMonth() && year === nowRef.getFullYear();
+                    const dayOfWeek = new Date(year, month, day).getDay();
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                     const dayItems = events.filter(e => eventOccursOnDate(e, dateStr));
                     const meetingsOnDay = dayItems.filter(e => e.eventType === 'meeting').length;
                     const eventsOnDay = dayItems.length - meetingsOnDay;
@@ -4432,9 +4662,9 @@
                     const municipalQuotes = dayItems.filter(e => municipalityKind(e) === 'quote').length;
 
                     const dayCell = document.createElement('div');
-                    const classes = ['day-cell', 'p-1.5', 'border', 'border-transparent', 'flex', 'flex-col', 'items-start', 'cursor-pointer', 'text-gray-700'];
-                    if (isToday) classes.push('bg-indigo-200/80', 'font-bold');
-                    else classes.push('bg-white/40', 'hover:bg-white/80');
+                    const classes = ['day-cell', 'cursor-pointer'];
+                    if (isWeekend) classes.push('is-weekend');
+                    if (isToday) classes.push('is-today');
                     if (eventsOnDay > 0) classes.push('has-event');
                     if (meetingsOnDay > 0) classes.push('has-meeting');
                     if (pendingOnDay > 0) classes.push('has-pending-cadastro');
@@ -4472,14 +4702,22 @@
                     }
 
                     if (municipalConfirmed || municipalQuotes) {
-                        eventInfoHtml += `<div class="municipality-day-labels">${municipalConfirmed ? municipalityBadge('confirmed', `${municipalConfirmed} pref. conf.`) : ''}${municipalQuotes ? municipalityBadge('quote', `${municipalQuotes} pref. orç.`) : ''}</div>`;
-                        dayCell.title = `${municipalConfirmed} prefeitura(s) confirmada(s); ${municipalQuotes} em orçamento`;
+                        eventInfoHtml += `<i class="fas fa-landmark municipality-day-icon" aria-hidden="true"></i>`;
                     }
                     const travelCount = events.filter(e => EventReservations.travelOn(e, dateStr)).length;
-                    if (travelCount) eventInfoHtml += `<div class="text-amber-700 text-xs font-semibold" title="${travelCount} deslocamento(s) de equipamentos"><i class="fas fa-truck" aria-hidden="true"></i> <span>${travelCount} viagem${travelCount > 1 ? 's' : ''}</span></div>`;
-                    dayCell.innerHTML = `<span class="day-number text-xs font-medium">${day}</span>${eventInfoHtml}`;
+                    if (travelCount) eventInfoHtml += `<div class="agenda-travel-pill" title="${travelCount} deslocamento(s) de equipamentos"><i class="fas fa-truck" aria-hidden="true"></i><span>${travelCount}</span></div>`;
+                    dayCell.innerHTML = `<span class="day-number">${day}</span>${eventInfoHtml}`;
                     dayCell.addEventListener('click', () => handleDayClick(dateStr));
                     calendarBody.appendChild(dayCell);
+                }
+
+                // Fecha a última semana da grade para manter simetria visual
+                const trailingCells = (7 - ((firstDayOfMonth + lastDateOfMonth) % 7)) % 7;
+                for (let i = 0; i < trailingCells; i++) {
+                    const emptyEnd = document.createElement('div');
+                    emptyEnd.className = 'agenda-empty-cell';
+                    emptyEnd.setAttribute('aria-hidden', 'true');
+                    calendarBody.appendChild(emptyEnd);
                 }
             };
 
@@ -4810,10 +5048,10 @@
                         const isConcluded = event.status === 'concluido';
                         const eventDiv = document.createElement('div');
                         eventDiv.className = isCancelled
-                            ? 'event-card-cancelled bg-red-50/60 p-3 rounded-lg border-2 border-red-300 relative'
+                            ? 'event-card-cancelled bg-red-50/60 p-4 rounded-xl border-2 border-red-300 relative'
                             : (event.status === 'cadastro_completo'
-                                ? 'bg-green-50/60 p-3 rounded-lg border-2 border-green-400'
-                                : 'bg-white/50 p-3 rounded-lg border border-gray-200');
+                                ? 'bg-green-50/60 p-4 rounded-xl border-2 border-green-400'
+                                : 'surface-inset p-4 rounded-xl transition-shadow hover:shadow-sm');
                         const municipalKind = municipalityKind(event);
                         if (municipalKind) eventDiv.classList.add(`event-municipality-${municipalKind}`);
                         const municipalBadge = municipalKind ? `<div class="mb-2">${municipalityBadge(municipalKind, municipalKind === 'confirmed' ? 'Prefeitura — confirmada' : 'Prefeitura — em orçamento')}</div>` : '';
@@ -5042,13 +5280,17 @@
                         ? `<span class="block text-[10px] text-gray-400 font-normal">${inMonth}/${total} dias neste mês</span>`
                         : '';
 
+                    const mKind = municipalityKind(event);
+                    const mDot = mKind === 'confirmed'
+                        ? `<i class="fas fa-landmark ml-1.5 text-xs" style="color:#06b6d4" title="Prefeitura confirmada"></i>`
+                        : (mKind === 'quote' ? `<i class="fas fa-landmark ml-1.5 text-xs opacity-60" style="color:#06b6d4" title="Prefeitura em orçamento"></i>` : '');
                     return `
-                <tr class="hover:bg-indigo-50 cursor-pointer transition-colors" data-event-id="${event.id}" data-event-date="${event.date}">
-                    <td class="border border-gray-300 px-3 py-3 text-sm font-mono font-bold text-indigo-700 whitespace-nowrap">${event.code != null ? `#${event.code}` : '—'}</td>
-                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${event.clientName || 'Sem nome'}</td>
-                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${formattedDate}</td>
-                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700">${eventLocation}</td>
-                    <td class="border border-gray-300 px-4 py-3 text-sm text-gray-700 font-semibold text-emerald-600">${formatCurrency(monthValue)}${partialNote}</td>
+                <tr class="cursor-pointer" data-event-id="${event.id}" data-event-date="${event.date}">
+                    <td class="whitespace-nowrap"><span class="badge badge-brand font-mono">${event.code != null ? `#${event.code}` : '—'}</span></td>
+                    <td class="font-medium">${event.clientName || 'Sem nome'}${mDot}</td>
+                    <td class="whitespace-nowrap" style="color: var(--text-muted)">${formattedDate}</td>
+                    <td style="color: var(--text-muted)">${eventLocation}</td>
+                    <td class="text-right font-semibold whitespace-nowrap" style="color: var(--success)">${formatCurrency(monthValue)}${partialNote}</td>
                 </tr>
             `;
                 }).join('');
@@ -10171,6 +10413,28 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 checkBirthdayNotifications(); // <-- ATUALIZAR NOTIFICAÇÕES
                 // --- FIM DA MODIFICAÇÃO ---
             });
+
+            if (todayMonthBtn) {
+                todayMonthBtn.addEventListener('click', () => {
+                    currentDate = new Date();
+                    selectedDate = null;
+                    hideModal(dayEventsModal);
+                    renderCalendar();
+                    renderCompanies();
+                    checkBirthdayNotifications();
+                });
+            }
+
+            if (quickNewEventBtn) {
+                quickNewEventBtn.addEventListener('click', () => {
+                    const now = new Date();
+                    const isSameMonth = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
+                    const targetDay = isSameMonth ? now.getDate() : 1;
+                    const defaultDateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+                    selectedDate = defaultDateStr;
+                    showEventModal(defaultDateStr);
+                });
+            }
 
             addToyBtn.addEventListener('click', handleAddToy);
             exportToysPdfBtn.addEventListener('click', handleExportToysPDF); // Event listener para o PDF
