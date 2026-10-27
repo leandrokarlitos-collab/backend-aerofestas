@@ -459,9 +459,9 @@
         }
         .dark .contract-pdf-preview-iframe { background: #1e293b; }
 
-        /* === Layout Otimizado da Agenda (Soft Depth Premium) === */
+        /* === Layout da Agenda — Estilo A: Respiro Puro === */
         .agenda-shell {
-            max-width: 72rem;
+            max-width: 68rem;
             margin: 0 auto;
         }
         .agenda-kpi-grid {
@@ -472,23 +472,49 @@
         }
         .agenda-kpi-card {
             display: flex;
-            flex-direction: row;
-            align-items: center;
+            flex-direction: column;
             justify-content: space-between;
-            gap: 14px;
             padding: 16px 20px;
+            border-radius: 16px;
+            background: var(--surface-1);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 8px 24px rgba(15, 23, 42, 0.04);
+            cursor: pointer;
+            transition: transform 0.16s var(--ease), border-color 0.16s var(--ease);
+        }
+        .dark .agenda-kpi-card {
+            border-color: var(--border);
+            box-shadow: none;
+        }
+        .agenda-kpi-card:hover {
+            transform: translateY(-1px);
+            border-color: var(--border-strong);
         }
         .agenda-kpi-card.hidden { display: none !important; }
-        .agenda-kpi-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
+        .agenda-kpi-link {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
+            gap: 5px;
         }
+        .agenda-kpi-link:hover { text-decoration: underline; }
+
+        .agenda-calendar-card {
+            background: var(--surface-1);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 18px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03), 0 8px 24px rgba(15, 23, 42, 0.04);
+        }
+        .dark .agenda-calendar-card {
+            border-color: var(--border);
+            box-shadow: none;
+        }
+
         .agenda-toolbar {
             display: flex;
             align-items: center;
@@ -496,22 +522,28 @@
             gap: 12px;
             flex-wrap: wrap;
             padding-bottom: 14px;
-            margin-bottom: 14px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+        }
+        .dark .agenda-toolbar {
+            border-bottom-color: rgba(148, 163, 184, 0.08);
         }
         .agenda-nav-group {
             display: inline-flex;
             align-items: center;
-            gap: 3px;
-            padding: 3px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
+            gap: 2px;
+            padding: 2px;
+            background: transparent;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+        }
+        .dark .agenda-nav-group {
+            border-color: rgba(148, 163, 184, 0.14);
         }
         .agenda-nav-btn {
-            width: 34px;
-            height: 34px;
-            border-radius: calc(var(--radius) - 3px);
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
             border: none;
             background: transparent;
             color: var(--text-muted);
@@ -519,96 +551,104 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
         }
         .agenda-nav-btn:hover {
-            background: var(--surface-1);
+            background: var(--surface-2);
             color: var(--text);
-            box-shadow: var(--shadow-1);
         }
         .agenda-today-btn {
-            height: 34px;
-            padding: 0 12px;
-            border-radius: calc(var(--radius) - 3px);
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 9px;
             border: none;
             background: transparent;
             color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
         }
         .agenda-today-btn:hover {
-            background: var(--surface-1);
-            color: var(--brand-600);
-            box-shadow: var(--shadow-1);
+            background: var(--surface-2);
+            color: var(--text);
         }
-        .dark .agenda-today-btn:hover { color: var(--brand-400); }
         .agenda-today-btn.is-current-month {
             color: var(--text-faint);
         }
+        .agenda-list-btn {
+            padding: 6px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+        }
+        .dark .agenda-list-btn { border-color: rgba(148, 163, 184, 0.14); }
+        .agenda-list-btn:hover {
+            background: var(--surface-2);
+            color: var(--text);
+        }
+
         .agenda-weekdays {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: center;
         }
         .agenda-weekdays > div {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-faint);
             padding: 4px 0;
         }
-        .agenda-weekdays > div.is-weekend { color: var(--brand-600); }
-        .dark .agenda-weekdays > div.is-weekend { color: var(--brand-400); }
 
+        /* A. Respiro Puro — sem caixas cinzas nos dias vazios nem nos dias comuns */
         .agenda-empty-cell {
-            min-height: 94px;
-            border-radius: var(--radius);
-            border: 1px dashed var(--border);
+            min-height: 86px;
             background: transparent;
-            opacity: 0.45;
+            border: none;
         }
 
         .day-cell {
-            min-height: 94px;
+            min-height: 86px;
             height: 100%;
             position: relative;
             overflow: hidden;
-            border-radius: var(--radius);
-            transition: transform var(--dur-slow) var(--ease), box-shadow var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease), background-color var(--dur-slow) var(--ease);
-            background: var(--surface-inset);
-            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: background-color 0.18s var(--ease), border-color 0.18s var(--ease);
+            background: transparent;
+            border: 1px solid transparent;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            padding: 8px 10px;
-            color: var(--text);
-        }
-
-        .day-cell.is-weekend {
-            background: var(--surface-2);
-        }
-        .dark .day-cell.is-weekend {
-            background: rgba(26, 36, 56, 0.55);
+            padding: 10px 12px;
+            color: var(--text-muted);
         }
 
         .day-cell:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-2);
-            background: var(--surface-1);
-            border-color: var(--brand-400);
+            background: rgba(15, 23, 42, 0.032);
             z-index: 10;
         }
+        .dark .day-cell:hover {
+            background: rgba(148, 163, 184, 0.07);
+        }
 
-        /* Célula "hoje" — anel sutil da marca + número em destaque */
+        /* Célula "hoje" — contorno finíssimo + pílula delicada no número */
         .day-cell.is-today {
-            background: var(--brand-50);
-            border-color: var(--brand-500);
-            box-shadow: 0 0 0 1px var(--brand-500) inset;
+            background: rgba(99, 102, 241, 0.035);
+            border-color: rgba(99, 102, 241, 0.22);
+        }
+        .dark .day-cell.is-today {
+            background: rgba(99, 102, 241, 0.06);
+            border-color: rgba(129, 140, 248, 0.28);
         }
         .day-cell.is-today .day-number {
             display: inline-flex;
@@ -616,12 +656,16 @@
             justify-content: center;
             min-width: 24px;
             height: 24px;
+            margin: -3px 0 0 -4px;
             padding: 0 6px;
             border-radius: 999px;
-            background: var(--grad-brand);
-            color: #fff;
-            font-weight: 700;
-            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+            background: rgba(79, 70, 229, 0.12);
+            color: var(--brand-600);
+            font-weight: 600;
+        }
+        .dark .day-cell.is-today .day-number {
+            background: rgba(99, 102, 241, 0.25);
+            color: #a5b4fc;
         }
 
         .agenda-travel-pill {
@@ -629,13 +673,13 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 6px;
-            border-radius: 6px;
+            padding: 1px 5px;
+            border-radius: 5px;
             font-size: 10px;
-            font-weight: 700;
-            background: var(--warning-soft);
+            font-weight: 600;
+            background: rgba(245, 158, 11, 0.10);
             color: #b45309;
-            transition: opacity 0.25s ease;
+            transition: opacity 0.2s ease;
         }
         .dark .agenda-travel-pill { color: var(--warning); }
         .day-cell:hover .agenda-travel-pill { opacity: 0; }
@@ -688,13 +732,14 @@
         .day-number {
             position: relative;
             z-index: 1;
-            font-size: 0.8125rem;
-            font-weight: 600;
+            font-size: 0.78rem;
+            font-weight: 500;
             line-height: 1.2;
             font-variant-numeric: tabular-nums;
-            color: var(--text);
-            transition: opacity 0.25s ease, transform 0.25s ease;
+            color: var(--text-muted);
+            transition: opacity 0.2s ease;
         }
+        .dark .day-number { color: #cbd5e1; }
 
         .event-count-container {
             position: absolute;
@@ -785,96 +830,97 @@
             background: linear-gradient(to top right, rgba(59, 130, 246, 0.92), rgba(139, 92, 246, 0.92));
         }
 
-        /* Aguardando cadastro do cliente — dia pulsa em âmbar */
-        @keyframes pulse-pending-cadastro {
-            0%, 100% {
-                background-color: rgba(251, 191, 36, 0.18);
-                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
-            }
-            50% {
-                background-color: rgba(251, 191, 36, 0.42);
-                box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
-            }
+        /* Aguardando cadastro do cliente — véu âmbar sutil + pulso suave na bolinha */
+        @keyframes pulse-pending-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
         }
         .day-cell.has-pending-cadastro {
-            animation: pulse-pending-cadastro 1.8s ease-in-out infinite;
-            border-color: rgba(245, 158, 11, 0.5) !important;
+            background-color: rgba(251, 191, 36, 0.08) !important;
+            border-color: rgba(245, 158, 11, 0.28) !important;
         }
-        /* Dot amarelo sobrepõe o azul padrão do has-event */
+        .dark .day-cell.has-pending-cadastro {
+            background-color: rgba(245, 158, 11, 0.10) !important;
+            border-color: rgba(245, 158, 11, 0.32) !important;
+        }
         .day-cell.has-pending-cadastro.has-event::after {
             background-color: #f59e0b;
-            box-shadow: 0 0 6px #f59e0b, 0 0 10px #fbbf24;
+            box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+            animation: pulse-pending-dot 2.4s ease-in-out infinite;
         }
-        /* Hover: contador amarelo/laranja */
         .day-cell.has-pending-cadastro .event-count-container {
-            background: linear-gradient(to top right, rgba(245, 158, 11, 0.95), rgba(251, 146, 60, 0.95)) !important;
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.90), rgba(245, 158, 11, 0.88)) !important;
         }
 
-        /* Destaque Prefeitura — Estilo 1 (Superfície translúcida + micro-ícone silencioso, Ciano) */
+        /* Destaque Prefeitura — Estilo 1 Ciano Sutil */
         .municipality-badge {
             display: inline-flex; align-items: center; gap: 5px;
             padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
             white-space: normal; line-height: 1.3;
         }
-        .municipality-confirmed { background: rgba(6, 182, 212, 0.14); color: #0e7490; border: 1px solid rgba(6, 182, 212, 0.55); }
-        .dark .municipality-confirmed { background: rgba(6, 182, 212, 0.20); color: #67e8f9; border-color: rgba(6, 182, 212, 0.55); }
-        .municipality-quote { background: rgba(6, 182, 212, 0.07); color: #0891b2; border: 1px dashed rgba(6, 182, 212, 0.50); }
-        .dark .municipality-quote { background: rgba(6, 182, 212, 0.10); color: #38bdf8; border-color: rgba(6, 182, 212, 0.45); }
+        .municipality-confirmed { background: rgba(6, 182, 212, 0.12); color: #0e7490; border: 1px solid rgba(8, 145, 178, 0.35); }
+        .dark .municipality-confirmed { background: rgba(6, 182, 212, 0.18); color: #67e8f9; border-color: rgba(6, 182, 212, 0.45); }
+        .municipality-quote { background: rgba(6, 182, 212, 0.06); color: #0891b2; border: 1px dashed rgba(8, 145, 178, 0.35); }
+        .dark .municipality-quote { background: rgba(6, 182, 212, 0.10); color: #38bdf8; border-color: rgba(6, 182, 212, 0.40); }
 
         .day-cell.has-municipality-quote,
         .day-cell.has-municipality-confirmed { animation: none; }
 
-        /* Prefeitura em orçamento (borda tracejada + fundo leve + anel luminoso) */
+        /* Prefeitura em orçamento (borda tracejada suave + anel ciano) */
         .day-cell.has-municipality-quote {
-            background-color: rgba(6, 182, 212, 0.06) !important;
-            border: 1px dashed rgba(6, 182, 212, 0.50) !important;
+            background-color: rgba(6, 182, 212, 0.03) !important;
+            border: 1px dashed rgba(8, 145, 178, 0.24) !important;
         }
         .dark .day-cell.has-municipality-quote {
-            background-color: rgba(6, 182, 212, 0.07) !important;
+            background-color: rgba(6, 182, 212, 0.045) !important;
+            border-color: rgba(6, 182, 212, 0.28) !important;
         }
         .day-cell.has-municipality-quote.has-event::after {
-            width: 7px; height: 7px;
+            width: 6px; height: 6px;
             background-color: transparent !important;
             border: 1.5px solid #06b6d4 !important;
-            box-shadow: 0 0 6px rgba(6, 182, 212, 0.50) !important;
+            box-shadow: none !important;
+            animation: none !important;
         }
         .day-cell.has-municipality-quote .event-count-container {
-            background: linear-gradient(to top right, rgba(2, 132, 199, 0.88), rgba(56, 189, 248, 0.88)) !important;
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.86), rgba(56, 189, 248, 0.86)) !important;
         }
 
-        /* Prefeitura confirmada (borda contínua + superfície translúcida + dot ciano luminoso) */
+        /* Prefeitura confirmada (véu ciano leve + borda fina + dot ciano suave) */
         .day-cell.has-municipality-confirmed {
-            background-color: rgba(6, 182, 212, 0.12) !important;
-            border: 1px solid rgba(6, 182, 212, 0.55) !important;
+            background-color: rgba(6, 182, 212, 0.055) !important;
+            border: 1px solid rgba(8, 145, 178, 0.24) !important;
         }
         .dark .day-cell.has-municipality-confirmed {
-            background-color: rgba(6, 182, 212, 0.16) !important;
+            background-color: rgba(6, 182, 212, 0.09) !important;
+            border-color: rgba(6, 182, 212, 0.32) !important;
         }
         .day-cell.has-municipality-confirmed.has-event::after {
             width: 6px; height: 6px;
             background-color: #06b6d4 !important;
             border: none !important;
-            box-shadow: 0 0 8px #06b6d4 !important;
+            box-shadow: 0 0 6px rgba(6, 182, 212, 0.55) !important;
+            animation: none !important;
         }
         .day-cell.has-municipality-confirmed .event-count-container {
-            background: linear-gradient(to top right, rgba(8, 145, 178, 0.94), rgba(6, 182, 212, 0.92)) !important;
+            background: linear-gradient(135deg, rgba(8, 145, 178, 0.90), rgba(6, 182, 212, 0.88)) !important;
         }
 
-        /* Micro-ícone silencioso no canto superior direito da célula */
+        /* Micro-ícone silencioso no canto superior direito */
         .municipality-day-icon {
-            position: absolute; top: 8px; right: 8px;
+            position: absolute; top: 10px; right: 10px;
             font-size: 11px; line-height: 1;
-            color: #0891b2; opacity: 0.85;
+            color: #0891b2; opacity: 0.68;
             pointer-events: none;
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: opacity 0.2s ease;
         }
-        .dark .municipality-day-icon { color: #06b6d4; }
-        .day-cell.has-municipality-quote:not(.has-municipality-confirmed) .municipality-day-icon { opacity: 0.55; }
-        .day-cell:hover .municipality-day-icon { opacity: 0; transform: scale(0.8); }
+        .dark .municipality-day-icon { color: #22d3ee; }
+        .day-cell.has-municipality-quote:not(.has-municipality-confirmed) .municipality-day-icon { opacity: 0.45; }
+        .day-cell:hover .municipality-day-icon { opacity: 0; }
 
-        .event-municipality-confirmed { border: 1.5px solid rgba(6, 182, 212, 0.65) !important; }
-        .event-municipality-quote { border: 1.5px dashed rgba(6, 182, 212, 0.55) !important; }
-        @media (max-width: 480px) { .municipality-day-icon { top: 6px; right: 6px; font-size: 10px; } }
+        .event-municipality-confirmed { border: 1.5px solid rgba(8, 145, 178, 0.45) !important; }
+        .event-municipality-quote { border: 1.5px dashed rgba(8, 145, 178, 0.40) !important; }
+        @media (max-width: 480px) { .municipality-day-icon { top: 7px; right: 7px; font-size: 10px; } }
 
         .rotate-180 {
             transform: rotate(180deg);
@@ -1077,6 +1123,10 @@
         /* amber-500 */
         .status-sinal {
             background-color: #3b82f6;
+        }
+
+        .status-parcial {
+            background-color: #0ea5e9;
         }
 
         /* blue-500 */
@@ -1770,39 +1820,70 @@
             </header>
 
             <div class="agenda-kpi-grid fade-in" style="animation-delay: 0.1s;">
-                <div id="monthly-total-container" class="kpi-card agenda-kpi-card">
-                    <div class="min-w-0">
-                        <span class="kpi-label">Faturamento do Mês</span>
-                        <span id="monthly-total" class="kpi-value is-success block mt-0.5">R$ 0,00</span>
+                <!-- Card 1: Eventos Comuns (Pagos & Pendentes) -->
+                <div id="monthly-total-container" class="agenda-kpi-card" title="Clique para ver a relação de eventos comuns">
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="monthly-common-label" class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-faint)">Eventos Comuns</span>
+                        <span class="text-xs" style="color: var(--text-faint)">Ver lista →</span>
                     </div>
-                    <div class="agenda-kpi-icon" style="background: var(--success-soft); color: var(--success);">
-                        <i class="fas fa-sack-dollar"></i>
+                    <span id="monthly-common-total" class="text-2xl font-bold font-display tabular-nums tracking-tight my-1 block" style="color: var(--text)">R$ 0,00</span>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+                        <button type="button" id="kpi-common-paid-btn" class="agenda-kpi-link" style="color: var(--success)">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--success)"></span>
+                            <span>Pago: <strong id="monthly-common-paid">R$ 0,00</strong></span>
+                        </button>
+                        <button type="button" id="kpi-common-pending-btn" class="agenda-kpi-link" style="color: var(--warning)">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--warning)"></span>
+                            <span>Pendente: <strong id="monthly-common-pending">R$ 0,00</strong></span>
+                        </button>
                     </div>
                 </div>
-                <div id="monthly-events-count-container" class="kpi-card agenda-kpi-card">
-                    <div class="min-w-0">
-                        <span class="kpi-label">Eventos do Mês</span>
-                        <span id="monthly-events-count" class="kpi-value block mt-0.5">—</span>
-                        <span class="kpi-delta block mt-0.5" style="color: var(--text-faint)">executados · a executar</span>
+
+                <!-- Card 2: Prefeituras (Oculto automaticamente quando não há prefeitura confirmada no mês) -->
+                <div id="monthly-municipality-container" class="agenda-kpi-card hidden" title="Clique para ver a relação de prefeituras">
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="monthly-muni-label" class="text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5" style="color: #0891b2">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background: #06b6d4"></span>Prefeituras
+                        </span>
+                        <span class="text-xs" style="color: var(--text-faint)">Ver lista →</span>
                     </div>
-                    <div class="agenda-kpi-icon" style="background: var(--brand-50); color: var(--brand-600);">
-                        <i class="fas fa-calendar-check"></i>
+                    <span id="monthly-muni-total" class="text-2xl font-bold font-display tabular-nums tracking-tight my-1 block" style="color: var(--text)">R$ 0,00</span>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+                        <button type="button" id="kpi-muni-paid-btn" class="agenda-kpi-link" style="color: var(--success)">
+                            <span>Pago: <strong id="monthly-muni-paid">R$ 0,00</strong></span>
+                        </button>
+                        <button type="button" id="kpi-muni-pending-btn" class="agenda-kpi-link" style="color: var(--warning)">
+                            <span>Pendente: <strong id="monthly-muni-pending">R$ 0,00</strong></span>
+                        </button>
+                        <button type="button" id="kpi-muni-quote-btn" class="agenda-kpi-link hidden" style="color: var(--text-faint)">
+                            <span>· Orç.: <strong id="monthly-muni-quote">R$ 0,00</strong></span>
+                        </button>
                     </div>
                 </div>
-                <div id="monthly-estimated-container" class="kpi-card agenda-kpi-card hidden">
-                    <div class="min-w-0">
-                        <span class="kpi-label">Valor Estimado do Mês</span>
-                        <span id="monthly-estimated" class="kpi-value block mt-0.5" style="color: var(--warning)">R$ 0,00</span>
-                        <span class="kpi-delta block mt-0.5" style="color: var(--text-faint)">Projeção de eventos vendidos por ingresso</span>
+
+                <!-- Card 3: Execução do Mês + Faturamento Total consolidado -->
+                <div id="monthly-events-count-container" class="agenda-kpi-card" title="Clique para abrir a relação completa do mês">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-faint)">Execução do Mês</span>
+                        <span class="text-xs tabular-nums" style="color: var(--text-faint)">Total: <strong id="monthly-total" class="font-semibold">R$ 0,00</strong></span>
                     </div>
-                    <div class="agenda-kpi-icon" style="background: var(--warning-soft); color: var(--warning);">
-                        <i class="fas fa-chart-line"></i>
+                    <span id="monthly-events-count" class="text-2xl font-bold font-display tabular-nums tracking-tight my-1 block">—</span>
+                    <span class="text-xs" style="color: var(--text-faint)">executados · a executar</span>
+                </div>
+
+                <!-- Card 4 (Opcional): Estimado de Venda por Ingresso -->
+                <div id="monthly-estimated-container" class="agenda-kpi-card hidden">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-faint)">Valor Estimado</span>
+                        <i class="fas fa-chart-line text-xs" style="color: var(--warning); opacity: 0.7"></i>
                     </div>
+                    <span id="monthly-estimated" class="text-2xl font-bold font-display tabular-nums tracking-tight my-1 block" style="color: var(--warning)">R$ 0,00</span>
+                    <span class="text-xs" style="color: var(--text-faint)">Projeção de eventos vendidos por ingresso</span>
                 </div>
             </div>
 
             <main class="fade-in" style="animation-delay: 0.2s;">
-                <div class="surface p-4 md:p-6">
+                <div class="agenda-calendar-card p-5 md:p-6">
                     <div class="agenda-toolbar">
                         <div class="flex items-center gap-3 flex-wrap">
                             <div class="agenda-nav-group" role="group" aria-label="Navegação de mês">
@@ -1814,27 +1895,21 @@
                                     <i class="fas fa-chevron-right text-xs"></i>
                                 </button>
                             </div>
-                            <h2 id="month-year-header" class="text-xl md:text-2xl font-bold font-display tracking-tight" style="color: var(--text)"></h2>
+                            <h2 id="month-year-header" class="text-lg md:text-xl font-semibold font-display tracking-tight" style="color: var(--text)"></h2>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button id="filter-events-btn" class="btn btn-secondary btn-sm" title="Ver lista e filtrar eventos do mês">
-                                <i class="fas fa-list-ul"></i>
-                                <span>Lista do Mês</span>
-                            </button>
-                            <button id="quick-new-event-btn" class="btn btn-primary btn-sm" title="Adicionar novo agendamento">
-                                <i class="fas fa-plus"></i>
-                                <span>Novo Evento</span>
-                            </button>
-                        </div>
+                        <button id="filter-events-btn" class="agenda-list-btn" title="Ver relação de eventos pagos e pendentes do mês">
+                            <i class="fas fa-list-ul text-xs opacity-70"></i>
+                            <span>Relação do Mês</span>
+                        </button>
                     </div>
                     <div class="agenda-weekdays">
-                        <div class="is-weekend">Dom</div>
+                        <div>Dom</div>
                         <div>Seg</div>
                         <div>Ter</div>
                         <div>Qua</div>
                         <div>Qui</div>
                         <div>Sex</div>
-                        <div class="is-weekend">Sáb</div>
+                        <div>Sáb</div>
                     </div>
                     <div id="calendar-body" class="grid calendar-grid gap-2"></div>
                 </div>
@@ -2580,12 +2655,13 @@
                                     <select id="payment-status" class="form-input w-full px-3 py-2 rounded-md">
                                         <option value="Aguardando Sinal">Aguardando Sinal</option>
                                         <option value="Sinal Pago">Sinal Pago</option>
+                                        <option value="Pagamento Parcial">Pagamento Parcial</option>
                                         <option value="Pago Integralmente">Pago Integralmente</option>
                                         <option value="Cancelado">Cancelado</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="signal-amount"
+                                    <label for="signal-amount" id="signal-amount-label"
                                         class="block text-sm font-medium text-gray-700 mb-1">Valor do Sinal (R$)</label>
                                     <input type="number" id="signal-amount" min="0" step="0.01" value="0"
                                         class="form-input w-full px-3 py-2 rounded-md">
@@ -2594,7 +2670,7 @@
                                     <label class="flex items-center cursor-pointer">
                                         <input type="checkbox" id="signal-received"
                                             class="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                        <span class="ml-2 text-sm font-medium text-gray-700">Sinal Recebido?</span>
+                                        <span id="signal-received-label" class="ml-2 text-sm font-medium text-gray-700">Sinal Recebido?</span>
                                     </label>
                                 </div>
                             </div>
@@ -2953,12 +3029,15 @@
 
     <div id="filter-events-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50"
         role="dialog" aria-labelledby="filter-events-modal-title" aria-modal="true">
-        <div class="modal-box glassmorphism p-6 md:p-7 rounded-2xl shadow-xl w-full max-w-5xl m-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center gap-3 pb-4 mb-4" style="border-bottom: 1px solid var(--border)">
-                <h2 id="filter-events-modal-title" class="text-xl md:text-2xl font-bold font-display" style="color: var(--text)">Eventos do Mês</h2>
+        <div class="modal-box glassmorphism p-5 md:p-6 rounded-2xl shadow-xl w-full max-w-5xl m-4 max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-start gap-3 pb-4" style="border-bottom: 1px solid var(--border)">
+                <div>
+                    <h2 id="filter-events-modal-title" class="text-lg md:text-xl font-semibold font-display" style="color: var(--text)">Relação do Mês</h2>
+                    <p id="filter-events-modal-sub" class="text-xs mt-0.5" style="color: var(--text-muted)">Eventos pagos e pendentes de pagamento</p>
+                </div>
                 <div class="flex items-center gap-2">
-                    <button id="export-filter-events-pdf-btn" class="btn btn-danger btn-sm" title="Exportar PDF">
-                        <i class="fas fa-file-pdf"></i>
+                    <button id="export-filter-events-pdf-btn" class="btn btn-secondary btn-sm" title="Exportar relação atual em PDF">
+                        <i class="fas fa-file-pdf text-rose-500"></i>
                         <span>Exportar PDF</span>
                     </button>
                     <button id="close-filter-events-modal-btn" class="btn btn-ghost btn-icon" aria-label="Fechar modal">
@@ -2966,7 +3045,23 @@
                     </button>
                 </div>
             </div>
-            <div id="filter-events-table-container" class="table-wrap surface-inset">
+
+            <!-- Barra de filtros: Escopo (oculta se não houver prefeitura confirmada no mês) + Status de pagamento -->
+            <div class="flex flex-wrap items-center justify-between gap-3 py-3.5">
+                <div id="rel-scope-tabs" class="segmented hidden" role="tablist" aria-label="Tipo de evento">
+                    <button type="button" data-rel-scope="common" class="rel-scope-btn active">Eventos Comuns</button>
+                    <button type="button" data-rel-scope="municipality" class="rel-scope-btn inline-flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full" style="background: #06b6d4"></span>Prefeituras
+                    </button>
+                    <button type="button" data-rel-scope="all" class="rel-scope-btn">Todos</button>
+                </div>
+                <div id="rel-pay-tabs" class="flex flex-wrap items-center gap-1.5"></div>
+            </div>
+
+            <!-- Resumo de totais da seleção -->
+            <div id="rel-summary-strip" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3.5"></div>
+
+            <div id="filter-events-table-container" class="table-wrap surface-inset flex-1 overflow-y-auto">
                 <table class="table">
                     <thead>
                         <tr>
@@ -2974,16 +3069,19 @@
                                 Código <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
                             <th class="cursor-pointer select-none" data-sort="name" data-sort-order="asc">
-                                Cliente / Evento <i class="fas fa-sort ml-1 text-gray-400"></i>
+                                Cliente <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
                             <th class="cursor-pointer select-none whitespace-nowrap" data-sort="date" data-sort-order="asc">
                                 Data <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
-                            <th class="cursor-pointer select-none" data-sort="location" data-sort-order="asc">
-                                Local <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            <th class="cursor-pointer select-none whitespace-nowrap" data-sort="status" data-sort-order="asc">
+                                Situação <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
-                            <th class="cursor-pointer select-none text-right whitespace-nowrap" data-sort="value" data-sort-order="asc">
-                                Valor <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            <th class="cursor-pointer select-none text-right whitespace-nowrap" data-sort="paid" data-sort-order="asc">
+                                Pago <i class="fas fa-sort ml-1 text-gray-400"></i>
+                            </th>
+                            <th class="cursor-pointer select-none text-right whitespace-nowrap" data-sort="pending" data-sort-order="asc">
+                                Pendente <i class="fas fa-sort ml-1 text-gray-400"></i>
                             </th>
                         </tr>
                     </thead>
@@ -2992,7 +3090,7 @@
                     </tbody>
                 </table>
             </div>
-            <p id="filter-events-empty" class="text-center py-10 hidden" style="color: var(--text-muted)">Nenhum evento encontrado para este mês.</p>
+            <p id="filter-events-empty" class="text-center py-10 hidden" style="color: var(--text-muted)">Nenhum evento encontrado para este filtro.</p>
         </div>
     </div>
 
@@ -3124,7 +3222,6 @@
             const prevMonthBtn = document.getElementById('prev-month-btn');
             const nextMonthBtn = document.getElementById('next-month-btn');
             const todayMonthBtn = document.getElementById('today-month-btn');
-            const quickNewEventBtn = document.getElementById('quick-new-event-btn');
             const toyListDiv = document.getElementById('toy-list');
             const addToyBtn = document.getElementById('add-toy-btn');
             const newToyNameInput = document.getElementById('new-toy-name');
@@ -3649,26 +3746,138 @@
             };
             */
 
+            // Calcula valor total, pago e pendente atribuíveis ao ano/mês para um evento válido.
+            const getEventPaymentBreakdownInMonth = (event, year, month) => {
+                const isCancelled = event.status === 'cancelado' || event.paymentStatus === 'Cancelado';
+                const mKind = municipalityKind(event); // 'confirmed' | 'quote' | null
+                const monthTotal = isCancelled ? 0 : eventRevenueInMonth(event, year, month);
+                if (isCancelled || mKind === 'quote') {
+                    return {
+                        isCancelled,
+                        isQuote: mKind === 'quote',
+                        isMunicipality: !!mKind,
+                        mKind,
+                        monthTotal,
+                        monthPaid: 0,
+                        monthPending: mKind === 'quote' ? monthTotal : 0,
+                        isFullyPaid: false
+                    };
+                }
+                const st = event.paymentStatus || 'Aguardando Sinal';
+                if (st === 'Pago Integralmente') {
+                    return {
+                        isCancelled: false,
+                        isQuote: false,
+                        isMunicipality: !!mKind,
+                        mKind,
+                        monthTotal,
+                        monthPaid: monthTotal,
+                        monthPending: 0,
+                        isFullyPaid: true
+                    };
+                }
+                const hasPartial = st === 'Sinal Pago' || st === 'Pagamento Parcial' || (event.signalReceived && Number(event.signalAmount) > 0);
+                const ym = `${year}-${String(month + 1).padStart(2, '0')}`;
+                const frac = eventMonthWeightFraction(event, ym);
+                const rawPaid = hasPartial ? (Number(event.signalAmount) || 0) * frac : 0;
+                const monthPaid = Math.min(monthTotal, Math.max(0, rawPaid));
+                const monthPending = Math.max(monthTotal - monthPaid, 0);
+                const isFullyPaid = monthTotal > 0 && monthPending <= 0.009;
+                return {
+                    isCancelled: false,
+                    isQuote: false,
+                    isMunicipality: !!mKind,
+                    mKind,
+                    monthTotal,
+                    monthPaid,
+                    monthPending: isFullyPaid ? 0 : monthPending,
+                    isFullyPaid
+                };
+            };
+
+            const summarizeEventsGroup = (list, year, month) => {
+                let total = 0, paid = 0, pending = 0, paidCount = 0, pendingCount = 0;
+                list.forEach(ev => {
+                    const b = getEventPaymentBreakdownInMonth(ev, year, month);
+                    if (b.isCancelled || b.isQuote) return;
+                    total += b.monthTotal;
+                    paid += b.monthPaid;
+                    pending += b.monthPending;
+                    if (b.isFullyPaid) paidCount++;
+                    else pendingCount++;
+                });
+                return { total, paid, pending, paidCount, pendingCount, count: paidCount + pendingCount };
+            };
+
             const calculateAndDisplayMonthlyTotal = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
-                // Eventos com ao menos um dia ativo neste mês (inclui multi-dia iniciado
-                // no mês anterior que se estende para cá).
                 const monthlyEvents = events.filter(event => {
                     if (event.eventType === 'meeting') return false;
                     return eventTouchesMonth(event, year, month);
                 });
-                // Faturamento do mês: preço dos eventos normais + líquido realizado dos eventos por ingresso,
-                // cada um rateado pelos dias ativos que caem NESTE mês — um evento que cruza a virada de mês
-                // entra proporcionalmente em cada mês. (Eventos por ingresso têm price = 0.)
-                const total = monthlyEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
-                monthlyTotalEl.textContent = formatCurrency(total);
-
-                // Quantitativo do mês: executados (status 'concluido') vs. a executar.
-                // Cancelados ficam de fora; multi-dia conta 1 em cada mês que toca (eventTouchesMonth).
                 const eventosValidos = monthlyEvents.filter(e => e.status !== 'cancelado' && e.paymentStatus !== 'Cancelado');
-                const executados = eventosValidos.filter(e => e.status === 'concluido').length;
-                const aExecutar = eventosValidos.length - executados;
+
+                const commonEvents = eventosValidos.filter(e => !municipalityKind(e));
+                const muniConfirmedEvents = eventosValidos.filter(e => municipalityKind(e) === 'confirmed');
+                const muniQuoteEvents = eventosValidos.filter(e => municipalityKind(e) === 'quote');
+
+                const commonStats = summarizeEventsGroup(commonEvents, year, month);
+                const muniStats = summarizeEventsGroup(muniConfirmedEvents, year, month);
+                const quoteTotal = muniQuoteEvents.reduce((s, e) => s + eventRevenueInMonth(e, year, month), 0);
+
+                // Total contratado consolidado (exclui orçamentos não fechados de prefeitura)
+                const consolidatedConfirmedTotal = commonStats.total + muniStats.total;
+                if (monthlyTotalEl) monthlyTotalEl.textContent = formatCurrency(consolidatedConfirmedTotal);
+
+                // Card 1: Eventos Comuns
+                const commonLabelEl = document.getElementById('monthly-common-label');
+                const commonTotalEl = document.getElementById('monthly-common-total');
+                const commonPaidEl = document.getElementById('monthly-common-paid');
+                const commonPendEl = document.getElementById('monthly-common-pending');
+                if (commonLabelEl) {
+                    commonLabelEl.textContent = muniStats.count > 0
+                        ? `Eventos Comuns · ${commonStats.count}`
+                        : `Faturamento do Mês · ${commonStats.count}`;
+                }
+                if (commonTotalEl) commonTotalEl.textContent = formatCurrency(commonStats.total);
+                if (commonPaidEl) commonPaidEl.textContent = formatCurrency(commonStats.paid);
+                if (commonPendEl) commonPendEl.textContent = formatCurrency(commonStats.pending);
+
+                // Card 2: Prefeituras — SÓ aparece se houver prefeitura CONFIRMADA no mês!
+                const muniContainer = document.getElementById('monthly-municipality-container');
+                if (muniContainer) {
+                    if (muniStats.count > 0) {
+                        muniContainer.classList.remove('hidden');
+                        const muniLabelEl = document.getElementById('monthly-muni-label');
+                        const muniTotalEl = document.getElementById('monthly-muni-total');
+                        const muniPaidEl = document.getElementById('monthly-muni-paid');
+                        const muniPendEl = document.getElementById('monthly-muni-pending');
+                        const muniQuoteBtn = document.getElementById('kpi-muni-quote-btn');
+                        const muniQuoteEl = document.getElementById('monthly-muni-quote');
+                        if (muniLabelEl) {
+                            muniLabelEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full" style="background: #06b6d4"></span>Prefeituras · ${muniStats.count}`;
+                        }
+                        if (muniTotalEl) muniTotalEl.textContent = formatCurrency(muniStats.total);
+                        if (muniPaidEl) muniPaidEl.textContent = formatCurrency(muniStats.paid);
+                        if (muniPendEl) muniPendEl.textContent = formatCurrency(muniStats.pending);
+                        if (muniQuoteBtn && muniQuoteEl) {
+                            if (muniQuoteEvents.length > 0) {
+                                muniQuoteEl.textContent = formatCurrency(quoteTotal);
+                                muniQuoteBtn.classList.remove('hidden');
+                            } else {
+                                muniQuoteBtn.classList.add('hidden');
+                            }
+                        }
+                    } else {
+                        muniContainer.classList.add('hidden');
+                    }
+                }
+
+                // Card 3: Quantitativo de execução (confirmados + comuns válidos, exceto orçamentos não fechados)
+                const eventosContratados = eventosValidos.filter(e => municipalityKind(e) !== 'quote');
+                const executados = eventosContratados.filter(e => e.status === 'concluido').length;
+                const aExecutar = eventosContratados.length - executados;
                 const countEl = document.getElementById('monthly-events-count');
                 if (countEl) {
                     countEl.innerHTML =
@@ -3677,12 +3886,10 @@
                         `<span style="color: var(--brand-500)">${aExecutar}</span>`;
                 }
 
-                // Estimado do mês: só eventos por ingresso AINDA não realizados (sem líquido informado).
-                // Quando o líquido é lançado, o evento sai do estimado e passa ao faturamento acima.
+                // Card 4: Estimado por ingresso
                 const estimatedTotal = monthlyEvents.reduce((sum, event) => {
                     if (!event.isTicketSale) return sum;
                     if (event.ticketNetTotal != null) return sum;
-                    // monthlyEvents já restringe ao mês em que o evento conta (mês de início do ingresso).
                     return sum + (Number(event.estimatedValue) || 0);
                 }, 0);
                 const estimatedContainer = document.getElementById('monthly-estimated-container');
@@ -4652,8 +4859,6 @@
                 for (let day = 1; day <= lastDateOfMonth; day++) {
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const isToday = day === nowRef.getDate() && month === nowRef.getMonth() && year === nowRef.getFullYear();
-                    const dayOfWeek = new Date(year, month, day).getDay();
-                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                     const dayItems = events.filter(e => eventOccursOnDate(e, dateStr));
                     const meetingsOnDay = dayItems.filter(e => e.eventType === 'meeting').length;
                     const eventsOnDay = dayItems.length - meetingsOnDay;
@@ -4663,7 +4868,6 @@
 
                     const dayCell = document.createElement('div');
                     const classes = ['day-cell', 'cursor-pointer'];
-                    if (isWeekend) classes.push('is-weekend');
                     if (isToday) classes.push('is-today');
                     if (eventsOnDay > 0) classes.push('has-event');
                     if (meetingsOnDay > 0) classes.push('has-meeting');
@@ -4709,15 +4913,6 @@
                     dayCell.innerHTML = `<span class="day-number">${day}</span>${eventInfoHtml}`;
                     dayCell.addEventListener('click', () => handleDayClick(dateStr));
                     calendarBody.appendChild(dayCell);
-                }
-
-                // Fecha a última semana da grade para manter simetria visual
-                const trailingCells = (7 - ((firstDayOfMonth + lastDateOfMonth) % 7)) % 7;
-                for (let i = 0; i < trailingCells; i++) {
-                    const emptyEnd = document.createElement('div');
-                    emptyEnd.className = 'agenda-empty-cell';
-                    emptyEnd.setAttribute('aria-hidden', 'true');
-                    calendarBody.appendChild(emptyEnd);
                 }
             };
 
@@ -5198,104 +5393,220 @@
                 }));
             };
 
-            // INÍCIO: Funções para Modal de Filtro de Eventos
-            let currentSortColumn = null;
+            // INÍCIO: Relação Financeira e Eventos do Mês (Comuns vs. Prefeituras · Pagos vs. Pendentes)
+            let currentSortColumn = 'date';
             let currentSortOrder = 'asc';
+            let relScope = 'common';     // 'common' | 'municipality' | 'all'
+            let relPayFilter = 'all';    // 'all' | 'pending' | 'paid' | 'quote'
 
-            const renderFilterEventsTable = () => {
+            const getRelationStatusLabel = (event, b) => {
+                if (b.isQuote) return 'Em Orçamento';
+                const st = event.paymentStatus || 'Aguardando Sinal';
+                if (b.isFullyPaid || st === 'Pago Integralmente') return 'Pago Integral';
+                if (st === 'Pagamento Parcial') return 'Pagamento Parcial';
+                if (st === 'Sinal Pago' || b.monthPaid > 0) return 'Sinal Pago · Falta saldo';
+                return 'Aguardando Sinal';
+            };
+
+            const getFilteredRelationContext = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
-
-                const monthlyEvents = events.filter(event => {
+                const validMonthly = events.filter(event => {
                     if (event.eventType === 'meeting') return false;
+                    if (event.status === 'cancelado' || event.paymentStatus === 'Cancelado') return false;
                     return eventTouchesMonth(event, year, month);
                 });
 
-                if (monthlyEvents.length === 0) {
+                const hasConfirmedMunicipality = validMonthly.some(e => municipalityKind(e) === 'confirmed');
+                // Se não houver prefeituras confirmadas no mês, oculta a divisão de prefeituras
+                const effectiveScope = hasConfirmedMunicipality ? relScope : 'common';
+
+                const scoped = validMonthly.filter(e => {
+                    const mk = municipalityKind(e);
+                    if (!hasConfirmedMunicipality) return !mk; // só eventos comuns quando não há prefeitura confirmada
+                    if (effectiveScope === 'common') return !mk;
+                    if (effectiveScope === 'municipality') return !!mk;
+                    return true;
+                });
+
+                const confirmedScoped = scoped.filter(e => municipalityKind(e) !== 'quote');
+                const quotesScoped = scoped.filter(e => municipalityKind(e) === 'quote');
+                const stats = summarizeEventsGroup(confirmedScoped, year, month);
+
+                let effectivePay = relPayFilter;
+                if (effectivePay === 'quote' && quotesScoped.length === 0) effectivePay = 'all';
+
+                const rowsList = scoped.filter(e => {
+                    const b = getEventPaymentBreakdownInMonth(e, year, month);
+                    if (effectivePay === 'quote') return b.isQuote;
+                    if (b.isQuote) return false;
+                    if (effectivePay === 'paid') return b.isFullyPaid;
+                    if (effectivePay === 'pending') return !b.isFullyPaid;
+                    return true;
+                });
+
+                const sortedRows = [...rowsList].sort((a, b) => {
+                    if (!currentSortColumn) return 0;
+                    const ba = getEventPaymentBreakdownInMonth(a, year, month);
+                    const bb = getEventPaymentBreakdownInMonth(b, year, month);
+                    let cmp = 0;
+                    switch (currentSortColumn) {
+                        case 'code':
+                            cmp = (a.code ?? 0) - (b.code ?? 0);
+                            break;
+                        case 'name':
+                            cmp = (a.clientName || '').localeCompare(b.clientName || '', 'pt-BR');
+                            break;
+                        case 'date':
+                            cmp = (a.date || '').localeCompare(b.date || '');
+                            break;
+                        case 'status':
+                            cmp = getRelationStatusLabel(a, ba).localeCompare(getRelationStatusLabel(b, bb), 'pt-BR');
+                            break;
+                        case 'paid':
+                            cmp = ba.monthPaid - bb.monthPaid;
+                            break;
+                        case 'pending':
+                            cmp = ba.monthPending - bb.monthPending;
+                            break;
+                        default:
+                            cmp = 0;
+                    }
+                    return currentSortOrder === 'asc' ? cmp : -cmp;
+                });
+
+                return {
+                    year, month, hasConfirmedMunicipality, effectiveScope, effectivePay,
+                    stats, quotesScoped, sortedRows
+                };
+            };
+
+            const renderFilterEventsTable = () => {
+                const ctx = getFilteredRelationContext();
+                const { year, month, hasConfirmedMunicipality, effectiveScope, effectivePay, stats, quotesScoped, sortedRows } = ctx;
+
+                const rawMonth = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+                const capMonth = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+                const titleEl = document.getElementById('filter-events-modal-title');
+                const subEl = document.getElementById('filter-events-modal-sub');
+                if (titleEl) titleEl.textContent = `Relação Financeira — ${capMonth}`;
+                if (subEl) {
+                    subEl.textContent = hasConfirmedMunicipality
+                        ? 'Eventos pagos e pendentes separados entre eventos comuns e prefeituras'
+                        : 'Relação de eventos pagos e pendentes de pagamento no mês';
+                }
+
+                // Abas de escopo: ocultas se não houver prefeitura confirmada no mês
+                const scopeTabsEl = document.getElementById('rel-scope-tabs');
+                if (scopeTabsEl) {
+                    scopeTabsEl.classList.toggle('hidden', !hasConfirmedMunicipality);
+                    scopeTabsEl.querySelectorAll('.rel-scope-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.relScope === effectiveScope);
+                    });
+                }
+
+                // Pílulas de filtro de pagamento
+                const payTabsEl = document.getElementById('rel-pay-tabs');
+                if (payTabsEl) {
+                    const pills = [
+                        { id: 'all', label: `Todos (${stats.count})` },
+                        { id: 'pending', label: `Pendentes (${stats.pendingCount})` },
+                        { id: 'paid', label: `Pagos (${stats.paidCount})` }
+                    ];
+                    if (hasConfirmedMunicipality && effectiveScope !== 'common' && quotesScoped.length > 0) {
+                        pills.push({ id: 'quote', label: `Em Orçamento (${quotesScoped.length})` });
+                    }
+                    payTabsEl.innerHTML = pills.map(p => {
+                        const active = effectivePay === p.id;
+                        let styleStr = 'border: 1px solid var(--border); color: var(--text-muted); background: transparent;';
+                        if (active) {
+                            if (p.id === 'paid') styleStr = 'border: 1px solid var(--success); color: var(--success); background: var(--success-soft);';
+                            else if (p.id === 'pending') styleStr = 'border: 1px solid var(--warning); color: #b45309; background: var(--warning-soft);';
+                            else styleStr = 'border: 1px solid var(--brand-500); color: var(--brand-600); background: var(--brand-50);';
+                        }
+                        return `<button type="button" data-rel-pay="${p.id}" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition" style="${styleStr}">${p.label}</button>`;
+                    }).join('');
+                    payTabsEl.querySelectorAll('button[data-rel-pay]').forEach(b => {
+                        b.addEventListener('click', () => {
+                            relPayFilter = b.dataset.relPay;
+                            renderFilterEventsTable();
+                        });
+                    });
+                }
+
+                // Resumo de Totais da seleção (Contratado · Pago · Pendente)
+                const stripEl = document.getElementById('rel-summary-strip');
+                if (stripEl) {
+                    stripEl.innerHTML = `
+                        <div class="surface-inset px-4 py-3 rounded-xl">
+                            <span class="text-xs block" style="color: var(--text-muted)">Total Contratado</span>
+                            <strong class="text-base font-bold font-display tabular-nums" style="color: var(--text)">${formatCurrency(stats.total)}</strong>
+                        </div>
+                        <div class="surface-inset px-4 py-3 rounded-xl">
+                            <span class="text-xs block" style="color: var(--text-muted)">Total Pago / Recebido</span>
+                            <strong class="text-base font-bold font-display tabular-nums" style="color: var(--success)">${formatCurrency(stats.paid)}</strong>
+                        </div>
+                        <div class="surface-inset px-4 py-3 rounded-xl">
+                            <span class="text-xs block" style="color: var(--text-muted)">Falta Receber (Pendente)</span>
+                            <strong class="text-base font-bold font-display tabular-nums" style="color: var(--warning)">${formatCurrency(stats.pending)}</strong>
+                        </div>
+                    `;
+                }
+
+                if (sortedRows.length === 0) {
                     filterEventsTableBody.innerHTML = '';
                     filterEventsEmpty.classList.remove('hidden');
                     return;
                 }
-
                 filterEventsEmpty.classList.add('hidden');
 
-                // Ordenar eventos
-                const sortedEvents = [...monthlyEvents].sort((a, b) => {
-                    if (!currentSortColumn) return 0;
-
-                    let aValue, bValue;
-
-                    switch (currentSortColumn) {
-                        case 'code':
-                            aValue = a.code ?? 0;
-                            bValue = b.code ?? 0;
-                            return currentSortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-                        case 'name':
-                            aValue = a.clientName || '';
-                            bValue = b.clientName || '';
-                            return currentSortOrder === 'asc'
-                                ? aValue.localeCompare(bValue, 'pt-BR')
-                                : bValue.localeCompare(aValue, 'pt-BR');
-                        case 'date':
-                            aValue = new Date(a.date + 'T00:00:00');
-                            bValue = new Date(b.date + 'T00:00:00');
-                            return currentSortOrder === 'asc'
-                                ? aValue - bValue
-                                : bValue - aValue;
-                        case 'location':
-                            const aLocation = [a.clientAddress, a.complemento, a.bairro, a.cidade]
-                                .filter(Boolean).join(', ') || 'Local a confirmar';
-                            const bLocation = [b.clientAddress, b.complemento, b.bairro, b.cidade]
-                                .filter(Boolean).join(', ') || 'Local a confirmar';
-                            return currentSortOrder === 'asc'
-                                ? aLocation.localeCompare(bLocation, 'pt-BR')
-                                : bLocation.localeCompare(aLocation, 'pt-BR');
-                        case 'value':
-                            aValue = eventRevenueInMonth(a, year, month);
-                            bValue = eventRevenueInMonth(b, year, month);
-                            return currentSortOrder === 'asc'
-                                ? aValue - bValue
-                                : bValue - aValue;
-                        default:
-                            return 0;
-                    }
-                });
-
-                filterEventsTableBody.innerHTML = sortedEvents.map(event => {
+                filterEventsTableBody.innerHTML = sortedRows.map(event => {
                     const eventDate = new Date(event.date + 'T00:00:00');
                     const formattedDate = eventDate.toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
+                        day: '2-digit', month: '2-digit', year: 'numeric'
                     });
-                    const eventLocation = [event.clientAddress, event.complemento, event.bairro, event.cidade]
-                        .filter(Boolean).join(', ') || 'Local a confirmar';
-
-                    // Valor rateado pelos dias que caem NESTE mês (multi-dia que cruza meses).
-                    const monthValue = eventRevenueInMonth(event, year, month);
                     const { inMonth, total } = eventDaysInMonth(event, year, month);
-                    // Nota "N/M dias" só faz sentido quando o valor é rateado (perDay).
                     const isPerDay = (event.revenueMode || 'perDay') !== 'upfront';
                     const partialNote = (isPerDay && total > 1 && inMonth < total)
-                        ? `<span class="block text-[10px] text-gray-400 font-normal">${inMonth}/${total} dias neste mês</span>`
+                        ? `<span class="block text-[10px] font-normal" style="color: var(--text-faint)">${inMonth}/${total} dias no mês</span>`
                         : '';
 
-                    const mKind = municipalityKind(event);
-                    const mDot = mKind === 'confirmed'
-                        ? `<i class="fas fa-landmark ml-1.5 text-xs" style="color:#06b6d4" title="Prefeitura confirmada"></i>`
-                        : (mKind === 'quote' ? `<i class="fas fa-landmark ml-1.5 text-xs opacity-60" style="color:#06b6d4" title="Prefeitura em orçamento"></i>` : '');
+                    const b = getEventPaymentBreakdownInMonth(event, year, month);
+                    const stLabel = getRelationStatusLabel(event, b);
+                    let statusBadge = '';
+                    if (b.isQuote) {
+                        statusBadge = `<span class="badge" style="background: rgba(6,182,212,0.10); color: #0891b2; border: 1px dashed rgba(8,145,178,0.40)">${stLabel}</span>`;
+                    } else if (b.isFullyPaid) {
+                        statusBadge = `<span class="badge badge-success">${stLabel}</span>`;
+                    } else if (stLabel === 'Pagamento Parcial' || stLabel.startsWith('Sinal Pago')) {
+                        statusBadge = `<span class="badge badge-info">${stLabel}</span>`;
+                    } else {
+                        statusBadge = `<span class="badge badge-warning">${stLabel}</span>`;
+                    }
+
+                    const muniPill = (hasConfirmedMunicipality && b.isMunicipality)
+                        ? `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium" style="background: rgba(6,182,212,0.10); color: #0891b2">Prefeitura</span>`
+                        : '';
+
+                    const paidCell = b.monthPaid > 0
+                        ? `<span style="color: var(--success)">${formatCurrency(b.monthPaid)}</span>`
+                        : `<span style="color: var(--text-faint)">—</span>`;
+                    const pendCell = b.monthPending > 0
+                        ? `<span style="color: var(--warning)">${formatCurrency(b.monthPending)}</span>${partialNote}`
+                        : `<span style="color: var(--text-faint)">—</span>${partialNote}`;
+
                     return `
-                <tr class="cursor-pointer" data-event-id="${event.id}" data-event-date="${event.date}">
-                    <td class="whitespace-nowrap"><span class="badge badge-brand font-mono">${event.code != null ? `#${event.code}` : '—'}</span></td>
-                    <td class="font-medium">${event.clientName || 'Sem nome'}${mDot}</td>
-                    <td class="whitespace-nowrap" style="color: var(--text-muted)">${formattedDate}</td>
-                    <td style="color: var(--text-muted)">${eventLocation}</td>
-                    <td class="text-right font-semibold whitespace-nowrap" style="color: var(--success)">${formatCurrency(monthValue)}${partialNote}</td>
-                </tr>
-            `;
+                        <tr class="cursor-pointer" data-event-id="${event.id}" data-event-date="${event.date}">
+                            <td class="whitespace-nowrap"><span class="badge badge-brand font-mono">${event.code != null ? `#${event.code}` : '—'}</span></td>
+                            <td class="font-medium">${event.clientName || 'Sem nome'}${muniPill}</td>
+                            <td class="whitespace-nowrap" style="color: var(--text-muted)">${formattedDate}</td>
+                            <td class="whitespace-nowrap">${statusBadge}</td>
+                            <td class="text-right font-semibold whitespace-nowrap">${paidCell}</td>
+                            <td class="text-right font-semibold whitespace-nowrap">${pendCell}</td>
+                        </tr>
+                    `;
                 }).join('');
 
-                // Adicionar event listeners para as linhas
                 filterEventsTableBody.querySelectorAll('tr[data-event-id]').forEach(row => {
                     row.addEventListener('click', () => {
                         const eventDate = row.dataset.eventDate;
@@ -5309,35 +5620,43 @@
                 const header = document.querySelector(`th[data-sort="${columnName}"]`);
                 if (!header) return;
 
-                // Resetar todos os ícones de ordenação
                 document.querySelectorAll('th[data-sort] i').forEach(icon => {
                     icon.className = 'fas fa-sort ml-1 text-gray-400';
                 });
 
                 if (currentSortColumn === columnName) {
-                    // Alternar ordem
                     currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
                 } else {
-                    // Nova coluna, começar com asc
                     currentSortColumn = columnName;
                     currentSortOrder = 'asc';
                 }
 
-                // Atualizar ícone da coluna atual
                 const icon = header.querySelector('i');
-                if (currentSortOrder === 'asc') {
-                    icon.className = 'fas fa-sort-up ml-1 text-indigo-600';
-                } else {
-                    icon.className = 'fas fa-sort-down ml-1 text-indigo-600';
+                if (icon) {
+                    icon.className = currentSortOrder === 'asc'
+                        ? 'fas fa-sort-up ml-1 text-indigo-600'
+                        : 'fas fa-sort-down ml-1 text-indigo-600';
                 }
 
                 renderFilterEventsTable();
             };
 
-            const showFilterEventsModal = () => {
-                currentSortColumn = null;
+            const showFilterEventsModal = (scopeArg, payArg) => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const hasConfMuni = events.some(e =>
+                    e.eventType !== 'meeting' &&
+                    e.status !== 'cancelado' &&
+                    e.paymentStatus !== 'Cancelado' &&
+                    eventTouchesMonth(e, year, month) &&
+                    municipalityKind(e) === 'confirmed'
+                );
+
+                relScope = typeof scopeArg === 'string' ? scopeArg : (hasConfMuni ? 'common' : 'common');
+                relPayFilter = typeof payArg === 'string' ? payArg : 'all';
+                currentSortColumn = 'date';
                 currentSortOrder = 'asc';
-                // Resetar todos os ícones
+
                 document.querySelectorAll('th[data-sort] i').forEach(icon => {
                     icon.className = 'fas fa-sort ml-1 text-gray-400';
                 });
@@ -5346,16 +5665,11 @@
             };
 
             const handleExportFilterEventsPDF = () => {
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth();
+                const ctx = getFilteredRelationContext();
+                const { year, month, hasConfirmedMunicipality, effectiveScope, effectivePay, sortedRows } = ctx;
 
-                const monthlyEvents = events.filter(event => {
-                    if (event.eventType === 'meeting') return false;
-                    return eventTouchesMonth(event, year, month);
-                });
-
-                if (monthlyEvents.length === 0) {
-                    showToast("Nenhum evento encontrado para este mês.", true);
+                if (sortedRows.length === 0) {
+                    showToast("Nenhum evento encontrado neste filtro para exportar.", true);
                     return;
                 }
 
@@ -5363,119 +5677,55 @@
                     const { jsPDF } = window.jspdf;
                     if (!jsPDF) {
                         showToast("Erro ao carregar a biblioteca PDF. Tente recarregar.", true);
-                        console.error("window.jspdf.jsPDF is not defined.");
                         return;
                     }
 
-                    // Ordenar eventos da mesma forma que na tabela
-                    const sortedEvents = [...monthlyEvents].sort((a, b) => {
-                        if (!currentSortColumn) return 0;
-
-                        let aValue, bValue;
-
-                        switch (currentSortColumn) {
-                            case 'code':
-                                aValue = a.code ?? 0;
-                                bValue = b.code ?? 0;
-                                return currentSortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-                            case 'name':
-                                aValue = a.clientName || '';
-                                bValue = b.clientName || '';
-                                return currentSortOrder === 'asc'
-                                    ? aValue.localeCompare(bValue, 'pt-BR')
-                                    : bValue.localeCompare(aValue, 'pt-BR');
-                            case 'date':
-                                aValue = new Date(a.date + 'T00:00:00');
-                                bValue = new Date(b.date + 'T00:00:00');
-                                return currentSortOrder === 'asc'
-                                    ? aValue - bValue
-                                    : bValue - aValue;
-                            case 'location':
-                                const aLocation = [a.clientAddress, a.complemento, a.bairro, a.cidade]
-                                    .filter(Boolean).join(', ') || 'Local a confirmar';
-                                const bLocation = [b.clientAddress, b.complemento, b.bairro, b.cidade]
-                                    .filter(Boolean).join(', ') || 'Local a confirmar';
-                                return currentSortOrder === 'asc'
-                                    ? aLocation.localeCompare(bLocation, 'pt-BR')
-                                    : bLocation.localeCompare(aLocation, 'pt-BR');
-                            case 'value':
-                                aValue = eventRevenueInMonth(a, year, month);
-                                bValue = eventRevenueInMonth(b, year, month);
-                                return currentSortOrder === 'asc'
-                                    ? aValue - bValue
-                                    : bValue - aValue;
-                            default:
-                                return 0;
-                        }
-                    });
-
                     const doc = new jsPDF();
-
-                    // Título
                     const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
-                    doc.setFontSize(18);
-                    doc.text(`Eventos do Mês - ${monthName}`, 14, 22);
-                    doc.setFontSize(11);
-                    doc.setTextColor(100);
-                    doc.text(`Total de ${sortedEvents.length} evento(s) cadastrado(s).`, 14, 29);
+                    const scopeTitle = !hasConfirmedMunicipality
+                        ? 'Eventos'
+                        : (effectiveScope === 'municipality' ? 'Prefeituras' : (effectiveScope === 'common' ? 'Eventos Comuns' : 'Todos os Eventos'));
+                    const payTitle = effectivePay === 'paid' ? 'Pagos' : (effectivePay === 'pending' ? 'Pendentes' : (effectivePay === 'quote' ? 'Em Orçamento' : 'Confirmados'));
 
-                    // Preparar dados da tabela
-                    const columns = ["Código", "Nome", "Data", "Local", "Valor"];
-                    const rows = sortedEvents.map(event => {
+                    doc.setFontSize(16);
+                    doc.text(`Relação do Mês (${scopeTitle} — ${payTitle}) - ${monthName}`, 14, 20);
+
+                    let sumPaid = 0, sumPend = 0;
+                    const columns = ["Código", "Cliente", "Data", "Situação", "Pago", "Pendente"];
+                    const rows = sortedRows.map(event => {
                         const eventDate = new Date(event.date + 'T00:00:00');
-                        const formattedDate = eventDate.toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric'
-                        });
-                        const eventLocation = [event.clientAddress, event.complemento, event.bairro, event.cidade]
-                            .filter(Boolean).join(', ') || 'Local a confirmar';
-
-                        // Valor rateado pelos dias que caem NESTE mês (multi-dia que cruza meses).
-                        const monthValue = eventRevenueInMonth(event, year, month);
-                        const { inMonth, total } = eventDaysInMonth(event, year, month);
-                        const isPerDay = (event.revenueMode || 'perDay') !== 'upfront';
-                        const dateCell = (isPerDay && total > 1 && inMonth < total)
-                            ? `${formattedDate} (${inMonth}/${total} dias)`
-                            : formattedDate;
-
+                        const formattedDate = eventDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const b = getEventPaymentBreakdownInMonth(event, year, month);
+                        sumPaid += b.monthPaid;
+                        sumPend += b.monthPending;
                         return [
                             event.code != null ? `#${event.code}` : '—',
                             event.clientName || 'Sem nome',
-                            dateCell,
-                            eventLocation,
-                            formatCurrency(monthValue)
+                            formattedDate,
+                            getRelationStatusLabel(event, b),
+                            formatCurrency(b.monthPaid),
+                            formatCurrency(b.monthPending)
                         ];
                     });
 
-                    // Adicionar linha de total (rateado — bate com o faturamento do mês)
-                    const totalValue = sortedEvents.reduce((sum, event) => sum + eventRevenueInMonth(event, year, month), 0);
-                    rows.push(['TOTAL', '', '', '', formatCurrency(totalValue)]);
+                    doc.setFontSize(10);
+                    doc.setTextColor(100);
+                    doc.text(`${sortedRows.length} evento(s) · Pago: ${formatCurrency(sumPaid)} · Pendente: ${formatCurrency(sumPend)}`, 14, 27);
 
-                    // Calcular larguras das colunas
-                    const pageWidth = doc.internal.pageSize.getWidth();
-                    const margin = 14 * 2; // margens esquerda e direita
-                    const availableWidth = pageWidth - margin;
-                    const codeWidth = availableWidth * 0.12;
-                    const restWidth = availableWidth - codeWidth;
-                    const baseWidth = restWidth / 5;
+                    rows.push(['TOTAIS', '', '', '', formatCurrency(sumPaid), formatCurrency(sumPend)]);
 
-                    // Tabela
                     doc.autoTable({
-                        startY: 35,
+                        startY: 33,
                         head: [columns],
                         body: rows,
                         theme: 'striped',
                         headStyles: { fillColor: [79, 70, 229] },
                         columnStyles: {
-                            0: { cellWidth: codeWidth, fontStyle: 'bold' }, // Código
-                            1: { cellWidth: baseWidth }, // Nome
-                            2: { cellWidth: baseWidth }, // Data
-                            3: { cellWidth: baseWidth * 1.4 }, // Local
-                            4: { cellWidth: baseWidth * 1.6, halign: 'right', fontStyle: 'bold' } // Valor
+                            0: { cellWidth: 20, fontStyle: 'bold' },
+                            4: { halign: 'right', fontStyle: 'bold' },
+                            5: { halign: 'right', fontStyle: 'bold' }
                         },
                         didParseCell: (data) => {
-                            // Estilizar linha de total
                             if (data.row.section === 'body' && data.row.index === rows.length - 1) {
                                 data.cell.styles.fillColor = [241, 245, 249];
                                 data.cell.styles.fontStyle = 'bold';
@@ -5484,31 +5734,43 @@
                         }
                     });
 
-                    // Salva o arquivo
                     const monthStr = String(month + 1).padStart(2, '0');
-                    doc.save(`eventos_${monthStr}_${year}.pdf`);
+                    doc.save(`relacao_${effectiveScope}_${effectivePay}_${monthStr}_${year}.pdf`);
                     showToast("PDF exportado com sucesso!", false);
-
                 } catch (error) {
                     console.error("Erro ao gerar PDF:", error);
                     showToast("Ocorreu um erro ao gerar o PDF.", true);
                 }
             };
-            // FIM: Funções para Modal de Filtro de Eventos
+            // FIM: Relação Financeira e Eventos do Mês
 
             // INÍCIO DA MODIFICAÇÃO: Helper para Status de Pagamento
             const getPaymentStatusHtml = (event) => {
                 let statusClass = '';
-                let statusText = event.paymentStatus || 'Aguardando Sinal'; // Default
+                let statusText = event.paymentStatus || 'Aguardando Sinal';
 
                 switch (statusText) {
                     case 'Aguardando Sinal':
                         statusClass = 'status-aguardando';
                         break;
-                    case 'Sinal Pago':
+                    case 'Sinal Pago': {
                         statusClass = 'status-sinal';
-                        statusText = event.signalReceived ? 'Sinal Recebido' : 'Sinal (Pendente)';
+                        const sig = Number(event.signalAmount) || 0;
+                        statusText = event.signalReceived
+                            ? (sig > 0 ? `Sinal Pago (${formatCurrency(sig)})` : 'Sinal Recebido')
+                            : 'Sinal (Pendente)';
                         break;
+                    }
+                    case 'Pagamento Parcial': {
+                        statusClass = 'status-parcial';
+                        const paidAmt = Number(event.signalAmount) || 0;
+                        const totAmt = Number(event.price) || 0;
+                        const remAmt = Math.max(totAmt - paidAmt, 0);
+                        statusText = paidAmt > 0
+                            ? `Pagamento Parcial (${formatCurrency(paidAmt)} pago · falta ${formatCurrency(remAmt)})`
+                            : 'Pagamento Parcial';
+                        break;
+                    }
                     case 'Pago Integralmente':
                         statusClass = 'status-pago';
                         break;
@@ -7168,7 +7430,8 @@
                                 </div>
                                 <select class="conclude-payment-select" id="conclude-payment-status">
                                     <option value="Aguardando Sinal" ${event.paymentStatus === 'Aguardando Sinal' ? 'selected' : ''}>⏳ Aguardando Sinal</option>
-                                    <option value="Sinal Pago" ${event.paymentStatus === 'Sinal Pago' ? 'selected' : ''}>💸 Sinal Pago (parcial)</option>
+                                    <option value="Sinal Pago" ${event.paymentStatus === 'Sinal Pago' ? 'selected' : ''}>💸 Sinal Pago</option>
+                                    <option value="Pagamento Parcial" ${event.paymentStatus === 'Pagamento Parcial' ? 'selected' : ''}>💳 Pagamento Parcial</option>
                                     <option value="Pago Integralmente" ${isPaidFull ? 'selected' : ''}>✅ Pago Integralmente</option>
                                     <option value="Cancelado" ${isCancelled ? 'selected' : ''}>❌ Cancelado</option>
                                 </select>
@@ -7210,6 +7473,7 @@
                 // - Sinal Pago: Total + Sinal + Restante
                 const paymentGrid = overlay.querySelector('#conclude-payment-grid');
                 const paymentSelect = overlay.querySelector('#conclude-payment-status');
+                let currentPaidAmount = sinal;
                 const updatePaymentDisplay = () => {
                     const status = paymentSelect.value;
                     if (status === 'Pago Integralmente') {
@@ -7227,39 +7491,48 @@
                         paymentGrid.innerHTML = `
                             <div class="conclude-payment-cell" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);">
                                 <div class="label" style="color:#b91c1c;">Evento cancelado</div>
-                                <div class="value" style="color:#b91c1c;font-size:0.85rem;">Total contratado: ${formatCurrency(total)}${sinal > 0 ? ' · sinal recebido: ' + formatCurrency(sinal) : ''}</div>
+                                <div class="value" style="color:#b91c1c;font-size:0.85rem;">Total contratado: ${formatCurrency(total)}${currentPaidAmount > 0 ? ' · já recebido: ' + formatCurrency(currentPaidAmount) : ''}</div>
                             </div>
                         `;
                         return;
                     }
-                    if (status === 'Aguardando Sinal' || sinal === 0) {
-                        paymentGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                    if (status === 'Pagamento Parcial' || status === 'Sinal Pago') {
+                        const rem = Math.max(total - currentPaidAmount, 0);
+                        paymentGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
                         paymentGrid.innerHTML = `
                             <div class="conclude-payment-cell">
                                 <div class="label">Total</div>
                                 <div class="value">${formatCurrency(total)}</div>
                             </div>
+                            <div class="conclude-payment-cell">
+                                <div class="label">${status === 'Pagamento Parcial' ? 'Valor já pago (R$)' : 'Sinal recebido (R$)'}</div>
+                                <input type="number" id="conclude-paid-amount" min="0" step="0.01" value="${currentPaidAmount}"
+                                    style="width:100%;margin-top:2px;border:1px solid #cbd5e1;border-radius:6px;padding:3px 6px;font-weight:700;font-size:0.9rem;color:#0f172a;background:#fff;">
+                            </div>
                             <div class="conclude-payment-cell remaining">
-                                <div class="label">A receber</div>
-                                <div class="value">${formatCurrency(total)}</div>
+                                <div class="label">Restante</div>
+                                <div class="value" id="conclude-remaining-val">${formatCurrency(rem)}</div>
                             </div>
                         `;
+                        const paidInp = paymentGrid.querySelector('#conclude-paid-amount');
+                        const remEl = paymentGrid.querySelector('#conclude-remaining-val');
+                        if (paidInp && remEl) {
+                            paidInp.addEventListener('input', () => {
+                                currentPaidAmount = Math.max(0, parseFloat(paidInp.value) || 0);
+                                remEl.textContent = formatCurrency(Math.max(total - currentPaidAmount, 0));
+                            });
+                        }
                         return;
                     }
-                    // Sinal pago (parcial)
-                    paymentGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    paymentGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
                     paymentGrid.innerHTML = `
                         <div class="conclude-payment-cell">
                             <div class="label">Total</div>
                             <div class="value">${formatCurrency(total)}</div>
                         </div>
-                        <div class="conclude-payment-cell">
-                            <div class="label">Sinal recebido</div>
-                            <div class="value">${formatCurrency(sinal)}</div>
-                        </div>
                         <div class="conclude-payment-cell remaining">
-                            <div class="label">Restante</div>
-                            <div class="value">${formatCurrency(restanteCalc)}</div>
+                            <div class="label">A receber</div>
+                            <div class="value">${formatCurrency(total)}</div>
                         </div>
                     `;
                 };
@@ -7648,11 +7921,16 @@
                         ticketItems: concludeTicketCtrl ? concludeTicketCtrl.getItems() : null
                     } : {};
 
+                    const isPartialOrSignal = newStatus === 'Pagamento Parcial' || newStatus === 'Sinal Pago';
+                    const nextSignalAmount = isPartialOrSignal ? currentPaidAmount : (Number(event.signalAmount) || 0);
+                    const nextSignalReceived = newStatus === 'Pago Integralmente' || isPartialOrSignal ? true : event.signalReceived;
+
                     const updatedEvent = {
                         ...event,
                         status: 'concluido',
                         paymentStatus: newStatus,
-                        signalReceived: newStatus === 'Pago Integralmente' || newStatus === 'Sinal Pago' ? true : event.signalReceived,
+                        signalAmount: nextSignalAmount,
+                        signalReceived: nextSignalReceived,
                         eventObservations: newObservations || null,
                         ...ticketResult,
                         // Garante que os items estejam no formato aceito pelo salvarEvento (id + quantity + price)
@@ -7672,6 +7950,8 @@
                                 ...events[idx],
                                 status: 'concluido',
                                 paymentStatus: newStatus,
+                                signalAmount: nextSignalAmount,
+                                signalReceived: nextSignalReceived,
                                 eventObservations: newObservations || null,
                                 ...ticketResult
                             };
@@ -8571,6 +8851,7 @@
                 document.getElementById('payment-status').value = 'Aguardando Sinal';
                 document.getElementById('signal-amount').value = sourceEvent.signalAmount || 0;
                 document.getElementById('signal-received').checked = false;
+                syncPaymentFormLabels(false);
                 setupContractSection(null);
 
                 renderSelectedToysInModal();
@@ -8893,6 +9174,7 @@
                 renderSelectedExternalRentals();
                 updateFinalPrice();
                 applyTicketSaleMode();
+                syncPaymentFormLabels(false);
 
                 // --- AUDITORIA: Mostra info de quem criou/modificou ---
                 const auditInfo = document.getElementById('audit-info');
@@ -10414,6 +10696,19 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 // --- FIM DA MODIFICAÇÃO ---
             });
 
+            function syncPaymentFormLabels(autoCheckReceived = false) {
+                const st = document.getElementById('payment-status')?.value || 'Aguardando Sinal';
+                const amtLbl = document.getElementById('signal-amount-label');
+                const recLbl = document.getElementById('signal-received-label');
+                const recChk = document.getElementById('signal-received');
+                if (amtLbl) amtLbl.textContent = st === 'Pagamento Parcial' ? 'Valor Já Pago (R$)' : 'Valor do Sinal (R$)';
+                if (recLbl) recLbl.textContent = st === 'Pagamento Parcial' ? 'Valor Recebido?' : 'Sinal Recebido?';
+                if (autoCheckReceived && recChk && (st === 'Pagamento Parcial' || st === 'Sinal Pago')) {
+                    recChk.checked = true;
+                }
+            }
+            document.getElementById('payment-status')?.addEventListener('change', () => syncPaymentFormLabels(true));
+
             if (todayMonthBtn) {
                 todayMonthBtn.addEventListener('click', () => {
                     currentDate = new Date();
@@ -10425,16 +10720,25 @@ CLÁUSULAS OBRIGATÓRIAS (use exatamente estes títulos como "## CLÁUSULA ... �
                 });
             }
 
-            if (quickNewEventBtn) {
-                quickNewEventBtn.addEventListener('click', () => {
-                    const now = new Date();
-                    const isSameMonth = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
-                    const targetDay = isSameMonth ? now.getDate() : 1;
-                    const defaultDateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
-                    selectedDate = defaultDateStr;
-                    showEventModal(defaultDateStr);
+            // Cliques rápidos nos cards superiores (Eventos Comuns / Prefeituras / Execução)
+            document.getElementById('monthly-total-container')?.addEventListener('click', () => showFilterEventsModal('common', 'all'));
+            document.getElementById('kpi-common-paid-btn')?.addEventListener('click', (e) => { e.stopPropagation(); showFilterEventsModal('common', 'paid'); });
+            document.getElementById('kpi-common-pending-btn')?.addEventListener('click', (e) => { e.stopPropagation(); showFilterEventsModal('common', 'pending'); });
+
+            document.getElementById('monthly-municipality-container')?.addEventListener('click', () => showFilterEventsModal('municipality', 'all'));
+            document.getElementById('kpi-muni-paid-btn')?.addEventListener('click', (e) => { e.stopPropagation(); showFilterEventsModal('municipality', 'paid'); });
+            document.getElementById('kpi-muni-pending-btn')?.addEventListener('click', (e) => { e.stopPropagation(); showFilterEventsModal('municipality', 'pending'); });
+            document.getElementById('kpi-muni-quote-btn')?.addEventListener('click', (e) => { e.stopPropagation(); showFilterEventsModal('municipality', 'quote'); });
+
+            document.getElementById('monthly-events-count-container')?.addEventListener('click', () => showFilterEventsModal('all', 'all'));
+
+            document.querySelectorAll('.rel-scope-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    relScope = btn.dataset.relScope;
+                    if (relPayFilter === 'quote' && relScope === 'common') relPayFilter = 'all';
+                    renderFilterEventsTable();
                 });
-            }
+            });
 
             addToyBtn.addEventListener('click', handleAddToy);
             exportToysPdfBtn.addEventListener('click', handleExportToysPDF); // Event listener para o PDF
