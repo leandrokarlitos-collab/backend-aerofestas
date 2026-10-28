@@ -145,7 +145,7 @@ async function createEventRoute(payload, user) {
     const availableAt = String(payload?.availableAt || '').trim();
     validateRouteWindow(departureAt, availableAt);
 
-    const baseCity = String(payload?.baseCity || '').trim() || 'Anápolis-GO';
+    const baseCity = String(payload?.baseCity || '').trim() || 'Aparecida de Goiânia-GO';
     const notes = payload?.notes ? String(payload.notes).trim() || null : null;
     const vehiclesData = await normalizeRouteVehicles(payload?.vehicles);
 
@@ -208,7 +208,7 @@ async function updateEventRoute(id, payload, user) {
     validateRouteWindow(nextDepartureAt, nextAvailableAt);
 
     const nextBaseCity = payload?.baseCity !== undefined
-        ? (String(payload.baseCity || '').trim() || 'Anápolis-GO')
+        ? (String(payload.baseCity || '').trim() || 'Aparecida de Goiânia-GO')
         : existing.baseCity;
     const nextNotes = payload?.notes !== undefined
         ? (String(payload.notes || '').trim() || null)

@@ -289,7 +289,7 @@ model Vehicle {
 // Rota logística: saída do galpão -> paradas (eventos) -> retorno/liberação no galpão
 model EventRoute {
   id          Int                 @id @default(autoincrement())
-  baseCity    String              @default("Anápolis-GO")
+  baseCity    String              @default("Aparecida de Goiânia-GO")
   departureAt String // YYYY-MM-DDTHH:mm
   availableAt String // YYYY-MM-DDTHH:mm
   notes       String?
@@ -345,7 +345,8 @@ model EventExternalRental {
   description String // ex.: "Cama elástica grande", "Touro mecânico"
   supplier    String? // fornecedor (opcional)
   quantity    Int      @default(1)
-  cost        Float // custo TOTAL pago ao terceiro (não unitário)
+  cost        Float // custo TOTAL pago ao terceiro (despesa no Financeiro)
+  price       Float? // valor TOTAL da locação cobrado do cliente no orçamento (null = legado, usa cost)
   createdAt   DateTime @default(now())
 
   @@index([eventId])

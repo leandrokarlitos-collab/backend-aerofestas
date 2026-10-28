@@ -133,12 +133,17 @@ function normalizeItems(rawItems) {
 
 function normalizeExternalRentals(rawList) {
     return (rawList || [])
-        .map(r => ({
-            description: String(r.description || '').trim(),
-            supplier: r.supplier ? String(r.supplier).trim() : null,
-            quantity: parseInt(r.quantity) || 1,
-            cost: toFloatOr(r.cost, 0)
-        }))
+        .map(r => {
+            const cost = toFloatOr(r.cost, 0);
+            const parsedPrice = toFloatOrNull(r.price);
+            return {
+                description: String(r.description || '').trim(),
+                supplier: r.supplier ? String(r.supplier).trim() : null,
+                quantity: parseInt(r.quantity) || 1,
+                cost,
+                price: parsedPrice !== null && parsedPrice >= 0 ? parsedPrice : cost
+            };
+        })
         .filter(r => r.description.length > 0 && r.cost >= 0);
 }
 

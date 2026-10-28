@@ -2331,7 +2331,7 @@
                                     </div>
                                     <div>
                                         <label for="event-route-base" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Cidade-base (retorno)</label>
-                                        <input type="text" id="event-route-base" value="Anápolis-GO" placeholder="Anápolis-GO" class="form-input w-full px-3 py-2 rounded-md text-sm">
+                                        <input type="text" id="event-route-base" value="Aparecida de Goiânia-GO" placeholder="Aparecida de Goiânia-GO" class="form-input w-full px-3 py-2 rounded-md text-sm">
                                     </div>
                                 </div>
 
@@ -2817,17 +2817,18 @@
                                 <i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i>
                                 Locações Externas (terceiros)
                             </label>
-                            <p class="text-xs text-gray-500 mb-2">Equipamentos alugados de outras empresas. O custo soma no valor final do evento <em>e</em> entra como despesa no Financeiro.</p>
+                            <p class="text-xs text-gray-500 mb-2">Equipamentos alugados de outras empresas. O <strong>Valor da locação</strong> entra no orçamento/valor final do cliente e o <strong>Custo total</strong> entra como despesa no Financeiro.</p>
                             <div class="grid grid-cols-12 gap-2">
                                 <input type="text" id="external-rental-desc" placeholder="O que é (ex.: Touro Mecânico)" class="form-input col-span-7 px-3 py-2 rounded-md text-sm">
                                 <input type="text" id="external-rental-supplier" placeholder="Fornecedor (opcional)" class="form-input col-span-5 px-2 py-2 rounded-md text-sm">
                             </div>
                             <div class="grid grid-cols-12 gap-2 mt-2">
-                                <input type="number" id="external-rental-quantity" min="1" value="1" class="form-input col-span-3 px-2 py-2 rounded-md text-sm" title="Quantidade" placeholder="Qtd">
-                                <input type="number" id="external-rental-cost" min="0" step="0.01" placeholder="Custo total R$" class="form-input col-span-6 px-2 py-2 rounded-md text-sm" title="Custo total pago ao terceiro">
-                                <button type="button" id="add-external-rental-btn" class="col-span-3 bg-amber-500 text-white shrink-0 rounded-md hover:bg-amber-600 text-sm font-semibold">Add</button>
+                                <input type="number" id="external-rental-quantity" min="1" value="1" class="form-input col-span-4 sm:col-span-2 px-2 py-2 rounded-md text-sm" title="Quantidade" placeholder="Qtd">
+                                <input type="number" id="external-rental-cost" min="0" step="0.01" placeholder="Custo total R$" class="form-input col-span-8 sm:col-span-4 px-2 py-2 rounded-md text-sm" title="Custo total pago ao terceiro (despesa no Financeiro)">
+                                <input type="number" id="external-rental-price" min="0" step="0.01" placeholder="Valor da locação R$" class="form-input col-span-8 sm:col-span-4 px-2 py-2 rounded-md text-sm" title="Valor da locação cobrado do cliente final no orçamento">
+                                <button type="button" id="add-external-rental-btn" class="col-span-4 sm:col-span-2 bg-amber-500 text-white shrink-0 rounded-md hover:bg-amber-600 text-sm font-semibold">Add</button>
                             </div>
-                            <div id="selected-external-rentals-list" class="mt-3 space-y-2 max-h-24 overflow-y-auto"></div>
+                            <div id="selected-external-rentals-list" class="mt-3 space-y-2 max-h-28 overflow-y-auto"></div>
                         </div>
 
                         <!-- Bloco normal: cálculo do Valor Final -->
@@ -4323,7 +4324,7 @@
                         key: `route:${r.id}`,
                         id: r.id,
                         isLegacy: false,
-                        baseCity: r.baseCity || 'Anápolis-GO',
+                        baseCity: r.baseCity || 'Aparecida de Goiânia-GO',
                         departureAt: r.departureAt,
                         availableAt: r.availableAt,
                         notes: r.notes || null,
@@ -4349,7 +4350,7 @@
                         key: `route:${rid}`,
                         id: rid,
                         isLegacy: false,
-                        baseCity: routeRef?.baseCity || 'Anápolis-GO',
+                        baseCity: routeRef?.baseCity || 'Aparecida de Goiânia-GO',
                         departureAt: routeRef?.departureAt || stops[0].departureAt,
                         availableAt: routeRef?.availableAt || stops[stops.length - 1].availableAt,
                         notes: routeRef?.notes || null,
@@ -4366,7 +4367,7 @@
                             id: null,
                             legacyEventId: e.id,
                             isLegacy: true,
-                            baseCity: 'Anápolis-GO',
+                            baseCity: 'Aparecida de Goiânia-GO',
                             departureAt: e.departureAt,
                             availableAt: e.availableAt,
                             notes: null,
@@ -4397,7 +4398,7 @@
                     const lbl = stopCityLabel(s);
                     if (stopNames[stopNames.length - 1] !== lbl) stopNames.push(lbl);
                 }
-                stopNames.push(routeObj.baseCity || 'Anápolis-GO');
+                stopNames.push(routeObj.baseCity || 'Aparecida de Goiânia-GO');
                 return stopNames.join(' → ');
             };
 
@@ -4706,8 +4707,8 @@
                     }
                 }
                 if (step === 3) {
-                    if (toysForCurrentEvent.length === 0) {
-                        showToast('Adicione pelo menos um brinquedo ao evento.', true);
+                    if (toysForCurrentEvent.length === 0 && externalRentalsForCurrentEvent.length === 0) {
+                        showToast('Adicione pelo menos um brinquedo ou locação externa ao evento.', true);
                         return false;
                     }
                 }
@@ -5517,6 +5518,15 @@
                 return basePerDaySubtotal;
             };
 
+            // Valor da locação externa cobrado do cliente final (retrocompatível: se price for nulo, usa cost).
+            const externalRentalClientPrice = (r) => {
+                if (!r) return 0;
+                if (r.price !== undefined && r.price !== null && r.price !== '' && !Number.isNaN(Number(r.price))) {
+                    return Number(r.price);
+                }
+                return Number(r.cost) || 0;
+            };
+
             // Recalcula os totais do evento somando cada dia ativo (dia customizado usa o próprio subtotal).
             // Frete, locações externas e desconto continuam a nível de evento (contam uma vez).
             const recomputeEventTotals = (event) => {
@@ -5524,7 +5534,7 @@
                 const basePerDay = subtotalOfItems(event.items || event.toys);
                 let attractionsTotal = 0;
                 activeDates.forEach(d => { attractionsTotal += daySubtotalForDate(event, d, basePerDay); });
-                const externalRentalsTotal = (event.externalRentals || []).reduce((a, r) => a + (Number(r.cost) || 0), 0);
+                const externalRentalsTotal = (event.externalRentals || []).reduce((a, r) => a + externalRentalClientPrice(r), 0);
                 const deliveryFee = Number(event.deliveryFee) || 0;
                 const discountType = event.discountType || 'fixed';
                 const discountValue = Number(event.discountValue) || 0;
@@ -5838,7 +5848,7 @@
                 const legacyEv = events.find(e => e.id === routeObj.legacyEventId);
                 if (!legacyEv) throw new Error('Evento da rota não encontrado.');
                 const created = await api.criarRota({
-                    baseCity: routeObj.baseCity || 'Anápolis-GO',
+                    baseCity: routeObj.baseCity || 'Aparecida de Goiânia-GO',
                     departureAt: routeObj.departureAt,
                     availableAt: routeObj.availableAt,
                     vehicles: vehiclesOverride || []
@@ -5887,7 +5897,7 @@
 
                     document.getElementById('route-modal-title').textContent = `Rota ${routeObj.displayNum}`;
                     document.getElementById('route-modal-subtitle').textContent =
-                        `Saída (${routeObj.baseCity || 'Anápolis-GO'}): ${fmtShortDateTime(routeObj.departureAt)} · Liberação: ${fmtShortDateTime(routeObj.availableAt)} · ${daysReserved} ${daysReserved === 1 ? 'dia reservado' : 'dias reservados'}`;
+                        `Saída (${routeObj.baseCity || 'Aparecida de Goiânia-GO'}): ${fmtShortDateTime(routeObj.departureAt)} · Liberação: ${fmtShortDateTime(routeObj.availableAt)} · ${daysReserved} ${daysReserved === 1 ? 'dia reservado' : 'dias reservados'}`;
 
                     const tabsHtml = monthRoutes.length > 1
                         ? `<div class="route-tabs-bar">${monthRoutes.map(r => `
@@ -5915,7 +5925,7 @@
                     }
                     chainParts.push(`
                         <div class="route-chain-step">
-                            <span class="route-chain-city is-base">${escHtml(routeObj.baseCity || 'Anápolis-GO')}</span>
+                            <span class="route-chain-city is-base">${escHtml(routeObj.baseCity || 'Aparecida de Goiânia-GO')}</span>
                             <span class="route-chain-sub">Retorno ${escHtml(fmtShortDateTime(routeObj.availableAt))}</span>
                         </div>
                     `);
@@ -5938,7 +5948,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs mb-1" style="color:var(--text-muted);">Cidade-base (retorno)</label>
-                                    <input type="text" id="rm-edit-base" value="${escHtml(routeObj.baseCity || 'Anápolis-GO')}" class="form-input w-full px-2.5 py-1.5 rounded-md text-xs">
+                                    <input type="text" id="rm-edit-base" value="${escHtml(routeObj.baseCity || 'Aparecida de Goiânia-GO')}" class="form-input w-full px-2.5 py-1.5 rounded-md text-xs">
                                 </div>
                             </div>
                             <div class="flex justify-end gap-2">
@@ -6104,7 +6114,7 @@
                         const btn = ev.currentTarget;
                         const nextDep = bodyEl.querySelector('#rm-edit-dep')?.value || '';
                         const nextAvail = bodyEl.querySelector('#rm-edit-avail')?.value || '';
-                        const nextBase = (bodyEl.querySelector('#rm-edit-base')?.value || '').trim() || 'Anápolis-GO';
+                        const nextBase = (bodyEl.querySelector('#rm-edit-base')?.value || '').trim() || 'Aparecida de Goiânia-GO';
                         btn.disabled = true;
                         try {
                             const realId = await ensureRealRoute(routeObj);
@@ -6384,6 +6394,14 @@
                             const quantityText = quantity > 1 ? ` (x${quantity})` : '';
                             toysHtml += `<li class="font-semibold text-gray-700">${toyName}${quantityText}</li>`;
                         });
+
+                        if (!dayHasItemOverride && Array.isArray(event.externalRentals) && event.externalRentals.length > 0) {
+                            event.externalRentals.forEach(r => {
+                                const qty = r.quantity || 1;
+                                const qtyTxt = qty > 1 ? ` (x${qty})` : '';
+                                toysHtml += `<li class="font-semibold text-amber-700"><i class="fas fa-truck-arrow-right text-amber-500 text-xs mr-1"></i>${escHtml(r.description || 'Locação externa')}${qtyTxt}</li>`;
+                            });
+                        }
 
                         toysHtml += '</ul>';
                         const yourCompany = companies.find(c => c.id === event.yourCompanyId);
@@ -7087,17 +7105,37 @@
                 }
                 externalRentalsForCurrentEvent.forEach((r, idx) => {
                     const itemEl = document.createElement('div');
-                    itemEl.className = 'flex justify-between items-center bg-amber-50 border border-amber-200 p-2 rounded-md text-sm';
+                    itemEl.className = 'flex justify-between items-center bg-amber-50 border border-amber-200 p-2 rounded-md text-sm gap-2';
                     const supplierTag = r.supplier ? ` · ${r.supplier}` : '';
+                    const clientVal = externalRentalClientPrice(r);
                     itemEl.innerHTML = `
-                        <span><i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i><strong>${r.description}</strong>${supplierTag} (x${r.quantity || 1}) — ${formatCurrency(r.cost || 0)}</span>
-                        <button type="button" data-idx="${idx}" class="remove-external-rental-btn text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                        <span class="min-w-0"><i class="fas fa-truck-arrow-right text-amber-500 mr-1"></i><strong>${escHtml(r.description)}</strong>${escHtml(supplierTag)} (x${r.quantity || 1}) — <span class="text-xs text-gray-600">Custo: ${formatCurrency(r.cost || 0)}</span> · <strong class="text-amber-800">Locação: ${formatCurrency(clientVal)}</strong></span>
+                        <span class="flex items-center gap-2 shrink-0">
+                            <button type="button" data-idx="${idx}" class="edit-external-rental-btn text-amber-700 hover:text-amber-900" title="Editar locação externa"><i class="fas fa-pen text-xs"></i></button>
+                            <button type="button" data-idx="${idx}" class="remove-external-rental-btn text-red-500 hover:text-red-700" title="Remover"><i class="fas fa-times"></i></button>
+                        </span>
                     `;
                     listEl.appendChild(itemEl);
                 });
+                listEl.querySelectorAll('.edit-external-rental-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const i = parseInt(e.currentTarget.dataset.idx, 10);
+                        const item = externalRentalsForCurrentEvent[i];
+                        if (!item) return;
+                        document.getElementById('external-rental-desc').value = item.description || '';
+                        document.getElementById('external-rental-supplier').value = item.supplier || '';
+                        document.getElementById('external-rental-quantity').value = String(item.quantity || 1);
+                        document.getElementById('external-rental-cost').value = String(Number(item.cost) || 0);
+                        document.getElementById('external-rental-price').value = String(externalRentalClientPrice(item));
+                        externalRentalsForCurrentEvent.splice(i, 1);
+                        renderSelectedExternalRentals();
+                        updateFinalPrice();
+                        document.getElementById('external-rental-price')?.focus();
+                    });
+                });
                 listEl.querySelectorAll('.remove-external-rental-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        const i = parseInt(e.currentTarget.dataset.idx);
+                        const i = parseInt(e.currentTarget.dataset.idx, 10);
                         externalRentalsForCurrentEvent.splice(i, 1);
                         renderSelectedExternalRentals();
                         updateFinalPrice();
@@ -7111,11 +7149,13 @@
                 const sup = document.getElementById('external-rental-supplier');
                 const qty = document.getElementById('external-rental-quantity');
                 const cost = document.getElementById('external-rental-cost');
+                const price = document.getElementById('external-rental-price');
 
                 const description = (desc.value || '').trim();
                 const supplier = (sup.value || '').trim() || null;
-                const quantity = parseInt(qty.value) || 1;
+                const quantity = parseInt(qty.value, 10) || 1;
                 const costVal = parseFloat(cost.value);
+                const priceVal = parseFloat(price.value);
 
                 if (!description) {
                     showToast('Informe a descrição da locação externa.', true);
@@ -7123,12 +7163,17 @@
                     return;
                 }
                 if (isNaN(costVal) || costVal < 0) {
-                    showToast('Informe um custo válido para a locação externa.', true);
+                    showToast('Informe um custo válido pago ao terceiro.', true);
                     cost.focus();
                     return;
                 }
+                if (isNaN(priceVal) || priceVal < 0) {
+                    showToast('Informe o valor da locação cobrado do cliente no orçamento.', true);
+                    price.focus();
+                    return;
+                }
 
-                externalRentalsForCurrentEvent.push({ description, supplier, quantity, cost: costVal });
+                externalRentalsForCurrentEvent.push({ description, supplier, quantity, cost: costVal, price: priceVal });
                 renderSelectedExternalRentals();
                 updateFinalPrice();
 
@@ -7137,6 +7182,7 @@
                 sup.value = '';
                 qty.value = '1';
                 cost.value = '';
+                price.value = '';
                 desc.focus();
             });
 
@@ -7174,7 +7220,7 @@
                 const attractionsTotal = perDaySubtotal * activeDays;
 
                 const externalRentalsTotal = externalRentalsForCurrentEvent.reduce(
-                    (acc, r) => acc + (Number(r.cost) || 0), 0
+                    (acc, r) => acc + externalRentalClientPrice(r), 0
                 );
                 const deliveryFee = parseFloat(deliveryFeeEl.value) || 0;
 
@@ -7211,11 +7257,11 @@
                     }
                 }
 
-                // Locações externas: somam direto no preço final (custo repassado ao cliente)
+                // Locações externas: somam o Valor da locação (cobrado do cliente) no preço final
                 const externalRentalsRow = document.getElementById('external-rentals-row');
                 const externalRentalsAmountEl = document.getElementById('external-rentals-amount');
                 if (externalRentalsRow && externalRentalsAmountEl) {
-                    if (p.externalRentalsTotal > 0) {
+                    if (externalRentalsForCurrentEvent.length > 0 || p.externalRentalsTotal > 0) {
                         externalRentalsRow.style.display = '';
                         externalRentalsAmountEl.textContent = `+ ${formatCurrency(p.externalRentalsTotal)}`;
                     } else {
@@ -8017,7 +8063,8 @@
                 description: r.description,
                 supplier: r.supplier || null,
                 quantity: r.quantity || 1,
-                cost: Number(r.cost) || 0
+                cost: Number(r.cost) || 0,
+                price: externalRentalClientPrice(r)
             }));
 
             // Monta payload completo do evento para enviar ao backend (preserva todos os campos atuais),
@@ -9771,7 +9818,8 @@
                         description: r.description,
                         supplier: r.supplier || null,
                         quantity: r.quantity || 1,
-                        cost: Number(r.cost) || 0
+                        cost: Number(r.cost) || 0,
+                        price: externalRentalClientPrice(r)
                     })),
 
                     subtotal: pricing.attractionsTotal, // total das atrações já multiplicado pelos dias
@@ -9893,7 +9941,7 @@
                     eventData.departureAt = document.getElementById('event-departure')?.value || null;
                     eventData.availableAt = document.getElementById('event-available')?.value || null;
                     eventData.newRoute = {
-                        baseCity: (document.getElementById('event-route-base')?.value || '').trim() || 'Anápolis-GO',
+                        baseCity: (document.getElementById('event-route-base')?.value || '').trim() || 'Aparecida de Goiânia-GO',
                         departureAt: eventData.departureAt,
                         availableAt: eventData.availableAt,
                         vehicles: formNewRouteVehicles
@@ -10031,7 +10079,7 @@
                 formNewRouteVehicles = [];
                 document.getElementById('event-departure').value = '';
                 document.getElementById('event-available').value = '';
-                document.getElementById('event-route-base').value = 'Anápolis-GO';
+                document.getElementById('event-route-base').value = 'Aparecida de Goiânia-GO';
                 setFormRouteMode('local', false);
 
                 // Etapa 1: Prefeitura + Cliente (PF / PJ)
@@ -10127,7 +10175,8 @@
                         description: r.description || '',
                         supplier: r.supplier || null,
                         quantity: parseInt(r.quantity, 10) || 1,
-                        cost: parseFloat(r.cost) || 0
+                        cost: parseFloat(r.cost) || 0,
+                        price: externalRentalClientPrice(r)
                     }))
                     : [];
 
@@ -10218,7 +10267,7 @@
                 formNewRouteVehicles = [];
                 document.getElementById('event-departure').value = eventToEdit?.departureAt || '';
                 document.getElementById('event-available').value = eventToEdit?.availableAt || '';
-                document.getElementById('event-route-base').value = eventToEdit?.route?.baseCity || 'Anápolis-GO';
+                document.getElementById('event-route-base').value = eventToEdit?.route?.baseCity || 'Aparecida de Goiânia-GO';
 
                 if (pendingPreselectedRouteId != null && !eventToEdit) {
                     populateJoinRouteSelect(pendingPreselectedRouteId);
@@ -10281,7 +10330,7 @@
                 setAgendamentoType('event');
                 setMunicipalityForm('municipality-status', eventToEdit, !!dayEditContext);
                 // Limpa campos do form de locação externa
-                ['external-rental-desc', 'external-rental-supplier', 'external-rental-cost'].forEach(id => {
+                ['external-rental-desc', 'external-rental-supplier', 'external-rental-cost', 'external-rental-price'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -10361,7 +10410,8 @@
                             description: r.description || '',
                             supplier: r.supplier || null,
                             quantity: parseInt(r.quantity) || 1,
-                            cost: parseFloat(r.cost) || 0
+                            cost: parseFloat(r.cost) || 0,
+                            price: externalRentalClientPrice(r)
                         }));
                     }
 
@@ -10627,6 +10677,15 @@
                         price: unitPrice * quantity
                     };
                 });
+                const extRentalsForOS = (!dayOverrideOS && Array.isArray(event.externalRentals)) ? event.externalRentals : [];
+                const extRentalsTotalOS = extRentalsForOS.reduce((acc, r) => acc + externalRentalClientPrice(r), 0);
+                extRentalsForOS.forEach(r => {
+                    toyData.push({
+                        name: r.description || 'Equipamento',
+                        quantity: r.quantity || 1,
+                        price: externalRentalClientPrice(r)
+                    });
+                });
 
                 // F2: escala estruturada para a OS (fallback no texto-livre legado).
                 const escalaOSNomes = (Array.isArray(event.assignments) && event.assignments.length)
@@ -10664,6 +10723,14 @@
                     discountRowHtml = `<tr>
                                 <td colspan="1" style="text-align: right; font-weight: bold;">Desconto (${event.discountValue}${discountTypeLabel})</td>
                                 <td style="text-align: right; font-weight: bold; color: #000;">- ${formatCurrency(discountAmount)}</td>
+                            </tr>`;
+                }
+
+                let externalRentalsRowOSHtml = '';
+                if ((extRentalsTotalOS > 0) && !hidePrices) {
+                    externalRentalsRowOSHtml = `<tr>
+                                <td colspan="1" style="text-align: right; font-weight: bold;">Outros Equipamentos</td>
+                                <td style="text-align: right; font-weight: bold;">+ ${formatCurrency(extRentalsTotalOS)}</td>
                             </tr>`;
                 }
 
@@ -10709,6 +10776,7 @@
                                 <td style="text-align: right; font-weight: bold;">Subtotal</td>
                                 <td style="text-align: right; font-weight: bold;">${formatCurrency(event.subtotal)}</td>
                             </tr>
+                            ${externalRentalsRowOSHtml}
                             ${discountRowHtml}
                             ${deliveryFeeRowHtml} <!-- ADICIONADO -->
                             <tr>
@@ -11106,13 +11174,18 @@
 
                 // CORREÇÃO: Suportar tanto event.toys quanto event.items
                 const eventToys = event.toys || event.items || [];
-                const toyNames = eventToys.map(eventToy => {
+                const ownToyNames = eventToys.map(eventToy => {
                     const toyId = eventToy.toyId || eventToy.id; // Prioriza toyId (API) sobre id (localStorage)
                     const toy = toys.find(t => t.id === toyId);
                     if (!toy) return null;
                     const quantityText = eventToy.quantity > 1 ? ` (x${eventToy.quantity})` : '';
                     return `${toy.name}${quantityText}`;
-                }).filter(Boolean).join(', ');
+                }).filter(Boolean);
+                const extToyNames = (event.externalRentals || []).map(r => {
+                    const qty = r.quantity || 1;
+                    return `${r.description}${qty > 1 ? ` (x${qty})` : ''}`;
+                }).filter(Boolean);
+                const toyNames = [...ownToyNames, ...extToyNames].join(', ');
 
                 const dateObj = new Date(event.date + 'T00:00:00');
                 const formattedDate = new Intl.DateTimeFormat('pt-BR', {
@@ -11745,17 +11818,21 @@ terminar EXATAMENTE com:\nAtenciosamente,\nEquipe ${companyName}`;
                     return;
                 }
 
-                // Compatível com estrutura antiga (event.items) e nova (event.toys)
+                // Compatível com estrutura antiga (event.items) e nova (event.toys) + locações externas
                 const eventToys = event.toys || event.items || [];
-                if (!Array.isArray(eventToys) || eventToys.length === 0) {
+                const extRentalsContract = Array.isArray(event.externalRentals) ? event.externalRentals : [];
+                if ((!Array.isArray(eventToys) || eventToys.length === 0) && extRentalsContract.length === 0) {
                     showToast("Adicione equipamentos ao evento antes de gerar o contrato.", true);
                     return;
                 }
-                const toyListString = eventToys.map(eventToy => {
-                    const toy = toys.find(t => t.id === eventToy.id);
+                const ownToyLines = eventToys.map(eventToy => {
+                    const toyId = eventToy.toyId || eventToy.id;
+                    const toy = toys.find(t => t.id === toyId);
                     if (!toy) return null;
-                    return `- ${eventToy.quantity}x ${toy.name}`;
-                }).filter(Boolean).join('\n');
+                    return `- ${eventToy.quantity || 1}x ${toy.name}`;
+                }).filter(Boolean);
+                const extToyLines = extRentalsContract.map(r => `- ${r.quantity || 1}x ${r.description}`).filter(Boolean);
+                const toyListString = [...ownToyLines, ...extToyLines].join('\n');
 
                 const dateObj = new Date(event.date + 'T00:00:00');
                 const formattedEventDate = new Intl.DateTimeFormat('pt-BR', {
@@ -11813,16 +11890,20 @@ ${contratoDiasLinhas}
 `;
                 }
 
-                const subtotal = event.subtotal;
+                const subtotal = event.subtotal || 0;
+                const extRentalsContractTotal = (event.externalRentals || []).reduce((s, r) => s + externalRentalClientPrice(r), 0);
                 const discountAmount = event.discountType === 'fixed'
-                    ? event.discountValue
-                    : (subtotal * event.discountValue / 100);
+                    ? (event.discountValue || 0)
+                    : (subtotal * (event.discountValue || 0) / 100);
                 const frete = event.deliveryFee || 0;
                 const valorTotal = event.price;
+                const extContractLine = extRentalsContractTotal > 0
+                    ? `\n- Equipamentos Adicionais: + ${formatCurrency(extRentalsContractTotal)}`
+                    : '';
 
                 const financePromptSection = `
 - **VALORES:**
-- Subtotal (Brinquedos): ${formatCurrency(subtotal)}
+- Subtotal (Brinquedos): ${formatCurrency(subtotal)}${extContractLine}
 - Desconto: - ${formatCurrency(discountAmount)}
 - Taxa de Entrega: + ${formatCurrency(frete)}
 - **Valor Total:** ${formatCurrency(valorTotal)}
